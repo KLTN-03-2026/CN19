@@ -1,0 +1,317 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// === MODULE 1: QUẢN LÝ NGƯỜI DÙNG & ĐỊNH DANH (IAM) ===
+
+model User {
+  id                    String    @id @default(uuid())
+  email                 String    @unique // Tài khoản đăng nhập chính
+  phone_number          String?   @unique
+  password_hash         String
+  role                  String    // customer, organizer, staff, admin [cite: 1, 22]
+  status                String    @default("active") // active, banned, inactive [cite: 1]
+  wallet_address        String?   // Ví Custodial Web3 [cite: 1, 4]
+  avatar_url            String?
+  address               String?   // Địa chỉ cá nhân [cite: 1]
+  date_of_birth         DateTime?
+  failed_login_attempts Int       @default(0)
+  created_at            DateTime  @default(now())
+
+  // Quan hệ
+  organizer_profile     Organizer?
+  staff_assignments     EventStaffAssignment[] @relation("StaffMember")
+  created_assignments   EventStaffAssignment[] @relation("Creator")
+  orders                Order[]
+  owned_tickets         Ticket[]               @relation("CurrentOwner")
+  original_tickets      Ticket[]               @relation("OriginalBuyer")
+  listings              MarketplaceListing[]
+  buyer_transactions    MarketplaceTransaction[] @relation("Buyer")
+  seller_transactions   MarketplaceTransaction[] @relation("Seller")
+  transfers_sent        TicketTransfer[]        @relation("Sender")
+  transfers_received    TicketTransfer[]        @relation("Receiver")
+  bot_logs              BotDetectionLog[]
+  refunds               RefundRequest[]
+  admin_logs            AdminActionLog[]
+  notifications         Notification[]
+}
+
+model Organizer {
+  id                String   @id @default(uuid())
+  user              User     @relation(fields: [user_id], references: [id])
+  user_id           String   @unique
+  organization_name String
+  kyc_status        String   @default("pending") // pending, approved, rejected [cite: 2]
+  kyc_verified_at   DateTime?
+  business_license  String?
+  identity_card     String?
+  is_verified       Boolean  @default(false) // Tick xanh [cite: 37]
+
+  events            Event[]
+}
+
+model EventStaffAssignment {
+  id          String   @id @default(uuid())
+  staff       User     @relation("StaffMember", fields: [staff_id], references: [id])
+  staff_id    String
+  event       Event    @relation(fields: [event_id], references: [id])
+  event_id    String
+  assigned_by User     @relation("Creator", fields: [creator_id], references: [id])
+  creator_id  String
+}
+
+// === MODULE 2: QUẢN LÝ SỰ KIỆN & VÉ ===
+
+model Category {
+  id         String   @id @default(uuid())
+  name       String   @unique
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now())
+
+  events     Event[]
+}
+
+model Event {
+  id                     String    @id @default(uuid())
+  organizer              Organizer @relation(fields: [organizer_id], references: [id])
+  organizer_id           String
+  category               Category  @relation(fields: [category_id], references: [id])
+  category_id            String
+  title                  String
+  event_date             DateTime
+  event_time             String?
+  status                 String    @default("draft") // draft, active, cancelled, postponed [cite: 4, 271]
+  allow_resale           Boolean   @default(true) // [cite: 280]
+  allow_transfer         Boolean   @default(true) // [cite: 176]
+  allow_refund           Boolean   @default(true) // [cite: 243]
+  price_ceiling          Decimal?  // Giá trần [cite: 203]
+  royalty_fee_percent    Decimal   @default(5.0) // [cite: 280]
+  smart_contract_address String?
+  refund_deadline_days   Int?
+
+  ticket_tiers           TicketTier[]
+  orders                 Order[]
+  tickets                Ticket[]
+  staff_assignments      EventStaffAssignment[]
+  marketplace_listings   MarketplaceListing[]
+  payouts                EscrowPayout[]
+}
+
+model TicketTier {
+  id                 String   @id @default(uuid())
+  event              Event    @relation(fields: [event_id], references: [id])
+  event_id           String
+  tier_name          String   // VIP, Standard [cite: 5]
+  section_name       String?  // [cite: 5]
+  benefits           String?  // [cite: 5]
+  price              Decimal
+  quantity_total     Int
+  quantity_available Int
+
+  tickets            Ticket[]
+  order_items        OrderItem[]
+}
+
+// === MODULE 3: ĐƠN HÀNG & NFT ===
+
+model Order {
+  id               String   @id @default(uuid())
+  customer         User     @relation(fields: [customer_id], references: [id])
+  customer_id      String
+  event            Event    @relation(fields: [event_id], references: [id])
+  event_id         String
+  order_number     String   @unique
+  status           String   // pending, paid, failed, refunded [cite: 7, 121]
+  subtotal         Decimal
+  platform_fee     Decimal
+  total_amount     Decimal
+  payment_method   String   // vnpay, momo [cite: 7, 157]
+  transaction_id   String?
+  transaction_hash String?  // Blockchain Hash [cite: 7, 162]
+  risk_score       Decimal? // AI Risk Score [cite: 121, 464]
+  is_bot_detected  Boolean  @default(false)
+  expires_at       DateTime // Hết hạn giữ chỗ 10p [cite: 7, 125]
+  created_at       DateTime @default(now())
+
+  items            OrderItem[]
+  tickets          Ticket[]
+  bot_logs         BotDetectionLog[]
+}
+
+model OrderItem {
+  id             String     @id @default(uuid())
+  order          Order      @relation(fields: [order_id], references: [id])
+  order_id       String
+  ticket_tier    TicketTier @relation(fields: [ticket_tier_id], references: [id])
+  ticket_tier_id String
+  quantity       Int
+  unit_price     Decimal
+  subtotal       Decimal
+}
+
+model Ticket {
+  id                   String   @id @default(uuid())
+  order                Order    @relation(fields: [order_id], references: [id])
+  order_id             String
+  event                Event    @relation(fields: [event_id], references: [id])
+  event_id             String
+  ticket_tier          TicketTier @relation(fields: [ticket_tier_id], references: [id])
+  ticket_tier_id       String
+  ticket_number        String   @unique
+  nft_token_id         String?  // [cite: 9, 162]
+  nft_mint_tx_hash     String?
+  status               String   // minted, used, refunded, reselling... 
+  current_owner        User     @relation("CurrentOwner", fields: [current_owner_id], references: [id])
+  current_owner_id     String
+  original_buyer       User     @relation("OriginalBuyer", fields: [original_buyer_id], references: [id])
+  original_buyer_id     String
+  is_on_marketplace    Boolean  @default(false)
+  is_transferred       Boolean  @default(false)
+  is_used              Boolean  @default(false)
+  checked_in_at        DateTime?
+  qr_code_hash         String?  // Dynamic QR [cite: 227]
+  refund_requested_at  DateTime?
+
+  marketplace_listings MarketplaceListing[]
+  transactions         MarketplaceTransaction[]
+  transfers            TicketTransfer[]
+  refund_requests      RefundRequest[]
+  scan_history         ScanHistory[]
+  qr_tokens            DynamicQRToken[]
+}
+
+// === MODULE 4: MARKETPLACE & AI ===
+
+model MarketplaceListing {
+  id                 String   @id @default(uuid())
+  ticket             Ticket   @relation(fields: [ticket_id], references: [id])
+  ticket_id          String
+  seller             User     @relation(fields: [seller_id], references: [id])
+  seller_id          String
+  event              Event    @relation(fields: [event_id], references: [id])
+  event_id           String
+  listing_number     String   @unique
+  asking_price       Decimal
+  status             String   // active, sold, cancelled [cite: 10, 140]
+  is_locked          Boolean  @default(false) // [cite: 136]
+  lock_expires_at    DateTime?
+  sold_at            DateTime?
+  platform_fee_percent Decimal @default(5.0)
+
+  transactions       MarketplaceTransaction[]
+}
+
+model MarketplaceTransaction {
+  id                     String             @id @default(uuid())
+  listing                MarketplaceListing @relation(fields: [listing_id], references: [id])
+  listing_id             String
+  ticket                 Ticket             @relation(fields: [ticket_id], references: [id])
+  ticket_id              String
+  seller                 User               @relation("Seller", fields: [seller_id], references: [id])
+  seller_id              String
+  buyer                  User               @relation("Buyer", fields: [buyer_id], references: [id])
+  buyer_id               String
+  seller_receive_amount  Decimal
+  platform_fee           Decimal
+  buyer_pay_amount       Decimal
+  status                 String
+  nft_transfer_tx_hash   String?
+}
+
+model TicketTransfer {
+  id                   String   @id @default(uuid())
+  ticket               Ticket   @relation(fields: [ticket_id], references: [id])
+  ticket_id            String
+  sender               User     @relation("Sender", fields: [from_user_id], references: [id])
+  from_user_id         String
+  receiver             User     @relation("Receiver", fields: [to_user_id], references: [id])
+  to_user_id           String
+  event_id             String
+  transfer_method      String   // direct, marketplace [cite: 12]
+  status               String
+  nft_transfer_tx_hash String?
+  requested_at         DateTime @default(now())
+  completed_at         DateTime?
+}
+
+model BotDetectionLog {
+  id                 String   @id @default(uuid())
+  user               User     @relation(fields: [user_id], references: [id])
+  user_id            String
+  order              Order    @relation(fields: [order_id], references: [id])
+  order_id           String
+  click_speed_ms     Int      // [cite: 122]
+  form_fill_duration Int
+  behavior_metrics   Json?    // Tọa độ chuột
+  risk_score         Decimal
+  decision           String   // pass, challenge, block [cite: 464]
+  created_at         DateTime @default(now())
+}
+
+// === MODULE 5: HẬU CẦN & ADMIN ===
+
+model ScanHistory {
+  id             String   @id @default(uuid())
+  ticket         Ticket   @relation(fields: [ticket_id], references: [id])
+  ticket_id      String
+  is_success     Boolean
+  failure_reason String?  // [cite: 505]
+  scanned_at     DateTime @default(now())
+}
+
+model RefundRequest {
+  id              String   @id @default(uuid())
+  ticket          Ticket   @relation(fields: [ticket_id], references: [id])
+  ticket_id       String
+  customer        User     @relation(fields: [customer_id], references: [id])
+  customer_id     String
+  status          String   @default("pending") // pending, approved, rejected [cite: 15, 396]
+  refund_amount   Decimal
+  admin_id        String?
+  approved_at     DateTime?
+}
+
+model EscrowPayout {
+  id                    String   @id @default(uuid())
+  event                 Event    @relation(fields: [event_id], references: [id])
+  event_id              String
+  total_revenue         Decimal
+  net_payout            Decimal  // Tiền trả cho BTC [cite: 427, 436]
+  status                String   @default("pending")
+  payout_trans_id       String?
+}
+
+model DynamicQRToken {
+  id          String   @id @default(uuid())
+  ticket      Ticket   @relation(fields: [ticket_id], references: [id])
+  ticket_id   String
+  token_hash  String   @unique
+  expires_at  DateTime // Hết hạn 60s [cite: 18, 231]
+  is_used     Boolean  @default(false)
+}
+
+model AdminActionLog {
+  id          String   @id @default(uuid())
+  admin       User     @relation(fields: [admin_id], references: [id])
+  admin_id    String
+  action_type String   // ban_user, approve_event... [cite: 16, 359]
+  target_id   String
+  old_value   String?
+  new_value   String?
+  created_at  DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [user_id], references: [id])
+  user_id   String
+  type      String
+  title     String
+  message   String
+  is_read   Boolean  @default(false)
+  created_at DateTime @default(now())
+}
