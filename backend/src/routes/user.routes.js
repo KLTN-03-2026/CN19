@@ -15,4 +15,10 @@ router.put('/profile', userController.updateProfile);
 // [PUT] /api/users/change-password
 router.put('/change-password', userController.changePassword);
 
+// [POST] /api/users/link-external-wallet
+router.post('/link-external-wallet', userController.linkExternalWallet);
+
+// [GET] /api/users/wallet-balance
+router.get('/wallet-balance', userController.getWalletBalance);
+
 module.exports = router;

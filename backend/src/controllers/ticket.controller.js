@@ -130,8 +130,37 @@ const transferTicket = async (req, res) => {
   }
 };
 
+// [Web3] Lấy Data truy vết trên Blockchain
+const getBlockchainInfo = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const ticket = await prisma.ticket.findUnique({
+      where: { id },
+      select: { nft_mint_tx_hash: true, nft_token_id: true, event: { select: { smart_contract_address: true } } }
+    });
+    
+    if (!ticket) return res.status(404).json({ error: 'Không tìm thấy vé' });
+
+    // Mock link Etherscan / Polygonscan
+    const explorerUrl = `https://mumbai.polygonscan.com/tx/${ticket.nft_mint_tx_hash}`;
+    const openseaUrl = `https://testnets.opensea.io/assets/mumbai/${ticket.event.smart_contract_address}/${ticket.nft_token_id}`;
+
+    res.status(200).json({
+      data: { 
+        tx_hash: ticket.nft_mint_tx_hash, 
+        token_id: ticket.nft_token_id, 
+        explorer_url: explorerUrl, 
+        opensea_url: openseaUrl 
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Lỗi server.' });
+  }
+};
+
 module.exports = {
   getMyTickets,
   getQrCode,
-  transferTicket
+  transferTicket,
+  getBlockchainInfo
 };

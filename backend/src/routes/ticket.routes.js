@@ -15,4 +15,7 @@ router.get('/:id/qr-code', ticketController.getQrCode);
 // [POST] /api/tickets/:id/transfer
 router.post('/:id/transfer', ticketController.transferTicket);
 
+// [GET] /api/tickets/:id/blockchain-info
+router.get('/:id/blockchain-info', ticketController.getBlockchainInfo);
+
 module.exports = router;

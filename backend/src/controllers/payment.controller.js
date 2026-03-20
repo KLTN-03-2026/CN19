@@ -111,7 +111,27 @@ const webhookHandler = async (req, res) => {
   }
 };
 
+// [UX/Real-time] Kiểm tra trạng thái thanh toán (để Frontend Polling)
+const getPaymentStatus = async (req, res) => {
+  try {
+    const { orderNumber } = req.params;
+    const order = await prisma.order.findUnique({
+      where: { order_number: orderNumber },
+      select: { status: true, transaction_id: true, transaction_hash: true }
+    });
+
+    if (!order) {
+      return res.status(404).json({ error: 'Đơn hàng không tồn tại.' });
+    }
+
+    res.status(200).json({ data: order });
+  } catch (error) {
+    res.status(500).json({ error: 'Lỗi server.' });
+  }
+};
+
 module.exports = {
   createPaymentUrl,
-  webhookHandler
+  webhookHandler,
+  getPaymentStatus
 };

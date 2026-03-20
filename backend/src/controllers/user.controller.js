@@ -112,8 +112,49 @@ const changePassword = async (req, res) => {
   }
 };
 
+// [Web3] Liên kết ví cá nhân (Metamask/Trust wallet)
+const linkExternalWallet = async (req, res) => {
+  try {
+    const { external_wallet_address, signature } = req.body;
+    // Giả lập logic verify signature web3
+    if (!signature) {
+      return res.status(400).json({ error: 'Thiếu chữ ký xác thực Web3 từ ví cá nhân.' });
+    }
+
+    // TODO: Lưu `external_wallet_address` vào user_profile
+    res.status(200).json({ 
+      message: 'Liên kết ví cá nhân thành công.', 
+      wallet: external_wallet_address 
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Lỗi server.' });
+  }
+};
+
+// [Web3] Xem số dư và Lịch sử Gas Fee
+const getWalletBalance = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    // Sinh mock data do thực tế phải query provider blockchain
+    const mockData = {
+      custodial_wallet: '0x' + userId.replace(/-/g, '').substring(0, 40), 
+      balance_matic: 0.045, // Số dư MATIC trong ví
+      nfts_count: 2,
+      recent_gas_history: [
+        { tx_hash: '0xabcd1234...', fee: '0.001 MATIC', action: 'Mint Ticket', date: new Date() }
+      ]
+    };
+    
+    res.status(200).json({ data: mockData });
+  } catch (error) {
+    res.status(500).json({ error: 'Lỗi server.' });
+  }
+};
+
 module.exports = {
   getProfile,
   updateProfile,
-  changePassword
+  changePassword,
+  linkExternalWallet,
+  getWalletBalance
 };

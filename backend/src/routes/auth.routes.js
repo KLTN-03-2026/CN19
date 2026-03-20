@@ -14,4 +14,7 @@ router.post('/register-organizer', authController.registerOrganizer);
 // [POST] /api/auth/forgot-password
 router.post('/forgot-password', authController.forgotPassword);
 
+// [POST] /api/auth/resend-otp
+router.post('/resend-otp', authController.resendOtp);
+
 module.exports = router;

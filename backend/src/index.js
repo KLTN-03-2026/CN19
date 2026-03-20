@@ -37,6 +37,10 @@ const adminSystemRoutes = require('./routes/admin-system.routes');
 
 const scannerRoutes = require('./routes/scanner.routes');
 
+const aiRoutes = require('./routes/ai.routes');
+const metadataRoutes = require('./routes/metadata.routes');
+const utilsRoutes = require('./routes/utils.routes');
+
 const app = express();
 
 // Middlewares
@@ -70,6 +74,11 @@ app.use('/api/admin', adminSystemRoutes);  // points inside to /config, /fraud-a
 
 // Staff routes
 app.use('/api/staff', scannerRoutes);
+
+// Utilities, AI, Web3
+app.use('/api/ai', aiRoutes);
+app.use('/api/metadata', metadataRoutes);
+app.use('/api/utils', utilsRoutes);
 
 // Test Route
 app.get('/', (req, res) => {

@@ -183,9 +183,21 @@ const forgotPassword = async (req, res) => {
   }
 };
 
+// [Utility] Gửi lại mã OTP
+const resendOtp = async (req, res) => {
+  try {
+    const { email } = req.body;
+    // Giả lập logic sinh lại mã OTP và gửi email
+    res.status(200).json({ message: 'Mã OTP mới đã được gửi đến email của bạn.' });
+  } catch (error) {
+    res.status(500).json({ error: 'Lỗi server.' });
+  }
+};
+
 module.exports = {
   register,
   login,
   registerOrganizer,
-  forgotPassword
+  forgotPassword,
+  resendOtp
 };
