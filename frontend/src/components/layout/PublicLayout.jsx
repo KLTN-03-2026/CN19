@@ -23,8 +23,8 @@ const PublicLayout = () => {
         </div>
       </header>
 
-      <main className="flex-grow">
-        {/* Vị trí render các trang con */}
+      <main className="flex-grow flex flex-col relative overflow-hidden">
+        {/* Vị trí render các trang con (Login, Register, Home) */}
         <Outlet />
       </main>
 
