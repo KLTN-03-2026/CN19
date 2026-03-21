@@ -22,21 +22,23 @@ const register = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const password_hash = await bcrypt.hash(password, salt);
 
-    // 3. TODO: Gọi module Web3 sinh ra địa chỉ ví Blockchain (Custodial Wallet)
-    // Giả lập sinh ví ngẫu nhiên cho mục đích demo
-    const mockWalletAddress = '0x' + require('crypto').randomBytes(20).toString('hex');
+    // 3. Sinh địa chỉ ví Blockchain thật từ Ethers.js (Custodial Wallet)
+    const { ethers } = require('ethers');
+    const randomWallet = ethers.Wallet.createRandom();
+    const realWalletAddress = randomWallet.address;
+    const walletPrivateKey = randomWallet.privateKey;
 
     // 4. Lưu User vào database
     const newUser = await prisma.user.create({
       data: {
         email,
+        full_name,
         phone_number,
         password_hash,
         role: 'customer',
         status: 'active',
-        wallet_address: mockWalletAddress,
-        // Nếu schema cần lưu full_name, ta có thể thêm field vào schema sau.
-        // Hiện tại schema chưa có field full_name, nên pass tạm thời.
+        wallet_address: realWalletAddress,
+        wallet_private_key: walletPrivateKey
       }
     });
 

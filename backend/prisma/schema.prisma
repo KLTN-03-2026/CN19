@@ -12,11 +12,13 @@ datasource db {
 model User {
   id                    String    @id @default(uuid())
   email                 String    @unique // Tài khoản đăng nhập chính
+  full_name             String?   // Tên hiển thị đầy đủ
   phone_number          String?   @unique
   password_hash         String
   role                  String    // customer, organizer, staff, admin [cite: 1, 22]
   status                String    @default("active") // active, banned, inactive [cite: 1]
   wallet_address        String?   // Ví Custodial Web3 [cite: 1, 4]
+  wallet_private_key    String?   // Khóa bí mật ví Web3
   avatar_url            String?
   address               String?   // Địa chỉ cá nhân [cite: 1]
   date_of_birth         DateTime?
