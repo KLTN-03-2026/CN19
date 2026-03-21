@@ -1,4 +1,5 @@
 const prisma = require('../config/prisma');
+const web3Service = require('../services/web3.service');
 
 // [UC_10] Gọi lấy link thanh toán (Mock)
 const createPaymentUrl = async (req, res) => {
@@ -73,34 +74,45 @@ const webhookHandler = async (req, res) => {
 
     // 1. Thanh toán thành công -> Đổi Order status
     // 2. Kích hoạt Blockchain Smart Contract (Đúc vé / Mint NFT)
-    // Giả lập Hash trả về từ Smart Contract
-    const txHash = '0x' + require('crypto').randomBytes(32).toString('hex');
+    const mintedTickets = [];
+    const customerWallet = '0x70997970C51812dc3A010C7d01b50e0d17dc79C8'; // Tạm thời dùng hardhat address 1 thay vì ví KH thực tế trong DB
+    
+    // Thực hiện mint TRƯỚC khi mở Transaction DB để tránh Timeout lock DB do chain request lâu
+    for (const item of order.items) {
+      for (let i = 0; i < item.quantity; i++) {
+        // Mint NFT
+        const { tokenId, transactionHash } = await web3Service.mintTicket(
+          customerWallet, 
+          `https://api.basticket.com/metadata/${order.event_id}/${item.ticket_tier_id}`
+        );
+        mintedTickets.push({ item, index: i, tokenId: String(tokenId), txHash: transactionHash });
+      }
+    }
 
     // 3. Sinh ra Database Records cho Tickets tương ứng
     await prisma.$transaction(async (tx) => {
       // Cập nhật Order
       await tx.order.update({
         where: { id: order.id },
-        data: { status: 'paid', transaction_id, transaction_hash: txHash }
+        data: { status: 'paid', transaction_id, transaction_hash: mintedTickets[0]?.txHash || null }
       });
 
       // Tạo vé sở hữu cho user
-      for (const item of order.items) {
-        for (let i = 0; i < item.quantity; i++) {
-          await tx.ticket.create({
-            data: {
-              order_id: order.id,
-              event_id: order.event_id,
-              ticket_tier_id: item.ticket_tier_id,
-              ticket_number: `TKT-${order_number}-${item.id}-${i}`,
-              nft_token_id: `NFT-${Date.now()}-${i}`,
-              nft_mint_tx_hash: txHash,
-              status: 'minted',
-              current_owner_id: order.customer_id,
-              original_buyer_id: order.customer_id,
-            }
-          });
-        }
+      for (const minted of mintedTickets) {
+        const { item, index, tokenId, txHash } = minted;
+        await tx.ticket.create({
+          data: {
+            order_id: order.id,
+            event_id: order.event_id,
+            ticket_tier_id: item.ticket_tier_id,
+            ticket_number: `TKT-${order_number}-${item.id}-${index}`,
+            nft_token_id: tokenId,
+            nft_mint_tx_hash: txHash,
+            status: 'minted',
+            current_owner_id: order.customer_id,
+            original_buyer_id: order.customer_id,
+          }
+        });
       }
     });
 

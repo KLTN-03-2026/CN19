@@ -1,5 +1,6 @@
 const prisma = require('../config/prisma');
 const crypto = require('crypto');
+const web3Service = require('../services/web3.service');
 
 // [UC_xx] Xem danh sách vé của tôi
 const getMyTickets = async (req, res) => {
@@ -94,8 +95,19 @@ const transferTicket = async (req, res) => {
       return res.status(404).json({ error: 'Tài khoản người nhận không tồn tại.' });
     }
 
-    // Thực thi giả lập Blockchain & DB Transaction
-    const txHash = '0xTxHashMock' + Date.now();
+    // Thực thi gọi Blockchain
+    let txHash = '0xTxHashMock' + Date.now();
+    try {
+        if (ticket.nft_token_id) {
+            // Tạm mượn admin làm proxy transfer do user chưa có ví thật kết nối
+            const mockSenderWallet = '0x70997970C51812dc3A010C7d01b50e0d17dc79C8'; // Hardhat #1
+            const mockReceiverWallet = '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC'; // Hardhat #2
+            txHash = await web3Service.transferTicket(mockSenderWallet, mockReceiverWallet, parseInt(ticket.nft_token_id));
+        }
+    } catch (err) {
+        console.error('Blockchain transfer error:', err);
+        return res.status(500).json({ error: 'Lỗi Smart Contract: Không thể chuyển nhượng.' });
+    }
     
     await prisma.$transaction(async (tx) => {
       // 1. Tạo bản ghi Transfer

@@ -1,4 +1,5 @@
 const prisma = require('../config/prisma');
+const web3Service = require('../services/web3.service');
 
 // [UC_12] Đăng bán lại vé (Marketplace)
 const createListing = async (req, res) => {
@@ -40,11 +41,16 @@ const createListing = async (req, res) => {
       // Khóa tính năng vé
       await tx.ticket.update({
         where: { id: ticket.id },
-        data: { is_on_marketplace: true } // Gọi Web3 ngầm: Lock NFT
+        data: { is_on_marketplace: true }
       });
     });
 
-    res.status(201).json({ message: 'Đăng bán vé thành công.' });
+    // Khóa NFT trên Smart Contract
+    if (ticket.nft_token_id) {
+      await web3Service.lockTicket(parseInt(ticket.nft_token_id));
+    }
+
+    res.status(201).json({ message: 'Đăng bán vé thành công và đã khóa vé trên Blockchain.' });
 
   } catch (error) {
     console.error('Lỗi đăng bán vé:', error);
@@ -79,9 +85,14 @@ const deleteListing = async (req, res) => {
 
       await tx.ticket.update({
         where: { id: listing.ticket_id },
-        data: { is_on_marketplace: false } // Gọi Web3 ngầm: Unlock NFT
+        data: { is_on_marketplace: false }
       });
     });
+
+    // Mở khóa NFT trên Smart Contract
+    if (listing.ticket && listing.ticket.nft_token_id) {
+       await web3Service.unlockTicket(parseInt(listing.ticket.nft_token_id));
+    }
 
     res.status(200).json({ message: 'Đã hủy đăng bán. Mã QR và vé đã được mở khóa.' });
   } catch (error) {

@@ -1,4 +1,5 @@
 const prisma = require('../config/prisma');
+const web3Service = require('../services/web3.service');
 
 // [UC_15] Yêu cầu hoàn tiền
 const requestRefund = async (req, res) => {
@@ -48,7 +49,12 @@ const requestRefund = async (req, res) => {
       });
     });
 
-    res.status(201).json({ message: 'Đã gửi yêu cầu hoàn tiền thành công. Vé đang được tạm khóa.' });
+    if (ticket.nft_token_id) {
+      // Khóa NFT ngăn sử dụng hoặc transfer
+      await web3Service.lockTicket(parseInt(ticket.nft_token_id));
+    }
+
+    res.status(201).json({ message: 'Đã gửi yêu cầu hoàn tiền thành công. Vé đang được tạm khóa trên Blockchain.' });
   } catch (error) {
     console.error('Lỗi yêu cầu hoàn tiền:', error);
     res.status(500).json({ error: 'Lỗi server.' });
