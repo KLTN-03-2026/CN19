@@ -1,1 +1,28 @@
 @import "tailwindcss";
+
+@theme {
+  --color-neon-green: #52c42d;
+  --color-neon-hover: #45a825;
+  --color-dark-bg: #0a0a0a;
+  --color-dark-card: #121212;
+  --color-dark-border: #222222;
+}
+
+@layer utilities {
+  .bg-grid-pattern {
+    background-image: 
+      linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+}
+
+body {
+  @apply bg-dark-bg text-white font-sans antialiased;
+}
+
+/* Lớp viền glow xanh cho card */
+.glow-card-green {
+  box-shadow: 0 0 40px -10px rgba(82, 196, 45, 0.3);
+  border: 1px solid rgba(82, 196, 45, 0.3);
+}
