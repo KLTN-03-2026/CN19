@@ -28,6 +28,7 @@ const organizerStatRoutes = require('./routes/organizer-stat.routes');
 // 5. Admin
 const adminUserRoutes = require('./routes/admin-user.routes');
 const adminEventRoutes = require('./routes/admin-event.routes');
+const adminCategoryRoutes = require('./routes/admin-category.routes');
 const adminFinanceRoutes = require('./routes/admin-finance.routes');
 const adminSystemRoutes = require('./routes/admin-system.routes');
 
@@ -68,6 +69,7 @@ app.use('/api/organizer/stats', organizerStatRoutes);
 // Admin
 app.use('/api/admin/users', adminUserRoutes);
 app.use('/api/admin/events', adminEventRoutes);
+app.use('/api/admin/categories', adminCategoryRoutes);
 app.use('/api/admin', adminFinanceRoutes); // points inside to /refunds, /payouts
 app.use('/api/admin', adminSystemRoutes);  // points inside to /config, /fraud-alerts, /stats
 

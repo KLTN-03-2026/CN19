@@ -2,6 +2,7 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getAnalytics } from "firebase/analytics";
+import { getStorage } from "firebase/storage";
 
 // Config Firebase thật của dự án BASTICKET
 const firebaseConfig = {
@@ -20,4 +21,5 @@ export const analytics = getAnalytics(app);
 
 // Lấy tham chiếu đến Dịch vụ Xác thực và Nhà cung cấp Google
 export const auth = getAuth(app);
+export const storage = getStorage(app);
 export const googleProvider = new GoogleAuthProvider();

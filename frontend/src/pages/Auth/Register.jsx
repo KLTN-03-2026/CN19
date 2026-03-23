@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
-import { Info, Eye, EyeOff, User, Phone, ShieldCheck } from 'lucide-react';
+import { Info, Eye, EyeOff, User, Phone, ShieldCheck, X, Lock } from 'lucide-react';
 import { authService } from '../../services/auth.service';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useTranslation } from 'react-i18next';
@@ -15,6 +15,10 @@ const Register = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState(null);
+  const [step, setStep] = useState(1);
+  const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  const [countdown, setCountdown] = useState(59);
+  const otpInputs = useRef([]);
   const navigate = useNavigate();
   const { t } = useTranslation();
 
@@ -26,14 +30,56 @@ const Register = () => {
   
   const isFormValid = emailVal && passVal && confirmPassVal && nameVal && phoneVal && turnstileToken;
 
-  const onSubmit = async (data) => {
+  const onSubmitStep1 = async (data) => {
     try {
       setIsLoading(true);
-      await authService.register(data);
-      toast.success('Đăng ký thành công! Bạn có thể đăng nhập ngay.');
+      await authService.sendRegisterOtp(data);
+      toast.success(t('org.otp_sent') || 'Đã gửi mã OTP đến email của bạn!');
+      setStep(2);
+      setCountdown(59);
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Lỗi gửi yêu cầu đăng ký.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // --- OTP Logic ---
+  useEffect(() => {
+    let timer;
+    if (step === 2 && countdown > 0) {
+      timer = setInterval(() => setCountdown(prev => prev - 1), 1000);
+    }
+    return () => clearInterval(timer);
+  }, [step, countdown]);
+
+  const handleOtpChange = (index, value) => {
+    if (isNaN(value)) return;
+    const newOtp = [...otp];
+    newOtp[index] = value;
+    setOtp(newOtp);
+    if (value !== '' && index < 5) otpInputs.current[index + 1].focus();
+  };
+
+  const handleOtpKeyDown = (index, e) => {
+    if (e.key === 'Backspace' && otp[index] === '' && index > 0) {
+      otpInputs.current[index - 1].focus();
+    }
+  };
+
+  const onVerifyOtp = async () => {
+    const otpCode = otp.join('');
+    if (otpCode.length < 6) {
+      toast.error(t('org.error_otp_length'));
+      return;
+    }
+    try {
+      setIsLoading(true);
+      await authService.verifyRegisterOtp({ email: emailVal, otp: otpCode });
+      toast.success(t('auth.register_success') || 'Đăng ký tài khoản thành công!');
       navigate('/login');
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Đăng ký thất bại. Vui lòng thử lại.');
+      toast.error(err.response?.data?.error || 'Xác thực OTP thất bại.');
     } finally {
       setIsLoading(false);
     }
@@ -78,7 +124,7 @@ const Register = () => {
         </div>
 
         {/* Form Content */}
-        <form className="p-8 flex flex-col space-y-4" onSubmit={handleSubmit(onSubmit)}>
+        <form className="p-8 flex flex-col space-y-4" onSubmit={handleSubmit(onSubmitStep1)}>
           
           <div className="relative">
             <input
@@ -208,6 +254,72 @@ const Register = () => {
           </div>
         </form>
       </div>
+
+      {/* --- MÀN HÌNH NHẬP OTP BƯỚC 2 --- */}
+      {step === 2 && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-md transition-opacity"></div>
+          
+          <div className="relative bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-2xl p-8 max-w-[420px] w-full shadow-2xl animate-in fade-in zoom-in-95 duration-300 flex flex-col items-center">
+            
+            <button onClick={() => setStep(1)} className="absolute top-4 right-4 text-gray-400 hover:text-white"><X className="w-5 h-5" /></button>
+            
+            <ShieldCheck className="w-16 h-16 text-neon-green mb-4" />
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{t('org.otp_title')}</h2>
+            <p className="text-gray-500 dark:text-gray-400 text-sm text-center mb-6">
+              {t('org.otp_desc')}
+            </p>
+
+            {/* OTP Inputs */}
+            <div className="flex justify-center space-x-2 sm:space-x-3 mb-6">
+              {otp.map((digit, i) => (
+                <input
+                  key={i}
+                  type="text"
+                  maxLength="1"
+                  value={digit}
+                  ref={(el) => otpInputs.current[i] = el}
+                  onChange={(e) => handleOtpChange(i, e.target.value)}
+                  onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                  className="w-12 h-14 bg-white border border-gray-300 text-gray-900 text-center text-xl font-black rounded-lg focus:outline-none focus:ring-2 focus:ring-neon-green focus:shadow-[0_0_10px_rgba(82,196,45,0.3)] transition-all"
+                />
+              ))}
+            </div>
+
+            <button 
+              onClick={onVerifyOtp}
+              disabled={isLoading}
+              className={`w-full py-3.5 rounded-xl font-bold text-black transition-all ${
+                isLoading ? 'bg-gray-500 cursor-not-allowed' : 'bg-neon-green hover:bg-neon-hover shadow-[0_0_15px_rgba(82,196,45,0.4)]'
+              }`}
+            >
+              {isLoading ? t('org.configuring') : t('org.confirm_register')}
+            </button>
+
+            <div className="mt-4 text-sm font-medium text-gray-500">
+              {countdown > 0 ? (
+                <span>{t('org.resend_in')} <span className="text-neon-green font-bold">{countdown}s</span></span>
+              ) : (
+                <button 
+                  className="text-neon-green hover:underline cursor-pointer tracking-wide"
+                  onClick={handleSubmit(onSubmitStep1)}
+                >
+                  {t('org.resend_now')}
+                </button>
+              )}
+            </div>
+
+            {/* Note text requirement */}
+            <div className="mt-8 border-t border-gray-100 dark:border-dark-border pt-4 w-full">
+              <p className="text-xs text-gray-400 dark:text-gray-500 text-center leading-relaxed">
+                <Lock className="w-3 h-3 inline-block mr-1 -mt-0.5" />
+                {t('org.data_encrypted')}
+              </p>
+            </div>
+
+          </div>
+        </div>
+      )}
     </div>
   );
 };
