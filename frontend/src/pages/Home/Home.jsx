@@ -1,8 +1,46 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Shield, Zap, Users, CodeCode, CheckCircle2 } from 'lucide-react';
+import { Shield, Zap, Users, CheckCircle2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+
+const GlowCard = ({ children, className = "" }) => {
+  const divRef = useRef(null);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [opacity, setOpacity] = useState(0);
+
+  const handleMouseMove = (e) => {
+    if (!divRef.current) return;
+    const rect = divRef.current.getBoundingClientRect();
+    setPosition({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+  };
+
+  return (
+    <div
+      ref={divRef}
+      onMouseMove={handleMouseMove}
+      onMouseEnter={() => setOpacity(1)}
+      onMouseLeave={() => setOpacity(0)}
+      className={`relative overflow-hidden rounded-2xl bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border hover:border-neon-green/50 dark:hover:border-neon-green/70 hover:shadow-[0_0_30px_rgba(82,196,45,0.15)] transition-all duration-300 ${className}`}
+    >
+      {/* Vùng phát sáng tâm chuột mềm mại hơn (Soft Glow) - Tăng độ sáng để Light mode thấy rõ */}
+      <div
+        className="pointer-events-none absolute -inset-px transition-opacity duration-700 ease-out opacity-80 dark:opacity-100"
+        style={{
+          opacity,
+          background: `radial-gradient(800px circle at ${position.x}px ${position.y}px, rgba(82, 196, 45, 0.12), transparent 60%)`,
+        }}
+      />
+      {/* Nội dung bên trong Card đính lên trên lớp sáng */}
+      <div className="relative z-10 p-8 h-full">
+        {children}
+      </div>
+    </div>
+  );
+};
 
 const Home = () => {
+  const { t } = useTranslation();
+
   return (
     <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-16">
       
@@ -11,78 +49,78 @@ const Home = () => {
         
         {/* Left: Text Content */}
         <div>
-          <div className="inline-flex items-center space-x-2 bg-[#142910] border border-[#2d5f22] rounded-full px-4 py-1.5 mb-8">
+          <div className="inline-flex items-center space-x-2 bg-green-50 dark:bg-[#142910] border border-green-200 dark:border-[#2d5f22] rounded-full px-4 py-1.5 mb-8 transition-colors">
             <Shield className="w-4 h-4 text-neon-green" />
-            <span className="text-sm text-neon-green font-medium tracking-wide">Powered by Blockchain</span>
+            <span className="text-sm text-green-700 dark:text-neon-green font-medium tracking-wide">{t('home.badge')}</span>
           </div>
           
-          <h1 className="text-6xl md:text-7xl font-extrabold text-white leading-[1.1] mb-6">
-            The complete <br />
-            platform to <span className="text-neon-green">secure</span> <br />
-            <span className="text-neon-green">event tickets</span>
+          <h1 className="text-6xl md:text-7xl font-extrabold text-gray-900 dark:text-white leading-[1.1] mb-6 transition-colors">
+            {t('home.title1')} <br />
+            {t('home.title2')} <span className="text-neon-green">{t('home.title_green1')}</span> <br />
+            <span className="text-neon-green">{t('home.title_green2')}</span>
           </h1>
           
-          <p className="text-xl text-gray-400 mb-10 leading-relaxed max-w-lg">
-            Stop fraud and counterfeiting with blockchain-powered NFT tickets. Secure, transparent, and verifiable ticketing for the modern world.
+          <p className="text-xl text-gray-600 dark:text-gray-400 mb-10 leading-relaxed max-w-lg transition-colors">
+            {t('home.desc')}
           </p>
           
           <div className="flex flex-wrap gap-4">
             <Link to="/events" className="bg-neon-green hover:bg-neon-hover text-black px-8 py-3.5 rounded-xl font-bold text-lg transition-all shadow-[0_0_20px_rgba(82,196,45,0.4)]">
-              Explore Events
+              {t('home.btn_explore')}
             </Link>
-            <Link to="/create-event" className="bg-transparent border border-gray-600 hover:border-gray-400 hover:bg-white/5 text-white px-8 py-3.5 rounded-xl font-bold text-lg transition-all">
-              Create Event
+            <Link to="/create-event" className="bg-transparent border border-gray-300 dark:border-gray-600 hover:border-gray-900 dark:hover:border-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 text-gray-800 dark:text-white px-8 py-3.5 rounded-xl font-bold text-lg transition-all">
+              {t('home.btn_create')}
             </Link>
           </div>
         </div>
 
-        {/* Right: Feature Cards Pattern from Image */}
+        {/* Right: Feature Cards Pattern from Image with Hover Tracking */}
         <div className="relative">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10 w-full max-w-lg lg:max-w-none mx-auto">
             
-            {/* Card 1 (Glowing) */}
-            <div className="bg-dark-card rounded-2xl p-8 glow-card-green relative overflow-hidden transform translate-y-4">
-              <div className="w-12 h-12 bg-[#142910] rounded-xl flex items-center justify-center mb-6">
+            {/* Card 1 */}
+            <GlowCard className="transform lg:translate-y-4">
+              <div className="w-12 h-12 bg-green-50 dark:bg-[#142910] rounded-xl flex items-center justify-center mb-6">
                 <Shield className="w-6 h-6 text-neon-green" />
               </div>
-              <h3 className="text-xl font-bold text-white mb-3">Anti-Fraud Protection</h3>
-              <p className="text-gray-400 text-sm leading-relaxed">
-                Every ticket is a unique NFT on the blockchain, making counterfeiting impossible.
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">{t('home.f1_title')}</h3>
+              <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
+                {t('home.f1_desc')}
               </p>
-            </div>
+            </GlowCard>
 
             {/* Card 2 */}
-            <div className="bg-dark-card border border-dark-border rounded-2xl p-8 hover:border-gray-700 transition-colors transform -translate-y-4">
-              <div className="w-12 h-12 bg-gray-800 rounded-xl flex items-center justify-center mb-6">
+            <GlowCard className="transform lg:-translate-y-4">
+              <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800/50 rounded-xl flex items-center justify-center mb-6">
                 <Zap className="w-6 h-6 text-neon-green" />
               </div>
-              <h3 className="text-xl font-bold text-white mb-3">Instant Verification</h3>
-              <p className="text-gray-400 text-sm leading-relaxed">
-                Verify ticket authenticity instantly at event entrances with QR codes.
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">{t('home.f2_title')}</h3>
+              <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
+                 {t('home.f2_desc')}
               </p>
-            </div>
+            </GlowCard>
 
             {/* Card 3 */}
-            <div className="bg-dark-card border border-dark-border rounded-2xl p-8 hover:border-gray-700 transition-colors transform translate-y-4">
-              <div className="w-12 h-12 bg-gray-800 rounded-xl flex items-center justify-center mb-6">
+            <GlowCard className="transform lg:translate-y-4">
+              <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800/50 rounded-xl flex items-center justify-center mb-6">
                 <Users className="w-6 h-6 text-neon-green" />
               </div>
-              <h3 className="text-xl font-bold text-white mb-3">Secure Marketplace</h3>
-              <p className="text-gray-400 text-sm leading-relaxed">
-                Buy and sell tickets safely with transparent pricing and ownership history.
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">{t('home.f3_title')}</h3>
+              <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
+                 {t('home.f3_desc')}
               </p>
-            </div>
+            </GlowCard>
 
              {/* Card 4 */}
-             <div className="bg-dark-card border border-dark-border rounded-2xl p-8 hover:border-gray-700 transition-colors transform -translate-y-4">
-              <div className="w-12 h-12 bg-gray-800 rounded-xl flex items-center justify-center mb-6">
+             <GlowCard className="transform lg:-translate-y-4">
+              <div className="w-12 h-12 bg-gray-100 dark:bg-gray-800/50 rounded-xl flex items-center justify-center mb-6">
                 <CheckCircle2 className="w-6 h-6 text-neon-green" />
               </div>
-              <h3 className="text-xl font-bold text-white mb-3">Smart Contracts</h3>
-              <p className="text-gray-400 text-sm leading-relaxed">
-                Automated ticket management with programmable rules and royalties.
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3">{t('home.f4_title')}</h3>
+              <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
+                 {t('home.f4_desc')}
               </p>
-            </div>
+            </GlowCard>
 
           </div>
         </div>

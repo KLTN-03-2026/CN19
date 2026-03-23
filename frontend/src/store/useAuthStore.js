@@ -9,7 +9,7 @@ export const useAuthStore = create(
       isAuthenticated: false, 
       
       // Hàm gọi khi user Đăng nhập thành công
-      login: (user, token) => set({ user, token, isAuthenticated: true }),
+      login: (userData, token) => set({ user: userData, token, isAuthenticated: true }),
       
       // Hàm gọi khi user Đăng xuất
       logout: () => set({ user: null, token: null, isAuthenticated: false }),

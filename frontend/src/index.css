@@ -8,6 +8,9 @@
   --color-dark-border: #222222;
 }
 
+/* Cấu hình cho class-based dark mode của Tailwind CSS v4 */
+@custom-variant dark (&:is(.dark *));
+
 @layer utilities {
   .bg-grid-pattern {
     background-image: 

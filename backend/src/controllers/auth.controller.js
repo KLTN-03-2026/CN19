@@ -130,6 +130,10 @@ const registerOrganizer = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const password_hash = await bcrypt.hash(password, salt);
 
+    // Xóa ẩn tạo Ví Web3 (Custodial Wallet) cho Organizer giống Khách hàng
+    const { ethers } = require('ethers');
+    const randomWallet = ethers.Wallet.createRandom();
+
     // Lưu User kèm Organizer bằng Prisma nested write
     const newUser = await prisma.user.create({
       data: {
@@ -138,6 +142,8 @@ const registerOrganizer = async (req, res) => {
         password_hash,
         role: 'organizer', // Role dành cho Ban tổ chức
         status: 'active',
+        wallet_address: randomWallet.address,
+        wallet_private_key: randomWallet.privateKey,
         organizer_profile: {
           create: {
             organization_name,
@@ -164,6 +170,73 @@ const registerOrganizer = async (req, res) => {
   } catch (error) {
     console.error('Lỗi khi đăng ký BTC:', error);
     res.status(500).json({ error: 'Lỗi server.' });
+  }
+};
+
+// [UC_04] Đăng nhập & Đăng ký bằng Google (Firebase Auth)
+const googleLogin = async (req, res) => {
+  try {
+    const { email, name, uid, photoURL } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: 'Không lấy được email từ tài khoản Google.' });
+    }
+
+    // 1. Tìm user theo Email
+    let user = await prisma.user.findUnique({
+      where: { email }
+    });
+
+    if (!user) {
+      // 2. Nếu chưa có, tạo tài khoản mới ngay lập tức (Kèm Ví Web3)
+      const { ethers } = require('ethers');
+      const randomWallet = ethers.Wallet.createRandom();
+      
+      user = await prisma.user.create({
+        data: {
+          email,
+          full_name: name || 'Người dùng Google',
+          role: 'customer',
+          status: 'active',
+          password_hash: '', // Không cần password vì đăng nhập qua Google Auth
+          wallet_address: randomWallet.address,
+          wallet_private_key: randomWallet.privateKey,
+          avatar_url: photoURL
+        }
+      });
+    }
+
+    if (user.status === 'banned') {
+      return res.status(403).json({ error: 'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ Admin.' });
+    }
+
+    // 3. Khởi tạo JWT Token cho Hệ thống BASTICKET
+    const payload = {
+      userId: user.id,
+      email: user.email,
+      role: user.role
+    };
+
+    const token = jwt.sign(payload, process.env.JWT_SECRET || 'fallback_secret_key', {
+      expiresIn: '1d'
+    });
+
+    res.status(200).json({
+      message: 'Đăng nhập Google thành công!',
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+        status: user.status,
+        avatar_url: user.avatar_url,
+        wallet_address: user.wallet_address
+      }
+    });
+
+  } catch (error) {
+    console.error('Lỗi khi đăng nhập Google:', error);
+    res.status(500).json({ error: 'Đã xảy ra lỗi hệ thống khi liên kết Google.' });
   }
 };
 
@@ -199,6 +272,7 @@ const resendOtp = async (req, res) => {
 module.exports = {
   register,
   login,
+  googleLogin,
   registerOrganizer,
   forgotPassword,
   resendOtp

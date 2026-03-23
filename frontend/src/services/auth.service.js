@@ -8,5 +8,9 @@ export const authService = {
   register: async (userData) => {
     const response = await api.post('/auth/register', userData);
     return response.data;
+  },
+  googleLogin: async (data) => {
+    const response = await api.post('/auth/google', data);
+    return response.data;
   }
 };

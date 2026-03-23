@@ -9,6 +9,9 @@ import Home from './pages/Home/Home';
 import Login from './pages/Auth/Login';
 import Register from './pages/Auth/Register';
 
+// Organizer Pages
+import RegisterOrganizer from './pages/Organizer/RegisterOrganizer';
+
 const router = createBrowserRouter([
   {
     path: '/',
@@ -17,6 +20,7 @@ const router = createBrowserRouter([
       { path: '', element: <Home /> },
       { path: 'login', element: <Login /> },
       { path: 'register', element: <Register /> },
+      { path: 'organizer-register', element: <RegisterOrganizer /> },
       { path: '*', element: <Navigate to="/" replace /> }
     ]
   }
