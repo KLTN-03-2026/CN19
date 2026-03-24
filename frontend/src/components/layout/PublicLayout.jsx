@@ -112,7 +112,7 @@ const PublicLayout = () => {
             <div className="flex items-center space-x-6">
               
               {/* Nút Truy cập Admin (Nếu là Admin/Staff) */}
-              {isAuthenticated && (user?.role === 'admin' || user?.role === 'staff') && (
+              {isAuthenticated && user?.role === 'admin' && (
                 <Link 
                   to="/admin/dashboard"
                   className="hidden lg:flex items-center bg-red-500/10 hover:bg-red-500/20 text-red-500 px-4 py-2 rounded-lg font-bold transition-colors text-sm border border-red-500/20 mr-4"

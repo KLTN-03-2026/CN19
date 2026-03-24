@@ -29,7 +29,13 @@ const Login = () => {
       const res = await authService.login(data);
       setAuth(res.user, res.token);
       toast.success('Đăng nhập thành công!');
-      navigate('/');
+      
+      // Redirect based on role
+      if (res.user.role === 'admin') {
+        navigate('/admin/dashboard');
+      } else {
+        navigate('/');
+      }
     } catch (err) {
       toast.error(err.response?.data?.error || 'Đăng nhập thất bại.');
     } finally {
@@ -52,7 +58,13 @@ const Login = () => {
       
       setAuth(res.user, res.token);
       toast.success('Đăng nhập với Google thành công!');
-      navigate('/');
+      
+      // Redirect based on role
+      if (res.user.role === 'admin') {
+        navigate('/admin/dashboard');
+      } else {
+        navigate('/');
+      }
     } catch (err) {
       console.error(err);
       toast.error('Lỗi khi đăng nhập bằng Google.');
