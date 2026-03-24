@@ -2,8 +2,10 @@ import React from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
-  Users, 
   Calendar, 
+  PlusCircle, 
+  Ticket, 
+  Wallet, 
   Settings, 
   LogOut, 
   Menu, 
@@ -11,21 +13,16 @@ import {
   Bell, 
   Search,
   ChevronRight,
-  ShieldCheck,
-  CreditCard,
-  Tags,
-  RotateCcw,
-  ShieldAlert,
-  BarChart3,
-  History,
   Sun,
   Moon,
-  Home
+  UserCircle,
+  Home,
+  Users
 } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import toast from 'react-hot-toast';
 
-const AdminLayout = () => {
+const OrganizerLayout = () => {
   const { user, logout } = useAuthStore();
   const location = useLocation();
   const navigate = useNavigate();
@@ -44,19 +41,19 @@ const AdminLayout = () => {
 
   const handleLogout = () => {
     logout();
-    toast.success('Đã đăng xuất khỏi trang quản trị');
+    toast.success('Đã đăng xuất khỏi tài khoản Ban Tổ Chức');
     navigate('/login');
   };
 
   const menuItems = [
-    { path: '/admin/dashboard', icon: BarChart3, label: 'Dashboard' },
-    { path: '/admin/users', icon: Users, label: 'Người dùng' },
-    { path: '/admin/events', icon: Calendar, label: 'Sự kiện' },
-    { path: '/admin/categories', icon: Tags, label: 'Danh mục sự kiện' },
-    { path: '/admin/refunds', icon: RotateCcw, label: 'Yêu cầu hoàn tiền' },
-    { path: '/admin/fraud', icon: ShieldAlert, label: 'Cảnh báo gian lận' },
-    { path: '/admin/transactions', icon: History, label: 'Quản lý giao dịch' },
-    { path: '/admin/settings', icon: Settings, label: 'Cấu hình hệ thống' },
+    { path: '/organizer/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+    { path: '/organizer/my-events', icon: Calendar, label: 'Sự kiện của tôi' },
+    { path: '/organizer/create-event', icon: PlusCircle, label: 'Tạo sự kiện' },
+    { path: '/organizer/tickets', icon: Ticket, label: 'Quản lý vé' },
+    { path: '/organizer/revenue', icon: Wallet, label: 'Doanh thu & Rút tiền' },
+    { path: '/organizer/staff', icon: Users, label: 'Quản lý nhân viên' },
+    { path: '/organizer/participants', icon: Users, label: 'Danh sách tham gia' },
+    { path: '/organizer/settings', icon: Settings, label: 'Cài đặt' },
   ];
 
   return (
@@ -69,10 +66,10 @@ const AdminLayout = () => {
       >
         <div className="p-6 flex items-center justify-between">
           <div className={`flex items-center space-x-3 ${!isSidebarOpen && 'hidden'}`}>
-            <div className="w-8 h-8 bg-neon-green rounded-lg flex items-center justify-center">
-              <ShieldCheck className="w-5 h-5 text-black" />
+            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+              <UserCircle className="w-5 h-5 text-white" />
             </div>
-            <span className="font-black text-xl tracking-tight text-gray-900 dark:text-white uppercase">Admin</span>
+            <span className="font-black text-xl tracking-tight text-gray-900 dark:text-white uppercase">Organizer</span>
           </div>
           <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
             {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-6 h-6" />}
@@ -89,11 +86,11 @@ const AdminLayout = () => {
                 to={item.path}
                 className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition-all group ${
                   isActive 
-                    ? 'bg-neon-green text-black font-bold shadow-[0_0_15px_rgba(82,196,45,0.3)]' 
+                    ? 'bg-blue-600 text-white font-bold shadow-[0_0_15px_rgba(37,99,235,0.3)]' 
                     : 'text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white'
                 }`}
               >
-                <Icon className={`w-5 h-5 ${isActive ? 'text-black' : 'group-hover:text-neon-green'}`} />
+                <Icon className={`w-5 h-5 ${isActive ? 'text-white' : 'group-hover:text-blue-600'}`} />
                 {isSidebarOpen && <span>{item.label}</span>}
                 {isSidebarOpen && isActive && <ChevronRight className="ml-auto w-4 h-4" />}
               </Link>
@@ -104,7 +101,7 @@ const AdminLayout = () => {
         <div className="p-4 border-t border-gray-200 dark:border-white/5">
           <button 
             onClick={handleLogout}
-            className="flex items-center space-x-3 px-4 py-3 w-full rounded-xl text-red-500 hover:bg-red-500/10 transition-all"
+            className="flex items-center space-x-3 px-4 py-3 w-full rounded-xl text-red-500 hover:bg-red-500/10 transition-all font-bold"
           >
             <LogOut className="w-5 h-5" />
             {isSidebarOpen && <span>Đăng xuất</span>}
@@ -120,8 +117,8 @@ const AdminLayout = () => {
             <Search className="absolute left-3 w-4 h-4 text-gray-400" />
             <input 
               type="text" 
-              placeholder="Tìm kiếm nhanh..." 
-              className="w-full bg-gray-100 dark:bg-white/10 border border-gray-200 dark:border-white/20 rounded-full py-2 pl-10 pr-4 text-sm focus:outline-none focus:border-neon-green transition-all dark:text-white text-gray-900"
+              placeholder="Tìm kiếm sự kiện, đơn hàng..." 
+              className="w-full bg-gray-100 dark:bg-white/10 border border-gray-200 dark:border-white/20 rounded-full py-2 pl-10 pr-4 text-sm focus:outline-none focus:border-blue-600 transition-all dark:text-white text-gray-900"
             />
           </div>
 
@@ -129,7 +126,7 @@ const AdminLayout = () => {
             {/* Back to Home Button */}
             <Link 
               to="/" 
-              className="flex items-center space-x-2 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 px-4 py-2 rounded-xl text-sm font-bold transition-all border border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-400 hover:text-neon-green dark:hover:text-neon-green"
+              className="flex items-center space-x-2 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 px-4 py-2 rounded-xl text-sm font-bold transition-all border border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400"
               title="Quay về trang chủ khách hàng"
             >
               <Home className="w-4 h-4" />
@@ -140,7 +137,7 @@ const AdminLayout = () => {
             {/* Theme Toggle */}
             <button 
               onClick={() => setIsDark(!isDark)}
-              className="p-2 bg-gray-100 dark:bg-white/5 rounded-full text-gray-500 dark:text-gray-400 hover:text-neon-green transition-all border border-gray-200 dark:border-white/5"
+              className="p-2 bg-gray-100 dark:bg-white/5 rounded-full text-gray-500 dark:text-gray-400 hover:text-blue-600 transition-all border border-gray-200 dark:border-white/5"
             >
               {isDark ? <Moon className="w-5 h-5 text-gray-400" /> : <Sun className="w-5 h-5 text-yellow-500" />}
             </button>
@@ -151,11 +148,11 @@ const AdminLayout = () => {
             </button>
             <div className="flex items-center space-x-3 pl-4 border-l border-gray-200 dark:border-white/5">
               <div className="text-right flex flex-col hidden sm:flex">
-                <span className="text-sm font-bold text-gray-900 dark:text-white">{user?.full_name || 'Admin'}</span>
-                <span className="text-[10px] text-neon-green uppercase font-black tracking-tighter">Super Admin</span>
+                <span className="text-sm font-bold text-gray-900 dark:text-white">{user?.full_name || 'Organizer'}</span>
+                <span className="text-[10px] text-blue-600 uppercase font-black tracking-tighter">Ban Tổ Chức</span>
               </div>
-              <div className="w-10 h-10 bg-gray-200 dark:bg-white/10 rounded-full border border-gray-300 dark:border-white/10 flex items-center justify-center text-neon-green font-bold">
-                {user?.email?.charAt(0).toUpperCase() || 'A'}
+              <div className="w-10 h-10 bg-gray-200 dark:bg-white/10 rounded-full border border-gray-300 dark:border-white/10 flex items-center justify-center text-blue-600 font-bold">
+                {user?.email?.charAt(0).toUpperCase() || 'O'}
               </div>
             </div>
           </div>
@@ -170,4 +167,4 @@ const AdminLayout = () => {
   );
 };
 
-export default AdminLayout;
+export default OrganizerLayout;

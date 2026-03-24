@@ -12,12 +12,15 @@ import {
   Loader2,
   Calendar,
   Image as ImageIcon,
-  Upload
+  Upload,
+  Eye,
+  Filter,
+  Clock,
+  ArrowUpDown
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { adminService } from '../../services/admin.service';
-import { storage } from '../../config/firebase';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import axios from 'axios';
 
 const CategoryManagement = () => {
   const [categories, setCategories] = useState([]);
@@ -29,6 +32,13 @@ const CategoryManagement = () => {
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  
+  // New States
+  const [statusFilter, setStatusFilter] = useState('all'); // all, active, hidden
+  const [dateSort, setDateSort] = useState('newest'); // newest, oldest
+  const [isCategoryActive, setIsCategoryActive] = useState(true);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [selectedDetailCategory, setSelectedDetailCategory] = useState(null);
 
   useEffect(() => {
     fetchCategories();
@@ -53,6 +63,7 @@ const CategoryManagement = () => {
     setEditingCategory(category);
     setNewCategoryName(category ? category.name : '');
     setImagePreview(category ? category.image_url : '');
+    setIsCategoryActive(category ? category.is_active : true);
     setImageFile(null);
     setIsModalOpen(true);
   };
@@ -78,9 +89,22 @@ const CategoryManagement = () => {
   };
 
   const uploadImage = async (file) => {
-    const storageRef = ref(storage, `categories/${Date.now()}_${file.name}`);
-    const snapshot = await uploadBytes(storageRef, file);
-    return await getDownloadURL(snapshot.ref);
+    const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+    const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+
+    if (!cloudName || cloudName === 'your_cloud_name') {
+      throw new Error("Cloudinary chưa được cấu hình");
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', uploadPreset);
+
+    const res = await axios.post(
+      `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+      formData
+    );
+    return res.data.secure_url;
   };
 
   const handleSubmit = async (e) => {
@@ -102,7 +126,8 @@ const CategoryManagement = () => {
         // Update
         const response = await adminService.updateCategory(editingCategory.id, { 
           name: newCategoryName, 
-          image_url: imageUrl 
+          image_url: imageUrl,
+          is_active: isCategoryActive
         });
         if (response.success) {
           toast.success('Cập nhật thành công');
@@ -113,7 +138,8 @@ const CategoryManagement = () => {
         // Create
         const response = await adminService.createCategory({ 
           name: newCategoryName, 
-          image_url: imageUrl 
+          image_url: imageUrl,
+          is_active: isCategoryActive
         });
         if (response.success) {
           toast.success('Thêm danh mục thành công');
@@ -156,9 +182,32 @@ const CategoryManagement = () => {
     }
   };
 
-  const filteredCategories = categories.filter(c => 
-    c.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredCategories = categories
+    .filter(c => {
+      const matchesSearch = c.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus = statusFilter === 'all' 
+        ? true 
+        : statusFilter === 'active' ? c.is_active : !c.is_active;
+
+      return matchesSearch && matchesStatus;
+    })
+    .sort((a, b) => {
+      if (dateSort === 'newest') {
+        return new Date(b.created_at) - new Date(a.created_at);
+      } else {
+        return new Date(a.created_at) - new Date(b.created_at);
+      }
+    });
+
+  const handleOpenDetail = (category) => {
+    setSelectedDetailCategory(category);
+    setIsDetailModalOpen(true);
+  };
+
+  const handleCloseDetail = () => {
+    setIsDetailModalOpen(false);
+    setSelectedDetailCategory(null);
+  };
 
   return (
     <div className="p-6">
@@ -197,6 +246,35 @@ const CategoryManagement = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
+        
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          {/* Status Filter */}
+          <div className="relative w-full md:w-44">
+            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <select 
+              className="w-full bg-gray-50 dark:bg-white/10 border border-gray-200 dark:border-white/20 rounded-xl py-3 pl-9 pr-4 text-xs font-bold appearance-none focus:outline-none focus:border-neon-green transition-all dark:text-white text-gray-900"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="all">Tất cả trạng thái</option>
+              <option value="active">Đang hoạt động</option>
+              <option value="hidden">Đã ẩn</option>
+            </select>
+          </div>
+
+          {/* Date Sort */}
+          <div className="relative w-full md:w-44">
+            <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <select 
+              className="w-full bg-gray-50 dark:bg-white/10 border border-gray-200 dark:border-white/20 rounded-xl py-3 pl-9 pr-4 text-xs font-bold appearance-none focus:outline-none focus:border-neon-green transition-all dark:text-white text-gray-900"
+              value={dateSort}
+              onChange={(e) => setDateSort(e.target.value)}
+            >
+              <option value="newest">Mới nhất trước</option>
+              <option value="oldest">Cũ nhất trước</option>
+            </select>
+          </div>
+        </div>
       </div>
 
       {/* Content */}
@@ -214,6 +292,7 @@ const CategoryManagement = () => {
                   <th className="px-6 py-4 text-[10px] font-black uppercase text-gray-400 tracking-wider">Tên Danh mục</th>
                   <th className="px-6 py-4 text-[10px] font-black uppercase text-gray-400 tracking-wider text-center">Số lượng Sự kiện</th>
                   <th className="px-6 py-4 text-[10px] font-black uppercase text-gray-400 tracking-wider text-center">Trạng thái</th>
+                  <th className="px-6 py-4 text-[10px] font-black uppercase text-gray-400 tracking-wider text-center">Ngày tạo</th>
                   <th className="px-6 py-4 text-[10px] font-black uppercase text-gray-400 tracking-wider text-right">Thao tác</th>
                 </tr>
               </thead>
@@ -238,19 +317,28 @@ const CategoryManagement = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <button 
-                        onClick={() => toggleStatus(c.id, c.is_active)}
-                        className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase transition-all ${
-                          c.is_active 
-                          ? 'bg-green-500/10 text-green-500 hover:bg-green-500/20' 
-                          : 'bg-red-500/10 text-red-500 hover:bg-red-500/20'
-                        }`}
-                      >
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase transition-all ${
+                        c.is_active 
+                        ? 'bg-green-500/10 text-green-500' 
+                        : 'bg-red-500/10 text-red-500'
+                      }`}>
                         {c.is_active ? 'Đang hoạt động' : 'Đã ẩn'}
-                      </button>
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-center">
+                      <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                        {new Date(c.created_at).toLocaleDateString('vi-VN')}
+                      </span>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-end space-x-2">
+                        <button 
+                          onClick={() => handleOpenDetail(c)}
+                          className="p-2 text-gray-400 hover:text-neon-green hover:bg-neon-green/10 rounded-lg transition-all"
+                          title="Xem chi tiết"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
                         <button 
                           onClick={() => handleOpenModal(c)}
                           className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-500/10 rounded-lg transition-all"
@@ -343,6 +431,29 @@ const CategoryManagement = () => {
                 />
               </div>
 
+              {/* Status Toggle */}
+              <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-white/5 rounded-2xl border border-gray-100 dark:border-white/10">
+                <div>
+                  <label className="block text-sm font-bold text-gray-900 dark:text-white">
+                    Trạng thái hoạt động
+                  </label>
+                  <p className="text-xs text-gray-500">Cho phép danh mục hiển thị trên hệ thống</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsCategoryActive(!isCategoryActive)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                    isCategoryActive ? 'bg-neon-green' : 'bg-gray-300 dark:bg-gray-700'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      isCategoryActive ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+
               <div className="flex space-x-3 pt-4">
                 <button 
                   type="button"
@@ -360,6 +471,94 @@ const CategoryManagement = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Detail Modal */}
+      {isDetailModalOpen && selectedDetailCategory && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-[#111114] w-full max-lg rounded-3xl overflow-hidden border border-white/10 shadow-2xl animate-in zoom-in duration-300">
+            {/* Modal Header/Image */}
+            <div className="relative h-64 w-full">
+              {selectedDetailCategory.image_url ? (
+                <img src={selectedDetailCategory.image_url} alt={selectedDetailCategory.name} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-gray-100 dark:bg-white/5 flex items-center justify-center">
+                  <Tags className="w-20 h-20 text-gray-300 dark:text-gray-700" />
+                </div>
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+              <button 
+                onClick={handleCloseDetail}
+                className="absolute top-4 right-4 p-2 bg-black/50 hover:bg-black/70 rounded-full text-white transition-all backdrop-blur-md"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <div className="absolute bottom-6 left-6">
+                <h3 className="text-3xl font-black text-white mb-2">{selectedDetailCategory.name}</h3>
+                <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${
+                  selectedDetailCategory.is_active ? 'bg-neon-green text-black' : 'bg-red-500 text-white'
+                }`}>
+                  {selectedDetailCategory.is_active ? 'Đang hoạt động' : 'Đã ẩn'}
+                </span>
+              </div>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-8">
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-1">
+                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                    <Calendar className="w-3 h-3" /> Ngày tạo
+                  </span>
+                  <p className="text-sm font-bold text-gray-900 dark:text-white">
+                    {new Date(selectedDetailCategory.created_at).toLocaleDateString('vi-VN', {
+                      day: '2-digit', month: '2-digit', year: 'numeric'
+                    })}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                    <Clock className="w-3 h-3" /> Cập nhật cuối
+                  </span>
+                  <p className="text-sm font-bold text-gray-900 dark:text-white">
+                    {new Date(selectedDetailCategory.updated_at).toLocaleDateString('vi-VN', {
+                      day: '2-digit', month: '2-digit', year: 'numeric'
+                    })}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                    <Tags className="w-3 h-3" /> Quy mô
+                  </span>
+                  <p className="text-sm font-bold text-gray-900 dark:text-white">
+                    {selectedDetailCategory._count.events} Sự kiện đã đăng ký
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                    <AlertCircle className="w-3 h-3" /> ID Danh mục
+                  </span>
+                  <p className="text-xs font-mono text-gray-500 break-all">
+                    {selectedDetailCategory.id}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-8 pt-8 border-t border-gray-100 dark:border-white/5">
+                <button 
+                  onClick={() => {
+                    handleCloseDetail();
+                    handleOpenModal(selectedDetailCategory);
+                  }}
+                  className="w-full py-4 bg-neon-green hover:bg-neon-green/90 text-black font-black rounded-2xl transition-all shadow-lg shadow-neon-green/20 flex items-center justify-center gap-2"
+                >
+                  <Edit2 className="w-5 h-5" />
+                  Chỉnh sửa danh mục
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

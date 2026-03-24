@@ -89,6 +89,14 @@ model Event {
   royalty_fee_percent    Decimal                @default(5.0)
   smart_contract_address String?
   refund_deadline_days   Int?
+  description            String?
+  image_url              String?
+  end_date               DateTime?
+  end_time               String?
+  latitude               Float?
+  location_address       String?
+  longitude              Float?
+  video_url              String?
   payouts                EscrowPayout[]
   category               Category               @relation(fields: [category_id], references: [id])
   organizer              Organizer              @relation(fields: [organizer_id], references: [id])

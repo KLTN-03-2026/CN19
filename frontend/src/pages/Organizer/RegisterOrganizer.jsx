@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import AddressMapModal from '../../components/AddressMapModal';
 import { useAuthStore } from '../../store/useAuthStore';
 import { authService } from '../../services/auth.service';
+import axios from 'axios';
 
 const RegisterOrganizer = () => {
   const { t } = useTranslation();
@@ -31,8 +32,10 @@ const RegisterOrganizer = () => {
 
   // --- State cho Bước 2: Upload ---
   const [file, setFile] = useState(null);
+  const [kycUrl, setKycUrl] = useState('');
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isDragActive, setIsDragActive] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   // --- State cho Bước 3: OTP ---
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
@@ -74,14 +77,42 @@ const RegisterOrganizer = () => {
     
     setFile(selectedFile);
     setUploadProgress(0);
-    
-    // Giả lập Progress bar
-    let progress = 0;
-    const interval = setInterval(() => {
-      progress += 10;
-      setUploadProgress(progress);
-      if (progress >= 100) clearInterval(interval);
-    }, 100);
+    uploadToCloudinary(selectedFile);
+  };
+
+  const uploadToCloudinary = async (selectedFile) => {
+    const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+    const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+
+    if (!cloudName || cloudName === 'your_cloud_name') {
+      toast.error("Cloudinary chưa được cấu hình.");
+      return;
+    }
+
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+    formData.append('upload_preset', uploadPreset);
+
+    try {
+      const res = await axios.post(
+        `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`, // Dùng 'auto' để hỗ trợ cả PDF
+        formData,
+        {
+          onUploadProgress: (progressEvent) => {
+            const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            setUploadProgress(progress);
+          }
+        }
+      );
+      setKycUrl(res.data.secure_url);
+      toast.success(t('org.upload_success') || "Tải tài liệu lên thành công!");
+    } catch (error) {
+      toast.error("Lỗi khi tải tài liệu lên Cloudinary.");
+      console.error(error);
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleDrop = (e) => {
@@ -115,6 +146,7 @@ const RegisterOrganizer = () => {
         password: values.password || undefined,
         organization_name: values.organizerName,
         address: values.address,
+        business_license: kycUrl, // Gửi link Cloudinary về backend
         existing_user_id: isCustomerUpgrade ? user?.id : undefined
       });
       toast.success(t('org.otp_sent') || 'Đã gửi OTP đến email!');
@@ -418,9 +450,10 @@ const RegisterOrganizer = () => {
                     <ArrowLeft className="w-5 h-5" />
                   </button>
                   <button type="button" onClick={handleSendRequest}
-                    className="flex-1 py-4 bg-neon-green hover:bg-neon-hover text-black font-bold rounded-xl shadow-[0_0_15px_rgba(82,196,45,0.4)] transition-all"
+                    disabled={isUploading || isLoading || !kycUrl}
+                    className="flex-1 py-4 bg-neon-green hover:bg-neon-hover text-black font-bold rounded-xl shadow-[0_0_15px_rgba(82,196,45,0.4)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {t('org.submit_btn')}
+                    {isUploading ? t('org.uploading') || 'Đang tải lên...' : t('org.submit_btn')}
                   </button>
                 </div>
 

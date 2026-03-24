@@ -162,7 +162,7 @@ const login = async (req, res) => {
 // [UC_03_A] Gửi OTP Đăng ký Ban Tổ chức (Hỗ trợ cả User mới lẫn Customer nâng cấp)
 const sendOrganizerOtp = async (req, res) => {
   try {
-    const { email, phone_number, full_name, password, organization_name, address, existing_user_id } = req.body;
+    const { email, phone_number, full_name, password, organization_name, address, existing_user_id, business_license } = req.body;
 
     // Nếu là Customer đã đăng nhập nâng cấp thì kiểm tra tồn tại qua existing_user_id
     // Nếu là User mới hoàn toàn thì kiểm tra Email/SĐT
@@ -219,7 +219,7 @@ const verifyOrganizerOtp = async (req, res) => {
     }
     if (record.otp !== otp) return res.status(400).json({ error: 'Mã OTP không chính xác!' });
 
-    const { full_name, phone_number, password, organization_name, address, existing_user_id } = record.data;
+    const { full_name, phone_number, password, organization_name, address, existing_user_id, business_license } = record.data;
 
     let userId;
 
@@ -233,6 +233,7 @@ const verifyOrganizerOtp = async (req, res) => {
         data: {
           user_id: existing_user_id,
           organization_name: organization_name || '',
+          business_license: business_license || null,
           kyc_status: 'pending'
         }
       });
@@ -259,6 +260,7 @@ const verifyOrganizerOtp = async (req, res) => {
           organizer_profile: {
             create: {
               organization_name: organization_name || '',
+              business_license: business_license || null,
               kyc_status: 'pending'
             }
           }

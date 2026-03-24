@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, Link, useNavigate } from 'react-router-dom';
-import { Shield, Moon, Sun, Globe, User, Ticket, LogOut, ChevronDown } from 'lucide-react';
+import { Shield, Moon, Sun, Globe, User, Ticket, LogOut, ChevronDown, LayoutDashboard } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
@@ -122,12 +122,22 @@ const PublicLayout = () => {
               )}
 
               {/* Nút Dành cho Ban Tổ Chức - Smart Routing theo Role */}
-              <button 
-                onClick={handleOrganizerBtnClick}
-                className="hidden lg:flex items-center bg-gray-100 hover:bg-200 dark:bg-white/5 dark:hover:bg-white/10 text-gray-900 dark:text-white px-4 py-2 rounded-lg font-semibold transition-colors text-sm border border-gray-200 dark:border-gray-700"
-              >
-                {isAuthenticated && user?.role === 'organizer' ? '🏢 Dashboard BTC' : t('nav.organizer')}
-              </button>
+              {isAuthenticated && user?.role === 'organizer' ? (
+                <Link 
+                  to="/organizer/dashboard"
+                  className="hidden lg:flex items-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold transition-all text-sm shadow-[0_0_15px_rgba(37,99,235,0.3)] mr-2"
+                >
+                  <LayoutDashboard className="w-4 h-4 mr-2" />
+                  Dashboard BTC
+                </Link>
+              ) : (
+                <button 
+                  onClick={handleOrganizerBtnClick}
+                  className="hidden lg:flex items-center bg-gray-100 hover:bg-200 dark:bg-white/5 dark:hover:bg-white/10 text-gray-900 dark:text-white px-4 py-2 rounded-lg font-semibold transition-colors text-sm border border-gray-200 dark:border-gray-700"
+                >
+                  {t('nav.organizer')}
+                </button>
+              )}
 
               {/* Vùng Setting Theme & Lang nằm giữa Danh mục và Auth */}
               <div className="flex items-center space-x-3 border-l md:border-l-0 md:border-r border-gray-300 dark:border-gray-700 pl-4 md:pl-0 md:pr-6 md:mr-2">

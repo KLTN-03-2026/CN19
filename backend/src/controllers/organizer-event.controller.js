@@ -16,25 +16,67 @@ const verifyEventOwnership = async (eventId, userId) => {
 const createEvent = async (req, res) => {
   try {
     const userId = req.user.userId;
-    const { title, category_id, event_date, event_time, ticket_tiers } = req.body;
+    const {
+      title,
+      category_id,
+      description,
+      image_url,
+      video_url,
+      event_date,
+      event_time,
+      end_date, end_time,
+      location_address, latitude, longitude,
+      ticket_tiers,
+      allow_resale, allow_refund, royalty_fee_percent, refund_deadline_days,
+      status
+    } = req.body;
 
     const organizer = await prisma.organizer.findUnique({ where: { user_id: userId } });
     if (!organizer) return res.status(403).json({ error: 'Không tìm thấy hồ sơ Ban tổ chức.' });
 
+    // Validate ticket tiers
+    if (!ticket_tiers || !Array.isArray(ticket_tiers) || ticket_tiers.length === 0) {
+      return res.status(400).json({ error: 'Vui lòng cung cấp ít nhất một hạng vé.' });
+    }
+
+    for (const tier of ticket_tiers) {
+      if (!tier.tier_name || !tier.price || tier.quantity_total === undefined || tier.quantity_total === '') {
+        return res.status(400).json({ error: `Hạng vé "${tier.tier_name || 'không tên'}" thiếu thông tin giá hoặc số lượng.` });
+      }
+      if (isNaN(parseFloat(tier.price)) || isNaN(parseInt(tier.quantity_total))) {
+        return res.status(400).json({ error: `Thông tin giá hoặc số lượng của hạng vé "${tier.tier_name}" không hợp lệ.` });
+      }
+    }
+
+
     const newEvent = await prisma.event.create({
       data: {
-        organizer_id: organizer.id,
-        category_id,
         title,
+        description,
+        image_url,
+        video_url,
+        category_id,
+        organizer_id: organizer.id,
         event_date: new Date(event_date),
         event_time,
-        status: 'pending', // Chờ Admin duyệt
+        end_date: end_date ? new Date(end_date) : null,
+        end_time,
+        location_address,
+        latitude: latitude ? parseFloat(latitude) : null,
+        longitude: longitude ? parseFloat(longitude) : null,
+        status: status || 'pending', // Mặc định là pending nếu không có status
+        allow_resale: allow_resale !== undefined ? allow_resale : true,
+        allow_refund: allow_refund !== undefined ? allow_refund : true,
+        royalty_fee_percent: royalty_fee_percent ? parseFloat(royalty_fee_percent) : 0,
+        refund_deadline_days: refund_deadline_days ? parseInt(refund_deadline_days) : 0,
         ticket_tiers: {
-          create: ticket_tiers.map(t => ({
-            tier_name: t.tier_name,
-            price: t.price,
-            quantity_total: t.quantity_total,
-            quantity_available: t.quantity_total
+          create: ticket_tiers.map(tier => ({
+            tier_name: tier.tier_name,
+            price: parseFloat(tier.price),
+            quantity_total: parseInt(tier.quantity_total),
+            quantity_available: parseInt(tier.quantity_total), // Changed from quantity_remaining to quantity_available to match original
+            benefits: tier.benefits,
+            section_name: tier.section_name
           }))
         }
       }
@@ -42,8 +84,12 @@ const createEvent = async (req, res) => {
 
     res.status(201).json({ message: 'Tạo sự kiện thành công. Đang chờ Admin phê duyệt.', data: newEvent });
   } catch (error) {
-    console.error('Lỗi tạo sự kiện:', error);
-    res.status(500).json({ error: 'Lỗi server.' });
+    console.error('Lỗi tạo sự kiện (Chi tiết):', error);
+    if (error.code) {
+        console.error('Prisma Error Code:', error.code);
+        console.error('Prisma Error Meta:', error.meta);
+    }
+    res.status(500).json({ error: 'Lỗi server: ' + (error.message || 'Lỗi không xác định') });
   }
 };
 

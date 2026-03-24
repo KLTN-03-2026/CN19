@@ -10,10 +10,14 @@ import Login from './pages/Auth/Login';
 import Register from './pages/Auth/Register';
 
 // Organizer Pages
+import OrganizerLayout from './components/layout/OrganizerLayout';
+import OrganizerDashboard from './pages/Organizer/OrganizerDashboard';
+import CreateEvent from './pages/Organizer/CreateEvent';
 import RegisterOrganizer from './pages/Organizer/RegisterOrganizer';
 
 // Admin Pages
 import AdminLayout from './components/layout/AdminLayout';
+import Dashboard from './pages/Admin/Dashboard';
 import UserManagement from './pages/Admin/UserManagement';
 import CategoryManagement from './pages/Admin/CategoryManagement';
 import EventManagement from './pages/Admin/EventManagement';
@@ -49,7 +53,7 @@ const router = createBrowserRouter([
       </ProtectedRoute>
     ),
     children: [
-      { path: 'dashboard', element: <div className="text-2xl font-black">Thống kê & Báo cáo (Coming Soon)</div> },
+      { path: 'dashboard', element: <Dashboard /> },
       { path: 'users', element: <UserManagement /> },
       { path: 'events', element: <EventManagement /> },
       { path: 'categories', element: <CategoryManagement /> },
@@ -57,6 +61,25 @@ const router = createBrowserRouter([
       { path: 'fraud', element: <div className="text-2xl font-black">Cảnh báo Gian lận (Coming Soon)</div> },
       { path: 'transactions', element: <div className="text-2xl font-black">Quản lý Giao dịch (Coming Soon)</div> },
       { path: 'settings', element: <div className="text-2xl font-black">Cấu hình Hệ thống (Coming Soon)</div> },
+      { path: '', element: <Navigate to="dashboard" replace /> }
+    ]
+  },
+  {
+    path: '/organizer',
+    element: (
+      <ProtectedRoute allowedRoles={['organizer']}>
+        <OrganizerLayout />
+      </ProtectedRoute>
+    ),
+    children: [
+      { path: 'dashboard', element: <OrganizerDashboard /> },
+      { path: 'my-events', element: <div className="p-8 text-2xl font-bold">Sự kiện của tôi (Coming Soon)</div> },
+      { path: 'create-event', element: <CreateEvent /> },
+      { path: 'tickets', element: <div className="p-8 text-2xl font-bold">Quản lý vé (Coming Soon)</div> },
+      { path: 'revenue', element: <div className="p-8 text-2xl font-bold">Doanh thu & Rút tiền (Coming Soon)</div> },
+      { path: 'staff', element: <div className="p-8 text-2xl font-bold">Quản lý nhân viên (Coming Soon)</div> },
+      { path: 'participants', element: <div className="p-8 text-2xl font-bold">Danh sách người tham gia (Coming Soon)</div> },
+      { path: 'settings', element: <div className="p-8 text-2xl font-bold">Cài đặt (Coming Soon)</div> },
       { path: '', element: <Navigate to="dashboard" replace /> }
     ]
   }
