@@ -23,6 +23,10 @@ export const adminService = {
     const response = await api.get('/admin/categories');
     return response.data;
   },
+  getCategoryById: async (id) => {
+    const response = await api.get(`/admin/categories/${id}`);
+    return response.data;
+  },
   createCategory: async (data) => {
     const response = await api.post('/admin/categories', data);
     return response.data;

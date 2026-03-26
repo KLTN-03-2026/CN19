@@ -122,6 +122,38 @@ async function main() {
     }
   });
 
+  const event3 = await prisma.event.create({
+    data: {
+      organizer_id: organizerProfile.id,
+      category_id: catMusic.id,
+      title: 'Workshop NFT & Blockchain',
+      event_date: new Date('2026-08-15T14:00:00Z'),
+      event_time: '14:00',
+      status: 'pending',
+      allow_resale: true,
+      allow_transfer: true,
+      allow_refund: true,
+      royalty_fee_percent: 10.0,
+      description: 'Tìm hiểu về NFT và ứng dụng trong vé điện tử.'
+    }
+  });
+
+  const event4 = await prisma.event.create({
+    data: {
+      organizer_id: organizerProfile.id,
+      category_id: catMusic.id,
+      title: 'Concert Mùa Hè Rực Rỡ',
+      event_date: new Date('2026-07-01T20:00:00Z'),
+      event_time: '20:00',
+      status: 'draft',
+      allow_resale: true,
+      allow_transfer: true,
+      allow_refund: true,
+      royalty_fee_percent: 5.0,
+      description: 'Sự kiện âm nhạc mùa hè lớn nhất năm.'
+    }
+  });
+
   // 6. Tạo Vé (Ticket Tiers) cho Sự kiện 1
   console.log('Tạo Hạng vé...');
   await prisma.ticketTier.createMany({
@@ -155,6 +187,26 @@ async function main() {
       price: 350000,
       quantity_total: 50,
       quantity_available: 50
+    }
+  });
+
+  // Tạo Vé cho Sự kiện 3 & 4
+  await prisma.ticketTier.create({
+    data: {
+      event_id: event3.id,
+      tier_name: 'Chung',
+      price: 200000,
+      quantity_total: 100,
+      quantity_available: 100
+    }
+  });
+  await prisma.ticketTier.create({
+    data: {
+      event_id: event4.id,
+      tier_name: 'Vé Sớm',
+      price: 150000,
+      quantity_total: 200,
+      quantity_available: 200
     }
   });
 

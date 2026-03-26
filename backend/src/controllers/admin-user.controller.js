@@ -32,23 +32,33 @@ const getUsers = async (req, res) => {
       ];
     }
 
-    const users = await prisma.user.findMany({
-      where: whereClause,
-      select: {
-        id: true,
-        email: true,
-        phone_number: true,
-        role: true,
-        status: true,
-        created_at: true,
-        organizer_profile: {
-          select: { kyc_status: true, organization_name: true }
-        }
-      },
-      orderBy: { created_at: 'desc' }
-    });
+    const [users, totalCount, pendingCount] = await Promise.all([
+      prisma.user.findMany({
+        where: whereClause,
+        select: {
+          id: true,
+          email: true,
+          phone_number: true,
+          role: true,
+          status: true,
+          created_at: true,
+          organizer_profile: {
+            select: { id: true, kyc_status: true, organization_name: true }
+          }
+        },
+        orderBy: { created_at: 'desc' }
+      }),
+      prisma.user.count(),
+      prisma.organizer.count({ where: { kyc_status: 'pending' } })
+    ]);
 
-    res.status(200).json({ data: users });
+    res.status(200).json({ 
+      data: users,
+      meta: {
+        total: totalCount,
+        pending: pendingCount
+      }
+    });
   } catch (error) {
     res.status(500).json({ error: 'Lỗi server.' });
   }

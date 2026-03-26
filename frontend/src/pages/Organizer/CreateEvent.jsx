@@ -49,7 +49,7 @@ const CreateEvent = () => {
       latitude: '',
       longitude: '',
       allow_resale: true,
-      allow_refund: true,
+      allow_transfer: true,
       royalty_fee_percent: 5,
       refund_deadline_days: 7,
       ticket_tiers: [{ tier_name: 'Vé Thường', price: '', quantity_total: '', section_name: 'Khán đài A', benefits: '' }]
@@ -304,7 +304,7 @@ const CreateEvent = () => {
                         />
                         <div className="border-2 border-dashed border-gray-200 dark:border-white/10 rounded-2xl p-6 flex flex-col items-center justify-center space-y-3 bg-gray-50/50 dark:bg-white/[0.02] group-hover:bg-blue-600/5 group-hover:border-blue-600 transition-all overflow-hidden relative min-h-[160px]">
                             {previewImage ? (
-                                <img src={previewImage} alt="Preview" className="absolute inset-0 w-full h-full object-cover rounded-2xl opacity-40" />
+                                <img src={previewImage} alt="Preview" className="absolute inset-0 w-full h-full object-cover rounded-2xl opacity-60 group-hover:opacity-80 transition-opacity" />
                             ) : (
                                 <Upload className="w-8 h-8 text-gray-300 dark:text-gray-600 group-hover:text-blue-600 transition-all" />
                             )}
@@ -316,9 +316,10 @@ const CreateEvent = () => {
                                 <button 
                                     type="button"
                                     onClick={removeImage}
-                                    className="absolute top-2 right-2 z-20 w-8 h-8 bg-black/50 hover:bg-red-500 text-white rounded-full flex items-center justify-center transition-all backdrop-blur-md"
+                                    className="absolute top-3 right-3 z-30 w-10 h-10 bg-red-600 hover:bg-red-700 text-white rounded-full flex items-center justify-center transition-all shadow-xl border-2 border-white/20"
+                                    title="Xóa ảnh và chọn lại"
                                 >
-                                    <Trash2 className="w-4 h-4" />
+                                    <Trash2 className="w-5 h-5" />
                                 </button>
                             )}
                             {uploadProgress > 0 && uploadProgress < 100 && (
@@ -570,10 +571,10 @@ const CreateEvent = () => {
 
                     <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-white/[0.03] rounded-2xl border border-gray-100 dark:border-white/5">
                         <div className="space-y-1">
-                            <p className="text-sm font-bold text-gray-900 dark:text-white uppercase italic">Cho phép hoàn tiền</p>
-                            <p className="text-[10px] text-gray-400 font-medium">Bật tính năng yêu cầu hoàn tiền cho vé</p>
+                            <p className="text-sm font-bold text-gray-900 dark:text-white uppercase italic">Cho phép chuyển nhượng</p>
+                            <p className="text-[10px] text-gray-400 font-medium">Người dùng có thể tặng hoặc gửi vé cho người khác</p>
                         </div>
-                        <input type="checkbox" {...register('allow_refund')} className="w-5 h-5 accent-blue-600" />
+                        <input type="checkbox" {...register('allow_transfer')} className="w-5 h-5 accent-blue-600" />
                     </div>
                 </div>
 

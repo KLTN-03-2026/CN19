@@ -16,6 +16,9 @@ router.post('/', adminCategoryController.createCategory);
 // [PUT] /api/admin/categories/:id
 router.put('/:id', adminCategoryController.updateCategory);
 
+// [GET] /api/admin/categories/:id
+router.get('/:id', adminCategoryController.getCategoryById);
+
 // [DELETE] /api/admin/categories/:id
 router.delete('/:id', adminCategoryController.deleteCategory);
 

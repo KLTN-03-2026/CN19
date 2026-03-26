@@ -21,6 +21,7 @@ import toast from 'react-hot-toast';
 
 const UserManagement = () => {
   const [users, setUsers] = useState([]);
+  const [stats, setStats] = useState({ total: 0, pending: 0 });
   const [isLoading, setIsLoading] = useState(true);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState(null);
@@ -39,6 +40,9 @@ const UserManagement = () => {
       setIsLoading(true);
       const res = await adminService.getUsers(filters);
       setUsers(res.data);
+      if (res.meta) {
+        setStats(res.meta);
+      }
     } catch (error) {
       toast.error('Lỗi khi tải danh sách người dùng');
     } finally {
@@ -130,7 +134,7 @@ const UserManagement = () => {
             </div>
             <div className="text-left">
               <div className="text-xs uppercase font-bold tracking-wider opacity-60">Tất cả</div>
-              <div className="text-xl font-black">{users.length}</div>
+              <div className="text-xl font-black">{stats.total}</div>
             </div>
           </button>
 
@@ -149,9 +153,7 @@ const UserManagement = () => {
             </div>
             <div className="text-left">
               <div className="text-xs uppercase font-bold tracking-wider opacity-60">Chờ duyệt</div>
-              <div className="text-xl font-black">
-                {users.filter(u => u.organizer_profile?.kyc_status === 'pending').length}
-              </div>
+              <div className="text-xl font-black">{stats.pending}</div>
             </div>
           </button>
         </div>

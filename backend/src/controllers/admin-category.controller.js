@@ -138,9 +138,46 @@ const deleteCategory = async (req, res) => {
   }
 };
 
+// Lấy chi tiết danh mục kèm danh sách sự kiện
+const getCategoryById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const category = await prisma.category.findUnique({
+      where: { id },
+      include: {
+        events: {
+          include: {
+            organizer: {
+              select: { organization_name: true }
+            }
+          },
+          orderBy: { event_date: 'desc' }
+        },
+        _count: {
+          select: { events: true }
+        }
+      }
+    });
+
+    if (!category) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy danh mục' });
+    }
+
+    res.json({
+      success: true,
+      data: category
+    });
+  } catch (error) {
+    console.error('Error fetching category detail:', error);
+    res.status(500).json({ success: false, message: 'Lỗi khi lấy chi tiết danh mục' });
+  }
+};
+
 module.exports = {
   getCategories,
   createCategory,
   updateCategory,
-  deleteCategory
+  deleteCategory,
+  getCategoryById
 };

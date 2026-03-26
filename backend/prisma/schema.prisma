@@ -105,6 +105,26 @@ model Event {
   orders                 Order[]
   tickets                Ticket[]
   ticket_tiers           TicketTier[]
+  emergency_requests    EmergencyRequest[]
+  created_at             DateTime               @default(now())
+  updated_at             DateTime               @updatedAt
+}
+
+model EmergencyRequest {
+  id             String   @id @default(uuid())
+  event_id       String
+  request_type   String   // 'cancel', 'reschedule'
+  reason         String
+  new_date       DateTime?
+  new_time       String?
+  new_end_date   DateTime?
+  new_end_time   String?
+  evidence_url   String?
+  status         String   @default("pending") // 'pending', 'approved', 'rejected'
+  admin_notes    String?
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+  event          Event    @relation(fields: [event_id], references: [id])
 }
 
 model TicketTier {

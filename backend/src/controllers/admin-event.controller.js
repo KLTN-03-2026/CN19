@@ -11,16 +11,33 @@ const getEvents = async (req, res) => {
       whereClause.title = { contains: keyword, mode: 'insensitive' };
     }
 
-    const events = await prisma.event.findMany({
-      where: whereClause,
-      include: {
-        organizer: { select: { organization_name: true } },
-        category: { select: { name: true } }
-      },
-      orderBy: { event_date: 'desc' }
-    });
+    const [events, totalCount, pendingCount] = await Promise.all([
+      prisma.event.findMany({
+        where: whereClause,
+        include: {
+          organizer: { select: { organization_name: true } },
+          category: { select: { name: true } }
+        },
+        orderBy: { event_date: 'desc' }
+      }),
+      prisma.event.count(),
+      prisma.event.count({ 
+        where: { 
+          OR: [
+            { status: 'pending' },
+            { status: 'draft' } // Đếm cả bản nháp cần fix
+          ]
+        } 
+      })
+    ]);
 
-    res.status(200).json({ data: events });
+    res.status(200).json({ 
+      data: events,
+      meta: {
+        total: totalCount,
+        pending: pendingCount
+      }
+    });
   } catch (error) {
     res.status(500).json({ error: 'Lỗi server.' });
   }

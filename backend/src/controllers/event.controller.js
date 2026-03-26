@@ -6,7 +6,10 @@ const getEvents = async (req, res) => {
     const { keyword, category_id, status } = req.query;
 
     const whereClause = {
-      status: status || 'active' // Mặc định chỉ public những sự kiện đang active
+      status: status || 'active', // Mặc định chỉ public những sự kiện đang active
+      category: {
+        is_active: true
+      }
     };
 
     if (keyword) {
@@ -69,7 +72,11 @@ const getEventById = async (req, res) => {
 const getRecommendations = async (req, res) => {
   try {
     const events = await prisma.event.findMany({
-      where: { status: 'active', event_date: { gt: new Date() } },
+      where: { 
+        status: 'active', 
+        event_date: { gt: new Date() },
+        category: { is_active: true }
+      },
       take: 6,
       orderBy: { event_date: 'asc' },
       include: { category: { select: { name: true } } }

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Tags, 
   Plus, 
@@ -23,6 +24,7 @@ import { adminService } from '../../services/admin.service';
 import axios from 'axios';
 
 const CategoryManagement = () => {
+  const navigate = useNavigate();
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -86,6 +88,12 @@ const CategoryManagement = () => {
       setImageFile(file);
       setImagePreview(URL.createObjectURL(file));
     }
+  };
+  
+  const handleRemoveImage = (e) => {
+    e.stopPropagation();
+    setImageFile(null);
+    setImagePreview(null);
   };
 
   const uploadImage = async (file) => {
@@ -200,8 +208,7 @@ const CategoryManagement = () => {
     });
 
   const handleOpenDetail = (category) => {
-    setSelectedDetailCategory(category);
-    setIsDetailModalOpen(true);
+    navigate(`/admin/categories/${category.id}`);
   };
 
   const handleCloseDetail = () => {
@@ -401,6 +408,13 @@ const CategoryManagement = () => {
                       <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                         <Upload className="w-8 h-8 text-white" />
                       </div>
+                      <button 
+                        type="button"
+                        onClick={handleRemoveImage}
+                        className="absolute top-3 right-3 z-20 w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-lg transition-all"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
                     </>
                   ) : (
                     <div className="flex flex-col items-center justify-center h-full text-gray-400">

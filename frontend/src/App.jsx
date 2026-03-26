@@ -14,12 +14,16 @@ import OrganizerLayout from './components/layout/OrganizerLayout';
 import OrganizerDashboard from './pages/Organizer/OrganizerDashboard';
 import CreateEvent from './pages/Organizer/CreateEvent';
 import RegisterOrganizer from './pages/Organizer/RegisterOrganizer';
+import MyEvents from './pages/Organizer/MyEvents';
+import EventDetail from './pages/Organizer/EventDetail';
+import EditEvent from './pages/Organizer/EditEvent';
 
 // Admin Pages
 import AdminLayout from './components/layout/AdminLayout';
 import Dashboard from './pages/Admin/Dashboard';
 import UserManagement from './pages/Admin/UserManagement';
 import CategoryManagement from './pages/Admin/CategoryManagement';
+import CategoryDetail from './pages/Admin/CategoryDetail';
 import EventManagement from './pages/Admin/EventManagement';
 
 // Component Bảo vệ Route theo Role
@@ -57,6 +61,7 @@ const router = createBrowserRouter([
       { path: 'users', element: <UserManagement /> },
       { path: 'events', element: <EventManagement /> },
       { path: 'categories', element: <CategoryManagement /> },
+      { path: 'categories/:id', element: <CategoryDetail /> },
       { path: 'refunds', element: <div className="text-2xl font-black">Yêu cầu Hoàn tiền (Coming Soon)</div> },
       { path: 'fraud', element: <div className="text-2xl font-black">Cảnh báo Gian lận (Coming Soon)</div> },
       { path: 'transactions', element: <div className="text-2xl font-black">Quản lý Giao dịch (Coming Soon)</div> },
@@ -73,7 +78,9 @@ const router = createBrowserRouter([
     ),
     children: [
       { path: 'dashboard', element: <OrganizerDashboard /> },
-      { path: 'my-events', element: <div className="p-8 text-2xl font-bold">Sự kiện của tôi (Coming Soon)</div> },
+      { path: 'my-events', element: <MyEvents /> },
+      { path: 'events/:id', element: <EventDetail /> },
+      { path: 'events/:id/edit', element: <EditEvent /> },
       { path: 'create-event', element: <CreateEvent /> },
       { path: 'tickets', element: <div className="p-8 text-2xl font-bold">Quản lý vé (Coming Soon)</div> },
       { path: 'revenue', element: <div className="p-8 text-2xl font-bold">Doanh thu & Rút tiền (Coming Soon)</div> },

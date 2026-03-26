@@ -27,7 +27,7 @@ const createEvent = async (req, res) => {
       end_date, end_time,
       location_address, latitude, longitude,
       ticket_tiers,
-      allow_resale, allow_refund, royalty_fee_percent, refund_deadline_days,
+      allow_resale, allow_transfer, allow_refund, royalty_fee_percent, refund_deadline_days,
       status
     } = req.body;
 
@@ -66,6 +66,7 @@ const createEvent = async (req, res) => {
         longitude: longitude ? parseFloat(longitude) : null,
         status: status || 'pending', // Mặc định là pending nếu không có status
         allow_resale: allow_resale !== undefined ? allow_resale : true,
+        allow_transfer: allow_transfer !== undefined ? allow_transfer : true,
         allow_refund: allow_refund !== undefined ? allow_refund : true,
         royalty_fee_percent: royalty_fee_percent ? parseFloat(royalty_fee_percent) : 0,
         refund_deadline_days: refund_deadline_days ? parseInt(refund_deadline_days) : 0,
@@ -93,26 +94,76 @@ const createEvent = async (req, res) => {
   }
 };
 
-// [UC_16] Cập nhật sự kiện (Tương tự UC_16 tạo mới nhưng chỉ cho phép khi event 'draft' hoặc 'pending' hoặc khóa các field giá nếu 'active')
+// [UC_16] Cập nhật sự kiện (Tương tự UC_16 tạo mới but as an update)
 const updateEvent = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, event_date, event_time } = req.body; 
-    
-    await verifyEventOwnership(id, req.user.userId);
+    const {
+      title,
+      category_id,
+      description,
+      image_url,
+      video_url,
+      event_date,
+      event_time,
+      end_date, end_time,
+      location_address, latitude, longitude,
+      ticket_tiers,
+      allow_resale, allow_transfer, allow_refund, royalty_fee_percent, refund_deadline_days,
+      status
+    } = req.body;
 
-    // TODO: Chỉ cho phép update giới hạn tùy thuộc vào Event Status
-    const event = await prisma.event.update({
+    const event = await verifyEventOwnership(id, req.user.userId);
+
+    // Chỉ cho phép sửa toàn bộ nếu status là draft hoặc pending
+    const isLocked = event.status === 'active' || event.status === 'ended';
+
+    // Nếu đã active/ended, hạn chế sửa thông tin tài chính/vé quan trọng
+    // Nhưng ở đây ta cứ triển khai cho các trường hợp draft/pending trước
+    if (isLocked) {
+      return res.status(400).json({ error: 'Không thể chỉnh sửa sự kiện đã bắt đầu bán vé hoặc đã kết thúc.' });
+    }
+
+    // Cập nhật thông tin cơ bản
+    const updatedEvent = await prisma.event.update({
       where: { id },
       data: {
         title,
+        description,
+        image_url,
+        video_url,
+        category_id,
         event_date: event_date ? new Date(event_date) : undefined,
-        event_time
+        event_time,
+        end_date: end_date ? new Date(end_date) : null,
+        end_time,
+        location_address,
+        latitude: latitude ? parseFloat(latitude) : undefined,
+        longitude: longitude ? parseFloat(longitude) : undefined,
+        status: status || event.status,
+        allow_resale: allow_resale !== undefined ? allow_resale : undefined,
+        allow_transfer: allow_transfer !== undefined ? allow_transfer : undefined,
+        allow_refund: allow_refund !== undefined ? allow_refund : undefined,
+        royalty_fee_percent: royalty_fee_percent !== undefined ? parseFloat(royalty_fee_percent) : undefined,
+        refund_deadline_days: refund_deadline_days !== undefined ? parseInt(refund_deadline_days) : undefined,
+        // Cập nhật hạng vé: Xóa cũ, tạo mới (Đơn giản nhất cho logic CreateEvent data)
+        ticket_tiers: ticket_tiers ? {
+          deleteMany: {},
+          create: ticket_tiers.map(tier => ({
+            tier_name: tier.tier_name,
+            price: parseFloat(tier.price),
+            quantity_total: parseInt(tier.quantity_total),
+            quantity_available: parseInt(tier.quantity_total),
+            benefits: tier.benefits,
+            section_name: tier.section_name
+          }))
+        } : undefined
       }
     });
 
-    res.status(200).json({ message: 'Cập nhật sự kiện thành công.', data: event });
+    res.status(200).json({ message: 'Cập nhật sự kiện thành công.', data: updatedEvent });
   } catch (error) {
+    console.error('Lỗi cập nhật sự kiện:', error);
     res.status(400).json({ error: error.message || 'Lỗi server.' });
   }
 };
@@ -192,10 +243,77 @@ const getAttendees = async (req, res) => {
   }
 };
 
+// [UC_16] Lấy danh sách sự kiện của BTC
+const getOrganizerEvents = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const organizer = await prisma.organizer.findUnique({ where: { user_id: userId } });
+    if (!organizer) return res.status(403).json({ error: 'Không tìm thấy hồ sơ Ban tổ chức.' });
+
+    const events = await prisma.event.findMany({
+      where: { organizer_id: organizer.id },
+      orderBy: { event_date: 'desc' },
+      include: {
+        category: { select: { name: true } },
+        _count: {
+          select: { tickets: true }
+        }
+      }
+    });
+
+    res.status(200).json({ data: events });
+  } catch (error) {
+    console.error('Lỗi lấy danh sách sự kiện:', error);
+    res.status(500).json({ error: 'Lỗi server khi lấy danh sách sự kiện.' });
+  }
+};
+
+// [UC_16] Lấy chi tiết sự kiện (dành cho BTC)
+const getEventById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const event = await verifyEventOwnership(id, req.user.userId);
+    
+    // Lấy thêm thông tin hạng vé
+    const eventDetails = await prisma.event.findUnique({
+      where: { id },
+      include: {
+        category: true,
+        ticket_tiers: true
+      }
+    });
+
+    res.status(200).json({ data: eventDetails });
+  } catch (error) {
+    res.status(400).json({ error: error.message || 'Lỗi server.' });
+  }
+};
+
+// [UC_16] Xóa sự kiện (Chỉ khi là Draft hoặc Pending)
+const deleteEvent = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const event = await verifyEventOwnership(id, req.user.userId);
+
+    if (event.status !== 'draft' && event.status !== 'pending') {
+      return res.status(400).json({ error: 'Chỉ có thể xóa sự kiện ở trạng thái Nháp hoặc Chờ duyệt.' });
+    }
+
+    await prisma.event.delete({ where: { id } });
+
+    res.status(200).json({ message: 'Đã xóa sự kiện thành công.' });
+  } catch (error) {
+    res.status(400).json({ error: error.message || 'Lỗi server.' });
+  }
+};
+
 module.exports = {
   createEvent,
   updateEvent,
   requestCancelOrReschedule,
   updateResalePolicy,
-  getAttendees
+  getAttendees,
+  getOrganizerEvents,
+  getEventById,
+  deleteEvent
 };

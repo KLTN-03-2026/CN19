@@ -21,6 +21,7 @@ import { adminService } from '../../services/admin.service';
 
 const EventManagement = () => {
   const [events, setEvents] = useState([]);
+  const [stats, setStats] = useState({ total: 0, pending: 0 });
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -38,6 +39,9 @@ const EventManagement = () => {
         keyword: searchTerm || undefined 
       });
       setEvents(response.data);
+      if (response.meta) {
+        setStats(response.meta);
+      }
     } catch (error) {
       console.error('Error fetching events:', error);
       toast.error('Không thể tải danh sách sự kiện');
@@ -70,6 +74,7 @@ const EventManagement = () => {
       case 'active':
         return <span className="px-3 py-1 bg-green-500/10 text-green-500 rounded-full text-[10px] font-black uppercase">Đang hoạt động</span>;
       case 'draft':
+      case 'pending': // Thêm case pending
         return <span className="px-3 py-1 bg-yellow-500/10 text-yellow-500 rounded-full text-[10px] font-black uppercase">Chờ duyệt</span>;
       case 'cancelled':
         return <span className="px-3 py-1 bg-red-500/10 text-red-500 rounded-full text-[10px] font-black uppercase">Đã hủy</span>;
@@ -86,11 +91,52 @@ const EventManagement = () => {
           <div className="p-2 bg-neon-green/10 rounded-lg">
             <Calendar className="w-6 h-6 text-neon-green" />
           </div>
-          <span>Quản lý Sự kiện Toàn hệ thống</span>
+          <span>Quản lý Sự kiện</span>
         </h1>
         <p className="text-gray-500 dark:text-gray-400 mt-1">
-          Theo dõi, phê duyệt và điều phối tất cả sự kiện ({events.length} sự kiện)
+          Theo dõi, phê duyệt và điều phối tất cả sự kiện hệ thống.
         </p>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="flex items-center space-x-4 mb-8">
+        <button 
+          onClick={() => setStatusFilter('')}
+          className={`p-4 rounded-2xl border flex items-center space-x-4 transition-all flex-1 md:flex-none md:min-w-[200px] ${
+            !statusFilter 
+              ? 'bg-neon-green/10 border-neon-green/30 text-neon-green' 
+              : 'bg-white dark:bg-white/5 border-gray-200 dark:border-white/5 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/10'
+          }`}
+        >
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+            !statusFilter ? 'bg-neon-green/20' : 'bg-gray-100 dark:bg-white/5'
+          }`}>
+            <Calendar className="w-5 h-5" />
+          </div>
+          <div className="text-left">
+            <div className="text-xs uppercase font-bold tracking-wider opacity-60">Tất cả</div>
+            <div className="text-xl font-black">{stats.total}</div>
+          </div>
+        </button>
+
+        <button 
+          onClick={() => setStatusFilter('pending')}
+          className={`p-4 rounded-2xl border flex items-center space-x-4 transition-all flex-1 md:flex-none md:min-w-[200px] ${
+            statusFilter === 'pending' 
+              ? 'bg-yellow-500/10 border-yellow-500/30 text-yellow-500' 
+              : 'bg-white dark:bg-white/5 border-gray-200 dark:border-white/5 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/10'
+          }`}
+        >
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+            statusFilter === 'pending' ? 'bg-yellow-500/20' : 'bg-gray-100 dark:bg-white/5'
+          }`}>
+            <Clock className="w-5 h-5" />
+          </div>
+          <div className="text-left">
+            <div className="text-xs uppercase font-bold tracking-wider opacity-60">Chờ duyệt</div>
+            <div className="text-xl font-black">{stats.pending}</div>
+          </div>
+        </button>
       </div>
 
       {/* Filter Bar */}
@@ -114,7 +160,8 @@ const EventManagement = () => {
             onChange={(e) => setStatusFilter(e.target.value)}
           >
             <option value="">Tất cả trạng thái</option>
-            <option value="draft">Chờ duyệt</option>
+            <option value="pending">Chờ duyệt (Mới)</option>
+            <option value="draft">Bản nháp/Từ chối</option>
             <option value="active">Đang hoạt động</option>
             <option value="cancelled">Đã hủy</option>
           </select>
@@ -181,7 +228,7 @@ const EventManagement = () => {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-end space-x-2">
-                        {event.status === 'draft' && (
+                        {(event.status === 'draft' || event.status === 'pending') && (
                           <>
                             <button 
                               onClick={() => handleAction(event.id, 'approve')}
