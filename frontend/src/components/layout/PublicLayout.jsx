@@ -71,9 +71,8 @@ const PublicLayout = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-dark-bg bg-grid-pattern transition-colors duration-500 flex flex-col font-sans relative overflow-hidden">
+    <div className="min-h-screen bg-gray-50 dark:bg-dark-bg bg-grid-pattern transition-colors duration-500 flex flex-col font-sans relative">
       
-      {/* --- HIỆU ỨNG AURORA KHÓI TỎA TOÀN TRANG BIẾN TẤU LƯỢN SÓNG (WAVY/SOFT AURA) --- */}
       {/* Cục mây (Aura) số 1: To và bồng bềnh, đi chậm theo chuột (Delay dài 1000ms), kết hợp nhịp thở (animate-pulse) */}
       <div 
         className="pointer-events-none fixed top-0 left-0 z-0 w-[300px] h-[300px] md:w-[450px] md:h-[450px] rounded-full bg-[#52c42d]/15 dark:bg-[#52c42d]/[0.07] blur-[70px] md:blur-[100px] transition-transform duration-1000 ease-out animate-pulse"
@@ -89,7 +88,7 @@ const PublicLayout = () => {
         }}
       />
 
-      <header className="border-b border-gray-200 dark:border-dark-border sticky top-0 z-50 bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-xl transition-colors">
+      <header className="fixed top-0 left-0 w-full z-50 border-b border-gray-200 dark:border-dark-border bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-xl transition-colors">
         <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="flex justify-between h-20 items-center">
             
@@ -229,7 +228,7 @@ const PublicLayout = () => {
         </div>
       </header>
 
-      <main className="flex-grow">
+      <main className="flex-grow pt-20">
         <Outlet />
       </main>
 

@@ -74,14 +74,31 @@ i18n
             err_incomplete: "Please select Ward/Commune and enter specific house number!"
           },
           home: {
-            badge: "Powered by Blockchain",
-            title1: "The complete", title2: "platform to", title_green1: "secure", title_green2: "event tickets",
-            desc: "Stop fraud and counterfeiting with blockchain-powered NFT tickets. Secure, transparent, and verifiable ticketing for the modern world.",
-            btn_explore: "Explore Events", btn_create: "Create Event",
-            f1_title: "Anti-Fraud Protection", f1_desc: "Every ticket is a unique NFT on the blockchain, making counterfeiting impossible.",
-            f2_title: "Instant Verification", f2_desc: "Verify ticket authenticity instantly at event entrances with QR codes.",
-            f3_title: "Secure Marketplace", f3_desc: "Buy and sell tickets safely with transparent pricing and ownership history.",
-            f4_title: "Smart Contracts", f4_desc: "Automated ticket management with programmable rules and royalties."
+            hero: {
+              badge: "Exploration: NFT Ticket World",
+              title_part1: "Hunt", title_highlight1: "unique",
+              title_part2: "tickets, Unparalleled", title_highlight2: "experience",
+              subtitle: "Explore the World of NFT Tickets with absolute security and transparency.",
+              search_placeholder: "Search by event name, artist, location...",
+              search_button: "Search"
+            },
+            categories: {
+              all: "All", music: "Music", workshop: "Workshop", sports: "Sports", theater: "Theater", festival: "Festival"
+            },
+            events: {
+              title: "Upcoming", title_highlight: "Events",
+              subtitle: "Discover the most prestigious shows waiting for you.",
+              view_all: "View all shows",
+              not_found: "No events in this category"
+            },
+            features: {
+              title_part1: "Why choose", title_highlight: "BASTICKET?",
+              secure_title: "Absolute Security", secure_desc: "NFT tickets are 100% counterfeit-proof on the Blockchain.",
+              instant_title: "Instant Transactions", instant_desc: "Buy, sell, and transfer tickets in just seconds.",
+              market_title: "Secure Market", market_desc: "Transparent ticket resale, automatic funds via Smart Contract.",
+              smart_title: "Smart Contracts", smart_desc: "Automate processes, extract profits directly to your wallet.",
+              trust_stat: "Trusted Users"
+            }
           }
         }
       },
@@ -152,14 +169,31 @@ i18n
             err_incomplete: "Vui lòng chọn đầy đủ Xã/Phường và nhập số nhà cụ thể!"
           },
           home: {
-            badge: "Sức mạnh Blockchain",
-            title1: "Nền tảng", title2: "toàn diện giúp", title_green1: "bảo mật", title_green2: "vé sự kiện",
-            desc: "Chặn đứng nạn lừa đảo và vé giả. Minh bạch, an toàn và cực kỳ dễ dàng để sở hữu tấm vé NFT kỹ thuật số đắt giá.",
-            btn_explore: "Khám phá Sự kiện", btn_create: "Tạo Sự kiện Mới",
-            f1_title: "Chống Vé Giả", f1_desc: "Mỗi vé là một NFT duy nhất trên blockchain. Trẻ em cũng biết vé này không thể làm giả.",
-            f2_title: "Xác Thực Tức Thì", f2_desc: "Nhân viên cầm điện thoại quét mã QR động (Dynamic QR) check-in sự kiện chỉ tốn đúng 1 giây.",
-            f3_title: "Chợ Vé An Toàn", f3_desc: "Bạn có việc bận? Cứ pass lại vé lên Chợ. Smart Contract sẽ tự động khóa và chuyển tiền giữa người mua và bán cực minh bạch.",
-            f4_title: "Hợp Đồng Thông Minh", f4_desc: "Tính năng siêu phàm dành cho Ban Tổ Chức. Cứ mỗi vé mồi bán lại, tự động trích % tiền cò chảy thẳng về túi BTC."
+            hero: {
+              badge: "Khám phá: Thế giới NFT Ticket",
+              title_part1: "Săn vé", title_highlight1: "độc bản",
+              title_part2: "Trải nghiệm", title_highlight2: "vô song",
+              subtitle: "Khám phá thế giới NFT Ticket với sự bảo mật và minh bạch tuyệt đối.",
+              search_placeholder: "Tìm theo tên sự kiện, nghệ sĩ, địa điểm...",
+              search_button: "Tìm kiếm"
+            },
+            categories: {
+              all: "Tất cả", music: "Âm nhạc", workshop: "Hội thảo", sports: "Thể thao", theater: "Sân khấu", festival: "Lễ hội"
+            },
+            events: {
+              title: "Sự kiện", title_highlight: "Sắp diễn ra",
+              subtitle: "Khám phá những show diễn đẳng cấp nhất đang chờ đón bạn.",
+              view_all: "Xem tất cả show",
+              not_found: "Không có sự kiện nào trong danh mục này"
+            },
+            features: {
+              title_part1: "Tại sao chọn", title_highlight: "BASTICKET?",
+              secure_title: "Bảo mật Tuyệt đối", secure_desc: "Vé NFT chống giả mạo 100% trên nền tảng Blockchain.",
+              instant_title: "Giao dịch Tức thì", instant_desc: "Mua bán và chuyển nhượng vé chỉ trong vài giây.",
+              market_title: "Chợ Vé An Toàn", market_desc: "Giao dịch pass vé minh bạch, tự động chuyển tiền qua Smart Contract.",
+              smart_title: "Hợp Đồng Thông Minh", smart_desc: "Tự động hóa mọi quy trình, trích lợi nhuận trực tiếp về ví BTC.",
+              trust_stat: "Người dùng tin tưởng"
+            }
           }
         }
       }
