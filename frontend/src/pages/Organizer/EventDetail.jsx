@@ -159,7 +159,7 @@ const EventDetail = () => {
                             </h1>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="flex flex-col gap-6">
                             <div className="flex items-start gap-4 p-5 bg-gray-50/50 dark:bg-white/5 rounded-3xl border border-gray-50 dark:border-white/5">
                                 <div className="p-3 bg-blue-600/10 text-blue-600 rounded-2xl">
                                     <Calendar className="w-5 h-5" />
@@ -173,15 +173,41 @@ const EventDetail = () => {
                                 </div>
                             </div>
 
-                            <div className="flex items-start gap-4 p-5 bg-gray-50/50 dark:bg-white/5 rounded-3xl border border-gray-50 dark:border-white/5">
-                                <div className="p-3 bg-indigo-600/10 text-indigo-600 rounded-2xl">
-                                    <MapPin className="w-5 h-5" />
+                            <div className="flex flex-col gap-4 p-5 bg-gray-50/50 dark:bg-white/5 rounded-[2.5rem] border border-gray-50 dark:border-white/5 group hover:border-blue-500/30 transition-all">
+                                <div className="flex items-start gap-4">
+                                    <div className="p-3 bg-indigo-600/10 text-indigo-600 rounded-2xl group-hover:scale-110 transition-transform">
+                                        <MapPin className="w-5 h-5" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Địa điểm tổ chức</p>
+                                        <p className="text-sm font-black text-gray-900 dark:text-white uppercase line-clamp-1">
+                                            {event.location_address || 'Địa điểm chưa xác định'}
+                                        </p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Địa điểm</p>
-                                    <p className="text-sm font-black text-gray-900 dark:text-white uppercase line-clamp-2">
-                                        {event.location_address}
-                                    </p>
+                                
+                                <div className="aspect-video w-full rounded-3xl overflow-hidden border border-gray-200 dark:border-white/10 relative shadow-inner">
+                                    {event.latitude && event.longitude ? (
+                                        <iframe
+                                            width="100%"
+                                            height="100%"
+                                            frameBorder="0"
+                                            style={{ border: 0 }}
+                                            src={`https://maps.google.com/maps?q=${event.latitude},${event.longitude}&hl=vi&z=15&output=embed`}
+                                            allowFullScreen
+                                            className="opacity-90 group-hover:opacity-100 transition-opacity grayscale-[10%] hover:grayscale-0"
+                                        />
+                                    ) : (
+                                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-100 dark:bg-white/5 opacity-40">
+                                            <MapPin className="w-8 h-8 mb-2 text-gray-400" />
+                                            <p className="text-[9px] font-black uppercase tracking-widest text-center">Tọa độ chưa được thiết lập</p>
+                                        </div>
+                                    )}
+                                    {event.latitude && (
+                                        <div className="absolute bottom-3 left-3 px-3 py-1.5 bg-black/50 backdrop-blur-md rounded-xl text-[8px] font-mono text-white border border-white/10 pointer-events-none">
+                                            {event.latitude}, {event.longitude}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>

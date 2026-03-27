@@ -62,7 +62,7 @@ const OrganizerLayout = () => {
       <aside 
         className={`${
           isSidebarOpen ? 'w-64' : 'w-20'
-        } bg-gray-50 dark:bg-[#111114] border-r border-gray-200 dark:border-white/5 transition-all duration-300 flex flex-col z-50 fixed h-full lg:static`}
+        } bg-gray-50 dark:bg-[#111114] border-r border-gray-200 dark:border-white/5 transition-all duration-300 flex flex-col z-50 fixed h-full lg:sticky lg:top-0 lg:h-screen`}
       >
         <div className="p-6 flex items-center justify-between">
           <div className={`flex items-center space-x-3 ${!isSidebarOpen && 'hidden'}`}>
