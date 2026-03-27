@@ -13,6 +13,7 @@ model User {
   phone_number          String?                  @unique
   password_hash         String
   role                  String
+  permissions           String[]                 @default([])
   status                String                   @default("active")
   wallet_address        String?
   avatar_url            String?

@@ -18,11 +18,13 @@ import {
 } from 'lucide-react';
 import { adminService } from '../../services/admin.service';
 import toast from 'react-hot-toast';
+import CreateUserModal from './components/CreateUserModal';
 
 const UserManagement = () => {
   const [users, setUsers] = useState([]);
   const [stats, setStats] = useState({ total: 0, pending: 0 });
   const [isLoading, setIsLoading] = useState(true);
+  const [showCreateModal, setShowCreateModal] = useState(false);
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState(null);
   const [rejectReason, setRejectReason] = useState('');
@@ -51,7 +53,6 @@ const UserManagement = () => {
   };
 
   useEffect(() => {
-    // Debounce search để tránh gọi API liên tục khi gõ
     const timer = setTimeout(() => {
       fetchUsers();
     }, 500);
@@ -156,76 +157,87 @@ const UserManagement = () => {
               <div className="text-xl font-black">{stats.pending}</div>
             </div>
           </button>
+
+          <button 
+            onClick={() => setShowCreateModal(true)}
+            className="p-4 rounded-2xl bg-neon-green text-black hover:bg-neon-green/90 transition-all flex items-center space-x-3 shadow-lg shadow-neon-green/20 group"
+          >
+            <div className="w-10 h-10 rounded-xl bg-black/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Users className="w-5 h-5 text-black" />
+            </div>
+            <div className="text-left">
+              <div className="text-[10px] uppercase font-black tracking-widest opacity-60">Thao tác</div>
+              <div className="text-sm font-bold">Thêm Người dùng</div>
+            </div>
+          </button>
         </div>
       </div>
 
-      {/* Filters Bar */}
-      <div className="bg-white dark:bg-[#111114] p-4 rounded-2xl border border-gray-200 dark:border-white/5 flex flex-wrap items-center gap-4 shadow-sm transition-all">
-        <form onSubmit={handleSearch} className="relative flex-1 min-w-[300px]">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input 
-            type="text"
-            placeholder="Tìm theo Email hoặc Số điện thoại..."
-            className="w-full bg-gray-50 dark:bg-white/10 border border-gray-200 dark:border-white/20 rounded-xl py-3 pl-11 pr-4 text-sm focus:outline-none focus:border-neon-green transition-all dark:text-white text-gray-900"
-            value={filters.keyword}
-            onChange={(e) => setFilters({...filters, keyword: e.target.value})}
-          />
-        </form>
-
-        <select 
-          className="bg-gray-50 dark:bg-white/10 border border-gray-200 dark:border-white/20 text-gray-700 dark:text-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-neon-green"
-          value={filters.role}
-          onChange={(e) => setFilters({...filters, role: e.target.value})}
-        >
-          <option value="">Tất cả Vai trò</option>
-          <option value="customer">Người mua (Customer)</option>
-          <option value="organizer">Ban tổ chức (Organizer)</option>
-          <option value="admin">Quản trị viên (Admin)</option>
-          <option value="staff">Nhân viên (Staff)</option>
-        </select>
-
-        <select 
-          className="bg-gray-50 dark:bg-white/10 border border-gray-200 dark:border-white/20 text-gray-700 dark:text-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-neon-green"
-          value={filters.status}
-          onChange={(e) => setFilters({...filters, status: e.target.value})}
-        >
-          <option value="">Tất cả Trạng thái</option>
-          <option value="active">Đang hoạt động</option>
-          <option value="banned">Đã khóa</option>
-        </select>
-
-        <div className="flex items-center space-x-2 bg-gray-50 dark:bg-white/10 border border-gray-200 dark:border-white/20 rounded-xl px-3 py-1.5 focus-within:border-neon-green transition-all">
-          <div className="flex flex-col">
-            <label className="text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase ml-1">Từ ngày</label>
-            <input 
-              type="date" 
-              className="bg-transparent text-gray-700 dark:text-gray-300 text-xs focus:outline-none transition-colors"
-              value={filters.from}
-              onChange={(e) => setFilters({...filters, from: e.target.value})}
-            />
-          </div>
-          <div className="h-4 w-px bg-gray-200 dark:bg-white/10" />
-          <div className="flex flex-col">
-            <label className="text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase ml-1">Đến ngày</label>
-            <input 
-              type="date" 
-              className="bg-transparent text-gray-700 dark:text-gray-300 text-xs focus:outline-none transition-colors"
-              value={filters.to}
-              onChange={(e) => setFilters({...filters, to: e.target.value})}
-            />
-          </div>
-        </div>
-        
-        <button 
-          onClick={fetchUsers}
-          className="p-3 bg-neon-green text-black rounded-xl hover:bg-neon-hover transition-all font-bold shadow-lg shadow-neon-green/20"
-        >
-          Lọc
-        </button>
-      </div>
-
-      {/* Users Table */}
       <div className="bg-white dark:bg-[#111114] border border-gray-200 dark:border-white/5 rounded-2xl overflow-hidden shadow-sm dark:shadow-2xl transition-all">
+        <div className="bg-white dark:bg-[#111114] p-4 border-b border-gray-200 dark:border-white/5 flex flex-wrap items-center gap-4 shadow-sm transition-all">
+          <form onSubmit={handleSearch} className="relative flex-1 min-w-[300px]">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input 
+              type="text"
+              placeholder="Tìm theo Email hoặc Số điện thoại..."
+              className="w-full bg-gray-50 dark:bg-white/10 border border-gray-200 dark:border-white/20 rounded-xl py-3 pl-11 pr-4 text-sm focus:outline-none focus:border-neon-green transition-all dark:text-white text-gray-900"
+              value={filters.keyword}
+              onChange={(e) => setFilters({...filters, keyword: e.target.value})}
+            />
+          </form>
+
+          <select 
+            className="bg-gray-50 dark:bg-white/10 border border-gray-200 dark:border-white/20 text-gray-700 dark:text-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-neon-green"
+            value={filters.role}
+            onChange={(e) => setFilters({...filters, role: e.target.value})}
+          >
+            <option value="">Tất cả Vai trò</option>
+            <option value="customer">Người mua (Customer)</option>
+            <option value="organizer">Ban tổ chức (Organizer)</option>
+            <option value="admin">Quản trị viên (Admin)</option>
+            <option value="staff">Nhân viên (Staff)</option>
+          </select>
+
+          <select 
+            className="bg-gray-50 dark:bg-white/10 border border-gray-200 dark:border-white/20 text-gray-700 dark:text-gray-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-neon-green"
+            value={filters.status}
+            onChange={(e) => setFilters({...filters, status: e.target.value})}
+          >
+            <option value="">Tất cả Trạng thái</option>
+            <option value="active">Đang hoạt động</option>
+            <option value="banned">Đã khóa</option>
+          </select>
+
+          <div className="flex items-center space-x-2 bg-gray-50 dark:bg-white/10 border border-gray-200 dark:border-white/20 rounded-xl px-3 py-1.5 focus-within:border-neon-green transition-all">
+            <div className="flex flex-col">
+              <label className="text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase ml-1">Từ ngày</label>
+              <input 
+                type="date" 
+                className="bg-transparent text-gray-700 dark:text-gray-300 text-xs focus:outline-none transition-colors"
+                value={filters.from}
+                onChange={(e) => setFilters({...filters, from: e.target.value})}
+              />
+            </div>
+            <div className="h-4 w-px bg-gray-200 dark:bg-white/10" />
+            <div className="flex flex-col">
+              <label className="text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase ml-1">Đến ngày</label>
+              <input 
+                type="date" 
+                className="bg-transparent text-gray-700 dark:text-gray-300 text-xs focus:outline-none transition-colors"
+                value={filters.to}
+                onChange={(e) => setFilters({...filters, to: e.target.value})}
+              />
+            </div>
+          </div>
+          
+          <button 
+            onClick={fetchUsers}
+            className="p-3 bg-neon-green text-black rounded-xl hover:bg-neon-hover transition-all font-bold shadow-lg shadow-neon-green/20"
+          >
+            Lọc
+          </button>
+        </div>
+
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -351,7 +363,6 @@ const UserManagement = () => {
           </table>
         </div>
         
-        {/* Pagination placeholder */}
         <div className="p-6 bg-white/[0.01] border-t border-white/5 flex items-center justify-between text-xs text-gray-500">
            <span>Hiển thị 1 - {users.length} của {users.length} người dùng</span>
            <div className="flex items-center space-x-2">
@@ -361,7 +372,6 @@ const UserManagement = () => {
         </div>
       </div>
 
-      {/* Reject Reason Modal */}
       {showRejectModal && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center px-4 bg-black/60 dark:bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white dark:bg-[#111114] border border-gray-200 dark:border-white/10 w-full max-w-md rounded-2xl p-6 space-y-4 shadow-2xl scale-in-center">
@@ -396,6 +406,12 @@ const UserManagement = () => {
           </div>
         </div>
       )}
+
+      <CreateUserModal 
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        onSuccess={fetchUsers}
+      />
     </div>
   );
 };

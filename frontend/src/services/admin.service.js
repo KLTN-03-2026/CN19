@@ -2,11 +2,14 @@ import api from './api';
 
 export const adminService = {
   // Quản lý người dùng
-  getUsers: async (params = {}) => {
+  getUsers: async (params) => {
     const response = await api.get('/admin/users', { params });
     return response.data;
   },
-
+  createUser: async (data) => {
+    const response = await api.post('/admin/users', data);
+    return response.data;
+  },
   toggleUserStatus: async (id, data) => {
     const response = await api.put(`/admin/users/${id}/ban`, data);
     return response.data;

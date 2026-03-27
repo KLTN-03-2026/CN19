@@ -1,4 +1,5 @@
 const prisma = require('../config/prisma');
+const bcrypt = require('bcrypt');
 const sendEmail = require('../utils/sendEmail');
 
 // [UC_21] Quản lý người dùng: Lấy toàn bộ danh sách
@@ -61,6 +62,65 @@ const getUsers = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ error: 'Lỗi server.' });
+  }
+};
+
+// [UC_21] Quản lý người dùng: Tạo người dùng mới (Dành cho Admin)
+const createUser = async (req, res) => {
+  try {
+    const { email, password, phone_number, full_name, role, permissions } = req.body;
+
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (existingUser) {
+      return res.status(400).json({ error: 'Email đã tồn tại trên hệ thống.' });
+    }
+
+    const password_hash = await bcrypt.hash(password, 10);
+
+    const newUser = await prisma.user.create({
+      data: {
+        email,
+        password_hash,
+        phone_number,
+        full_name,
+        role: role || 'customer',
+        permissions: role === 'admin' ? (permissions || []) : [],
+        status: 'active'
+      }
+    });
+
+    // 4. Gửi Email thông báo tài khoản mới
+    try {
+      const subject = '[BASTICKET] Thông tin tài khoản mới của bạn';
+      const html = `
+        <div style="font-family: sans-serif; padding: 20px; color: #333;">
+          <h2 style="color: #52c41a;">Chào mừng bạn đến với BASTICKET!</h2>
+          <p>Tài khoản quản trị của bạn đã được khởi tạo bởi Admin hệ thống.</p>
+          <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <p><b>Email đăng nhập:</b> ${email}</p>
+            <p><b>Mật khẩu tạm thời:</b> <span style="color: #ff4d4f; font-family: monospace;">${password}</span></p>
+          </div>
+          <p>Vui lòng đăng nhập và đổi mật khẩu ngay để đảm bảo an toàn.</p>
+          <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/login" 
+             style="display: inline-block; padding: 10px 20px; background-color: #52c41a; color: white; text-decoration: none; border-radius: 5px; font-weight: bold;">
+            Đăng nhập ngay
+          </a>
+          <p style="margin-top: 20px; font-size: 12px; color: #999;">Trân trọng,<br/>Đội ngũ BASTICKET</p>
+        </div>
+      `;
+      await sendEmail(email, subject, html);
+    } catch (emailError) {
+      console.error('Lỗi gửi email chào mừng:', emailError);
+      // Vẫn báo thành công vì user đã được tạo
+    }
+
+    res.status(201).json({ 
+      message: 'Tạo tài khoản thành công và đã gửi email thông báo.',
+      data: { id: newUser.id, email: newUser.email, role: newUser.role }
+    });
+  } catch (error) {
+    console.error('Error creating user:', error);
+    res.status(500).json({ error: 'Lỗi server khi tạo người dùng.' });
   }
 };
 
@@ -168,6 +228,7 @@ const approveOrganizer = async (req, res) => {
 
 module.exports = {
   getUsers,
+  createUser,
   toggleUserStatus,
   approveOrganizer
 };
