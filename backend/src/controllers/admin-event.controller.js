@@ -151,7 +151,7 @@ const getEventById = async (req, res) => {
       where: { id },
       include: {
         organizer: { 
-          select: { organization_name: true, kyc_status: true, user: { select: { email: true, phone_number: true } } } 
+          select: { id: true, user_id: true, organization_name: true, kyc_status: true, user: { select: { email: true, phone_number: true } } } 
         },
         category: { select: { name: true } },
         ticket_tiers: true,

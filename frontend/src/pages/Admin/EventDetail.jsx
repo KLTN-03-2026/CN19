@@ -303,13 +303,24 @@ const EventDetail = () => {
                       </div>
                    </div>
 
-                   <div className="pt-8 flex justify-end">
+                   <div className="pt-8 flex justify-end space-x-4">
+                      {/* Public Page Link */}
                       <button 
                         onClick={() => window.open(`/event/${event.id}`, '_blank')}
-                        className="flex items-center space-x-3 px-8 py-4 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl hover:bg-gray-50 dark:hover:bg-white/10 transition-all font-black text-xs uppercase tracking-widest dark:text-white"
+                        className="flex items-center space-x-2 px-6 py-3 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl hover:bg-gray-50 dark:hover:bg-white/10 transition-all font-bold text-[10px] uppercase tracking-widest text-gray-500"
+                        title="Xem trang hiển thị cho khách hàng"
                       >
-                         <span>Trang chi tiết người dùng</span>
                          <ExternalLink className="w-4 h-4" />
+                         <span>Trang Public</span>
+                      </button>
+
+                      {/* Admin User Detail Link */}
+                      <button 
+                        onClick={() => navigate(`/admin/users/${event.organizer?.id}`)}
+                        className="flex items-center space-x-3 px-8 py-3 bg-blue-600 text-white rounded-2xl hover:bg-blue-700 hover:scale-105 transition-all font-black text-xs uppercase tracking-wider shadow-lg shadow-blue-500/20"
+                      >
+                         <User className="w-4 h-4" />
+                         <span>Hồ sơ Ban tổ chức</span>
                       </button>
                    </div>
                 </div>

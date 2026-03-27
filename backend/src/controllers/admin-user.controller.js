@@ -149,12 +149,13 @@ const createUser = async (req, res) => {
   }
 };
 
-// [UC_21] Quản lý người dùng: Lấy chi tiết 360 độ (ID)
+// [UC_21] Quản lý người dùng: Lấy chi tiết 360 độ (ID hoặc Organizer ID)
 const getUserById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const user = await prisma.user.findUnique({
+    // Thử tìm thẳng qua User ID
+    let user = await prisma.user.findUnique({
       where: { id },
       include: {
         organizer_profile: {
@@ -188,12 +189,8 @@ const getUserById = async (req, res) => {
         },
         owned_tickets: {
           include: {
-            event: {
-              select: { id: true, title: true, event_date: true, location_address: true }
-            },
-            ticket_tier: {
-              select: { tier_name: true, price: true }
-            }
+            event: { select: { title: true, image_url: true } },
+            ticket_tier: { select: { tier_name: true, price: true } }
           },
           where: { status: 'active' } // Chỉ lấy vé đang có hiệu lực
         },
@@ -206,8 +203,40 @@ const getUserById = async (req, res) => {
       }
     });
 
+    // Nếu không tìm thấy qua User ID, thử tìm qua Organizer ID
     if (!user) {
-      return res.status(404).json({ error: 'Không tìm thấy người dùng.' });
+      const organizer = await prisma.organizer.findUnique({
+        where: { id },
+        select: { user_id: true }
+      });
+
+      if (organizer) {
+        // Đệ quy nhẹ hoặc chỉ cần findUnique lại với user_id vừa tìm được
+        user = await prisma.user.findUnique({
+           where: { id: organizer.user_id },
+           include: {
+              organizer_profile: {
+                include: {
+                  events: {
+                    select: { 
+                      id: true, title: true, event_date: true, event_time: true,
+                      end_date: true, end_time: true, status: true, image_url: true,
+                      location_address: true, description: true, category: { select: { name: true } }
+                    },
+                    orderBy: { event_date: 'desc' }
+                  }
+                }
+              },
+              orders: { include: { event: { select: { id: true, title: true, event_date: true, image_url: true } } }, orderBy: { created_at: 'desc' }, take: 10 },
+              owned_tickets: { include: { event: { select: { title: true, image_url: true } }, ticket_tier: { select: { tier_name: true, price: true } } }, where: { status: 'active' } },
+              listings: { include: { event: { select: { title: true } }, ticket: { select: { ticket_number: true } } } }
+           }
+        });
+      }
+    }
+
+    if (!user) {
+      return res.status(404).json({ error: 'Không tìm thấy người dùng hoặc Ban tổ chức.' });
     }
 
     // Không trả về private key vì lý do bảo mật
