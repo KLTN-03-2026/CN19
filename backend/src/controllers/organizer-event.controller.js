@@ -172,7 +172,15 @@ const updateEvent = async (req, res) => {
 const requestCancelOrReschedule = async (req, res) => {
   try {
     const { id } = req.params;
-    const { request_type, reason, new_date } = req.body; // 'cancel', 'reschedule'
+    const { 
+      request_type, 
+      reason, 
+      new_date, 
+      new_time, 
+      new_end_date, 
+      new_end_time, 
+      evidence_url 
+    } = req.body; 
 
     const event = await verifyEventOwnership(id, req.user.userId);
 
@@ -182,17 +190,33 @@ const requestCancelOrReschedule = async (req, res) => {
 
     const nextStatus = request_type === 'cancel' ? 'pending_cancel' : 'pending_reschedule';
     
-    await prisma.event.update({
-      where: { id },
-      data: { 
-        status: nextStatus,
-        // Có thể lưu reason vào 1 bảng Report/Log mới, demo ta chỉ đổi status
-      }
-    });
+    // Sử dụng transaction để đảm bảo cả 2 bước đều thành công hoặc thất bại
+    await prisma.$transaction([
+      // 1. Tạo bản ghi yêu cầu khẩn cấp chi tiết
+      prisma.emergencyRequest.create({
+        data: {
+          event_id: id,
+          request_type,
+          reason,
+          new_date: new_date ? new Date(new_date) : null,
+          new_time: new_time || null,
+          new_end_date: new_end_date ? new Date(new_end_date) : null,
+          new_end_time: new_end_time || null,
+          evidence_url: evidence_url || null,
+          status: 'pending'
+        }
+      }),
+      // 2. Cập nhật trạng thái sự kiện
+      prisma.event.update({
+        where: { id },
+        data: { status: nextStatus }
+      })
+    ]);
 
-    res.status(200).json({ message: 'Đã gửi yêu cầu xử lý khẩn cấp lên Admin.' });
+    res.status(200).json({ message: 'Đã gửi yêu cầu xử lý khẩn cấp cùng minh chứng lên Admin.' });
   } catch (error) {
-    res.status(400).json({ error: error.message || 'Lỗi server.' });
+     console.error('Error in requestCancelOrReschedule:', error);
+    res.status(400).json({ error: error.message || 'Lỗi server khi xử lý yêu cầu khẩn cấp.' });
   }
 };
 

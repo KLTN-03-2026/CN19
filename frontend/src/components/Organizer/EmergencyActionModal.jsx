@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AlertTriangle, X, Calendar, MessageSquare, CheckCircle2 } from 'lucide-react';
+import { AlertTriangle, X, Calendar, MessageSquare, CheckCircle2, PlusCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const EmergencyActionModal = ({ isOpen, onClose, onConfirm, eventTitle }) => {
