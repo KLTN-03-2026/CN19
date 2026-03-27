@@ -85,58 +85,60 @@ const EventManagement = () => {
 
   return (
     <div className="p-6">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-black text-gray-900 dark:text-white flex items-center space-x-3">
-          <div className="p-2 bg-neon-green/10 rounded-lg">
-            <Calendar className="w-6 h-6 text-neon-green" />
-          </div>
-          <span>Quản lý Sự kiện</span>
-        </h1>
-        <p className="text-gray-500 dark:text-gray-400 mt-1">
-          Theo dõi, phê duyệt và điều phối tất cả sự kiện hệ thống.
-        </p>
-      </div>
+      {/* Header & Stats section */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+        <div>
+          <h1 className="text-2xl font-black text-gray-900 dark:text-white flex items-center space-x-3">
+            <div className="p-2 bg-neon-green/10 rounded-lg">
+              <Calendar className="w-6 h-6 text-neon-green" />
+            </div>
+            <span>Quản lý Sự kiện</span>
+          </h1>
+          <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm">
+            Theo dõi, phê duyệt và điều phối tất cả sự kiện hệ thống.
+          </p>
+        </div>
 
-      {/* Stats Cards */}
-      <div className="flex items-center space-x-4 mb-8">
-        <button 
-          onClick={() => setStatusFilter('')}
-          className={`p-4 rounded-2xl border flex items-center space-x-4 transition-all flex-1 md:flex-none md:min-w-[200px] ${
-            !statusFilter 
-              ? 'bg-neon-green/10 border-neon-green/30 text-neon-green' 
-              : 'bg-white dark:bg-white/5 border-gray-200 dark:border-white/5 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/10'
-          }`}
-        >
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-            !statusFilter ? 'bg-neon-green/20' : 'bg-gray-100 dark:bg-white/5'
-          }`}>
-            <Calendar className="w-5 h-5" />
-          </div>
-          <div className="text-left">
-            <div className="text-xs uppercase font-bold tracking-wider opacity-60">Tất cả</div>
-            <div className="text-xl font-black">{stats.total}</div>
-          </div>
-        </button>
+        {/* Stats Cards */}
+        <div className="flex items-center space-x-3">
+          <button 
+            onClick={() => setStatusFilter('')}
+            className={`p-4 rounded-2xl border flex items-center space-x-4 transition-all ${
+              !statusFilter 
+                ? 'bg-neon-green/10 border-neon-green/30 text-neon-green' 
+                : 'bg-white dark:bg-white/5 border-gray-200 dark:border-white/5 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/10'
+            }`}
+          >
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+              !statusFilter ? 'bg-neon-green/20' : 'bg-gray-100 dark:bg-white/5'
+            }`}>
+              <Calendar className="w-5 h-5" />
+            </div>
+            <div className="text-left">
+              <div className="text-xs uppercase font-bold tracking-wider opacity-60">Tất cả</div>
+              <div className="text-xl font-black">{stats.total}</div>
+            </div>
+          </button>
 
-        <button 
-          onClick={() => setStatusFilter('pending')}
-          className={`p-4 rounded-2xl border flex items-center space-x-4 transition-all flex-1 md:flex-none md:min-w-[200px] ${
-            statusFilter === 'pending' 
-              ? 'bg-yellow-500/10 border-yellow-500/30 text-yellow-500' 
-              : 'bg-white dark:bg-white/5 border-gray-200 dark:border-white/5 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/10'
-          }`}
-        >
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-            statusFilter === 'pending' ? 'bg-yellow-500/20' : 'bg-gray-100 dark:bg-white/5'
-          }`}>
-            <Clock className="w-5 h-5" />
-          </div>
-          <div className="text-left">
-            <div className="text-xs uppercase font-bold tracking-wider opacity-60">Chờ duyệt</div>
-            <div className="text-xl font-black">{stats.pending}</div>
-          </div>
-        </button>
+          <button 
+            onClick={() => setStatusFilter('pending')}
+            className={`p-4 rounded-2xl border flex items-center space-x-4 transition-all ${
+              statusFilter === 'pending' 
+                ? 'bg-yellow-500/10 border-yellow-500/30 text-yellow-500' 
+                : 'bg-white dark:bg-white/5 border-gray-200 dark:border-white/5 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/10'
+            }`}
+          >
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+              statusFilter === 'pending' ? 'bg-yellow-500/20' : 'bg-gray-100 dark:bg-white/5'
+            }`}>
+              <Clock className="w-5 h-5" />
+            </div>
+            <div className="text-left">
+              <div className="text-xs uppercase font-bold tracking-wider opacity-60">Chờ duyệt</div>
+              <div className="text-xl font-black">{stats.pending}</div>
+            </div>
+          </button>
+        </div>
       </div>
 
       {/* Filter Bar */}
