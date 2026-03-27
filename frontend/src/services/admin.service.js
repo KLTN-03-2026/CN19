@@ -52,6 +52,10 @@ export const adminService = {
     const response = await api.get('/admin/events', { params });
     return response.data;
   },
+  getEventById: async (id) => {
+    const response = await api.get(`/admin/events/${id}`);
+    return response.data;
+  },
   approveEvent: async (id, data) => {
     const response = await api.put(`/admin/events/${id}/approve`, data);
     return response.data;

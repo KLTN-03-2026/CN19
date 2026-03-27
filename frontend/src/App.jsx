@@ -25,6 +25,7 @@ import UserManagement from './pages/Admin/UserManagement';
 import CategoryManagement from './pages/Admin/CategoryManagement';
 import CategoryDetail from './pages/Admin/CategoryDetail';
 import EventManagement from './pages/Admin/EventManagement';
+import AdminEventDetail from './pages/Admin/EventDetail';
 import UserDetail from './pages/Admin/UserDetail';
 
 // Component Bảo vệ Route theo Role
@@ -62,6 +63,7 @@ const router = createBrowserRouter([
       { path: 'users', element: <UserManagement /> },
       { path: 'users/:id', element: <UserDetail /> },
       { path: 'events', element: <EventManagement /> },
+      { path: 'events/:id', element: <AdminEventDetail /> },
       { path: 'categories', element: <CategoryManagement /> },
       { path: 'categories/:id', element: <CategoryDetail /> },
       { path: 'refunds', element: <div className="text-2xl font-black">Yêu cầu Hoàn tiền (Coming Soon)</div> },

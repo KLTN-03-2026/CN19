@@ -1,4 +1,5 @@
 const prisma = require('../config/prisma');
+const web3Service = require('../services/web3.service');
 
 // [UC_22] Quản lý sự kiện: Lấy toàn bộ các sự kiện
 const getEvents = async (req, res) => {
@@ -60,11 +61,39 @@ const approveEvent = async (req, res) => {
     const { id } = req.params;
     const { action, reason } = req.body; // 'approve' | 'reject'
 
-    const newStatus = action === 'approve' ? 'active' : 'draft'; // Nếu reject thì trả về draft cho sửa
+    const event = await prisma.event.findUnique({
+      where: { id },
+      include: { organizer: { include: { user: true } } }
+    });
+
+    if (!event) {
+      return res.status(404).json({ error: 'Không tìm thấy sự kiện' });
+    }
+
+    let smartContractAddress = event.smart_contract_address;
+
+    if (action === 'approve') {
+       // Nếu chưa có smart contract thì mới deploy (tránh deploy lại khi duyệt đi duyệt lại)
+       if (!smartContractAddress) {
+          try {
+            // Lấy ví BTC, nếu không có thì dùng ví admin hệ thống làm backup
+            const ownerWallet = event.organizer.user.wallet_address || process.env.CONTRACT_ADDRESS; 
+            smartContractAddress = await web3Service.deployEventContract(ownerWallet);
+          } catch (web3Error) {
+            console.error('Web3 Deployment Error:', web3Error);
+            return res.status(500).json({ error: 'Lỗi khi triển khai Smart Contract. Vui lòng thử lại sau.' });
+          }
+       }
+    }
+
+    const newStatus = action === 'approve' ? 'active' : 'draft'; 
     
     await prisma.event.update({
       where: { id },
-      data: { status: newStatus }
+      data: { 
+        status: newStatus,
+        smart_contract_address: smartContractAddress
+      }
     });
 
     await prisma.adminActionLog.create({
@@ -73,8 +102,12 @@ const approveEvent = async (req, res) => {
 
     // TODO: Gửi Email cho BTC báo kết quả
 
-    res.status(200).json({ message: `Đã xử lý sự kiện: ${newStatus}` });
+    res.status(200).json({ 
+      message: `Đã xử lý sự kiện: ${newStatus}`,
+      contract_address: smartContractAddress 
+    });
   } catch (error) {
+    console.error('Approve Event Error:', error);
     res.status(500).json({ error: 'Lỗi server.' });
   }
 };
@@ -102,6 +135,38 @@ const forceCancelEvent = async (req, res) => {
   }
 };
 
+// [UC_22] Lấy chi tiết một sự kiện (ID) cho Admin
+const getEventById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const event = await prisma.event.findUnique({
+      where: { id },
+      include: {
+        organizer: { 
+          select: { organization_name: true, kyc_status: true, user: { select: { email: true, phone_number: true } } } 
+        },
+        category: { select: { name: true } },
+        ticket_tiers: true,
+        _count: {
+          select: {
+            orders: { where: { status: 'completed' } },
+            tickets: true
+          }
+        }
+      }
+    });
+
+    if (!event) {
+      return res.status(404).json({ error: 'Không tìm thấy sự kiện.' });
+    }
+
+    res.status(200).json(event);
+  } catch (error) {
+    res.status(500).json({ error: 'Lỗi server.' });
+  }
+};
+
 // [UC_24] Quản lý danh mục (Thêm mới)
 const createCategory = async (req, res) => {
     try {
@@ -115,6 +180,7 @@ const createCategory = async (req, res) => {
 
 module.exports = {
   getEvents,
+  getEventById,
   approveEvent,
   forceCancelEvent,
   createCategory

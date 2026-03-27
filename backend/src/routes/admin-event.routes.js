@@ -8,6 +8,9 @@ router.use(authenticate, authorize('admin'));
 // [GET] /api/admin/events
 router.get('/', controller.getEvents);
 
+// [GET] /api/admin/events/:id
+router.get('/:id', controller.getEventById);
+
 // [PUT] /api/admin/events/:id/approve
 router.put('/:id/approve', controller.approveEvent);
 

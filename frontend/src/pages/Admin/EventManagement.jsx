@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Calendar, 
   Search, 
@@ -22,6 +23,7 @@ import { vi } from 'date-fns/locale';
 import { adminService } from '../../services/admin.service';
 
 const EventManagement = () => {
+  const navigate = useNavigate();
   const [events, setEvents] = useState([]);
   const [stats, setStats] = useState({ total: 0, pending: 0 });
   const [loading, setLoading] = useState(true);
@@ -301,9 +303,9 @@ const EventManagement = () => {
                         </div>
                       )}
                       <button 
-                        onClick={() => window.open(`/event/${event.id}`, '_blank')}
-                        className="p-3 text-gray-400 bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl hover:text-white hover:bg-neon-green hover:text-black transition-all"
-                        title="Xem chi tiết"
+                        onClick={() => navigate(`/admin/events/${event.id}`)}
+                        className="p-2 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-gray-400 hover:text-neon-green hover:border-neon-green/30 transition-all"
+                        title="Xem chi tiết Admin"
                       >
                         <Eye className="w-4 h-4" />
                       </button>
