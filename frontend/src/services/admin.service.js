@@ -6,6 +6,10 @@ export const adminService = {
     const response = await api.get('/admin/users', { params });
     return response.data;
   },
+  getUserById: async (id) => {
+    const response = await api.get(`/admin/users/${id}`);
+    return response.data;
+  },
   createUser: async (data) => {
     const response = await api.post('/admin/users', data);
     return response.data;

@@ -16,11 +16,13 @@ import {
   Eye,
   FileSearch
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { adminService } from '../../services/admin.service';
 import toast from 'react-hot-toast';
 import CreateUserModal from './components/CreateUserModal';
 
 const UserManagement = () => {
+  const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [stats, setStats] = useState({ total: 0, pending: 0 });
   const [isLoading, setIsLoading] = useState(true);
@@ -335,12 +337,13 @@ const UserManagement = () => {
                     <td className="px-6 py-4">
                       <div className="text-xs text-gray-400 flex items-center space-x-2">
                          <Clock className="w-3.5 h-3.5 text-gray-600" />
-                         <span>{new Date(u.created_at).toLocaleDateString('vi-VN')}</span>
+                         <span>{new Date(u.created_at).toLocaleString('vi-VN')}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end space-x-2">
                         <button 
+                           onClick={() => navigate(`/admin/users/${u.id}`)}
                            className="p-2 bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 rounded-lg hover:text-neon-green hover:bg-neon-green/10 transition-all border border-transparent dark:border-white/5"
                            title="Xem chi tiết"
                         >

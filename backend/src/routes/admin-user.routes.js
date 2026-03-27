@@ -8,6 +8,9 @@ router.use(authenticate, authorize('admin'));
 // [GET] /api/admin/users
 router.get('/', controller.getUsers);
 
+// [GET] /api/admin/users/:id
+router.get('/:id', controller.getUserById);
+
 // [POST] /api/admin/users
 router.post('/', controller.createUser);
 

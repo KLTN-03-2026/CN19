@@ -145,8 +145,61 @@ const createUser = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error creating user:', error);
     res.status(500).json({ error: 'Lỗi server khi tạo người dùng.' });
+  }
+};
+
+// [UC_21] Quản lý người dùng: Lấy chi tiết 360 độ (ID)
+const getUserById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await prisma.user.findUnique({
+      where: { id },
+      include: {
+        organizer_profile: true,
+        orders: {
+          include: {
+            event: {
+              select: { id: true, title: true, event_date: true, image_url: true }
+            }
+          },
+          orderBy: { created_at: 'desc' },
+          take: 10 // Chỉ lấy 10 đơn gần nhất để tránh overload, có thể mở rộng sau
+        },
+        owned_tickets: {
+          include: {
+            event: {
+              select: { id: true, title: true, event_date: true, location_address: true }
+            },
+            ticket_tier: {
+              select: { tier_name: true, price: true }
+            }
+          },
+          where: { status: 'active' } // Chỉ lấy vé đang có hiệu lực
+        },
+        listings: {
+          include: {
+            event: { select: { title: true } },
+            ticket: { select: { ticket_number: true } }
+          }
+        }
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'Không tìm thấy người dùng.' });
+    }
+
+    // Không trả về private key vì lý do bảo mật
+    const sensitiveData = { ...user };
+    delete sensitiveData.wallet_private_key;
+    delete sensitiveData.password_hash;
+
+    res.status(200).json(sensitiveData);
+  } catch (error) {
+    console.error('Error fetching user detail:', error);
+    res.status(500).json({ error: 'Lỗi server khi lấy chi tiết người dùng.' });
   }
 };
 
@@ -255,6 +308,7 @@ const approveOrganizer = async (req, res) => {
 module.exports = {
   getUsers,
   createUser,
+  getUserById,
   toggleUserStatus,
   approveOrganizer
 };

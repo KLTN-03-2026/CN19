@@ -25,6 +25,7 @@ import UserManagement from './pages/Admin/UserManagement';
 import CategoryManagement from './pages/Admin/CategoryManagement';
 import CategoryDetail from './pages/Admin/CategoryDetail';
 import EventManagement from './pages/Admin/EventManagement';
+import UserDetail from './pages/Admin/UserDetail';
 
 // Component Bảo vệ Route theo Role
 // @ts-ignore
@@ -59,6 +60,7 @@ const router = createBrowserRouter([
     children: [
       { path: 'dashboard', element: <Dashboard /> },
       { path: 'users', element: <UserManagement /> },
+      { path: 'users/:id', element: <UserDetail /> },
       { path: 'events', element: <EventManagement /> },
       { path: 'categories', element: <CategoryManagement /> },
       { path: 'categories/:id', element: <CategoryDetail /> },
