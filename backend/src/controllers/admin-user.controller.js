@@ -169,7 +169,6 @@ const getUserById = async (req, res) => {
                 end_time: true,
                 status: true, 
                 image_url: true,
-                location_name: true,
                 location_address: true,
                 description: true,
                 category: { select: { name: true } }

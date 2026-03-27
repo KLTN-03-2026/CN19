@@ -21,7 +21,12 @@ import {
   ArrowRightLeft,
   Settings,
   Building2,
-  CalendarDays
+  CalendarDays,
+  X,
+  Search,
+  Filter as FilterIcon,
+  Tag,
+  Eye
 } from 'lucide-react';
 import { adminService } from '../../services/admin.service';
 import toast from 'react-hot-toast';
@@ -32,6 +37,9 @@ const UserDetail = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('general');
+  const [eventSearch, setEventSearch] = useState('');
+  const [eventStatusFilter, setEventStatusFilter] = useState('');
+  const [selectedEvent, setSelectedEvent] = useState(null);
 
   useEffect(() => {
     fetchUserDetail();
@@ -293,51 +301,85 @@ const UserDetail = () => {
             )}
 
             {activeTab === 'organizer_events' && (
-              <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                {user.organizer_profile?.events?.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {user.organizer_profile.events.map(ev => (
-                      <div key={ev.id} className="p-4 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-2xl flex items-center space-x-4 group hover:border-neon-green/30 transition-all">
-                        <div className="w-16 h-16 rounded-xl bg-white dark:bg-white/10 flex-shrink-0 border border-gray-200 dark:border-white/5 overflow-hidden">
-                           {ev.image_url ? (
-                             <img src={ev.image_url} alt={ev.title} className="w-full h-full object-cover" />
-                           ) : (
-                             <div className="w-full h-full flex items-center justify-center">
-                               <CalendarDays className="w-8 h-8 text-neon-green opacity-40" />
-                             </div>
-                           )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-black text-gray-900 dark:text-white truncate mb-1 group-hover:text-neon-green transition-colors">{ev.title}</div>
-                          <div className="flex items-center justify-between">
-                            <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest flex items-center space-x-1">
-                               <Clock className="w-3 h-3" />
-                               <span>{new Date(ev.event_date).toLocaleDateString('vi-VN')}</span>
+              <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                {/* Search & Filter for Events */}
+                <div className="flex flex-col md:flex-row gap-4 mb-2">
+                   <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <input 
+                        type="text"
+                        placeholder="Tìm tên sự kiện..."
+                        className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-xl py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:border-neon-green transition-all"
+                        value={eventSearch}
+                        onChange={(e) => setEventSearch(e.target.value)}
+                      />
+                   </div>
+                   <select 
+                     className="bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-neon-green"
+                     value={eventStatusFilter}
+                     onChange={(e) => setEventStatusFilter(e.target.value)}
+                   >
+                     <option value="">Tất cả trạng thái</option>
+                     <option value="active">Đang hoạt động</option>
+                     <option value="pending">Chờ duyệt</option>
+                     <option value="cancelled">Đã hủy</option>
+                     <option value="draft">Từ chối/Bản nháp</option>
+                   </select>
+                </div>
+
+                {(() => {
+                  const filtered = (user.organizer_profile?.events || []).filter(ev => {
+                    const matchesSearch = ev.title.toLowerCase().includes(eventSearch.toLowerCase());
+                    const matchesStatus = eventStatusFilter ? ev.status === eventStatusFilter : true;
+                    return matchesSearch && matchesStatus;
+                  });
+
+                  return filtered.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {filtered.map(ev => (
+                        <div 
+                          key={ev.id} 
+                          onClick={() => setSelectedEvent(ev)}
+                          className="p-4 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-2xl flex items-center space-x-4 group hover:border-neon-green/30 transition-all cursor-pointer"
+                        >
+                          <div className="w-16 h-16 rounded-xl bg-white dark:bg-white/10 flex-shrink-0 border border-gray-200 dark:border-white/5 overflow-hidden">
+                             {ev.image_url ? (
+                               <img src={ev.image_url} alt={ev.title} className="w-full h-full object-cover" />
+                             ) : (
+                               <div className="w-full h-full flex items-center justify-center">
+                                 <CalendarDays className="w-8 h-8 text-neon-green opacity-40" />
+                               </div>
+                             )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-black text-gray-900 dark:text-white truncate mb-1 group-hover:text-neon-green transition-colors">{ev.title}</div>
+                            <div className="flex items-center justify-between">
+                              <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest flex items-center space-x-1">
+                                 <Clock className="w-3 h-3" />
+                                 <span>{new Date(ev.event_date).toLocaleDateString('vi-VN')}</span>
+                              </div>
+                              <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded ${
+                                ev.status === 'active' ? 'bg-neon-green/10 text-neon-green' : 
+                                ev.status === 'pending' ? 'bg-yellow-500/10 text-yellow-500' : 
+                                'bg-gray-500/10 text-gray-500'
+                              }`}>
+                                {ev.status}
+                              </span>
                             </div>
-                            <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded ${
-                              ev.status === 'active' ? 'bg-neon-green/10 text-neon-green' : 
-                              ev.status === 'pending' ? 'bg-yellow-500/10 text-yellow-500' : 
-                              'bg-gray-500/10 text-gray-500'
-                            }`}>
-                              {ev.status}
-                            </span>
+                          </div>
+                          <div className="p-2 text-gray-300 group-hover:text-neon-green transition-colors opacity-0 group-hover:opacity-100">
+                             <Eye className="w-4 h-4" />
                           </div>
                         </div>
-                        <button 
-                          onClick={() => window.open(`/event/${ev.id}`, '_blank')}
-                          className="p-2 text-gray-400 hover:text-neon-green transition-colors"
-                        >
-                           <ExternalLink className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-20 opacity-30 text-center">
-                    <CalendarDays className="w-16 h-16 mb-4" />
-                    <p className="text-sm font-bold uppercase tracking-widest">Chưa có sự kiện nào được tạo</p>
-                  </div>
-                )}
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-20 opacity-30 text-center">
+                      <CalendarDays className="w-16 h-16 mb-4" />
+                      <p className="text-sm font-bold uppercase tracking-widest">Không có sự kiện nào phù hợp</p>
+                    </div>
+                  );
+                })()}
               </div>
             )}
 
@@ -412,6 +454,101 @@ const UserDetail = () => {
           </div>
         </div>
       </div>
+      {/* Event Detail Modal */}
+      {selectedEvent && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white dark:bg-[#111114] w-full max-w-2xl rounded-[32px] overflow-hidden shadow-2xl border border-white/10 slide-in-from-bottom-8 duration-500">
+            <div className="relative h-64 overflow-hidden">
+               {selectedEvent.image_url ? (
+                 <img src={selectedEvent.image_url} alt={selectedEvent.title} className="w-full h-full object-cover" />
+               ) : (
+                 <div className="w-full h-full bg-neon-green/10 flex items-center justify-center">
+                   <CalendarDays className="w-20 h-20 text-neon-green opacity-20" />
+                 </div>
+               )}
+               <button 
+                onClick={() => setSelectedEvent(null)}
+                className="absolute top-6 right-6 p-3 bg-black/50 hover:bg-black/80 text-white rounded-2xl backdrop-blur-md transition-all border border-white/10"
+               >
+                 <X className="w-5 h-5" />
+               </button>
+               <div className="absolute bottom-6 left-6">
+                 <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-xl ${
+                   selectedEvent.status === 'active' ? 'bg-neon-green text-black' : 'bg-yellow-500 text-black'
+                 }`}>
+                   {selectedEvent.status}
+                 </span>
+               </div>
+            </div>
+
+            <div className="p-8 space-y-8">
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2 text-neon-green font-black uppercase text-[10px] tracking-widest">
+                    <Tag className="w-3.5 h-3.5" />
+                    <span>{selectedEvent.category?.name}</span>
+                  </div>
+                  <h2 className="text-3xl font-black text-gray-900 dark:text-white leading-tight uppercase tracking-tighter">
+                    {selectedEvent.title}
+                  </h2>
+                </div>
+                <button 
+                  onClick={() => window.open(`/event/${selectedEvent.id}`, '_blank')}
+                  className="flex items-center space-x-2 px-6 py-3 bg-neon-green/10 text-neon-green border border-neon-green/20 rounded-2xl hover:bg-neon-green hover:text-black transition-all font-black text-xs uppercase"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  <span>Trang Public</span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-gray-50 dark:bg-white/5 rounded-3xl border border-gray-100 dark:border-white/5">
+                <div className="space-y-1">
+                  <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center space-x-2">
+                    <Calendar className="w-3 h-3" />
+                    <span>Thời gian bắt đầu</span>
+                  </div>
+                  <div className="text-sm font-bold dark:text-white uppercase">
+                    {new Date(selectedEvent.event_date).toLocaleString('vi-VN')}
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center space-x-2">
+                    <MapPin className="w-3 h-3" />
+                    <span>Địa điểm</span>
+                  </div>
+                  <div className="text-sm font-bold dark:text-white truncate">
+                    {selectedEvent.location_address || 'Hội trường trực tuyến'}
+                  </div>
+                </div>
+
+                <div className="md:col-span-2 pt-4 border-t border-gray-100 dark:border-white/5 flex items-center space-x-4">
+                   <div className="flex-1">
+                      <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Địa chỉ cụ thể</div>
+                      <div className="text-xs text-gray-500 italic">{selectedEvent.location_address || 'N/A'}</div>
+                   </div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Mô tả sự kiện</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed max-h-40 overflow-y-auto pr-4 scrollbar-thin scrollbar-thumb-white/10">
+                  {selectedEvent.description || 'Không có mô tả chi tiết cho sự kiện này.'}
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-4">
+                 <button 
+                  onClick={() => setSelectedEvent(null)}
+                  className="px-8 py-3 dark:text-gray-500 font-black text-xs uppercase hover:text-white transition-colors"
+                 >
+                   Đóng cửa sổ
+                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
