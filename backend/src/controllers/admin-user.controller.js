@@ -1,5 +1,6 @@
 const prisma = require('../config/prisma');
 const bcrypt = require('bcrypt');
+const { ethers } = require('ethers');
 const sendEmail = require('../utils/sendEmail');
 
 // [UC_21] Quản lý người dùng: Lấy toàn bộ danh sách
@@ -74,49 +75,74 @@ const createUser = async (req, res) => {
     if (existingUser) {
       return res.status(400).json({ error: 'Email đã tồn tại trên hệ thống.' });
     }
-
+    // 2. Mã hóa mật khẩu
     const password_hash = await bcrypt.hash(password, 10);
 
+    // 3. Tạo Ví Web3 Custodial
+    const randomWallet = ethers.Wallet.createRandom();
+
+    // 4. Tạo user
     const newUser = await prisma.user.create({
       data: {
         email,
         password_hash,
-        phone_number,
+        phone_number: phone_number || null,
         full_name,
         role: role || 'customer',
         permissions: role === 'admin' ? (permissions || []) : [],
+        wallet_address: randomWallet.address,
+        wallet_private_key: randomWallet.privateKey,
         status: 'active'
       }
     });
 
-    // 4. Gửi Email thông báo tài khoản mới
+    // 5. Gửi Email thông báo tài khoản & Ví mới
     try {
-      const subject = '[BASTICKET] Thông tin tài khoản mới của bạn';
+      const subject = '[BASTICKET] Thông tin tài khoản & Ví Web3 mới';
       const html = `
-        <div style="font-family: sans-serif; padding: 20px; color: #333;">
-          <h2 style="color: #52c41a;">Chào mừng bạn đến với BASTICKET!</h2>
-          <p>Tài khoản quản trị của bạn đã được khởi tạo bởi Admin hệ thống.</p>
-          <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 20px 0;">
-            <p><b>Email đăng nhập:</b> ${email}</p>
-            <p><b>Mật khẩu tạm thời:</b> <span style="color: #ff4d4f; font-family: monospace;">${password}</span></p>
+        <div style="font-family: sans-serif; padding: 20px; color: #333; max-width: 600px; border: 1px solid #eee; border-radius: 12px;">
+          <h2 style="color: #52c41a; text-align: center;">Chào mừng bạn đến với BASTICKET!</h2>
+          <p>Tài khoản quản trị và <b>Ví Web3 cá nhân</b> của bạn đã được khởi tạo thành công.</p>
+          
+          <div style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin: 5px 0;"><b>📧 Email đăng nhập:</b> ${email}</p>
+            <p style="margin: 5px 0;"><b>🔑 Mật khẩu tạm thời:</b> <span style="color: #ff4d4f; font-family: monospace; font-weight: bold;">${password}</span></p>
+            <hr style="border: none; border-top: 1px solid #ddd; margin: 15px 0;"/>
+            <p style="margin: 5px 0;"><b>💎 Địa chỉ Ví Web3:</b></p>
+            <p style="word-break: break-all; font-family: monospace; font-size: 13px; color: #666; background: #fff; padding: 10px; border: 1px solid #eee; border-radius: 4px;">
+              ${randomWallet.address}
+            </p>
+            <p style="font-size: 11px; color: #999; margin-top: 10px;"><i>* Ví này dùng để quản lý vé NFT và các giao dịch trên hệ thống.</i></p>
           </div>
-          <p>Vui lòng đăng nhập và đổi mật khẩu ngay để đảm bảo an toàn.</p>
-          <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/login" 
-             style="display: inline-block; padding: 10px 20px; background-color: #52c41a; color: white; text-decoration: none; border-radius: 5px; font-weight: bold;">
-            Đăng nhập ngay
-          </a>
-          <p style="margin-top: 20px; font-size: 12px; color: #999;">Trân trọng,<br/>Đội ngũ BASTICKET</p>
+
+          <p>Hành động cần làm: <b>Vui lòng đăng nhập và đổi mật khẩu ngay để bảo mật tài khoản.</b></p>
+          
+          <div style="text-align: center; margin-top: 30px;">
+            <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/login" 
+               style="display: inline-block; padding: 12px 30px; background-color: #52c41a; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">
+              Đăng nhập ngay
+            </a>
+          </div>
+          
+          <p style="margin-top: 30px; font-size: 12px; color: #999; text-align: center; line-height: 1.5;">
+            Trân trọng,<br/>
+            <b>Đội ngũ Quản trị BASTICKET</b>
+          </p>
         </div>
       `;
       await sendEmail(email, subject, html);
     } catch (emailError) {
-      console.error('Lỗi gửi email chào mừng:', emailError);
-      // Vẫn báo thành công vì user đã được tạo
+      console.error('Lỗi gửi email:', emailError);
     }
 
     res.status(201).json({ 
-      message: 'Tạo tài khoản thành công và đã gửi email thông báo.',
-      data: { id: newUser.id, email: newUser.email, role: newUser.role }
+      message: 'Tạo tài khoản và Ví Web3 thành công.',
+      data: { 
+        id: newUser.id, 
+        email: newUser.email, 
+        role: newUser.role,
+        wallet_address: newUser.wallet_address 
+      }
     });
   } catch (error) {
     console.error('Error creating user:', error);

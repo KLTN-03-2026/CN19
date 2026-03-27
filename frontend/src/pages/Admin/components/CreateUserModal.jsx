@@ -71,7 +71,6 @@ const CreateUserModal = ({ isOpen, onClose, onSuccess }) => {
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
       <div className="bg-white dark:bg-[#0f0f12] border border-gray-200 dark:border-white/10 w-full max-w-2xl rounded-[32px] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
-        {/* Header */}
         <div className="relative px-8 pt-8 pb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
@@ -91,7 +90,6 @@ const CreateUserModal = ({ isOpen, onClose, onSuccess }) => {
 
         <form onSubmit={handleSubmit} className="p-8 pt-4 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Left Col: Info */}
             <div className="space-y-4">
               <div className="space-y-2">
                 <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Email Đăng nhập</label>
@@ -136,6 +134,20 @@ const CreateUserModal = ({ isOpen, onClose, onSuccess }) => {
               </div>
 
               <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Số điện thoại</label>
+                <div className="relative">
+                  <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input 
+                    type="tel"
+                    className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl py-3.5 pl-11 pr-4 text-sm focus:outline-none focus:border-neon-green transition-all dark:text-white"
+                    placeholder="09xx xxx xxx"
+                    value={formData.phone_number}
+                    onChange={(e) => setFormData({...formData, phone_number: e.target.value})}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
                 <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 ml-1">Vai trò (Role)</label>
                 <div className="grid grid-cols-2 gap-2">
                   {[
@@ -162,7 +174,6 @@ const CreateUserModal = ({ isOpen, onClose, onSuccess }) => {
               </div>
             </div>
 
-            {/* Right Col: Permissions */}
             <div className="bg-gray-50 dark:bg-white/[0.02] rounded-[24px] p-6 border border-gray-100 dark:border-white/5">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xs font-black uppercase tracking-widest text-gray-900 dark:text-white">Quyền hạn hệ thống</h3>

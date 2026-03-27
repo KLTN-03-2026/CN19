@@ -269,12 +269,18 @@ const UserManagement = () => {
                         <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-white/10 flex items-center justify-center font-bold text-neon-green border border-gray-200 dark:border-white/5">
                           {u.email.charAt(0).toUpperCase()}
                         </div>
-                        <div>
-                          <div className="text-sm font-bold text-gray-900 dark:text-white mb-0.5">{u.email}</div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-bold text-gray-900 dark:text-white mb-0.5 truncate">{u.email}</div>
                           <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center space-x-2">
                              <Phone className="w-3 h-3" />
                              <span>{u.phone_number || 'N/A'}</span>
                           </div>
+                          {u.wallet_address && (
+                            <div className="text-[10px] font-mono text-gray-400 mt-1 flex items-center space-x-1 opacity-60 group-hover:opacity-100 transition-opacity">
+                              <Shield className="w-2.5 h-2.5 text-neon-green" />
+                              <span title={u.wallet_address}>{u.wallet_address.substring(0, 6)}...{u.wallet_address.substring(38)}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </td>
