@@ -78,10 +78,17 @@ const approveEvent = async (req, res) => {
           try {
             // Lấy ví BTC, nếu không có thì dùng ví admin hệ thống làm backup
             const ownerWallet = event.organizer.user.wallet_address || process.env.CONTRACT_ADDRESS; 
+            console.log(`[Admin Controller] Đang yêu cầu deploy cho ví: ${ownerWallet}`);
+            
             smartContractAddress = await web3Service.deployEventContract(ownerWallet);
           } catch (web3Error) {
-            console.error('Web3 Deployment Error:', web3Error);
-            return res.status(500).json({ error: 'Lỗi khi triển khai Smart Contract. Vui lòng thử lại sau.' });
+            console.error('❌ [Web3 Deployment Error]:', web3Error.message);
+            // Trả về lỗi cụ thể hơn để Admin biết (vd: RPC Error, Wallet Error)
+            return res.status(500).json({ 
+              error: 'Triển khai Smart Contract thất bại', 
+              detail: web3Error.message,
+              suggestion: 'Hãy đảm bảo Node Blockchain (Hardhat) đang chạy và ví Admin có đủ Gas.'
+            });
           }
        }
     }

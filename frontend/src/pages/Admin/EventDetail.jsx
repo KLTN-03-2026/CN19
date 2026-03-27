@@ -31,6 +31,7 @@ const EventDetail = () => {
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
     fetchEventDetail();
@@ -50,13 +51,20 @@ const EventDetail = () => {
   };
 
   const handleApprove = async () => {
-    if (window.confirm('Bạn có chắc chắn muốn PHÊ DUYỆT sự kiện này?')) {
+    if (window.confirm('Bạn có chắc chắn muốn PHÊ DUYỆT sự kiện này? Hệ thống sẽ tự động khởi tạo Smart Contract trên Blockchain.')) {
       try {
-        await adminService.approveEvent(id, { action: 'approve' });
-        toast.success('Đã phê duyệt sự kiện!');
+        setIsProcessing(true);
+        const res = await adminService.approveEvent(id, { action: 'approve' });
+        toast.success(`Phê duyệt thành công! Smart Contract: ${res.contract_address?.substring(0, 10)}...`);
         fetchEventDetail();
       } catch (error) {
-        toast.error('Thao tác thất bại');
+        const errorDetail = error.response?.data?.detail || error.message;
+        const suggestion = error.response?.data?.suggestion || '';
+        toast.error(`${error.response?.data?.error || 'Thao tác thất bại'}: ${errorDetail}. ${suggestion}`, {
+          duration: 6000
+        });
+      } finally {
+        setIsProcessing(false);
       }
     }
   };
@@ -116,17 +124,30 @@ const EventDetail = () => {
           <div className="flex items-center space-x-3">
             <button 
               onClick={handleReject}
-              className="flex items-center space-x-2 px-6 py-3 bg-red-500/10 text-red-500 border border-red-500/20 rounded-2xl font-black text-xs uppercase hover:bg-red-500 hover:text-white transition-all shadow-lg shadow-red-500/5"
+              disabled={isProcessing}
+              className="flex items-center space-x-2 px-6 py-3 bg-red-500/10 text-red-500 border border-red-500/20 rounded-2xl font-black text-xs uppercase hover:bg-red-500 hover:text-white transition-all shadow-lg shadow-red-500/5 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <XCircle className="w-4 h-4" />
               <span>Từ chối</span>
             </button>
             <button 
               onClick={handleApprove}
-              className="flex items-center space-x-2 px-6 py-3 bg-neon-green text-black rounded-2xl font-black text-xs uppercase hover:scale-105 transition-all shadow-lg shadow-neon-green/20"
+              disabled={isProcessing}
+              className={`flex items-center space-x-2 px-6 py-3 rounded-2xl font-black text-xs uppercase transition-all shadow-lg shadow-neon-green/20 disabled:opacity-70 disabled:cursor-wait ${
+                isProcessing ? 'bg-neon-green/50 text-black/50' : 'bg-neon-green text-black hover:scale-105'
+              }`}
             >
-              <CheckCircle2 className="w-4 h-4" />
-              <span>Phê duyệt ngay</span>
+              {isProcessing ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                  <span>Đang triển khai...</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Phê duyệt ngay</span>
+                </>
+              )}
             </button>
           </div>
         )}
