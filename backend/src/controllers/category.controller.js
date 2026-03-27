@@ -8,6 +8,7 @@ const getAllCategories = async (req, res) => {
       select: {
         id: true,
         name: true,
+        image_url: true,
       }
     });
     res.status(200).json({ data: categories });

@@ -83,7 +83,9 @@ i18n
               search_button: "Search"
             },
             categories: {
-              all: "All", music: "Music", workshop: "Workshop", sports: "Sports", theater: "Theater", festival: "Festival"
+              title: "Explore by Category",
+              view_all: "View All",
+              all: "All", music: "Music", workshop: "Workshop", sports: "Sports", theater: "Theater", festival: "Festival", food: "Food", travel: "Travel", charity: "Charity"
             },
             events: {
               title: "Upcoming", title_highlight: "Events",
@@ -178,7 +180,9 @@ i18n
               search_button: "Tìm kiếm"
             },
             categories: {
-              all: "Tất cả", music: "Âm nhạc", workshop: "Hội thảo", sports: "Thể thao", theater: "Sân khấu", festival: "Lễ hội"
+              title: "Khám phá theo danh mục",
+              view_all: "Xem tất cả",
+              all: "Tất cả", music: "Âm nhạc", workshop: "Hội thảo", sports: "Thể thao", theater: "Sân khấu", festival: "Lễ hội", food: "Ẩm thực", travel: "Du lịch", charity: "Từ thiện"
             },
             events: {
               title: "Sự kiện", title_highlight: "Sắp diễn ra",
