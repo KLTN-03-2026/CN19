@@ -157,7 +157,27 @@ const getUserById = async (req, res) => {
     const user = await prisma.user.findUnique({
       where: { id },
       include: {
-        organizer_profile: true,
+        organizer_profile: {
+          include: {
+            events: {
+              select: { 
+                id: true, 
+                title: true, 
+                event_date: true, 
+                event_time: true,
+                end_date: true,
+                end_time: true,
+                status: true, 
+                image_url: true,
+                location_name: true,
+                location_address: true,
+                description: true,
+                category: { select: { name: true } }
+              },
+              orderBy: { event_date: 'desc' }
+            }
+          }
+        },
         orders: {
           include: {
             event: {

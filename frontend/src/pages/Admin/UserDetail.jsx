@@ -20,7 +20,8 @@ import {
   Package,
   ArrowRightLeft,
   Settings,
-  Building2
+  Building2,
+  CalendarDays
 } from 'lucide-react';
 import { adminService } from '../../services/admin.service';
 import toast from 'react-hot-toast';
@@ -196,25 +197,33 @@ const UserDetail = () => {
         <div className="lg:col-span-2 space-y-6">
           {/* Tabs */}
           <div className="flex items-center space-x-1 p-1 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/5 rounded-2xl">
-            {[
-              { id: 'general', label: 'Thông tin chung', icon: User },
-              { id: 'tickets', label: 'Kho vé NFT', icon: Ticket },
-              { id: 'orders', label: 'Lịch sử mua', icon: ShoppingBag },
-              { id: 'activity', label: 'Hoạt động', icon: ArrowRightLeft }
-            ].map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex-1 flex items-center justify-center space-x-2 py-3 rounded-xl text-xs font-bold transition-all ${
-                  activeTab === tab.id 
-                    ? 'bg-neon-green text-black shadow-lg shadow-neon-green/20' 
-                    : 'text-gray-500 hover:bg-gray-50 dark:hover:bg-white/10'
-                }`}
-              >
-                <tab.icon className="w-4 h-4" />
-                <span>{tab.label}</span>
-              </button>
-            ))}
+            {(() => {
+              const baseTabs = [
+                { id: 'general', label: 'Thông tin chung', icon: User },
+                { id: 'tickets', label: 'Kho vé NFT', icon: Ticket },
+                { id: 'orders', label: 'Lịch sử mua', icon: ShoppingBag },
+                { id: 'activity', label: 'Hoạt động', icon: ArrowRightLeft }
+              ];
+
+              if (user.organizer_profile) {
+                baseTabs.splice(1, 0, { id: 'organizer_events', label: 'Sự kiện tổ chức', icon: CalendarDays });
+              }
+
+              return baseTabs.map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex-1 flex items-center justify-center space-x-2 py-3 rounded-xl text-xs font-bold transition-all ${
+                    activeTab === tab.id 
+                      ? 'bg-neon-green text-black shadow-lg shadow-neon-green/20' 
+                      : 'text-gray-500 hover:bg-gray-50 dark:hover:bg-white/10'
+                  }`}
+                >
+                  <tab.icon className="w-4 h-4" />
+                  <span>{tab.label}</span>
+                </button>
+              ));
+            })()}
           </div>
 
           {/* Tab Content */}
@@ -278,6 +287,55 @@ const UserDetail = () => {
                          {user.organizer_profile.description || 'Không có mô tả cho ban tổ chức này.'}
                        </p>
                     </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'organizer_events' && (
+              <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                {user.organizer_profile?.events?.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {user.organizer_profile.events.map(ev => (
+                      <div key={ev.id} className="p-4 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-2xl flex items-center space-x-4 group hover:border-neon-green/30 transition-all">
+                        <div className="w-16 h-16 rounded-xl bg-white dark:bg-white/10 flex-shrink-0 border border-gray-200 dark:border-white/5 overflow-hidden">
+                           {ev.image_url ? (
+                             <img src={ev.image_url} alt={ev.title} className="w-full h-full object-cover" />
+                           ) : (
+                             <div className="w-full h-full flex items-center justify-center">
+                               <CalendarDays className="w-8 h-8 text-neon-green opacity-40" />
+                             </div>
+                           )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-black text-gray-900 dark:text-white truncate mb-1 group-hover:text-neon-green transition-colors">{ev.title}</div>
+                          <div className="flex items-center justify-between">
+                            <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest flex items-center space-x-1">
+                               <Clock className="w-3 h-3" />
+                               <span>{new Date(ev.event_date).toLocaleDateString('vi-VN')}</span>
+                            </div>
+                            <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded ${
+                              ev.status === 'active' ? 'bg-neon-green/10 text-neon-green' : 
+                              ev.status === 'pending' ? 'bg-yellow-500/10 text-yellow-500' : 
+                              'bg-gray-500/10 text-gray-500'
+                            }`}>
+                              {ev.status}
+                            </span>
+                          </div>
+                        </div>
+                        <button 
+                          onClick={() => window.open(`/event/${ev.id}`, '_blank')}
+                          className="p-2 text-gray-400 hover:text-neon-green transition-colors"
+                        >
+                           <ExternalLink className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-20 opacity-30 text-center">
+                    <CalendarDays className="w-16 h-16 mb-4" />
+                    <p className="text-sm font-bold uppercase tracking-widest">Chưa có sự kiện nào được tạo</p>
                   </div>
                 )}
               </div>

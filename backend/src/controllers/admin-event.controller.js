@@ -3,10 +3,21 @@ const prisma = require('../config/prisma');
 // [UC_22] Quản lý sự kiện: Lấy toàn bộ các sự kiện
 const getEvents = async (req, res) => {
   try {
-    const { status, keyword } = req.query;
+    const { status, keyword, from, to } = req.query;
 
     const whereClause = {};
     if (status) whereClause.status = status;
+
+    if (from || to) {
+      whereClause.event_date = {};
+      if (from) whereClause.event_date.gte = new Date(from);
+      if (to) {
+        const toDate = new Date(to);
+        toDate.setHours(23, 59, 59, 999);
+        whereClause.event_date.lte = toDate;
+      }
+    }
+
     if (keyword) {
       whereClause.title = { contains: keyword, mode: 'insensitive' };
     }
