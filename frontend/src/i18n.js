@@ -101,6 +101,18 @@ i18n
               smart_title: "Smart Contracts", smart_desc: "Automate processes, extract profits directly to your wallet.",
               trust_stat: "Trusted Users"
             }
+          },
+          explore: {
+            title: "Explore", title_highlight: "Events",
+            subtitle: "Finding the perfect show for your unique taste.",
+            filters: "Filters",
+            search_placeholder: "Event name, artist...",
+            category_label: "Categories",
+            price_label: "Price Range",
+            date_label: "Select Date",
+            clear_all: "Clear All",
+            no_results: "We couldn't find any events matching your filters.",
+            found: "Found {{count}} events"
           }
         }
       },
@@ -167,7 +179,7 @@ i18n
             detail_placeholder: "Ví dụ: 123 Đường Nguyễn Sinh Cung...",
             debounce_hint: "* 1.5s sau khi bạn nhập, bản đồ sẽ tự động rà soát vị trí đường.",
             confirm_btn: "Xác Nhận Địa Chỉ",
-            map_instruction: "Nhấp chuột để cắm cờ chính xác!",
+            map_instruction: "Nhập chuột để cắm cờ chính xác!",
             err_incomplete: "Vui lòng chọn đầy đủ Xã/Phường và nhập số nhà cụ thể!"
           },
           home: {
@@ -198,14 +210,26 @@ i18n
               smart_title: "Hợp Đồng Thông Minh", smart_desc: "Tự động hóa mọi quy trình, trích lợi nhuận trực tiếp về ví BTC.",
               trust_stat: "Người dùng tin tưởng"
             }
+          },
+          explore: {
+            title: "Khám phá", title_highlight: "Sự kiện",
+            subtitle: "Tìm kiếm show diễn hoàn hảo cho gu âm nhạc của bạn.",
+            filters: "Bộ lọc",
+            search_placeholder: "Tên sự kiện, nghệ sĩ...",
+            category_label: "Danh mục",
+            price_label: "Khoảng giá",
+            date_label: "Chọn ngày",
+            clear_all: "Xóa tất cả",
+            no_results: "Không tìm thấy sự kiện nào khớp với bộ lọc của bạn.",
+            found: "Tìm thấy {{count}} sự kiện"
           }
         }
       }
     },
-    lng: 'vi', // Mặc định luôn khởi động bằng Tiếng Việt
-    fallbackLng: 'vi', // Nếu lỗi dịch thuật thì ưu tiên dùng Tiếng Việt
+    lng: 'vi',
+    fallbackLng: 'vi',
     interpolation: {
-      escapeValue: false, 
+      escapeValue: false,
     }
   });
 

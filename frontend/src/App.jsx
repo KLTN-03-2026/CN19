@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast';
 // Layouts và Pages
 import PublicLayout from './components/layout/PublicLayout';
 import Home from './pages/Home/Home';
+import Events from './pages/Home/Events';
 
 // Auth Pages
 import Login from './pages/Auth/Login';
@@ -45,6 +46,7 @@ const router = createBrowserRouter([
     element: <PublicLayout />,
     children: [
       { path: '', element: <Home /> },
+      { path: 'events', element: <Events /> },
       { path: 'login', element: <Login /> },
       { path: 'register', element: <Register /> },
       { path: 'organizer-register', element: <RegisterOrganizer /> },

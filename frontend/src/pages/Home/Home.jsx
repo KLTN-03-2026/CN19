@@ -101,7 +101,7 @@ const Home = () => {
                     <input 
                         type="text" 
                         placeholder={t('home.hero.search_placeholder')}
-                        className="w-full px-4 py-4 bg-transparent outline-none text-sm font-bold placeholder:text-gray-400 dark:text-white"
+                        className="w-full px-4 py-4 bg-transparent outline-none text-sm font-bold placeholder:text-gray-400 text-gray-900 dark:text-white"
                         value={searchKeyword}
                         onChange={(e) => setSearchKeyword(e.target.value)}
                     />
@@ -121,7 +121,7 @@ const Home = () => {
                     {t('home.categories.title')}
                 </h2>
             </div>
-            <Link to="/explore" className="group flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-gray-500 dark:text-white/50 hover:text-neon-green transition-all">
+            <Link to="/events" className="group flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-gray-500 dark:text-white/50 hover:text-neon-green transition-all">
                 {t('home.categories.view_all')} 
                 <div className="w-8 h-8 rounded-full border border-gray-200 dark:border-white/10 flex items-center justify-center group-hover:border-neon-green group-hover:bg-neon-green/10 transition-all">
                     <ArrowRight className="w-4 h-4" />
@@ -187,37 +187,37 @@ const Home = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <GlowCard>
                         <Shield className="w-8 h-8 text-neon-green mb-4" />
-                        <h4 className="text-lg font-black dark:text-white uppercase mb-2">
+                        <h4 className="text-lg font-black text-gray-900 dark:text-white uppercase mb-2">
                           {t('home.features.secure_title')}
                         </h4>
-                        <p className="text-xs font-bold text-gray-400 leading-relaxed">
+                        <p className="text-xs font-bold text-gray-600 dark:text-gray-400 leading-relaxed">
                           {t('home.features.secure_desc')}
                         </p>
                     </GlowCard>
                     <GlowCard>
                         <Zap className="w-8 h-8 text-neon-green mb-4" />
-                        <h4 className="text-lg font-black dark:text-white uppercase mb-2">
+                        <h4 className="text-lg font-black text-gray-900 dark:text-white uppercase mb-2">
                           {t('home.features.instant_title')}
                         </h4>
-                        <p className="text-xs font-bold text-gray-400 leading-relaxed">
+                        <p className="text-xs font-bold text-gray-600 dark:text-gray-400 leading-relaxed">
                           {t('home.features.instant_desc')}
                         </p>
                     </GlowCard>
                     <GlowCard>
                         <Users className="w-8 h-8 text-neon-green mb-4" />
-                        <h4 className="text-lg font-black dark:text-white uppercase mb-2">
+                        <h4 className="text-lg font-black text-gray-900 dark:text-white uppercase mb-2">
                           {t('home.features.market_title')}
                         </h4>
-                        <p className="text-xs font-bold text-gray-400 leading-relaxed">
+                        <p className="text-xs font-bold text-gray-600 dark:text-gray-400 leading-relaxed">
                           {t('home.features.market_desc')}
                         </p>
                     </GlowCard>
                     <GlowCard>
                         <Calendar className="w-8 h-8 text-neon-green mb-4" />
-                        <h4 className="text-lg font-black dark:text-white uppercase mb-2">
+                        <h4 className="text-lg font-black text-gray-900 dark:text-white uppercase mb-2">
                           {t('home.features.smart_title')}
                         </h4>
-                        <p className="text-xs font-bold text-gray-400 leading-relaxed">
+                        <p className="text-xs font-bold text-gray-600 dark:text-gray-400 leading-relaxed">
                           {t('home.features.smart_desc')}
                         </p>
                     </GlowCard>

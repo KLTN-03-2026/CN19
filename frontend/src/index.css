@@ -21,7 +21,8 @@
 }
 
 body {
-  @apply bg-dark-bg text-white font-sans antialiased;
+  @apply bg-white text-gray-900 font-sans antialiased dark:bg-dark-bg dark:text-white transition-colors duration-300;
+  color-scheme: light dark;
 }
 
 /* Lớp viền glow xanh cho card */
@@ -72,4 +73,9 @@ body {
 @keyframes slide-in-bottom {
   from { transform: translateY(20px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
+}
+
+/* Fix for dark mode native select dropdown options */
+option {
+  @apply bg-white text-gray-900 dark:bg-[#111114] dark:text-white transition-colors duration-200;
 }

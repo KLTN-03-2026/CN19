@@ -234,8 +234,8 @@ const PublicLayout = () => {
 
       <footer className="border-t border-gray-200 dark:border-dark-border bg-white dark:bg-dark-bg py-12 mt-20 transition-colors">
         <div className="max-w-[1400px] mx-auto px-4 text-center">
-          <Shield className="w-8 h-8 text-gray-300 dark:text-dark-border mx-auto mb-4" />
-          <p className="text-gray-400 sm:text-gray-500">© 2026 BlockTix. The Next Generation Ticketing Platform.</p>
+          <Shield className="w-8 h-8 text-gray-300 dark:text-gray-800 mx-auto mb-4" />
+          <p className="text-gray-500 dark:text-gray-400 font-medium">© 2026 BlockTix. The Next Generation Ticketing Platform.</p>
         </div>
       </footer>
     </div>
