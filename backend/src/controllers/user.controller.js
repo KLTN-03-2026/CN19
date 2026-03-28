@@ -18,6 +18,7 @@ const getProfile = async (req, res) => {
         wallet_address: true,
         avatar_url: true,
         address: true,
+        full_name: true,
         date_of_birth: true,
         created_at: true,
         organizer_profile: true // Lấy thêm info BTC nếu có
@@ -39,7 +40,7 @@ const getProfile = async (req, res) => {
 const updateProfile = async (req, res) => {
   try {
     const userId = req.user.userId;
-    const { phone_number, avatar_url, address, date_of_birth } = req.body;
+    const { full_name, phone_number, avatar_url, address, date_of_birth } = req.body;
 
     // Kiểm tra số điện thoại có bị trùng không
     if (phone_number) {
@@ -54,6 +55,7 @@ const updateProfile = async (req, res) => {
     const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: {
+        full_name,
         phone_number,
         avatar_url,
         address,
@@ -62,6 +64,7 @@ const updateProfile = async (req, res) => {
       select: {
         id: true,
         email: true,
+        full_name: true,
         phone_number: true,
         address: true,
         date_of_birth: true,

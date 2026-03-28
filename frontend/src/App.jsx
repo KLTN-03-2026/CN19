@@ -5,10 +5,13 @@ import { Toaster } from 'react-hot-toast';
 import PublicLayout from './components/layout/PublicLayout';
 import Home from './pages/Home/Home';
 import Events from './pages/Home/Events';
+import Profile from './pages/Profile/Profile';
 
 // Auth Pages
 import Login from './pages/Auth/Login';
 import Register from './pages/Auth/Register';
+import ForgotPassword from './pages/Auth/ForgotPassword';
+import ResetPassword from './pages/Auth/ResetPassword';
 
 // Organizer Pages
 import OrganizerLayout from './components/layout/OrganizerLayout';
@@ -49,6 +52,16 @@ const router = createBrowserRouter([
       { path: 'events', element: <Events /> },
       { path: 'login', element: <Login /> },
       { path: 'register', element: <Register /> },
+      { path: 'forgot-password', element: <ForgotPassword /> },
+      { path: 'reset-password', element: <ResetPassword /> },
+      { 
+        path: 'profile', 
+        element: (
+          <ProtectedRoute>
+            <Profile />
+          </ProtectedRoute>
+        ) 
+      },
       { path: 'organizer-register', element: <RegisterOrganizer /> },
       { path: '*', element: <Navigate to="/" replace /> }
     ]

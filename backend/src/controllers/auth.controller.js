@@ -348,7 +348,7 @@ const googleLogin = async (req, res) => {
   }
 };
 
-// Quên mật khẩu (Giả lập gửi OTP qua Email)
+// [UC_08_A] Quên mật khẩu - Gửi mã OTP xác nhận
 const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
@@ -358,11 +358,68 @@ const forgotPassword = async (req, res) => {
       return res.status(404).json({ error: 'Email không tồn tại trong hệ thống.' });
     }
 
-    // TODO: Sinh OTP 6 số lưu vào Redis hoặc DB và gửi Email
+    // 1. Sinh OTP 6 số
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // 2. Lưu vào Cache (Hết hạn sau 5 phút)
+    global.otpCache.set(`reset_${email}`, {
+      otp: otp,
+      userId: user.id,
+      expires: Date.now() + 5 * 60 * 1000
+    });
+
+    // 3. Gửi Email
+    const htmlContent = `
+      <div style="font-family: Arial, sans-serif; padding: 20px; background: #111; color: #fff; border-radius: 10px; max-width: 500px; margin: auto;">
+        <h2 style="color: #52c41a; text-align: center;">BASTICKET</h2>
+        <p>Chào <b>${user.full_name || 'Bạn'}</b>,</p>
+        <p>Bạn đã yêu cầu đặt lại mật khẩu cho tài khoản BASTICKET. Đây là mã xác nhận (OTP) 6 số của bạn:</p>
+        <div style="font-size: 36px; font-weight: bold; letter-spacing: 5px; text-align: center; color: #52c41a; padding: 15px; border: 1px dashed #52c41a; margin: 20px 0;">
+          ${otp}
+        </div>
+        <p style="color: #888; font-size: 12px; text-align: center;">Mã này sẽ hết hạn sau 5 phút. Nếu không phải bạn yêu cầu, hãy bỏ qua email này.</p>
+      </div>
+    `;
+
+    sendEmail(email, 'Mã xác nhận Đặt lại mật khẩu - BASTICKET', htmlContent);
+    console.log(`[DEV OTP RESET] OTP: ${otp} -> ${email}`);
+
     res.status(200).json({ message: 'Mã OTP đã được gửi đến email của bạn.' });
   } catch (error) {
     console.error('Lỗi khi forgot password:', error);
     res.status(500).json({ error: 'Lỗi server.' });
+  }
+};
+
+// [UC_08_B] Xác nhận OTP và Reset mật khẩu mới
+const resetPassword = async (req, res) => {
+  try {
+    const { email, otp, new_password } = req.body;
+
+    const record = global.otpCache.get(`reset_${email}`);
+    if (!record) return res.status(400).json({ error: 'Phiên đặt lại mật khẩu không tồn tại hoặc đã hết hạn.' });
+    if (Date.now() > record.expires) {
+      global.otpCache.delete(`reset_${email}`);
+      return res.status(400).json({ error: 'Mã OTP đã hết hiệu lực 5 phút.' });
+    }
+    if (record.otp !== otp) return res.status(400).json({ error: 'Mã OTP không chính xác!' });
+
+    // Cập nhật mật khẩu mới
+    const salt = await bcrypt.genSalt(10);
+    const password_hash = await bcrypt.hash(new_password, salt);
+
+    await prisma.user.update({
+      where: { id: record.userId },
+      data: { password_hash }
+    });
+
+    // Xóa cache
+    global.otpCache.delete(`reset_${email}`);
+
+    res.status(200).json({ message: 'Đặt lại mật khẩu thành công! Vui lòng đăng nhập lại.' });
+  } catch (err) {
+    console.error('Lỗi khi reset password:', err);
+    res.status(500).json({ error: 'Lỗi hệ thống khi cập nhật mật khẩu.' });
   }
 };
 
@@ -385,5 +442,6 @@ module.exports = {
   sendOrganizerOtp,
   verifyOrganizerOtp,
   forgotPassword,
+  resetPassword,
   resendOtp
 };

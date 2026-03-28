@@ -113,6 +113,45 @@ i18n
             clear_all: "Clear All",
             no_results: "We couldn't find any events matching your filters.",
             found: "Found {{count}} events"
+          },
+          profile: {
+            title: "Profile", user: "User",
+            tabs: {
+              info: "Personal Info",
+              wallet: "Wallet & Security",
+              security: "Account Settings"
+            },
+            labels: {
+              name: "Full Name", phone: "Phone Number", dob: "Date of Birth", address: "Address", email: "Email Address",
+              save: "Save Changes", cancel: "Cancel", edit: "Edit Profile",
+              save_success: "Profile updated successfully!", update_failed: "Update failed, please try again."
+            },
+            roles: {
+              admin: "Administrator", organizer: "Organizer", customer: "Customer"
+            },
+            placeholders: {
+               address: "Ex: 123 District 1, HCMC"
+            },
+            wallet: {
+              title: "Custodial Wallet", desc: "Managed safely by BASTICKET", address: "Wallet Address", balance: "Balance",
+              no_wallet: "No wallet connected", network: "Network", type: "Type"
+            },
+            security: {
+              title: "Account Security", desc: "Manage your password and security settings.", change_pass: "Change Password",
+              pass_desc: "Always keep your password safe and private.", preferences: "Preferences", email_notif: "Email Notifications",
+              old_pass: "Old Password", new_pass: "New Password", confirm_new_pass: "Confirm New Password",
+              change_success: "Password changed successfully!", change_failed: "Failed to change password."
+            },
+            forgot: {
+              title: "Forgot Password", desc: "Enter your email to receive an OTP reset code.",
+              email_placeholder: "Enter your email...", send_btn: "Send OTP",
+              verify_title: "Verify OTP", verify_desc: "Enter the code sent to your email and your new password.",
+              otp_label: "OTP Code", new_pass_label: "New Password", reset_btn: "Reset Password",
+              success: "Password reset successfully!"
+            },
+            organizer: {
+              title: "Organizer Info", name: "Organization Name", kyc: "KYC Status", desc: "Description"
+            }
           }
         }
       },
@@ -222,6 +261,45 @@ i18n
             clear_all: "Xóa tất cả",
             no_results: "Không tìm thấy sự kiện nào khớp với bộ lọc của bạn.",
             found: "Tìm thấy {{count}} sự kiện"
+          },
+          profile: {
+            title: "Hồ sơ", user: "Người dùng",
+            tabs: {
+              info: "Thông tin cá nhân",
+              wallet: "Ví & Bảo mật",
+              security: "Cài đặt tài khoản"
+            },
+            labels: {
+              name: "Họ và tên", phone: "Số điện thoại", dob: "Ngày sinh", address: "Địa chỉ", email: "Địa chỉ Email",
+              save: "Lưu thay đổi", cancel: "Hủy", edit: "Chỉnh sửa",
+              save_success: "Cập nhật hồ sơ thành công!", update_failed: "Cập nhật thất bại, vui lòng thử lại."
+            },
+            roles: {
+              admin: "Quản trị viên", organizer: "Ban tổ chức", customer: "Khách hàng"
+            },
+            placeholders: {
+               address: "Ví dụ: 123 Quận 1, TP.HCM"
+            },
+            wallet: {
+              title: "Ví Custodial", desc: "Được quản lý an toàn bởi BASTICKET", address: "Địa chỉ ví", balance: "Số dư",
+              no_wallet: "Chưa kết nối ví", network: "Mạng lưới", type: "Loại ví"
+            },
+            security: {
+              title: "Bảo mật tài khoản", desc: "Quản lý mật khẩu và các tùy chọn bảo mật của bạn.", change_pass: "Đổi mật khẩu",
+              pass_desc: "Luôn giữ mật khẩu của bạn an toàn và riêng tư.", preferences: "Tùy chọn", email_notif: "Thông báo qua Email",
+              old_pass: "Mật khẩu cũ", new_pass: "Mật khẩu mới", confirm_new_pass: "Xác nhận mật khẩu mới",
+              change_success: "Đổi mật khẩu thành công!", change_failed: "Đổi mật khẩu thất bại."
+            },
+            forgot: {
+              title: "Quên mật khẩu", desc: "Nhập email để nhận mã OTP khôi phục.",
+              email_placeholder: "Nhập email của bạn...", send_btn: "Gửi mã OTP",
+              verify_title: "Xác thực OTP", verify_desc: "Nhập mã đã gửi tới email và mật khẩu mới của bạn.",
+              otp_label: "Mã OTP", new_pass_label: "Mật khẩu mới", reset_btn: "Đặt lại mật khẩu",
+              success: "Đặt lại mật khẩu thành công!"
+            },
+            organizer: {
+              title: "Thông tin Tổ chức", name: "Tên tổ chức", kyc: "Trạng thái KYC", desc: "Mô tả"
+            }
           }
         }
       }

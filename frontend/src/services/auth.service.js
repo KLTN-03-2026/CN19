@@ -24,5 +24,13 @@ export const authService = {
   googleLogin: async (data) => {
     const response = await api.post('/auth/google', data);
     return response.data;
+  },
+  forgotPassword: async (email) => {
+    const response = await api.post('/auth/forgot-password', { email });
+    return response.data;
+  },
+  resetPassword: async (data) => {
+    const response = await api.post('/auth/reset-password', data);
+    return response.data;
   }
 };
