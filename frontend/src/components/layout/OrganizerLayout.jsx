@@ -151,8 +151,12 @@ const OrganizerLayout = () => {
                 <span className="text-sm font-bold text-gray-900 dark:text-white">{user?.full_name || 'Organizer'}</span>
                 <span className="text-[10px] text-blue-600 uppercase font-black tracking-tighter">Ban Tổ Chức</span>
               </div>
-              <div className="w-10 h-10 bg-gray-200 dark:bg-white/10 rounded-full border border-gray-300 dark:border-white/10 flex items-center justify-center text-blue-600 font-bold">
-                {user?.email?.charAt(0).toUpperCase() || 'O'}
+              <div className="w-10 h-10 bg-gray-200 dark:bg-white/10 rounded-full border border-gray-300 dark:border-white/10 flex items-center justify-center text-blue-600 font-bold overflow-hidden">
+                {user?.avatar_url ? (
+                  <img src={user.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  user?.full_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'O'
+                )}
               </div>
             </div>
           </div>

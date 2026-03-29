@@ -154,8 +154,12 @@ const AdminLayout = () => {
                 <span className="text-sm font-bold text-gray-900 dark:text-white">{user?.full_name || 'Admin'}</span>
                 <span className="text-[10px] text-neon-green uppercase font-black tracking-tighter">Super Admin</span>
               </div>
-              <div className="w-10 h-10 bg-gray-200 dark:bg-white/10 rounded-full border border-gray-300 dark:border-white/10 flex items-center justify-center text-neon-green font-bold">
-                {user?.email?.charAt(0).toUpperCase() || 'A'}
+              <div className="w-10 h-10 bg-gray-200 dark:bg-white/10 rounded-full border border-gray-300 dark:border-white/10 flex items-center justify-center text-neon-green font-bold overflow-hidden">
+                {user?.avatar_url ? (
+                  <img src={user.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  user?.full_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'A'
+                )}
               </div>
             </div>
           </div>

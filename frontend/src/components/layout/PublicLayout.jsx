@@ -177,11 +177,15 @@ const PublicLayout = () => {
                     onClick={() => setDropdownOpen(prev => !prev)}
                     className="flex items-center space-x-2 bg-neon-green/10 hover:bg-neon-green/20 border border-neon-green/40 text-gray-900 dark:text-white px-3 py-2 rounded-full font-medium transition-all"
                   >
-                    <div className="w-7 h-7 rounded-full bg-neon-green flex items-center justify-center text-black font-bold text-xs">
-                      {user?.email?.[0]?.toUpperCase() || 'U'}
+                    <div className="w-7 h-7 rounded-full bg-neon-green flex items-center justify-center text-black font-bold text-xs overflow-hidden">
+                      {user?.avatar_url ? (
+                        <img src={user.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                      ) : (
+                        user?.full_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'U'
+                      )}
                     </div>
                     <span className="text-sm font-semibold max-w-[100px] truncate">
-                      {user?.email?.split('@')[0] || 'User'}
+                      {user?.full_name || user?.fullName || user?.email?.split('@')[0] || 'User'}
                     </span>
                     <ChevronDown className={`w-4 h-4 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
                   </button>

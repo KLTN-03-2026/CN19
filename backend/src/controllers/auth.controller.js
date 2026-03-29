@@ -41,8 +41,13 @@ const sendRegisterOtp = async (req, res) => {
       </div>
     `;
 
-    // Gọi không await để chạy ngầm (Non-blocking)
-    sendEmail(email, 'Mã xác nhận Đăng ký - BASTICKET', htmlContent);
+    // Gọi await để bắt lỗi nếu email cấu hình sai
+    const emailSent = await sendEmail(email, 'Mã xác nhận Đăng ký - BASTICKET', htmlContent);
+    if (!emailSent) {
+      global.otpCache.delete(email);
+      return res.status(500).json({ error: 'Không thể gửi email OTP. Vui lòng thử lại.' });
+    }
+    
     // Log tạm để test dễ dàng nếu email không tới (hoặc email cấu hình lỗi)
     console.log(`[DEV OTP MOCK] Gửi OTP ${otp} đến ${email}`);
 
@@ -162,7 +167,8 @@ const login = async (req, res) => {
 // [UC_03_A] Gửi OTP Đăng ký Ban Tổ chức (Hỗ trợ cả User mới lẫn Customer nâng cấp)
 const sendOrganizerOtp = async (req, res) => {
   try {
-    const { email, phone_number, full_name, password, organization_name, address, existing_user_id, business_license } = req.body;
+    const { phone_number, full_name, password, organization_name, address, existing_user_id, business_license } = req.body;
+    const email = req.body.email?.trim();
 
     // Nếu là Customer đã đăng nhập nâng cấp thì kiểm tra tồn tại qua existing_user_id
     // Nếu là User mới hoàn toàn thì kiểm tra Email/SĐT
@@ -183,20 +189,25 @@ const sendOrganizerOtp = async (req, res) => {
       expires: Date.now() + 5 * 60 * 1000
     });
 
-    const displayName = full_name || 'Ban Tổ chức';
+    const displayName = full_name || 'Quý khách';
     const htmlContent = `
       <div style="font-family: Arial, sans-serif; padding: 20px; background: #111; color: #fff; border-radius: 10px; max-width: 500px; margin: auto;">
         <h2 style="color: #52c41a; text-align: center;">BASTICKET</h2>
         <p>Chào <b>${displayName}</b>,</p>
-        <p>Đây là mã xác nhận OTP 6 số để hoàn tất <b>Đăng ký trở thành Ban Tổ Chức BASTICKET</b>:</p>
+        <p>Đây là mã xác nhận (OTP) 6 số để hoàn tất đăng ký tài khoản tổ chức sự kiện BASTICKET Web3 của bạn:</p>
         <div style="font-size: 36px; font-weight: bold; letter-spacing: 5px; text-align: center; color: #52c41a; padding: 15px; border: 1px dashed #52c41a; margin: 20px 0;">
           ${otp}
         </div>
-        <p style="color: #888; font-size: 12px; text-align: center;">Mã này sẽ hết hạn sau 5 phút. Không chia sẻ cho ai khác!</p>
+        <p style="color: #888; font-size: 12px; text-align: center;">Mã này sẽ hết hạn sau 5 phút. Vui lòng không chia sẻ cho bất kỳ ai nhé!</p>
       </div>
     `;
 
-    sendEmail(email, 'Mã xác nhận Đăng ký Ban Tổ Chức - BASTICKET', htmlContent);
+    const emailSent = await sendEmail(email, 'Mã xác nhận Đăng ký - BASTICKET', htmlContent);
+    if (!emailSent) {
+      global.otpCache.delete(`org_${email}`);
+      return res.status(500).json({ error: 'Không thể gửi email OTP, vui lòng kiểm tra lại địa chỉ email hoặc thử lại sau.' });
+    }
+
     console.log(`[DEV OTP] Organizer OTP: ${otp} -> ${email}`);
 
     res.status(200).json({ message: 'Mã OTP đã gửi qua Email của bạn.' });
@@ -209,7 +220,8 @@ const sendOrganizerOtp = async (req, res) => {
 // [UC_03_B] Verify OTP và Lưu/Nâng cấp Ban Tổ Chức
 const verifyOrganizerOtp = async (req, res) => {
   try {
-    const { email, otp } = req.body;
+    const { otp } = req.body;
+    const email = req.body.email?.trim();
 
     const record = global.otpCache.get(`org_${email}`);
     if (!record) return res.status(400).json({ error: 'Phiên đăng ký không tồn tại hoặc đã hết hạn.' });
@@ -381,7 +393,12 @@ const forgotPassword = async (req, res) => {
       </div>
     `;
 
-    sendEmail(email, 'Mã xác nhận Đặt lại mật khẩu - BASTICKET', htmlContent);
+    const emailSent = await sendEmail(email, 'Mã xác nhận Đặt lại mật khẩu - BASTICKET', htmlContent);
+    if (!emailSent) {
+      global.otpCache.delete(`reset_${email}`);
+      return res.status(500).json({ error: 'Không thể gửi email OTP, vui lòng kiểm tra lại địa chỉ email hoặc thử lại sau.' });
+    }
+
     console.log(`[DEV OTP RESET] OTP: ${otp} -> ${email}`);
 
     res.status(200).json({ message: 'Mã OTP đã được gửi đến email của bạn.' });
