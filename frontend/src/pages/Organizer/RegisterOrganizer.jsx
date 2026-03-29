@@ -159,6 +159,16 @@ const RegisterOrganizer = () => {
     }
   };
 
+  // --- Xử lý Gửi lại OTP (Gọi lại từ hàm gốc) ---
+  const handleResendOtp = async () => {
+    // Chỉ clear ô OTP cũ
+    setOtp(['', '', '', '', '', '']);
+    // Focus lại ô nhập đầu tiên
+    if (otpInputs.current[0]) otpInputs.current[0].focus();
+    // Gọi lại flow gửi OTP
+    await handleSendRequest();
+  };
+
   // --- Xử lý OTP (Bước 3) ---
   useEffect(() => {
     let timer;
@@ -509,7 +519,14 @@ const RegisterOrganizer = () => {
               {countdown > 0 ? (
                 <span>{t('org.resend_in')} <span className="text-neon-green font-bold">{countdown}s</span></span>
               ) : (
-                <button className="text-neon-green hover:underline">{t('org.resend_now')}</button>
+                <button 
+                  type="button" 
+                  onClick={handleResendOtp}
+                  disabled={isLoading}
+                  className="text-neon-green font-bold hover:underline disabled:opacity-50 transition-all"
+                >
+                  {t('org.resend_now') || 'Gửi lại mã ngay'}
+                </button>
               )}
             </div>
 

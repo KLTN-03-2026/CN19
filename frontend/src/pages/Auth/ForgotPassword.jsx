@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Mail, ArrowLeft, Shield, Loader2 } from 'lucide-react';
+import { Mail, ArrowLeft, Shield, Loader2, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { authService } from '../../services/auth.service';
 import toast from 'react-hot-toast';
@@ -32,6 +32,14 @@ const ForgotPassword = () => {
     <div className="min-h-[80vh] flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-[440px] bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-2xl shadow-2xl relative overflow-hidden flex flex-col glow-card-green transition-colors">
         
+        {/* Nút X quay lại màn hình trước đó */}
+        <button 
+          type="button"
+          onClick={() => navigate(-1)}
+          className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors z-10"
+        >
+          <X className="w-5 h-5" />
+        </button>
         <div className="border-b border-gray-100 dark:border-dark-border pt-10 pb-6 px-8 flex flex-col items-center justify-center text-center">
           <div className="w-16 h-16 bg-neon-green/10 rounded-full flex items-center justify-center mb-4">
             <Shield className="w-8 h-8 text-neon-green" />
@@ -68,13 +76,14 @@ const ForgotPassword = () => {
             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : t('profile.forgot.send_btn')}
           </button>
 
-          <Link 
-            to="/login" 
-            className="flex items-center justify-center gap-2 text-sm font-bold text-gray-500 hover:text-neon-green transition-colors mt-4"
+          <button 
+            type="button"
+            onClick={() => navigate(-1)} 
+            className="w-full flex items-center justify-center gap-2 text-sm font-bold text-gray-500 hover:text-neon-green transition-colors mt-4"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Quay lại Đăng nhập</span>
-          </Link>
+            <span>Quay lại</span>
+          </button>
         </form>
       </div>
     </div>
