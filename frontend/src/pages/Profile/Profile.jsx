@@ -47,13 +47,26 @@ const Profile = () => {
         avatarUrl: user.avatar_url || '',
       });
       fetchWalletBalance();
+      
+      // Đồng bộ thông tin mới nhất từ DB lỡ như LocalStorage bị cũ (thiếu địa chỉ ví)
+      const syncProfile = async () => {
+        try {
+          const res = await userService.getProfile();
+          if (res.data) {
+            updateUser(res.data);
+          }
+        } catch (err) {
+          console.error('Failed to sync profile', err);
+        }
+      };
+      syncProfile();
     }
-  }, [user]);
+  }, [user?.id]);
 
   const fetchWalletBalance = async () => {
     try {
       const data = await userService.getWalletBalance();
-      setWalletBalance(data.balance || '0');
+      setWalletBalance(data.data?.balance_matic || '0');
     } catch (error) {
       console.error('Failed to fetch wallet balance', error);
     }
@@ -171,75 +184,81 @@ const Profile = () => {
     <div className="min-h-screen bg-transparent pt-10 pb-20 animate-in fade-in duration-700">
       <div className="max-w-6xl mx-auto px-4 md:px-8">
         
-        {/* Header Section */}
-        <div className="flex flex-col md:flex-row items-center gap-8 mb-12">
-          <div className="relative group">
-            <div className="w-32 h-32 rounded-full bg-neon-green/10 border-4 border-neon-green flex items-center justify-center text-4xl font-black text-neon-green shadow-[0_0_30px_rgba(82,196,45,0.2)] overflow-hidden">
-              {uploadingAvatar ? (
-                <Loader2 className="w-8 h-8 animate-spin" />
-              ) : formData.avatarUrl ? (
-                <img src={formData.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
-              ) : (
-                user?.full_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase()
-              )}
-            </div>
-            <button 
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploadingAvatar}
-              className="absolute bottom-1 right-1 p-2 bg-dark-bg border border-white/10 rounded-full text-white hover:text-neon-green transition-colors shadow-xl disabled:opacity-50"
-            >
-              <Camera className="w-4 h-4" />
-            </button>
-            <input 
-              type="file" 
-              ref={fileInputRef} 
-              className="hidden" 
-              accept="image/*" 
-              onChange={handleAvatarChange} 
-            />
-          </div>
-
-          <div className="text-center md:text-left">
-            <h1 className="text-4xl font-black text-gray-900 dark:text-white tracking-tighter mb-2">
-              {user?.full_name || user?.fullName || t('profile.user')}
-            </h1>
-            <div className="flex items-center justify-center md:justify-start gap-4">
-              <span className="inline-flex items-center px-3 py-1 bg-neon-green/10 text-neon-green text-[10px] font-black uppercase tracking-widest rounded-full border border-neon-green/20">
-                {t(`profile.roles.${user?.role || 'customer'}`)}
-              </span>
-              <span className="text-gray-500 dark:text-gray-400 text-sm font-medium flex items-center gap-1">
-                <Mail className="w-4 h-4" />
-                {user?.email}
-              </span>
-            </div>
-          </div>
-        </div>
-
+        {/* Main Layout Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           
-          {/* Navigation Sidebar */}
-          <div className="lg:col-span-1 space-y-2">
-            {tabs.map((tab) => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`w-full flex items-center justify-between px-6 py-4 rounded-2xl border transition-all duration-300 ${
-                    isActive 
-                      ? 'bg-neon-green text-black border-neon-green font-black shadow-[0_0_20px_rgba(82,196,45,0.3)]' 
-                      : 'bg-white dark:bg-white/5 border-gray-200 dark:border-white/5 text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-white/10 font-bold'
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <Icon className="w-5 h-5" />
-                    <span className="uppercase text-[11px] tracking-widest">{tab.label}</span>
+          {/* Left Column: Sidebar (Avatar + Info + Tabs) */}
+          <div className="lg:col-span-1 space-y-6">
+            
+            {/* User Profile Summary Card */}
+            <div className="flex flex-col items-center text-center p-6 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-[2rem] shadow-sm relative overflow-hidden">
+               {/* Background Glow */}
+               <div className="absolute top-0 right-0 p-16 bg-neon-green/10 blur-[50px] rounded-full"></div>
+               
+               <div className="relative group mb-5">
+                  <div className="w-28 h-28 rounded-full bg-neon-green/10 border-4 border-neon-green flex items-center justify-center text-4xl font-black text-neon-green shadow-[0_0_20px_rgba(82,196,45,0.2)] overflow-hidden transition-transform duration-300 group-hover:scale-105">
+                    {uploadingAvatar ? (
+                      <Loader2 className="w-6 h-6 animate-spin" />
+                    ) : formData.avatarUrl ? (
+                      <img src={formData.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                    ) : (
+                      user?.full_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase()
+                    )}
                   </div>
-                  <ChevronRight className={`w-4 h-4 transition-transform ${isActive ? 'translate-x-1' : ''}`} />
-                </button>
-              );
-            })}
+                  <button 
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingAvatar}
+                    className="absolute bottom-0 right-0 p-2.5 bg-gray-900 border-2 border-white dark:border-dark-bg rounded-full text-white hover:text-neon-green transition-colors shadow-xl disabled:opacity-50"
+                  >
+                    <Camera className="w-4 h-4" />
+                  </button>
+                  <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    className="hidden" 
+                    accept="image/*" 
+                    onChange={handleAvatarChange} 
+                  />
+               </div>
+
+               <h1 className="text-xl font-black text-gray-900 dark:text-white tracking-tighter mb-2 relative z-10 break-words w-full px-2">
+                 {user?.full_name || user?.fullName || t('profile.user')}
+               </h1>
+               
+               <span className="inline-flex items-center px-4 py-1.5 bg-neon-green/10 text-neon-green text-[10px] font-black uppercase tracking-widest rounded-full border border-neon-green/20 mb-3 relative z-10">
+                 {t(`profile.roles.${user?.role || 'customer'}`)}
+               </span>
+               
+               <span className="text-gray-500 dark:text-gray-400 text-xs font-bold flex items-center justify-center gap-1.5 relative z-10 break-all px-2 w-full">
+                 <Mail className="w-3.5 h-3.5 flex-shrink-0" />
+                 <span className="truncate">{user?.email}</span>
+               </span>
+            </div>
+
+            {/* Navigation Tabs */}
+            <div className="space-y-2">
+              {tabs.map((tab) => {
+                const Icon = tab.icon;
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`w-full flex items-center justify-between px-6 py-4 rounded-2xl border transition-all duration-300 ${
+                      isActive 
+                        ? 'bg-neon-green text-black border-neon-green font-black shadow-[0_0_20px_rgba(82,196,45,0.3)]' 
+                        : 'bg-white dark:bg-white/5 border-gray-200 dark:border-white/5 text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-white/10 font-bold hover:shadow-sm'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Icon className="w-5 h-5" />
+                      <span className="uppercase text-[11px] tracking-widest">{tab.label}</span>
+                    </div>
+                    <ChevronRight className={`w-4 h-4 transition-transform ${isActive ? 'translate-x-1' : ''}`} />
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* Content Area */}
@@ -250,7 +269,7 @@ const Profile = () => {
                 <div className="space-y-12">
                   <form onSubmit={handleUpdateProfile} className="space-y-8">
                     <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-sm font-black text-neon-green uppercase tracking-[0.3em]">
+                      <h3 className="text-sm font-black text-neon-green uppercase ">
                         {t('profile.tabs.info')}
                       </h3>
                       {!isEditing && (
@@ -420,10 +439,10 @@ const Profile = () => {
                         <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">{t('profile.wallet.address')}</p>
                         <div className="flex items-center justify-between gap-4">
                           <code className="text-xs md:text-sm font-mono text-gray-900 dark:text-neon-green font-bold break-all">
-                            {user?.walletAddress || t('profile.wallet.no_wallet')}
+                            {user?.wallet_address || t('profile.wallet.no_wallet')}
                           </code>
                           <a 
-                            href={`https://amoy.polygonscan.com/address/${user?.walletAddress}`}
+                            href={`https://amoy.polygonscan.com/address/${user?.wallet_address}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="p-2 hover:bg-neon-green/20 rounded-lg text-gray-400 dark:text-white/50 hover:text-neon-green transition-all"
@@ -522,7 +541,7 @@ const Profile = () => {
                       </form>
                    </div>
 
-                   <div className="pt-8 border-t border-gray-100 dark:border-white/5">
+                   <div className="pt-2 border-t border-gray-100 dark:border-white/5">
                       <h4 className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] mb-6 inline-block border-b-2 border-neon-green pb-1">
                         {t('profile.security.preferences')}
                       </h4>
