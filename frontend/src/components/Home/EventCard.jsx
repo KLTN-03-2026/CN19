@@ -26,12 +26,12 @@ const EventCard = ({ event, className = "" }) => {
             </div>
 
             {/* Poster Content Overlay */}
-            <div className="absolute inset-0 z-10 p-6 flex flex-col justify-between">
+            <div className="absolute inset-0 z-10 p-6 flex flex-col justify-between h-full">
                 <div className="flex justify-between items-start">
                     {/* Date Badge */}
                     <div className="bg-white/10 backdrop-blur-xl rounded-2xl px-3 py-2 flex flex-col items-center min-w-[50px] border border-white/20 shadow-xl">
                         <span className="text-xl font-black text-white leading-none">{day}</span>
-                        <span className="text-[10px] font-bold text-neon-green uppercase tracking-tighter">{month}</span>
+                        <span className="text-[10px] font-bold text-neon-green uppercase tracking-tighter mt-1">{month}</span>
                     </div>
 
                     {/* Category Badge */}
@@ -42,8 +42,8 @@ const EventCard = ({ event, className = "" }) => {
                     </div>
                 </div>
 
-                <div className="transform translate-y-2 group-hover:translate-y-0 transition-all duration-500">
-                    <div className="flex items-center gap-2 mb-3">
+                <div className="mt-auto transform translate-y-2 group-hover:translate-y-0 transition-all duration-500">
+                    <div className="flex items-center gap-2 mb-2">
                         <div className="flex text-yellow-500">
                             {[...Array(5)].map((_, i) => (
                                 <Star key={i} className="w-2.5 h-2.5 fill-current" />
@@ -52,21 +52,21 @@ const EventCard = ({ event, className = "" }) => {
                         <span className="text-[10px] text-white/50 font-bold">(4.9)</span>
                     </div>
 
-                    <h3 className="text-xl font-black text-white leading-tight mb-4 group-hover:text-neon-green transition-colors line-clamp-2 uppercase italic tracking-tighter">
+                    <h3 className="text-[18px] md:text-xl font-black text-white leading-tight mb-4 group-hover:text-neon-green transition-colors line-clamp-2 uppercase italic tracking-tighter">
                         {event.title}
                     </h3>
 
-                    <div className="flex items-center justify-between pt-4 border-t border-white/10">
-                        <div>
+                    <div className="flex items-center justify-between pt-4 border-t border-white/10 mt-auto">
+                        <div className="flex-1">
                             <p className="text-[9px] font-black text-white/40 uppercase tracking-widest mb-1">Giá từ</p>
-                            <p className="text-lg font-black text-neon-green">
+                            <p className="text-sm md:text-lg font-black text-neon-green truncate w-full pr-2">
                                 {event.ticket_tiers?.length > 0 
-                                    ? new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Math.min(...event.ticket_tiers.map(t => t.price)))
+                                    ? new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Math.min(...event.ticket_tiers.map(t => parseFloat(t.price))))
                                     : 'Miễn phí'
                                 }
                             </p>
                         </div>
-                        <div className="w-10 h-10 rounded-full bg-neon-green flex items-center justify-center text-black shadow-lg shadow-neon-green/30 transform scale-90 group-hover:scale-100 transition-all duration-500">
+                        <div className="w-10 h-10 rounded-full bg-neon-green flex-shrink-0 flex items-center justify-center text-black shadow-lg shadow-neon-green/30 transform scale-90 group-hover:scale-100 transition-all duration-500">
                             <ArrowRight className="w-5 h-5" />
                         </div>
                     </div>

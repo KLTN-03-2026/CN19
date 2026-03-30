@@ -106,7 +106,8 @@ model Event {
   orders                 Order[]
   tickets                Ticket[]
   ticket_tiers           TicketTier[]
-  emergency_requests    EmergencyRequest[]
+  emergency_requests     EmergencyRequest[]
+  seating_charts         String[]               @default([])
   created_at             DateTime               @default(now())
   updated_at             DateTime               @updatedAt
 }

@@ -5,6 +5,7 @@ import { Toaster } from 'react-hot-toast';
 import PublicLayout from './components/layout/PublicLayout';
 import Home from './pages/Home/Home';
 import Events from './pages/Home/Events';
+import PublicEventDetail from './pages/Home/PublicEventDetail';
 import Profile from './pages/Profile/Profile';
 
 // Auth Pages
@@ -50,6 +51,7 @@ const router = createBrowserRouter([
     children: [
       { path: '', element: <Home /> },
       { path: 'events', element: <Events /> },
+      { path: 'events/:id', element: <PublicEventDetail /> },
       { path: 'login', element: <Login /> },
       { path: 'register', element: <Register /> },
       { path: 'forgot-password', element: <ForgotPassword /> },

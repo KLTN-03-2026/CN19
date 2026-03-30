@@ -24,7 +24,8 @@ const getEvents = async (req, res) => {
       where: whereClause,
       include: {
         category: { select: { name: true } },
-        organizer: { select: { organization_name: true, is_verified: true } }
+        organizer: { select: { organization_name: true, is_verified: true } },
+        ticket_tiers: { select: { price: true } }
       },
       orderBy: { event_date: 'asc' }
     });
