@@ -24,6 +24,7 @@ import MyEvents from './pages/Organizer/MyEvents';
 import EventDetail from './pages/Organizer/EventDetail';
 import EditEvent from './pages/Organizer/EditEvent';
 import StaffManagement from './pages/Organizer/StaffManagement';
+import TicketManagement from './pages/Organizer/TicketManagement';
 
 // Admin Pages
 import AdminLayout from './components/layout/AdminLayout';
@@ -106,7 +107,7 @@ const router = createBrowserRouter([
       { path: 'events/:id', element: <EventDetail /> },
       { path: 'events/:id/edit', element: <EditEvent /> },
       { path: 'create-event', element: <CreateEvent /> },
-      { path: 'tickets', element: <div className="p-8 text-2xl font-bold">Quản lý vé (Coming Soon)</div> },
+      { path: 'tickets', element: <TicketManagement /> },
       { path: 'revenue', element: <div className="p-8 text-2xl font-bold">Doanh thu & Rút tiền (Coming Soon)</div> },
       { path: 'staff', element: <StaffManagement /> },
       { path: 'participants', element: <div className="p-8 text-2xl font-bold">Danh sách người tham gia (Coming Soon)</div> },

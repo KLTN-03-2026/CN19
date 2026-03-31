@@ -24,6 +24,7 @@ const organizerRoutes = require('./routes/organizer.routes');
 const organizerEventRoutes = require('./routes/organizer-event.routes');
 const staffRoutes = require('./routes/staff.routes');
 const organizerStatRoutes = require('./routes/organizer-stat.routes');
+const organizerTicketRoutes = require('./routes/organizer-ticket.routes');
 
 // 5. Admin
 const adminUserRoutes = require('./routes/admin-user.routes');
@@ -65,6 +66,7 @@ app.use('/api/organizers', organizerRoutes); // Public profile of organizer
 app.use('/api/organizer/events', organizerEventRoutes);
 app.use('/api/organizer/staffs', staffRoutes);
 app.use('/api/organizer/stats', organizerStatRoutes);
+app.use('/api/organizer/tickets', organizerTicketRoutes);
 
 // Admin
 app.use('/api/admin/users', adminUserRoutes);
