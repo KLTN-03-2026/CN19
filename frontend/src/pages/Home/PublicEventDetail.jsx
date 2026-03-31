@@ -191,24 +191,27 @@ const PublicEventDetail = () => {
                </div>
 
                {/* Organizer Quick Profile */}
-               <div className="flex items-center gap-5 p-5 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 backdrop-blur-xl rounded-[2rem] mb-8 max-w-[400px] shadow-sm dark:shadow-none">
+               <Link 
+                 to={`/organizers/${event.organizer?.id}`}
+                 className="flex items-center gap-5 p-5 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 backdrop-blur-xl rounded-[2rem] mb-8 max-w-[400px] shadow-sm dark:shadow-none hover:border-neon-green/50 hover:bg-gray-50 dark:hover:bg-white/10 transition-all group"
+               >
                   <div className="relative">
                     <img 
                       src={event.organizer?.user?.avatar_url || `https://ui-avatars.com/api/?name=${event.organizer?.organization_name}&background=111&color=fff`}
-                      className="w-14 h-14 rounded-full border-2 border-neon-green/30 object-cover"
+                      className="w-14 h-14 rounded-full border-2 border-neon-green/30 object-cover group-hover:scale-105 transition-transform"
                       alt="Organizer"
                     />
                     {event.organizer?.is_verified && (
-                      <div className="absolute bottom-0 right-0 w-5 h-5 bg-blue-500 rounded-full border-2 border-white dark:border-[#1a1a1c] flex items-center justify-center">
+                      <div className="absolute bottom-0 right-0 w-5 h-5 bg-blue-500 rounded-full border-2 border-white dark:border-[#1a1a1c] flex items-center justify-center shadow-lg">
                         <CheckCircle2 className="w-3 h-3 text-white" />
                       </div>
                     )}
                   </div>
                   <div>
                     <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.1em] mb-1">{t('eventDetail.organizer', 'Ban tổ chức')}</p>
-                    <p className="font-black text-lg text-gray-900 dark:text-white tracking-tight">{event.organizer?.organization_name}</p>
+                    <p className="font-black text-lg text-gray-900 dark:text-white tracking-tight group-hover:text-neon-green transition-colors">{event.organizer?.organization_name}</p>
                   </div>
-               </div>
+               </Link>
 
                {/* Buy Box & Auxiliary Controls Wrapper */}
                <div className="flex flex-col md:flex-row items-center gap-6 animate-in fade-in slide-in-from-bottom-12 duration-1000 delay-300 w-full mt-4">

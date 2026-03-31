@@ -10,13 +10,18 @@ const getOrganizerProfile = async (req, res) => {
       include: {
         user: { select: { email: true, phone_number: true, avatar_url: true } },
         events: {
-          where: { status: 'active' }, // Chỉ hiển thị các sự kiện đang mở bán
+          where: { 
+            status: { in: ['active', 'completed'] } 
+          },
           select: {
             id: true,
             title: true,
             event_date: true,
+            image_url: true,
+            status: true,
             category: { select: { name: true } }
-          }
+          },
+          orderBy: { event_date: 'desc' }
         }
       }
     });

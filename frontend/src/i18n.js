@@ -185,6 +185,31 @@ i18n
             organizer: {
               title: "Organizer Info", name: "Organization Name", kyc: "KYC Status", desc: "Description"
             }
+          },
+          publicOrganizer: {
+            notFound: "Organizer not found",
+            joinedSince: "Joined since",
+            activeStatus: "Active",
+            totalEvents: "EVENTS",
+            status: "STATUS",
+            follow: "Follow Now",
+            about: "About the organizer",
+            noDescription: "This organizer hasn't updated their detailed introduction yet.",
+            upcomingEvents: "Upcoming Events",
+            pastEvents: "Past Events",
+            blog: "Blog",
+            noUpcomingEvents: "No upcoming events from this organizer",
+            noPastEvents: "No past events from this organizer",
+            blogTitle: "Experience Journal & Reviews",
+            blogPlaceholder: "Blog is where customers share moments and reviews after attending events. This feature will be launched soon to connect the event-loving community!"
+          },
+          common: {
+            back: "Back",
+            backHome: "Back Home",
+            events: "events",
+            viewDetails: "View Details",
+            ended: "Ended",
+            loading: "Loading..."
           }
         }
       },
@@ -366,6 +391,31 @@ i18n
             organizer: {
               title: "Thông tin Tổ chức", name: "Tên tổ chức", kyc: "Trạng thái KYC", desc: "Mô tả"
             }
+          },
+          publicOrganizer: {
+            notFound: "Không tìm thấy Ban tổ chức",
+            joinedSince: "Tham gia từ",
+            activeStatus: "Đang hoạt động",
+            totalEvents: "SỰ KIỆN",
+            status: "TRẠNG THÁI",
+            follow: "Theo dõi ngay",
+            about: "Về ban tổ chức",
+            noDescription: "Ban tổ chức này chưa cập nhật thông tin giới thiệu chi tiết.",
+            upcomingEvents: "Sự kiện sắp tới",
+            pastEvents: "Sự kiện đã qua",
+            blog: "Blog",
+            noUpcomingEvents: "Ban tổ chức chưa có sự kiện nào sắp tới",
+            noPastEvents: "Ban tổ chức chưa có sự kiện nào đã diễn ra",
+            blogTitle: "Nhật ký trải nghiệm & Đánh giá",
+            blogPlaceholder: "Blog là nơi khách hàng chia sẻ những khoảnh khắc và đánh giá sau khi tham gia sự kiện. Tính năng này sẽ sớm được ra mắt để kết nối cộng đồng yêu sự kiện!"
+          },
+          common: {
+            back: "Quay lại",
+            backHome: "Về trang chủ",
+            events: "sự kiện",
+            viewDetails: "Xem chi tiết",
+            ended: "Đã kết thúc",
+            loading: "Đang tải..."
           }
         }
       }

@@ -6,6 +6,7 @@ import PublicLayout from './components/layout/PublicLayout';
 import Home from './pages/Home/Home';
 import Events from './pages/Home/Events';
 import PublicEventDetail from './pages/Home/PublicEventDetail';
+import OrganizerPublicProfile from './pages/Home/OrganizerPublicProfile';
 import Profile from './pages/Profile/Profile';
 
 // Auth Pages
@@ -52,6 +53,7 @@ const router = createBrowserRouter([
       { path: '', element: <Home /> },
       { path: 'events', element: <Events /> },
       { path: 'events/:id', element: <PublicEventDetail /> },
+      { path: 'organizers/:id', element: <OrganizerPublicProfile /> },
       { path: 'login', element: <Login /> },
       { path: 'register', element: <Register /> },
       { path: 'forgot-password', element: <ForgotPassword /> },

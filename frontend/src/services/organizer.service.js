@@ -41,5 +41,11 @@ export const organizerService = {
   deleteEvent: async (id) => {
     const res = await api.delete(`/organizer/events/${id}`);
     return res.data;
+  },
+
+  // [NEW] Lấy thông tin công khai của Ban tổ chức (dành cho khách hàng)
+  getPublicProfile: async (id) => {
+    const res = await api.get(`/organizers/${id}`);
+    return res.data;
   }
 };
