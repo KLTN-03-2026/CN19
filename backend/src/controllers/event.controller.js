@@ -3,7 +3,7 @@ const prisma = require('../config/prisma');
 // [UC_04] Tìm kiếm, lọc sự kiện
 const getEvents = async (req, res) => {
   try {
-    const { keyword, category_id, status } = req.query;
+    const { keyword, category_id, status, startDate, endDate } = req.query;
 
     const whereClause = {
       status: status || 'active', // Mặc định chỉ public những sự kiện đang active
@@ -18,6 +18,12 @@ const getEvents = async (req, res) => {
 
     if (category_id) {
       whereClause.category_id = category_id;
+    }
+
+    if (startDate || endDate) {
+      whereClause.event_date = {};
+      if (startDate) whereClause.event_date.gte = new Date(startDate);
+      if (endDate) whereClause.event_date.lte = new Date(endDate);
     }
 
     const events = await prisma.event.findMany({

@@ -210,6 +210,32 @@ i18n
             viewDetails: "View Details",
             ended: "Ended",
             loading: "Loading..."
+          },
+          footer: {
+            newsletter_title: "Subscribe for exclusive offers",
+            newsletter_subtitle: "Receive updates on the hottest events immediately",
+            email_placeholder: "Your email...",
+            subscribe_btn: "Join Now",
+            description: "Next-generation event ticketing platform, powered by secure Blockchain technology.",
+            platform: {
+                title: "Platform",
+                events: "Events",
+                marketplace: "Marketplace",
+                nfts: "NFT Collectibles",
+                rewards: "Fan Rewards"
+            },
+            support: {
+                title: "Support",
+                help: "Help Center",
+                terms: "Terms of Service",
+                privacy: "Privacy Policy",
+                refund: "Refund Policy"
+            },
+            connect: {
+                title: "Connect",
+                address: "DUT - University of Danang, Vietnam"
+            },
+            copyright: "BUILT WITH ❤️ FOR THE WEB3 COMMUNITY."
           }
         }
       },
@@ -287,6 +313,18 @@ i18n
               subtitle: "Khám phá thế giới NFT Ticket với sự bảo mật và minh bạch tuyệt đối.",
               search_placeholder: "Tìm theo tên sự kiện, nghệ sĩ, địa điểm...",
               search_button: "Tìm kiếm"
+            },
+            for_you: {
+              title: "Sự kiện dành cho",
+              title_highlight: "Bạn",
+              subtitle: "Lựa chọn của BASTICKET dành riêng cho gu của bạn"
+            },
+            time_filter: {
+              title: "Sắp",
+              title_highlight: "Diễn ra",
+              subtitle: "Đừng bỏ lỡ những khoảnh khắc sắp tới",
+              this_week: "Tuần này",
+              this_month: "Tháng này"
             },
             categories: {
               title: "Khám phá theo danh mục",
@@ -416,6 +454,32 @@ i18n
             viewDetails: "Xem chi tiết",
             ended: "Đã kết thúc",
             loading: "Đang tải..."
+          },
+          footer: {
+            newsletter_title: "Đăng ký nhận ưu đãi mới nhất",
+            newsletter_subtitle: "Nhận thông tin về các sự kiện hot nhất ngay lập tức",
+            email_placeholder: "Email của bạn...",
+            subscribe_btn: "Đăng ký",
+            description: "Nền tảng quản lý và phân phối vé sự kiện thế hệ mới, ứng dụng công nghệ Blockchain bảo mật tuyệt đối.",
+            platform: {
+                title: "Nền tảng",
+                events: "Sự kiện",
+                marketplace: "Marketplace",
+                nfts: "Bộ sưu tập NFT",
+                rewards: "Phần thưởng Fan"
+            },
+            support: {
+                title: "Hỗ trợ",
+                help: "Trung tâm trợ giúp",
+                terms: "Điều khoản sử dụng",
+                privacy: "Chính sách bảo mật",
+                refund: "Chính sách hoàn tiền"
+            },
+            connect: {
+                title: "Kết nối",
+                address: "Đại học Bách Khoa - Đại học Đà Nẵng, Việt Nam"
+            },
+            copyright: "ĐƯỢC XÂY DỰNG VỚI ❤️ DÀNH CHO CỘNG ĐỒNG WEB3."
           }
         }
       }

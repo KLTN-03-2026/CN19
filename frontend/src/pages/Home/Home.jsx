@@ -1,11 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Shield, Zap, Users, CheckCircle2, ArrowRight, TrendingUp, Calendar, Rocket } from 'lucide-react';
+import { Search, Shield, Zap, Users, ArrowRight, TrendingUp, Calendar } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import eventService from '../../services/event.service';
 import EventCard from '../../components/Home/EventCard';
 import CategoryBar from '../../components/Home/CategoryBar';
+import { 
+  startOfToday, 
+  endOfWeek, 
+  lastDayOfMonth 
+} from 'date-fns';
 
 const GlowCard = ({ children, className = "" }) => {
   const [position, setPosition] = React.useState({ x: 0, y: 0 });
@@ -44,31 +49,76 @@ const Home = () => {
   const { t } = useTranslation();
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchKeyword, setSearchKeyword] = useState('');
+  const [timeFilter, setTimeFilter] = useState('week'); // 'week' or 'month'
+  
+  // Ref map for category sections
+  const categoryRefs = React.useRef({});
+  const resultsRef = React.useRef(null);
 
-  // Fetch Categories
+  // 1. Fetch Categories
   const { data: categoriesData } = useQuery({
     queryKey: ['categories'],
     queryFn: () => eventService.getCategories()
   });
-
   const dbCategories = categoriesData?.data || [];
 
-  // Fetch Events
-  const { data: eventsData, isLoading } = useQuery({
-    queryKey: ['events', activeCategory],
-    queryFn: () => eventService.getEvents({ 
-        category_id: activeCategory === 'all' ? undefined : activeCategory 
-    })
+  // 2. Fetch Recommendations (Featured)
+  const { data: recommendationsData, isLoading: isRecLoading } = useQuery({
+    queryKey: ['recommendations'],
+    queryFn: () => eventService.getRecommendations()
   });
+  const recommendations = recommendationsData?.data || [];
 
-  const events = eventsData?.data || [];
+  // 3. Fetch Time-Filtered Events
+  const timeParams = React.useMemo(() => {
+    const today = startOfToday();
+    if (timeFilter === 'week') {
+      return {
+        startDate: today.toISOString(),
+        endDate: endOfWeek(today, { weekStartsOn: 1 }).toISOString()
+      };
+    } else {
+      return {
+        startDate: today.toISOString(),
+        endDate: lastDayOfMonth(today).toISOString()
+      };
+    }
+  }, [timeFilter]);
+
+  const { data: timeEventsData, isLoading: isTimeLoading } = useQuery({
+    queryKey: ['events-time', timeFilter],
+    queryFn: () => eventService.getEvents(timeParams)
+  });
+  const timeEvents = timeEventsData?.data || [];
+
+  // 4. Fetch All Events to group by category
+  const { data: allEventsData, isLoading: isAllEventsLoading } = useQuery({
+    queryKey: ['all-active-events'],
+    queryFn: () => eventService.getEvents({ status: 'active' })
+  });
+  const allEvents = allEventsData?.data || [];
+
+  const handleCategoryChange = (catId) => {
+    setActiveCategory(catId);
+    
+    // Smooth scroll to the specific category section
+    if (catId === 'all') {
+        if (resultsRef.current) {
+            resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    } else {
+        const targetRef = categoryRefs.current[catId];
+        if (targetRef) {
+            targetRef.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+        }
+    }
+  };
 
   return (
     <div className="bg-white dark:bg-dark-bg transition-colors duration-500 font-sans selection:bg-neon-green/30">
       
-      {/* 🚀 Hero Section - High Impact */}
+      {/* 🚀 Hero Section */}
       <section className="relative h-[85vh] min-h-[600px] flex items-center justify-center overflow-hidden">
-        {/* Background Image with Overlay */}
         <div className="absolute inset-0 z-0">
             <img 
                 src="/hero-banner.png" 
@@ -78,7 +128,6 @@ const Home = () => {
             <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-white dark:to-dark-bg"></div>
         </div>
 
-        {/* Hero Content */}
         <div className="relative z-10 max-w-4xl mx-auto px-6 text-center">
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-neon-green/10 backdrop-blur-md rounded-full border border-neon-green/30 mb-8 animate-in fade-in slide-in-from-bottom-4">
                 <TrendingUp className="w-4 h-4 text-neon-green" />
@@ -92,7 +141,6 @@ const Home = () => {
                 {t('home.hero.title_part2')} <span className=" decoration-neon-green decoration-8 underline-offset-8">{t('home.hero.title_highlight2')}</span>
             </h1>
 
-            {/* Glassmorphism Search Bar */}
             <div className="max-w-3xl mx-auto p-2 bg-white/10 backdrop-blur-2xl rounded-[2.5rem] border border-white/20 shadow-2xl animate-in fade-in slide-in-from-bottom-10 duration-1000">
                 <div className="relative flex items-center bg-white dark:bg-[#111114] rounded-[2rem] overflow-hidden p-1 border border-gray-100 dark:border-white/5">
                     <div className="pl-6 text-gray-400">
@@ -113,76 +161,148 @@ const Home = () => {
         </div>
       </section>
 
-      {/* 🎸 Category Explorer */}
-      <section className="max-w-[1400px] mx-auto px-6 -mt-12 relative z-20">
-        <div className="flex items-center justify-between mb-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <div className="flex items-center gap-3">
-                <h2 className="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tighter">
-                    {t('home.categories.title')}
-                </h2>
-            </div>
-            <Link 
-                to={activeCategory === 'all' ? '/events' : `/events?category=${activeCategory}`} 
-                className="group flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-gray-500 dark:text-white/50 hover:text-neon-green transition-all"
-            >
-                {t('home.categories.view_all')} 
-                <div className="w-8 h-8 rounded-full border border-gray-200 dark:border-white/10 flex items-center justify-center group-hover:border-neon-green group-hover:bg-neon-green/10 transition-all">
-                    <ArrowRight className="w-4 h-4" />
+      {/* 🌟 Featured: Events For You */}
+      <section className="relative overflow-hidden pt-20 pb-32">
+        {/* Abstract background for premium feel */}
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-neon-green/5 rounded-full blur-[120px] -z-10"></div>
+        <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-neon-green/10 rounded-full blur-[100px] -z-10"></div>
+        
+        <div className="max-w-[1400px] mx-auto px-6">
+            <div className="mb-14 flex flex-col md:flex-row md:items-end justify-between gap-4">
+                <div>
+                    <h2 className="text-4xl md:text-5xl font-black text-gray-900 dark:text-white uppercase tracking-tighter italic">
+                        {t('home.for_you.title')} <span className="text-neon-green">{t('home.for_you.title_highlight')}</span>
+                    </h2>
+                    <p className="text-[11px] font-black text-gray-400 dark:text-white/30 uppercase tracking-[0.4em] mt-3">
+                        {t('home.for_you.subtitle')}
+                    </p>
                 </div>
-            </Link>
+                <div className="hidden md:block h-px flex-1 bg-gray-100 dark:bg-white/5 mx-10 mb-5"></div>
+            </div>
+
+            <div className="flex gap-10 overflow-x-auto pb-12 no-scrollbar px-4 -mx-4 snap-x">
+                {isRecLoading ? (
+                    [...Array(4)].map((_, i) => (
+                        <div key={i} className="min-w-[280px] md:min-w-[320px] h-[390px] md:h-[480px] bg-gray-100 dark:bg-white/5 rounded-[3rem] animate-pulse"></div>
+                    ))
+                ) : (
+                    recommendations.map(event => (
+                        <div key={event.id} className="snap-start shrink-0">
+                            <EventCard event={event} variant="featured" />
+                        </div>
+                    ))
+                )}
+            </div>
+        </div>
+      </section>
+
+      {/* 🎸 Category Explorer Icons Bar */}
+      <section className="max-w-[1400px] mx-auto px-6 py-10 relative z-20">
+        <div className="flex items-center justify-between mb-10">
+            <h2 className="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tighter">
+                {t('home.categories.title')}
+            </h2>
+            <div className="h-px flex-1 bg-gray-100 dark:bg-white/5 ml-10"></div>
         </div>
         <CategoryBar 
             activeCategory={activeCategory} 
-            onCategoryChange={setActiveCategory} 
+            onCategoryChange={handleCategoryChange} 
             dbCategories={dbCategories}
         />
       </section>
 
-      {/* 📱 Upcoming Events Section */}
-      <section className="max-w-[1400px] mx-auto px-6 py-20 min-h-[400px]">
-        <div className="flex items-center justify-between mb-12 animate-in fade-in slide-in-from-bottom-8 duration-700">
-            <div className="flex items-center gap-4">
-                <div>
-                    <h2 className="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tighter leading-none">
-                        {t('home.events.title')} <span className="text-neon-green">{t('home.events.title_highlight')}</span>
-                    </h2>
-                    <p className="text-[10px] font-bold text-gray-400 dark:text-white/40 uppercase tracking-[0.3em] mt-2">
-                        {t('home.events.subtitle')}
-                    </p>
-                </div>
+      {/* 🕒 Time-Based Events */}
+      <section className="max-w-[1400px] mx-auto px-6 py-24 bg-gray-50/50 dark:bg-white/[0.01] rounded-[5rem] my-10 border border-gray-100 dark:border-white/5">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-8 mb-16 px-6">
+            <div>
+                <h2 className="text-4xl font-black text-gray-900 dark:text-white uppercase tracking-tighter">
+                    {t('home.time_filter.title')} <span className="text-neon-green">{t('home.time_filter.title_highlight')}</span>
+                </h2>
+                <p className="text-[11px] font-black text-gray-400 dark:text-white/30 uppercase tracking-[0.4em] mt-3">
+                    {t('home.time_filter.subtitle')}
+                </p>
             </div>
-            <Link 
-                to={activeCategory === 'all' ? '/events' : `/events?category=${activeCategory}`} 
-                className="group flex items-center gap-3 text-xs font-black uppercase tracking-widest text-gray-500 hover:text-neon-green transition-all"
-            >
-                {t('home.events.view_all')} 
-                <div className="w-12 h-12 rounded-full border border-gray-200 dark:border-white/10 flex items-center justify-center group-hover:border-neon-green group-hover:bg-neon-green/10 transition-all shadow-xl">
-                    <ArrowRight className="w-5 h-5" />
-                </div>
-            </Link>
+            <div className="flex bg-white dark:bg-[#0c0c0e] p-2 rounded-3xl border border-gray-200 dark:border-white/10 shadow-2xl">
+                <button 
+                    onClick={() => setTimeFilter('week')}
+                    className={`px-10 py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all duration-300 ${timeFilter === 'week' ? 'bg-neon-green text-black scale-105 shadow-lg shadow-neon-green/20' : 'text-gray-500 hover:text-gray-300'}`}
+                >
+                    {t('home.time_filter.this_week')}
+                </button>
+                <button 
+                    onClick={() => setTimeFilter('month')}
+                    className={`px-10 py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all duration-300 ${timeFilter === 'month' ? 'bg-neon-green text-black scale-105 shadow-lg shadow-neon-green/20' : 'text-gray-500 hover:text-gray-300'}`}
+                >
+                    {t('home.time_filter.this_month')}
+                </button>
+            </div>
         </div>
-
-        {/* Cinematic Horizontal Scroll */}
-        <div className="flex gap-8 overflow-x-auto pb-12 no-scrollbar px-4 -mx-4 snap-x snap-mandatory scroll-smooth">
-            {isLoading ? (
-                [...Array(6)].map((_, i) => (
-                    <div key={i} className="min-w-[300px] aspect-[2/3] bg-gray-100 dark:bg-white/5 rounded-[2.5rem] animate-pulse shrink-0"></div>
+        
+        {/* Changed Grid to Horizontal Scroll */}
+        <div className="flex gap-10 overflow-x-auto pb-12 no-scrollbar px-4 -mx-4 snap-x">
+            {isTimeLoading ? (
+                [...Array(4)].map((_, i) => (
+                    <div key={i} className="min-w-[280px] md:min-w-[320px] h-[390px] md:h-[480px] bg-gray-100 dark:bg-white/5 rounded-[3rem] animate-pulse"></div>
                 ))
-            ) : events.length > 0 ? (
-                events.map(event => (
+            ) : timeEvents.length > 0 ? (
+                timeEvents.map(event => (
                     <div key={event.id} className="snap-start shrink-0">
                         <EventCard event={event} />
                     </div>
                 ))
             ) : (
-                <div className="w-full py-20 text-center bg-gray-50 dark:bg-white/5 rounded-[3rem] border border-dashed border-gray-200 dark:border-white/10">
-                    <p className="text-gray-500 font-bold italic">{t('home.events.not_found')}</p>
+                <div className="col-span-full py-24 text-center text-gray-500 font-bold italic tracking-wider w-full">
+                    {t('home.events.not_found')}
                 </div>
             )}
         </div>
       </section>
 
-      {/* 💎 Why BASTICKET? */}
+      {/* 📱 Dynamic Category Sections */}
+      <div ref={resultsRef} className="scroll-mt-24 space-y-12">
+        {dbCategories.map(cat => {
+            const categoryEvents = allEvents.filter(e => e.category_id === cat.id);
+            if (categoryEvents.length === 0) return null;
+
+            return (
+                <section 
+                    key={cat.id} 
+                    ref={el => categoryRefs.current[cat.id] = el}
+                    className="max-w-[1400px] mx-auto px-6 py-20 scroll-mt-24"
+                >
+                    <div className="flex items-center justify-between mb-12">
+                        <div className="flex items-center gap-6">
+                            <h2 className="text-4xl font-black text-gray-900 dark:text-white uppercase tracking-tighter leading-none italic pr-4 border-r-4 border-neon-green">
+                                {cat.name}
+                            </h2>
+                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest pt-2">
+                                {categoryEvents.length} {t('home.events.count_label') || 'Sự kiện'}
+                            </span>
+                        </div>
+                        <Link 
+                            to={`/events?category=${cat.id}`} 
+                            className="group flex items-center gap-4 text-xs font-black uppercase tracking-widest text-gray-500 hover:text-neon-green transition-all"
+                        >
+                            <span className="opacity-60 group-hover:opacity-100">{t('home.events.view_all')}</span>
+                            <div className="w-12 h-12 rounded-full border border-gray-200 dark:border-white/10 flex items-center justify-center group-hover:border-neon-green group-hover:bg-neon-green/10 transition-all shadow-xl">
+                                <ArrowRight className="w-5 h-5" />
+                            </div>
+                        </Link>
+                    </div>
+
+                    <div className="flex gap-10 overflow-x-auto pb-12 no-scrollbar snap-x px-4 -mx-4">
+                        {categoryEvents.map(event => (
+                            <div key={event.id} className="snap-start shrink-0">
+                                <EventCard event={event} />
+                            </div>
+                        ))}
+                    </div>
+                </section>
+            );
+        })}
+      </div>
+
+      {/* 💎 Premium Features */}
       <section className="max-w-[1400px] mx-auto px-6 py-20 bg-gray-50/50 dark:bg-[#0a0a0c] rounded-[4rem] border border-gray-100 dark:border-white/5 mb-20">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
             <div>

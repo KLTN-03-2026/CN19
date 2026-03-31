@@ -1,5 +1,4 @@
 import React, { useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Music, Mic2, Theater, Utensils, Trophy, Plane, Rocket, Heart, Cpu, ArrowUpRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -20,7 +19,6 @@ const CARD_WIDTH = 280 + 24; // min-w-[280px] + gap-6
 
 const CategoryBar = ({ activeCategory, onCategoryChange, dbCategories = [] }) => {
     const { t } = useTranslation();
-    const navigate = useNavigate();
     const scrollRef = useRef(null);
     const isHovering = useRef(false);
 
@@ -34,8 +32,10 @@ const CategoryBar = ({ activeCategory, onCategoryChange, dbCategories = [] }) =>
     // Tripled categories to support infinite circular scroll
     const displayCategories = [...categories, ...categories, ...categories];
 
-    const handleViewAll = (catId) => {
-        navigate(`/events?category=${catId}`);
+    const handleViewAllInternal = (catId) => {
+        if (onCategoryChange) {
+            onCategoryChange(catId);
+        }
     };
 
     // Initialize scroll position to the start of the middle set
@@ -91,7 +91,7 @@ const CategoryBar = ({ activeCategory, onCategoryChange, dbCategories = [] }) =>
             onMouseLeave={() => { isHovering.current = false; }}
         >
             {displayCategories.length > 0 && displayCategories.map((cat, idx) => {
-                const isActive = activeCategory.toString() === cat.id.toString();
+                const isActive = activeCategory && activeCategory.toString() === cat.id.toString();
 
                 return (
                     <div
@@ -120,7 +120,7 @@ const CategoryBar = ({ activeCategory, onCategoryChange, dbCategories = [] }) =>
                                 <button
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        handleViewAll(cat.id);
+                                        handleViewAllInternal(cat.id);
                                     }}
                                     className="flex items-center gap-2 text-neon-green font-black uppercase text-[11px] tracking-[0.2em] hover:gap-4 transition-all group"
                                 >
