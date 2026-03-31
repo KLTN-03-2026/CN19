@@ -14,12 +14,24 @@ const Events = () => {
     // States for filters
     const [searchTerm, setSearchTerm] = useState(searchParams.get('search') || '');
     const [selectedCategories, setSelectedCategories] = useState(
-        searchParams.get('category') ? [parseInt(searchParams.get('category'))] : []
+        searchParams.get('category') ? [searchParams.get('category')] : []
     );
     const [priceRange, setPriceRange] = useState([0, 10000000]);
     const [selectedDate, setSelectedDate] = useState(null);
-    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [sortBy, setSortBy] = useState('newest');
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+    // Sync state with search params if they change (e.g. from nav or home)
+    useEffect(() => {
+        const cat = searchParams.get('category');
+        if (cat) {
+            setSelectedCategories([cat]);
+        }
+        const search = searchParams.get('search');
+        if (search) {
+            setSearchTerm(search);
+        }
+    }, [searchParams]);
 
     // Fetch Categories for Sidebar
     const { data: categoriesResult } = useQuery({

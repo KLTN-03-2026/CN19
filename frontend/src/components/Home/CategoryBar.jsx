@@ -31,25 +31,53 @@ const CategoryBar = ({ activeCategory, onCategoryChange, dbCategories = [] }) =>
         image: cat.image_url || FALLBACK_IMAGE,
     }));
 
+    // Tripled categories to support infinite circular scroll
+    const displayCategories = [...categories, ...categories, ...categories];
+
     const handleViewAll = (catId) => {
         navigate(`/events?category=${catId}`);
     };
 
+    // Initialize scroll position to the start of the middle set
+    useEffect(() => {
+        const container = scrollRef.current;
+        if (container && categories.length > 0) {
+            const singleWidth = categories.length * CARD_WIDTH;
+            container.scrollLeft = singleWidth;
+        }
+    }, [categories.length]);
+
+    // Infinite Looping Logic: Jump between sets seamlessly
+    useEffect(() => {
+        const container = scrollRef.current;
+        if (!container || categories.length === 0) return;
+
+        const handleInfiniteScroll = () => {
+            const singleWidth = categories.length * CARD_WIDTH;
+            
+            // If scrolled into the third set, jump back to middle set
+            if (container.scrollLeft >= singleWidth * 2) {
+                container.scrollLeft -= singleWidth;
+            } 
+            // If scrolled into the first set, jump forward to middle set
+            else if (container.scrollLeft <= 0) {
+                container.scrollLeft += singleWidth;
+            }
+        };
+
+        container.addEventListener('scroll', handleInfiniteScroll);
+        return () => container.removeEventListener('scroll', handleInfiniteScroll);
+    }, [categories.length]);
+
     // Auto-scroll every 2 seconds
     useEffect(() => {
         const container = scrollRef.current;
-        if (!container) return;
+        if (!container || categories.length === 0) return;
 
         const interval = setInterval(() => {
             if (isHovering.current) return;
-
-            const maxScroll = container.scrollWidth - container.clientWidth;
-            if (container.scrollLeft >= maxScroll) {
-                // Reset về đầu mượt mà
-                container.scrollTo({ left: 0, behavior: 'smooth' });
-            } else {
-                container.scrollBy({ left: CARD_WIDTH, behavior: 'smooth' });
-            }
+            // Behavior: 'smooth' handles the animation since we removed 'scroll-smooth' from className
+            container.scrollBy({ left: CARD_WIDTH, behavior: 'smooth' });
         }, 2000);
 
         return () => clearInterval(interval);
@@ -58,16 +86,16 @@ const CategoryBar = ({ activeCategory, onCategoryChange, dbCategories = [] }) =>
     return (
         <div
             ref={scrollRef}
-            className="flex gap-6 overflow-x-auto pb-8 no-scrollbar px-4 md:px-0 scroll-smooth snap-x"
+            className="flex gap-6 overflow-x-auto pb-8 no-scrollbar px-4 md:px-0 snap-x"
             onMouseEnter={() => { isHovering.current = true; }}
             onMouseLeave={() => { isHovering.current = false; }}
         >
-            {categories.map((cat) => {
+            {displayCategories.length > 0 && displayCategories.map((cat, idx) => {
                 const isActive = activeCategory.toString() === cat.id.toString();
 
                 return (
                     <div
-                        key={cat.id}
+                        key={`${cat.id}-${idx}`}
                         className={`group relative min-w-[280px] aspect-[4/3] rounded-[2rem] overflow-hidden cursor-pointer border-2 transition-all duration-500 snap-start shrink-0 select-none ${
                             isActive ? 'border-neon-green shadow-2xl shadow-neon-green/20 scale-105' : 'border-white/5 hover:border-neon-green/30'
                         }`}

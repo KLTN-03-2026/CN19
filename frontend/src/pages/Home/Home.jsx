@@ -79,7 +79,7 @@ const Home = () => {
         </div>
 
         {/* Hero Content */}
-        <div className="relative z-10 max-w-5xl mx-auto px-6 text-center">
+        <div className="relative z-10 max-w-4xl mx-auto px-6 text-center">
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-neon-green/10 backdrop-blur-md rounded-full border border-neon-green/30 mb-8 animate-in fade-in slide-in-from-bottom-4">
                 <TrendingUp className="w-4 h-4 text-neon-green" />
                 <span className="text-[10px] font-black uppercase tracking-widest text-neon-green/80">
@@ -121,7 +121,10 @@ const Home = () => {
                     {t('home.categories.title')}
                 </h2>
             </div>
-            <Link to="/events" className="group flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-gray-500 dark:text-white/50 hover:text-neon-green transition-all">
+            <Link 
+                to={activeCategory === 'all' ? '/events' : `/events?category=${activeCategory}`} 
+                className="group flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-gray-500 dark:text-white/50 hover:text-neon-green transition-all"
+            >
                 {t('home.categories.view_all')} 
                 <div className="w-8 h-8 rounded-full border border-gray-200 dark:border-white/10 flex items-center justify-center group-hover:border-neon-green group-hover:bg-neon-green/10 transition-all">
                     <ArrowRight className="w-4 h-4" />
@@ -148,7 +151,10 @@ const Home = () => {
                     </p>
                 </div>
             </div>
-            <Link to="/events" className="group flex items-center gap-3 text-xs font-black uppercase tracking-widest text-gray-500 hover:text-neon-green transition-all">
+            <Link 
+                to={activeCategory === 'all' ? '/events' : `/events?category=${activeCategory}`} 
+                className="group flex items-center gap-3 text-xs font-black uppercase tracking-widest text-gray-500 hover:text-neon-green transition-all"
+            >
                 {t('home.events.view_all')} 
                 <div className="w-12 h-12 rounded-full border border-gray-200 dark:border-white/10 flex items-center justify-center group-hover:border-neon-green group-hover:bg-neon-green/10 transition-all shadow-xl">
                     <ArrowRight className="w-5 h-5" />
