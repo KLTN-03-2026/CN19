@@ -20,8 +20,23 @@ export const staffService = {
   },
 
   /**
+   * Cập nhật thông tin nhân viên
+   */
+  updateStaff: async (id, data) => {
+    const res = await api.put(`/organizer/staffs/${id}`, data);
+    return res.data;
+  },
+
+  /**
+   * Lấy chi tiết nhân viên
+   */
+  getStaffDetail: async (id) => {
+    const res = await api.get(`/organizer/staffs/${id}`);
+    return res.data;
+  },
+
+  /**
    * Khóa/Mở khóa tài khoản nhân viên (Toggle status)
-   * Ở backend lockStaff chỉ set status: 'inactive'
    * @param {string} id - Staff User ID
    */
   lockStaff: async (id) => {

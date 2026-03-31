@@ -11,6 +11,12 @@ router.get('/', controller.getStaffs);
 // [POST] /api/organizer/staffs
 router.post('/', controller.createStaff);
 
+// [GET] /api/organizer/staffs/:id
+router.get('/:id', controller.getStaffDetail);
+
+// [PUT] /api/organizer/staffs/:id
+router.put('/:id', controller.updateStaff);
+
 // [PUT] /api/organizer/staffs/:id/lock
 router.put('/:id/lock', controller.lockStaff);
 
