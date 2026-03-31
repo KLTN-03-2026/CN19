@@ -15,7 +15,7 @@ i18n
           auth: {
             login: "Sign In", signup: "Sign Up", welcome: "Welcome back to BASTICKET", welcome_desc: "Secure login to the system.",
             create: "Create Account", create_desc: "Automatically generates a secure Web3 Custodial Wallet for your tickets.",
-            email: "Email address", email_phone: "Email or Phone number", forgot: "Forgot password?", pass: "Password", name: "Full Name", phone: "Phone Number", cpass: "Confirm Password",
+            email: "Email address", email_phone: "Email or Phone number", forgot: "Forgot password?", pass: "Password", name: "Full Name", dob: "Date of Birth", phone: "Phone Number", cpass: "Confirm Password",
             auth_btn: "Authenticating...", signin_btn: "Sign In", create_btn: "Sign Up", creating_btn: "Creating Web3 Wallet...",
             or: "OR", google: "Continue with Google",
             no_acc: "Don't have an account?", yes_acc: "Already have an account?",
@@ -247,7 +247,7 @@ i18n
           auth: {
             login: "Đăng nhập", signup: "Đăng ký", welcome: "Chào mừng trở lại BASTICKET", welcome_desc: "Đăng nhập an toàn vào hệ thống.",
             create: "Tạo tài khoản", create_desc: "Hệ thống tự động khởi tạo Ví Ẩn Web3 siêu bảo mật.",
-            email: "Địa chỉ Email", email_phone: "Email hoặc Số điện thoại", forgot: "Quên mật khẩu?", pass: "Mật khẩu", name: "Họ và Tên", phone: "Số điện thoại", cpass: "Xác nhận Mật khẩu",
+            email: "Địa chỉ Email", email_phone: "Email hoặc Số điện thoại", forgot: "Quên mật khẩu?", pass: "Mật khẩu", name: "Họ và Tên", dob: "Ngày tháng năm sinh", phone: "Số điện thoại", cpass: "Xác nhận Mật khẩu",
             auth_btn: "Đang xác thực...", signin_btn: "Đăng nhập", create_btn: "Tạo tài khoản", creating_btn: "Đang tạo Ví Web3...",
             or: "Hoặc", google: "Tiếp tục với Google",
             no_acc: "Chưa có tài khoản?", yes_acc: "Đã có tài khoản rồi?",

@@ -27,6 +27,7 @@ const createEvent = async (req, res) => {
       end_date, end_time,
       location_address, latitude, longitude,
       ticket_tiers,
+      seating_charts,
       allow_resale, allow_transfer, allow_refund, royalty_fee_percent, refund_deadline_days,
       status
     } = req.body;
@@ -79,7 +80,8 @@ const createEvent = async (req, res) => {
             benefits: tier.benefits,
             section_name: tier.section_name
           }))
-        }
+        },
+        seating_charts: seating_charts && Array.isArray(seating_charts) ? seating_charts : []
       }
     });
 
@@ -109,6 +111,7 @@ const updateEvent = async (req, res) => {
       end_date, end_time,
       location_address, latitude, longitude,
       ticket_tiers,
+      seating_charts,
       allow_resale, allow_transfer, allow_refund, royalty_fee_percent, refund_deadline_days,
       status
     } = req.body;
@@ -157,7 +160,8 @@ const updateEvent = async (req, res) => {
             benefits: tier.benefits,
             section_name: tier.section_name
           }))
-        } : undefined
+        } : undefined,
+        seating_charts: seating_charts && Array.isArray(seating_charts) ? seating_charts : undefined
       }
     });
 

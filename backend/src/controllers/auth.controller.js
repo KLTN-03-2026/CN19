@@ -72,7 +72,18 @@ const verifyRegisterOtp = async (req, res) => {
     if (record.otp !== otp) return res.status(400).json({ error: 'Mã OTP không chính xác!' });
 
     // Dữ liệu hợp lệ, bắt đầu lưu DB!
-    const { full_name, phone_number, password } = record.data;
+    const { full_name, phone_number, password, date_of_birth } = record.data;
+
+    // Server-side Validation: Kiểm tra ngày sinh
+    if (date_of_birth) {
+      const selectedDate = new Date(date_of_birth);
+      const today = new Date();
+      if (selectedDate > today) return res.status(400).json({ error: 'Ngày sinh không thể ở tương lai.' });
+      
+      const minAgeDate = new Date();
+      minAgeDate.setFullYear(minAgeDate.getFullYear() - 13);
+      if (selectedDate > minAgeDate) return res.status(400).json({ error: 'Bạn phải từ 13 tuổi trở lên để sử dụng hệ thống.' });
+    }
 
     const salt = await bcrypt.genSalt(10);
     const password_hash = await bcrypt.hash(password, salt);
@@ -88,6 +99,7 @@ const verifyRegisterOtp = async (req, res) => {
         full_name,
         phone_number,
         password_hash,
+        date_of_birth: date_of_birth ? new Date(date_of_birth) : null,
         role: 'customer',
         status: 'active',
         wallet_address: randomWallet.address,

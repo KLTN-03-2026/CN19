@@ -32,6 +32,8 @@ const CreateEvent = () => {
   const [videoProgress, setVideoProgress] = useState(0);
   const [previewVideo, setPreviewVideo] = useState(null);
   const [isVideoUploading, setIsVideoUploading] = useState(false);
+  const [previewSeatingCharts, setPreviewSeatingCharts] = useState([]);
+  const [isSeatingChartsUploading, setIsSeatingChartsUploading] = useState(false);
   const [targetStatus, setTargetStatus] = useState('pending');
 
   const { register, control, handleSubmit, watch, setValue, formState: { errors } } = useForm({
@@ -52,6 +54,7 @@ const CreateEvent = () => {
       allow_transfer: true,
       royalty_fee_percent: 5,
       refund_deadline_days: 7,
+      seating_charts: [],
       ticket_tiers: [{ tier_name: 'Vé Thường', price: '', quantity_total: '', section_name: 'Khán đài A', benefits: '' }]
     }
   });
@@ -158,6 +161,58 @@ const CreateEvent = () => {
     } finally {
       setIsVideoUploading(false);
     }
+  };
+  
+  const handleSeatingChartsUpload = async (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+
+    const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+    const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+
+    if (!cloudName || cloudName === 'your_cloud_name') {
+      toast.error("Cloudinary chưa được cấu hình.");
+      return;
+    }
+
+    setIsSeatingChartsUploading(true);
+    const newUrls = [...watch('seating_charts')];
+    const newPreviews = [...previewSeatingCharts];
+
+    try {
+      for (const file of files) {
+        // Local preview for immediate feedback
+        const previewUrl = URL.createObjectURL(file);
+        
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('upload_preset', uploadPreset);
+
+        const res = await axios.post(
+          `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+          formData
+        );
+        
+        newUrls.push(res.data.secure_url);
+        newPreviews.push(res.data.secure_url);
+      }
+      
+      setValue('seating_charts', newUrls);
+      setPreviewSeatingCharts(newPreviews);
+      toast.success(`Đã tải lên ${files.length} ảnh sơ đồ!`);
+    } catch (error) {
+      toast.error("Lỗi khi tải ảnh sơ đồ lên.");
+      console.error(error);
+    } finally {
+      setIsSeatingChartsUploading(false);
+    }
+  };
+
+  const removeSeatingChart = (index) => {
+    const newUrls = watch('seating_charts').filter((_, i) => i !== index);
+    const newPreviews = previewSeatingCharts.filter((_, i) => i !== index);
+    setValue('seating_charts', newUrls);
+    setPreviewSeatingCharts(newPreviews);
   };
 
   const removeImage = (e) => {
@@ -371,7 +426,51 @@ const CreateEvent = () => {
                     </div>
                 </div>
              </div>
-          </div>
+              
+              {/* Sơ đồ sự kiện (Multi-upload) */}
+              <div className="space-y-4 pt-6 border-t border-gray-100 dark:border-white/5">
+                  <div className="flex items-center justify-between">
+                     <label className="text-xs font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">Sơ đồ sự kiện / Sơ đồ chỗ ngồi (Tải lên nhiều ảnh) <span className="text-red-500">*</span></label>
+                     <span className="text-[10px] font-bold text-blue-600 bg-blue-600/10 px-2 py-0.5 rounded-full uppercase tracking-tighter">Tải lên ít nhất 1 ảnh</span>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                      {previewSeatingCharts.map((url, index) => (
+                          <div key={index} className="relative aspect-video md:aspect-square rounded-2xl overflow-hidden border border-gray-100 dark:border-white/10 group">
+                              <img src={url} alt={`Layout ${index}`} className="w-full h-full object-cover" />
+                              <button 
+                                  type="button"
+                                  onClick={() => removeSeatingChart(index)}
+                                  className="absolute top-2 right-2 w-7 h-7 bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg z-20"
+                              >
+                                  <Trash2 className="w-4 h-4" />
+                              </button>
+                          </div>
+                      ))}
+                      
+                      {previewSeatingCharts.length < 10 && (
+                          <div className="relative aspect-video md:aspect-square rounded-2xl border-2 border-dashed border-gray-200 dark:border-white/10 hover:border-blue-600 dark:hover:border-blue-600 transition-all bg-gray-50/50 dark:bg-white/[0.02] flex flex-col items-center justify-center space-y-2 cursor-pointer group">
+                              <input 
+                                  type="file"
+                                  multiple
+                                  accept="image/*"
+                                  onChange={handleSeatingChartsUpload}
+                                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                  disabled={isSeatingChartsUploading}
+                              />
+                              {isSeatingChartsUploading ? (
+                                  <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                              ) : (
+                                  <>
+                                      <PlusCircle className="w-6 h-6 text-gray-300 dark:text-gray-600 group-hover:text-blue-600 transition-colors" />
+                                      <span className="text-[10px] font-bold text-gray-400 uppercase">Thêm ảnh sơ đồ</span>
+                                  </>
+                              )}
+                          </div>
+                      )}
+                  </div>
+              </div>
+           </div>
         )}
 
         {/* Step 2: Thời gian & Địa điểm */}

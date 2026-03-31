@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
-import { Info, Eye, EyeOff, User, Phone, ShieldCheck, X, Lock } from 'lucide-react';
+import { Info, Eye, EyeOff, User, Phone, ShieldCheck, X, Lock, Calendar } from 'lucide-react';
 import { authService } from '../../services/auth.service';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useTranslation } from 'react-i18next';
@@ -27,8 +27,9 @@ const Register = () => {
   const confirmPassVal = watch("confirmPassword", "");
   const nameVal = watch("full_name", "");
   const phoneVal = watch("phone_number", "");
+  const dobVal = watch("date_of_birth", "");
   
-  const isFormValid = emailVal && passVal && confirmPassVal && nameVal && phoneVal && turnstileToken;
+  const isFormValid = emailVal && passVal && confirmPassVal && nameVal && phoneVal && dobVal && turnstileToken;
 
   const onSubmitStep1 = async (data) => {
     try {
@@ -161,6 +162,36 @@ const Register = () => {
               <Phone className="w-5 h-5" />
             </div>
           </div>
+
+          <div className="relative">
+            <input
+              type="date"
+              {...register("date_of_birth", { 
+                required: true,
+                validate: value => {
+                  const selectedDate = new Date(value);
+                  const today = new Date();
+                  today.setHours(0,0,0,0);
+                  if (selectedDate > today) return "Ngày sinh không thể ở tương lai";
+                  
+                  // Kiểm tra tối thiểu 13 tuổi (Tùy chọn nhưng nên có)
+                  const minAgeDate = new Date();
+                  minAgeDate.setFullYear(minAgeDate.getFullYear() - 13);
+                  if (selectedDate > minAgeDate) return "Bạn phải từ 13 tuổi trở lên để sử dụng hệ thống";
+                  
+                  return true;
+                }
+              })}
+              max={new Date().toISOString().split('T')[0]}
+              className="w-full pl-4 pr-10 py-3 bg-gray-50 dark:bg-[#0a0a0a] border border-gray-200 dark:border-dark-border text-gray-900 dark:text-white rounded-xl focus:outline-none focus:border-neon-green focus:ring-1 focus:ring-neon-green transition-colors appearance-none cursor-pointer"
+              placeholder={t('auth.dob')}
+              onClick={(e) => e.target.showPicker && e.target.showPicker()}
+            />
+            <div className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 dark:text-gray-500 pointer-events-none">
+              <Calendar className="w-5 h-5" />
+            </div>
+          </div>
+          {errors.date_of_birth && <p className="text-sm text-red-500 mt-1">{errors.date_of_birth.message}</p>}
 
           <div className="relative">
             <input

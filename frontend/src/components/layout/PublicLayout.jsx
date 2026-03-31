@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Outlet, Link, useNavigate } from 'react-router-dom';
+import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
 import { Shield, Moon, Sun, Globe, User, Ticket, LogOut, ChevronDown, LayoutDashboard } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useTranslation } from 'react-i18next';
@@ -12,6 +12,7 @@ const PublicLayout = () => {
   const navigate = useNavigate();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const location = useLocation();
 
   useEffect(() => {
     const handleClickOutside = (e) => {
@@ -237,7 +238,10 @@ const PublicLayout = () => {
         <Outlet />
       </main>
 
-      <Footer />
+      {/* Ẩn Footer ở các trang Auth để tập trung vào Form (UX Minimalist) */}
+      {!['/login', '/register', '/forgot-password', '/reset-password', '/organizer-register'].includes(location.pathname) && (
+        <Footer />
+      )}
     </div>
   );
 };

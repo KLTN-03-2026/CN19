@@ -75,7 +75,12 @@ body {
   to { transform: translateY(0); opacity: 1; }
 }
 
-/* Fix for dark mode native select dropdown options */
-option {
-  @apply bg-white text-gray-900 dark:bg-[#111114] dark:text-white transition-colors duration-200;
+/* Ẩn icon lịch mặc định của trình duyệt để dùng icon Lucide cho đồng bộ */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  display: none;
+  -webkit-appearance: none;
+}
+input[type="date"]::-webkit-inner-spin-button,
+input[type="date"]::-webkit-clear-button {
+  display: none;
 }

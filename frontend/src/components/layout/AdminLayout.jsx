@@ -166,7 +166,7 @@ const AdminLayout = () => {
         </header>
 
         {/* Content Area */}
-        <div className="p-8 overflow-y-auto">
+        <div className="p-8 flex-1 overflow-y-auto">
           <Outlet />
         </div>
       </main>
