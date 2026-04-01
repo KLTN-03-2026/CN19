@@ -98,7 +98,7 @@ const getOrganizerTickets = async (req, res) => {
           ticket_tier: { select: { tier_name: true, price: true } },
           current_owner: { select: { full_name: true, email: true } }
         },
-        orderBy: { created_at: 'desc' },
+        orderBy: { id: 'desc' },
         skip: Number(skip),
         take: Number(limit)
       }),

@@ -35,6 +35,9 @@ const EditEvent = () => {
     const [videoProgress, setVideoProgress] = useState(0);
     const [previewVideo, setPreviewVideo] = useState(null);
     const [isVideoUploading, setIsVideoUploading] = useState(false);
+    const [previewSeatingCharts, setPreviewSeatingCharts] = useState([]);
+    const [isSeatingChartsUploading, setIsSeatingChartsUploading] = useState(false);
+    const [isCategoryOpen, setIsCategoryOpen] = useState(false);
     const [targetStatus, setTargetStatus] = useState('pending');
 
     const { register, control, handleSubmit, watch, setValue, formState: { errors } } = useForm({
@@ -54,7 +57,8 @@ const EditEvent = () => {
             allow_resale: true,
             allow_transfer: true,
             royalty_fee_percent: 5,
-            refund_deadline_days: 7,
+            refund_deadline_days: 0,
+            seating_charts: [],
             ticket_tiers: []
         }
     });
@@ -92,7 +96,7 @@ const EditEvent = () => {
                 setValue('allow_resale', eventData.allow_resale);
                 setValue('allow_transfer', eventData.allow_transfer);
                 setValue('royalty_fee_percent', eventData.royalty_fee_percent);
-                setValue('refund_deadline_days', eventData.refund_deadline_days);
+                setValue('refund_deadline_days', 0);
                 
                 // Map ticket tiers (backend fields might be tier_name, price, quantity_total)
                 if (eventData.ticket_tiers) {
@@ -107,6 +111,10 @@ const EditEvent = () => {
 
                 if (eventData.image_url) setPreviewImage(eventData.image_url);
                 if (eventData.video_url) setPreviewVideo(eventData.video_url);
+                if (eventData.seating_charts) {
+                    setValue('seating_charts', eventData.seating_charts);
+                    setPreviewSeatingCharts(eventData.seating_charts);
+                }
                 setTargetStatus(eventData.status);
 
             } catch (err) {
@@ -206,6 +214,46 @@ const EditEvent = () => {
         setValue('video_url', '');
     };
 
+    const handleSeatingChartsUpload = async (e) => {
+        const files = Array.from(e.target.files);
+        if (files.length === 0) return;
+
+        const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+        const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+
+        setIsSeatingChartsUploading(true);
+        try {
+            const uploadPromises = files.map(file => {
+                const formData = new FormData();
+                formData.append('file', file);
+                formData.append('upload_preset', uploadPreset);
+                return axios.post(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, formData);
+            });
+
+            const results = await Promise.all(uploadPromises);
+            const newUrls = results.map(res => res.data.secure_url);
+            
+            const currentUrls = watch('seating_charts') || [];
+            const updatedUrls = [...currentUrls, ...newUrls];
+            
+            setValue('seating_charts', updatedUrls, { shouldValidate: true });
+            setPreviewSeatingCharts(updatedUrls);
+            toast.success(`Đã tải lên ${files.length} ảnh sơ đồ!`);
+        } catch (error) {
+            toast.error("Lỗi khi tải ảnh sơ đồ lên.");
+            console.error(error);
+        } finally {
+            setIsSeatingChartsUploading(false);
+        }
+    };
+
+    const removeSeatingChart = (index) => {
+        const currentUrls = watch('seating_charts') || [];
+        const newUrls = currentUrls.filter((_, i) => i !== index);
+        setValue('seating_charts', newUrls, { shouldValidate: true });
+        setPreviewSeatingCharts(newUrls);
+    };
+
     const onSubmit = async (data) => {
         if (!data.image_url) {
             toast.error('Vui lòng tải ảnh banner sự kiện.');
@@ -282,6 +330,12 @@ const EditEvent = () => {
             {renderStepHeader()}
 
             <form onSubmit={handleSubmit(onSubmit)} className="bg-white dark:bg-[#111114] rounded-3xl border border-gray-100 dark:border-white/5 shadow-2xl p-8 lg:p-12 relative overflow-hidden transition-colors">
+                {/* Hidden Registered Fields for Validation */}
+                <input type="hidden" {...register('image_url', { required: true })} />
+                <input type="hidden" {...register('location_address', { required: true })} />
+                <input type="hidden" {...register('latitude')} />
+                <input type="hidden" {...register('longitude')} />
+                <input type="hidden" {...register('seating_charts')} />
                 
                 {step === 1 && (
                     <div className="space-y-6 animate-in slide-in-from-right-8 fade-in duration-500">
@@ -293,17 +347,54 @@ const EditEvent = () => {
                                     className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-blue-600 transition-all"
                                 />
                             </div>
-                            <div className="space-y-2">
+                            <div className="space-y-2 relative">
                                 <label className="text-xs font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">Danh mục <span className="text-red-500">*</span></label>
-                                <select 
-                                    {...register('category_id', { required: true })}
-                                    className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-blue-600 transition-all text-gray-900 dark:text-white"
-                                >
-                                    <option value="">Chọn danh mục</option>
-                                    {categories.map(cat => (
-                                        <option key={cat.id} value={cat.id}>{cat.name}</option>
-                                    ))}
-                                </select>
+                                <div className="relative">
+                                    <button 
+                                        type="button"
+                                        onClick={() => setIsCategoryOpen(!isCategoryOpen)}
+                                        className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-left flex items-center justify-between focus:outline-none focus:border-blue-600 transition-all text-gray-900 dark:text-white"
+                                    >
+                                        <span>{categories.find(c => c.id === watch('category_id'))?.name || 'Chọn danh mục'}</span>
+                                        <ChevronRight className={`w-4 h-4 transition-transform duration-300 ${isCategoryOpen ? 'rotate-90' : 'rotate-0'}`} />
+                                    </button>
+                                    
+                                    {isCategoryOpen && (
+                                        <>
+                                            <div className="fixed inset-0 z-40" onClick={() => setIsCategoryOpen(false)}></div>
+                                            <div className="absolute top-full left-0 w-full mt-2 bg-white dark:bg-[#1a1a1e] border border-gray-100 dark:border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                                                <div className="max-h-60 overflow-y-auto py-2">
+                                                    <div 
+                                                        className="px-4 py-2 text-sm font-bold text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 cursor-pointer uppercase tracking-widest text-[10px]"
+                                                        onClick={() => {
+                                                            setValue('category_id', '', { shouldValidate: true });
+                                                            setIsCategoryOpen(false);
+                                                        }}
+                                                    >
+                                                        Chọn danh mục
+                                                    </div>
+                                                    {categories.map(cat => (
+                                                        <div 
+                                                            key={cat.id} 
+                                                            onClick={() => {
+                                                                setValue('category_id', cat.id, { shouldValidate: true });
+                                                                setIsCategoryOpen(false);
+                                                            }}
+                                                            className={`px-4 py-3 text-sm font-bold cursor-pointer transition-colors flex items-center justify-between ${
+                                                                watch('category_id') === cat.id 
+                                                                ? 'bg-blue-600 text-white' 
+                                                                : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5'
+                                                            }`}
+                                                        >
+                                                            {cat.name}
+                                                            {watch('category_id') === cat.id && <CheckCircle2 className="w-4 h-4" />}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
                             </div>
                         </div>
 
@@ -369,6 +460,50 @@ const EditEvent = () => {
                                         )}
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+
+                        {/* Sơ đồ sự kiện (Multi-upload) */}
+                        <div className="space-y-4 pt-6 border-t border-gray-100 dark:border-white/5">
+                            <div className="flex items-center justify-between">
+                                <label className="text-xs font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">Sơ đồ sự kiện / Sơ đồ chỗ ngồi (Tải lên nhiều ảnh) <span className="text-red-500">*</span></label>
+                                <span className="text-[10px] font-bold text-blue-600 bg-blue-600/10 px-2 py-0.5 rounded-full uppercase tracking-tighter">Tải lên ít nhất 1 ảnh</span>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                                {previewSeatingCharts.map((url, index) => (
+                                    <div key={index} className="relative aspect-video md:aspect-square rounded-2xl overflow-hidden border border-gray-100 dark:border-white/10 group">
+                                        <img src={url} alt={`Layout ${index}`} className="w-full h-full object-cover" />
+                                        <button 
+                                            type="button"
+                                            onClick={() => removeSeatingChart(index)}
+                                            className="absolute top-2 right-2 w-7 h-7 bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg z-20"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                ))}
+                                
+                                {previewSeatingCharts.length < 10 && (
+                                    <div className="relative aspect-video md:aspect-square rounded-2xl border-2 border-dashed border-gray-200 dark:border-white/10 hover:border-blue-600 transition-all bg-gray-50/50 dark:bg-white/[0.02] flex flex-col items-center justify-center space-y-2 cursor-pointer group">
+                                        <input 
+                                            type="file"
+                                            multiple
+                                            accept="image/*"
+                                            onChange={handleSeatingChartsUpload}
+                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                            disabled={isSeatingChartsUploading}
+                                        />
+                                        {isSeatingChartsUploading ? (
+                                            <div className="w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                                        ) : (
+                                            <>
+                                                <PlusCircle className="w-6 h-6 text-gray-300 dark:text-gray-600 group-hover:text-blue-600 transition-colors" />
+                                                <span className="text-[10px] font-bold text-gray-400 uppercase">Thêm ảnh sơ đồ</span>
+                                            </>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
@@ -446,6 +581,9 @@ const EditEvent = () => {
                                         <div className="space-y-1">
                                             <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 italic">Giá vé (VNĐ)</label>
                                             <input type="number" {...register(`ticket_tiers.${index}.price`, { required: true })} className="w-full bg-transparent border-b border-gray-200 dark:border-white/10 py-1 text-sm font-bold focus:outline-none focus:border-blue-600" />
+                                            <p className="text-[10px] text-blue-600 dark:text-blue-400 font-medium mt-1">
+                                                * Bạn nhận về: {(watch(`ticket_tiers.${index}.price`) * 0.98).toLocaleString()} VNĐ
+                                            </p>
                                         </div>
                                         <div className="space-y-1">
                                             <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 italic">Số lượng</label>
@@ -482,9 +620,37 @@ const EditEvent = () => {
                                 </div>
                             </div>
                             <div className="space-y-6">
-                                <h4 className="text-xs font-bold uppercase tracking-widest text-blue-600">Phí và thời hạn</h4>
-                                <input type="number" {...register('royalty_fee_percent')} className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold" />
-                                <input type="number" {...register('refund_deadline_days')} className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 rounded-xl px-4 py-3 text-sm font-bold" />
+                                <h4 className="text-xs font-bold uppercase tracking-widest text-blue-600">Phí bản quyền</h4>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 italic">Phí bản quyền (%)</label>
+                                    <div className="relative">
+                                        <input type="number" {...register('royalty_fee_percent')} className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-blue-600 transition-all" />
+                                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">%</span>
+                                    </div>
+                                    <p className="text-[10px] text-blue-600 dark:text-blue-400 font-medium mt-2 italic">* Phí này được chuyển cho BTC mỗi khi vé được bán lại trên Marketplace.</p>
+                                </div>
+                                
+                                <div className="p-4 bg-blue-600/5 rounded-xl border border-blue-600/10 flex items-start space-x-3 mt-4">
+                                    <Info className="w-4 h-4 text-blue-600 mt-0.5" />
+                                    <p className="text-[10px] text-blue-700 dark:text-blue-400 font-medium leading-relaxed">
+                                        <b>Phí dịch vụ & Gas (2%):</b> Hệ thống trích 2% hoa hồng từ doanh thu để trả phí Gas Blockchain. Khách hàng chỉ trả đúng giá bạn niêm yết.
+                                        <br/><span className="text-red-500 mt-1 block">* Lưu ý: Phí này không hoàn lại cho BTC nếu sự kiện bị hủy.</span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="p-8 bg-black rounded-3xl border border-blue-600/20 text-center space-y-4">
+                            <CheckCircle2 className="w-12 h-12 text-blue-600 mx-auto" />
+                            <h3 className="text-xl font-bold text-white uppercase tracking-tighter">Mọi thứ đã sẵn sàng!</h3>
+                            <p className="text-sm text-gray-400 font-medium max-w-lg mx-auto leading-relaxed">
+                                Cập nhật thông tin sự kiện của bạn và gửi đi. Các thay đổi sẽ được cập nhật đồng bộ lên hệ thống.
+                            </p>
+                            <div className="mt-6 p-4 bg-red-600/10 rounded-2xl border border-red-600/20 text-left">
+                                <p className="text-[10px] text-red-500 font-bold uppercase tracking-widest mb-1">Quy định bồi hoàn & Trách nhiệm:</p>
+                                <p className="text-[10px] text-gray-400 font-medium leading-relaxed italic">
+                                    Nếu sự kiện bị hủy/dời lịch, bạn có nghĩa vụ hoàn trả <b>100% tiền khách đã trả</b>. Phí hoa hồng 2% (đã dùng cho gas/vận hành) sẽ không được hoàn lại cho BTC.
+                                </p>
                             </div>
                         </div>
                     </div>

@@ -7,10 +7,9 @@ import {
   Twitter, 
   Youtube, 
   Mail, 
-  Phone, 
   MapPin, 
-  ArrowRight,
-  Globe
+  Globe,
+  Phone
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -18,31 +17,31 @@ const Footer = () => {
     const { t } = useTranslation();
 
     return (
-        <footer className="relative z-10 bg-white dark:bg-[#0a0a0b] border-t border-gray-100 dark:border-white/5 pt-12 pb-8 transition-colors duration-500">
+        <footer className="font-sans bg-white dark:bg-dark-bg border-t border-gray-200 dark:border-dark-border pt- pb-6 transition-colors duration-300">
             {/* Top Section with Newsletter */}
             <div className="max-w-[1400px] mx-auto px-6 mb-12">
-                <div className="relative overflow-hidden bg-neon-green rounded-[2.5rem] p-6 md:p-10 flex flex-col lg:flex-row items-center justify-between gap-8 group shadow-[0_20px_40px_-10px_rgba(82,196,45,0.25)]">
-                    <div className="absolute top-0 right-0 w-80 h-80 bg-white/20 rounded-full blur-[100px] -mr-32 -mt-32"></div>
-                    <div className="absolute bottom-0 left-0 w-60 h-60 bg-black/10 rounded-full blur-[80px] -ml-20 -mb-20 opacity-30"></div>
+                <div className="bg-gray-50 dark:bg-dark-card border border-gray-200 dark:border-dark-border dark:glow-card-green rounded-3xl p-8 md:p- flex flex-col lg:flex-row items-center justify-between gap-8 relative overflow-hidden">
                     
-                    <div className="relative z-10 text-center lg:text-left max-w-xl">
-                        <h3 className="text-2xl md:text-4xl font-black text-black uppercase leading-none mb-4 italic">
-                            {t('footer.newsletter_title')}
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-neon-green/5 rounded-full blur-[80px] -mr-20 -mt-20 pointer-events-none"></div>
+
+                    <div className="text-center lg:text-left max-w-xl relative z-10">
+                        <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                            {t('footer.newsletter_title', 'Đăng ký nhận tin')}
                         </h3>
-                        <p className="text-black/60 font-black uppercase tracking-[0.3em] text-[9px] md:text-[10px]">
-                            {t('footer.newsletter_subtitle')}
+                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                            {t('footer.newsletter_subtitle', 'Nhận thông báo sớm nhất về các sự kiện hot và vé NFT giới hạn.')}
                         </p>
                     </div>
 
-                    <div className="relative z-10 w-full lg:w-auto">
-                        <div className="flex bg-black p-2 rounded-[2rem] border border-white/10 shadow-2xl w-full lg:w-[450px]">
+                    <div className="w-full lg:w-auto relative z-10">
+                        <div className="flex bg-white dark:bg-dark-bg p-1.5 rounded-2xl border border-gray-200 dark:border-dark-border shadow-sm w-full lg:w-[450px] focus-within:border-neon-green focus-within:ring-1 focus-within:ring-neon-green transition-all">
                             <input 
                                 type="email" 
-                                placeholder={t('footer.email_placeholder')}
-                                className="bg-transparent border-none outline-none text-white px-6 py-3 font-black text-[10px] w-full placeholder:text-white/20 uppercase tracking-widest"
+                                placeholder={t('footer.email_placeholder', 'Nhập email của bạn...')}
+                                className="font-medium bg-transparent border-none outline-none text-gray-900 dark:text-white px-4 py-2 text-sm w-full placeholder:text-gray-400 dark:placeholder:text-gray-500"
                             />
-                            <button className="bg-neon-green hover:bg-neon-hover text-black px-8 py-3 rounded-[1.5rem] font-black uppercase text-[10px] tracking-widest transition-all transform hover:scale-105 active:scale-95 shadow-xl shadow-black/40 whitespace-nowrap">
-                                {t('footer.subscribe_btn')}
+                            <button className="bg-neon-green hover:bg-neon-hover text-white px-6 py-2.5 rounded-xl text-sm font-semibold transition-colors whitespace-nowrap">
+                                {t('footer.subscribe_btn', 'Đăng ký')}
                             </button>
                         </div>
                     </div>
@@ -50,22 +49,22 @@ const Footer = () => {
             </div>
 
             {/* Main Links Grid */}
-            <div className="max-w-[1400px] mx-auto px-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
+            <div className="max-w-[1400px] mx-auto px-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-10">
                 {/* Column 1: Brand */}
                 <div className="space-y-6">
                     <Link to="/" className="flex items-center gap-3 group">
-                        <Shield className="w-10 h-10 text-neon-green group-hover:rotate-12 transition-transform duration-500" />
-                        <span className="text-2xl font-black text-gray-900 dark:text-white tracking-tighter uppercase italic">
-                            BASTICKET
+                        <Shield className="w-8 h-8 text-neon-green" />
+                        <span className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">
+                            BAS-TICKET
                         </span>
                     </Link>
-                    <p className="text-[10px] font-black text-gray-500 dark:text-white/30 leading-relaxed uppercase tracking-[0.2em]">
-                        {t('footer.description')}
+                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400 leading-relaxed">
+                        {t('footer.description', 'Nền tảng phát hành vé sự kiện ứng dụng công nghệ Blockchain và AI. Chống gian lận tuyệt đối, thanh toán minh bạch.')}
                     </p>
-                    <div className="flex gap-3">
+                    <div className="flex gap-4">
                         {[Facebook, Instagram, Twitter, Youtube].map((Icon, i) => (
-                            <a key={i} href="#" className="w-10 h-10 rounded-xl border border-gray-200 dark:border-white/10 flex items-center justify-center text-gray-500 hover:text-neon-green hover:border-neon-green hover:bg-neon-green/10 transition-all shadow-xl active:scale-90 group">
-                                <Icon className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                            <a key={i} href="#" className="w-10 h-10 rounded-full bg-gray-100 dark:bg-dark-card border border-transparent dark:border-dark-border flex items-center justify-center text-gray-600 dark:text-gray-400 hover:bg-neon-green hover:text-white dark:hover:bg-neon-green dark:hover:text-white dark:hover:border-neon-green transition-all">
+                                <Icon className="w-4 h-4" />
                             </a>
                         ))}
                     </div>
@@ -73,20 +72,19 @@ const Footer = () => {
 
                 {/* Column 2: Platform */}
                 <div>
-                    <h4 className="text-[9px] font-black text-neon-green uppercase tracking-[0.5em] mb-6 italic border-l-4 border-neon-green pl-4">
-                        {t('footer.platform.title')}
+                    <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-6 uppercase tracking-wider">
+                        {t('footer.platform.title', 'Nền tảng')}
                     </h4>
-                    <ul className="space-y-3">
+                    <ul className="space-y-4">
                         {[
-                            { key: 'events', path: '/events' },
-                            { key: 'marketplace', path: '/marketplace' },
-                            { key: 'nfts', path: '#' },
-                            { key: 'rewards', path: '#' }
+                            { key: 'events', label: 'Sự kiện', path: '/events' },
+                            { key: 'marketplace', label: 'Chợ vé (Marketplace)', path: '/marketplace' },
+                            { key: 'nfts', label: 'Xác thực NFT', path: '#' },
+                            { key: 'organizer', label: 'Dành cho Ban tổ chức', path: '#' }
                         ].map((item) => (
                             <li key={item.key}>
-                                <Link to={item.path} className="text-[10px] font-black text-gray-600 dark:text-white/50 hover:text-neon-green transition-all uppercase tracking-widest flex items-center group">
-                                    <div className="w-0 h-[2px] bg-neon-green group-hover:w-3 transition-all opacity-0 group-hover:opacity-100 mr-0 group-hover:mr-2" />
-                                    {t(`footer.platform.${item.key}`)}
+                                <Link to={item.path} className="text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-neon-green dark:hover:text-neon-green transition-colors">
+                                    {t(`footer.platform.${item.key}`, item.label)}
                                 </Link>
                             </li>
                         ))}
@@ -95,20 +93,19 @@ const Footer = () => {
 
                 {/* Column 3: Support */}
                 <div>
-                    <h4 className="text-[9px] font-black text-neon-green uppercase tracking-[0.5em] mb-6 italic border-l-4 border-neon-green pl-4">
-                        {t('footer.support.title')}
+                    <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-6 uppercase tracking-wider">
+                        {t('footer.support.title', 'Hỗ trợ')}
                     </h4>
-                    <ul className="space-y-3">
+                    <ul className="space-y-4">
                         {[
-                            { key: 'help', path: '#' },
-                            { key: 'terms', path: '#' },
-                            { key: 'privacy', path: '#' },
-                            { key: 'refund', path: '#' }
+                            { key: 'help', label: 'Trung tâm trợ giúp', path: '#' },
+                            { key: 'terms', label: 'Điều khoản dịch vụ', path: '#' },
+                            { key: 'privacy', label: 'Chính sách bảo mật', path: '#' },
+                            { key: 'refund', label: 'Chính sách hoàn tiền', path: '#' }
                         ].map((item) => (
                             <li key={item.key}>
-                                <Link to={item.path} className="text-[10px] font-black text-gray-600 dark:text-white/50 hover:text-neon-green transition-all uppercase tracking-widest flex items-center group">
-                                    <div className="w-0 h-[2px] bg-neon-green group-hover:w-3 transition-all opacity-0 group-hover:opacity-100 mr-0 group-hover:mr-2" />
-                                    {t(`footer.support.${item.key}`)}
+                                <Link to={item.path} className="text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-neon-green dark:hover:text-neon-green transition-colors">
+                                    {t(`footer.support.${item.key}`, item.label)}
                                 </Link>
                             </li>
                         ))}
@@ -117,46 +114,54 @@ const Footer = () => {
 
                 {/* Column 4: Contact */}
                 <div>
-                    <h4 className="text-[9px] font-black text-neon-green uppercase tracking-[0.5em] mb-6 italic border-l-4 border-neon-green pl-4">
-                        {t('footer.connect.title')}
+                    <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-6 uppercase tracking-wider">
+                        {t('footer.connect.title', 'Liên hệ')}
                     </h4>
-                    <div className="space-y-6">
-                        <div className="flex items-start gap-4 group">
-                            <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-white/5 flex items-center justify-center text-neon-green shrink-0 group-hover:bg-neon-green group-hover:text-black transition-colors">
-                                <MapPin className="w-4 h-4" />
-                            </div>
-                            <p className="text-[9px] font-black text-gray-600 dark:text-white/40 uppercase tracking-[0.2em] leading-relaxed pt-1">
-                                {t('footer.connect.address')}
-                            </p>
-                        </div>
-                        <div className="flex items-center gap-4 group">
-                            <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-white/5 flex items-center justify-center text-neon-green shrink-0 group-hover:bg-neon-green group-hover:text-black transition-colors">
-                                <Mail className="w-4 h-4" />
-                            </div>
-                            <p className="text-[9px] font-black text-gray-600 dark:text-white/40 uppercase tracking-[0.2em]">
-                                contact@basticket.tech
-                            </p>
-                        </div>
-                    </div>
+                    <ul className="space-y-4">
+                        <li className="flex items-start gap-3">
+                            <MapPin className="w-5 h-5 text-neon-green shrink-0 mt-0.5" />
+                            <span className="text-sm font-medium text-gray-600 dark:text-gray-400 leading-relaxed">
+                                K33/29 Châu Văn Liêm, P.Thuận Phước, Q. Hải Châu, TP. Đà Nẵng
+                            </span>
+                        </li>
+                        <li className="flex items-center gap-3">
+                            <Mail className="w-5 h-5 text-neon-green shrink-0" />
+                            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                                basticket.noreply@gmail.com
+                            </span>
+                        </li>
+                        <li className="flex items-center gap-3">
+                            <Mail className="w-5 h-5 text-neon-green shrink-0" />
+                            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                                tranminhphuong732004@gmail.com
+                            </span>
+                        </li>
+                        <li className="flex items-center gap-3">
+                            <Phone className="w-5 h-5 text-neon-green shrink-0" />
+                            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                                {t('footer.connect.hotline', 'Hotline: 0962642853')}
+                            </span>
+                        </li>
+                    </ul>
                 </div>
             </div>
 
             {/* Bottom Bar Section */}
-            <div className="max-w-[1400px] mx-auto px-6 pt-8 border-t border-gray-100 dark:border-white/5">
-                <div className="flex flex-col lg:flex-row items-center justify-between gap-10">
-                    <p className="text-[9px] font-black text-gray-400 dark:text-white/20 uppercase tracking-[0.5em] text-center lg:text-left">
-                        © 2026 BASTICKET. {t('footer.copyright')}
+            <div className="max-w-[1400px] mx-auto px-6 pt-8 border-t border-gray-200 dark:border-dark-border">
+                <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                    <p className="text-sm font-medium text-gray-500 dark:text-gray-500 text-center md:text-left">
+                        © 2026 BAS-Ticket
                     </p>
-                    <div className="flex flex-wrap items-center justify-center gap-10">
-                        <div className="flex items-center gap-3 text-[10px] font-black text-gray-500 dark:text-white/30 uppercase tracking-[0.3em] italic">
+                    <div className="flex flex-wrap items-center justify-center gap-6">
+                        <div className="flex items-center gap-2 text-sm font-medium text-gray-500 dark:text-gray-500">
                             <Globe className="w-4 h-4 text-neon-green" />
-                            BASTICKET WORLDWIDE
+                            <span>Vietnam</span>
                         </div>
-                        <div className="h-4 w-px bg-gray-200 dark:bg-white/10 hidden lg:block"></div>
-                        <div className="flex items-center gap-6">
-                            <img src="https://upload.wikimedia.org/wikipedia/commons/b/b5/PayPal.svg" alt="PayPal" className="h-5 opacity-20 hover:opacity-100 hover:grayscale-0 grayscale transition-all cursor-pointer" />
-                            <img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg" alt="Visa" className="h-3 opacity-20 hover:opacity-100 hover:grayscale-0 grayscale transition-all cursor-pointer" />
-                            <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" alt="Mastercard" className="h-7 opacity-20 hover:opacity-100 hover:grayscale-0 grayscale transition-all cursor-pointer" />
+                        <div className="h-4 w-px bg-gray-300 dark:bg-dark-border hidden md:block"></div>
+                        <div className="flex items-center gap-4 opacity-60 grayscale hover:grayscale-0 hover:opacity-100 transition-all">
+                            <span className="text-sm font-bold text-gray-400 dark:text-gray-400 tracking-widest">VNPAY</span>
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg" alt="Visa" className="h-3.5 object-contain" />
+                            <img src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg" alt="Mastercard" className="h-5 object-contain" />
                         </div>
                     </div>
                 </div>

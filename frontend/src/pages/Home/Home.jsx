@@ -136,7 +136,7 @@ const Home = () => {
                 </span>
             </div>
             
-            <h1 className="text-5xl md:text-7xl font-black text-white leading-[1] mb-8 uppercase tracking-tighter animate-in fade-in slide-in-from-bottom-6 duration-700">
+            <h1 className="text-5xl md:text-7xl font-black text-white leading-[1] mb-10 uppercase tracking-tighter animate-in fade-in slide-in-from-bottom-6 duration-700">
                 {t('home.hero.title_part1')} <span className="text-neon-green">{t('home.hero.title_highlight1')}</span> <br />
                 {t('home.hero.title_part2')} <span className=" decoration-neon-green decoration-8 underline-offset-8">{t('home.hero.title_highlight2')}</span>
             </h1>
@@ -162,18 +162,18 @@ const Home = () => {
       </section>
 
       {/* 🌟 Featured: Events For You */}
-      <section className="relative overflow-hidden pt-20 pb-32">
+      <section className="relative overflow-hidden">
         {/* Abstract background for premium feel */}
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-neon-green/5 rounded-full blur-[120px] -z-10"></div>
-        <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-neon-green/10 rounded-full blur-[100px] -z-10"></div>
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-neon-green/5 rounded-full blur-[120px] -z-4"></div>
+        <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-neon-green/10 rounded-full blur-[100px] -z-4"></div>
         
         <div className="max-w-[1400px] mx-auto px-6">
-            <div className="mb-14 flex flex-col md:flex-row md:items-end justify-between gap-4">
+            <div className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
                 <div>
-                    <h2 className="text-4xl md:text-5xl font-black text-gray-900 dark:text-white uppercase tracking-tighter italic">
+                    <h2 className="text-2xl md:text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tighter">
                         {t('home.for_you.title')} <span className="text-neon-green">{t('home.for_you.title_highlight')}</span>
                     </h2>
-                    <p className="text-[11px] font-black text-gray-400 dark:text-white/30 uppercase tracking-[0.4em] mt-3">
+                    <p className="text-[11px] font-black text-gray-400 dark:text-white/30 tracking-[0.1em] mt-3">
                         {t('home.for_you.subtitle')}
                     </p>
                 </div>
@@ -197,7 +197,7 @@ const Home = () => {
       </section>
 
       {/* 🎸 Category Explorer Icons Bar */}
-      <section className="max-w-[1400px] mx-auto px-6 py-10 relative z-20">
+      <section className="max-w-[1400px] mx-auto px-6 py-2 relative z-20">
         <div className="flex items-center justify-between mb-10">
             <h2 className="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tighter">
                 {t('home.categories.title')}
@@ -212,26 +212,26 @@ const Home = () => {
       </section>
 
       {/* 🕒 Time-Based Events */}
-      <section className="max-w-[1400px] mx-auto px-6 py-24 bg-gray-50/50 dark:bg-white/[0.01] rounded-[5rem] my-10 border border-gray-100 dark:border-white/5">
-        <div className="flex flex-col md:flex-row items-center justify-between gap-8 mb-16 px-6">
+      <section className="max-w-[1400px] mx-auto px-4 py-4 bg-gray-50/50 dark:bg-white/[0.01] rounded-[5rem] my-10 border border-gray-100 dark:border-white/5">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-8 mb-4 px-6">
             <div>
-                <h2 className="text-4xl font-black text-gray-900 dark:text-white uppercase tracking-tighter">
+                <h2 className="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tighter">
                     {t('home.time_filter.title')} <span className="text-neon-green">{t('home.time_filter.title_highlight')}</span>
                 </h2>
-                <p className="text-[11px] font-black text-gray-400 dark:text-white/30 uppercase tracking-[0.4em] mt-3">
+                <p className="text-[9px] font-black text-gray-400 dark:text-white/30 uppercase tracking-[0.1em] mt-3">
                     {t('home.time_filter.subtitle')}
                 </p>
             </div>
-            <div className="flex bg-white dark:bg-[#0c0c0e] p-2 rounded-3xl border border-gray-200 dark:border-white/10 shadow-2xl">
+            <div className="flex bg-white dark:bg-[#0c0c0e] p-2 rounded-3xl border border-gray-200 dark:border-white/10 shadow-xl">
                 <button 
                     onClick={() => setTimeFilter('week')}
-                    className={`px-10 py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all duration-300 ${timeFilter === 'week' ? 'bg-neon-green text-black scale-105 shadow-lg shadow-neon-green/20' : 'text-gray-500 hover:text-gray-300'}`}
+                    className={`px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${timeFilter === 'week' ? 'bg-neon-green text-black scale-105 shadow-lg shadow-neon-green/20' : 'text-gray-500 hover:text-gray-300'}`}
                 >
                     {t('home.time_filter.this_week')}
                 </button>
                 <button 
                     onClick={() => setTimeFilter('month')}
-                    className={`px-10 py-4 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all duration-300 ${timeFilter === 'month' ? 'bg-neon-green text-black scale-105 shadow-lg shadow-neon-green/20' : 'text-gray-500 hover:text-gray-300'}`}
+                    className={`px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${timeFilter === 'month' ? 'bg-neon-green text-black scale-105 shadow-lg shadow-neon-green/20' : 'text-gray-500 hover:text-gray-300'}`}
                 >
                     {t('home.time_filter.this_month')}
                 </button>
@@ -259,7 +259,7 @@ const Home = () => {
       </section>
 
       {/* 📱 Dynamic Category Sections */}
-      <div ref={resultsRef} className="scroll-mt-24 space-y-12">
+      <div ref={resultsRef} className="scroll-mt-4 space-y-4">
         {dbCategories.map(cat => {
             const categoryEvents = allEvents.filter(e => e.category_id === cat.id);
             if (categoryEvents.length === 0) return null;
@@ -268,15 +268,15 @@ const Home = () => {
                 <section 
                     key={cat.id} 
                     ref={el => categoryRefs.current[cat.id] = el}
-                    className="max-w-[1400px] mx-auto px-6 py-20 scroll-mt-24"
+                    className="max-w-[1400px] mx-auto px-4 py-2 scroll-mt-2"
                 >
-                    <div className="flex items-center justify-between mb-12">
+                    <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-6">
-                            <h2 className="text-4xl font-black text-gray-900 dark:text-white uppercase tracking-tighter leading-none italic pr-4 border-r-4 border-neon-green">
+                            <h2 className="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tighter leading-none pr-4 border-r-4 border-neon-green">
                                 {cat.name}
                             </h2>
                             <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest pt-2">
-                                {categoryEvents.length} {t('home.events.count_label') || 'Sự kiện'}
+                                {categoryEvents.length} {'Sự kiện'}
                             </span>
                         </div>
                         <Link 
@@ -290,7 +290,7 @@ const Home = () => {
                         </Link>
                     </div>
 
-                    <div className="flex gap-10 overflow-x-auto pb-12 no-scrollbar snap-x px-4 -mx-4">
+                    <div className="flex gap-10 overflow-x-auto pb-4 no-scrollbar snap-x px-4 -mx-4">
                         {categoryEvents.map(event => (
                             <div key={event.id} className="snap-start shrink-0">
                                 <EventCard event={event} />
@@ -303,7 +303,7 @@ const Home = () => {
       </div>
 
       {/* 💎 Premium Features */}
-      <section className="max-w-[1400px] mx-auto px-6 py-20 bg-gray-50/50 dark:bg-[#0a0a0c] rounded-[4rem] border border-gray-100 dark:border-white/5 mb-20">
+      <section className="max-w-[1400px] mx-auto px-6 py-10 bg-gray-50/50 dark:bg-[#0a0a0c] rounded-[4rem] border border-gray-100 dark:border-white/5 mb-6">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
             <div>
                 <h2 className="text-5xl font-black text-gray-900 dark:text-white leading-[1.1] mb-8 uppercase italic tracking-tighter">

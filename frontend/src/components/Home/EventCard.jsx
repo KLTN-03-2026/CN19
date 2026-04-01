@@ -19,7 +19,7 @@ const EventCard = ({ event, className = "", variant = "default" }) => {
     return (
         <Link 
             to={`/events/${event.id}`}
-            className={`group relative overflow-hidden rounded-[2.5rem] bg-gray-100 dark:bg-[#0a0a0b] border border-gray-100 dark:border-white/5 transition-all duration-500 hover:scale-[1.02] hover:border-neon-green/30 hover:shadow-[0_20px_50px_rgba(82,196,45,0.2)] block shrink-0 w-[280px] md:w-[320px] aspect-[2/3] ${className}`}
+            className={`group relative overflow-hidden rounded-[2.5rem] bg-gray-100 dark:bg-[#0a0a0b] border border-gray-100 dark:border-white/5 transition-all duration-500 hover:scale-[1.02] hover:border-neon-green/30 hover:shadow-[0_20px_50px_rgba(82,196,45,0.2)] block shrink-0 w-[280px] md:w-[300px] aspect-[3/4] ${className}`}
         >
             {/* Poster Background Image */}
             <div className="absolute inset-0 z-0 bg-gray-200 dark:bg-white/5 flex items-center justify-center">
@@ -35,17 +35,17 @@ const EventCard = ({ event, className = "", variant = "default" }) => {
             </div>
 
             {/* Poster Content Overlay */}
-            <div className="absolute inset-0 z-10 p-6 md:p-8 flex flex-col justify-between h-full">
+            <div className="absolute inset-0 z-10 p-6 md:p-6 flex flex-col justify-between h-full">
                 <div className="flex justify-between items-start">
                     {/* Date Badge */}
                     <div className="bg-white/10 backdrop-blur-xl rounded-2xl px-4 py-2 flex flex-col items-center min-w-[60px] border border-white/20 shadow-xl">
-                        <span className="text-2xl font-black text-white leading-none">{day}</span>
+                        <span className="text-xl font-black text-white leading-none">{day}</span>
                         <span className="text-[11px] font-bold text-neon-green uppercase tracking-tighter mt-1">{month}</span>
                     </div>
 
                     {/* Category Label */}
-                    <div className="bg-neon-green/20 backdrop-blur-xl px-4 py-2 rounded-full border border-neon-green/30">
-                        <span className="text-[11px] font-black uppercase tracking-widest text-neon-green">
+                    <div className="bg-neon-green/20 backdrop-blur-xl px-3 py-1 rounded-full border border-neon-green/30">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-neon-green">
                             {event.category?.name || 'Sự kiện'}
                         </span>
                     </div>
@@ -59,21 +59,21 @@ const EventCard = ({ event, className = "", variant = "default" }) => {
                         </div>
                     )}
                     
-                    <h3 className="text-xl md:text-2xl font-black text-white leading-tight mb-4 group-hover:text-neon-green transition-colors line-clamp-2 uppercase italic tracking-tighter">
+                    <h3 className="text-xl md:text-xl font-black text-white leading-tight mb-4 group-hover:text-neon-green transition-colors line-clamp-2 uppercase tracking-tighter">
                         {event.title}
                     </h3>
 
                     <div className="flex items-center justify-between pt-4 md:pt-6 border-t border-white/10 mt-auto">
                         <div className="flex-1">
                             <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-1">Giá từ</p>
-                            <p className="text-xl md:text-2xl font-black text-neon-green truncate w-full pr-2 uppercase">
+                            <p className="text-xl md:text-[16px] font-black text-neon-green truncate w-full pr-2 uppercase">
                                 {event.ticket_tiers && event.ticket_tiers.length > 0 
                                     ? new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Math.min(...event.ticket_tiers.map(t => parseFloat(t.price) || 0)))
                                     : 'Miễn phí'
                                 }
                             </p>
                         </div>
-                        <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-neon-green flex-shrink-0 flex items-center justify-center text-black shadow-lg shadow-neon-green/30 transform scale-90 group-hover:scale-100 transition-all duration-500">
+                        <div className="w-8 h-8 md:w-8 md:h- rounded-full bg-neon-green flex-shrink-0 flex items-center justify-center text-black shadow-lg shadow-neon-green/30 transform scale-90 group-hover:scale-100 transition-all duration-500">
                             <ArrowRight className="w-5 h-5 md:w-6 md:h-6" />
                         </div>
                     </div>

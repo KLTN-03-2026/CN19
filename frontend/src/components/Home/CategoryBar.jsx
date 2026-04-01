@@ -15,8 +15,6 @@ const iconMap = {
 };
 
 const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?q=80&w=1000';
-const CARD_WIDTH = 280 + 24; // min-w-[280px] + gap-6
-
 const CategoryBar = ({ activeCategory, onCategoryChange, dbCategories = [] }) => {
     const { t } = useTranslation();
     const scrollRef = useRef(null);
@@ -42,7 +40,7 @@ const CategoryBar = ({ activeCategory, onCategoryChange, dbCategories = [] }) =>
     useEffect(() => {
         const container = scrollRef.current;
         if (container && categories.length > 0) {
-            const singleWidth = categories.length * CARD_WIDTH;
+            const singleWidth = container.scrollWidth / 3;
             container.scrollLeft = singleWidth;
         }
     }, [categories.length]);
@@ -53,15 +51,16 @@ const CategoryBar = ({ activeCategory, onCategoryChange, dbCategories = [] }) =>
         if (!container || categories.length === 0) return;
 
         const handleInfiniteScroll = () => {
-            const singleWidth = categories.length * CARD_WIDTH;
+            const singleWidth = container.scrollWidth / 3;
+            const scrollLeft = container.scrollLeft;
             
             // If scrolled into the third set, jump back to middle set
-            if (container.scrollLeft >= singleWidth * 2) {
-                container.scrollLeft -= singleWidth;
+            if (scrollLeft >= singleWidth * 2 - 10) {
+                container.scrollLeft = scrollLeft - singleWidth;
             } 
             // If scrolled into the first set, jump forward to middle set
-            else if (container.scrollLeft <= 0) {
-                container.scrollLeft += singleWidth;
+            else if (scrollLeft <= 10) {
+                container.scrollLeft = scrollLeft + singleWidth;
             }
         };
 
@@ -76,8 +75,8 @@ const CategoryBar = ({ activeCategory, onCategoryChange, dbCategories = [] }) =>
 
         const interval = setInterval(() => {
             if (isHovering.current) return;
-            // Behavior: 'smooth' handles the animation since we removed 'scroll-smooth' from className
-            container.scrollBy({ left: CARD_WIDTH, behavior: 'smooth' });
+            const step = (container.scrollWidth / 3) / categories.length;
+            container.scrollBy({ left: step, behavior: 'smooth' });
         }, 2000);
 
         return () => clearInterval(interval);
@@ -86,7 +85,7 @@ const CategoryBar = ({ activeCategory, onCategoryChange, dbCategories = [] }) =>
     return (
         <div
             ref={scrollRef}
-            className="flex gap-6 overflow-x-auto pb-8 no-scrollbar px-4 md:px-0 snap-x"
+            className="flex gap-6 overflow-x-auto  no-scrollbar px-4 md:px-0 snap-x"
             onMouseEnter={() => { isHovering.current = true; }}
             onMouseLeave={() => { isHovering.current = false; }}
         >
@@ -96,7 +95,7 @@ const CategoryBar = ({ activeCategory, onCategoryChange, dbCategories = [] }) =>
                 return (
                     <div
                         key={`${cat.id}-${idx}`}
-                        className={`group relative min-w-[280px] aspect-[4/3] rounded-[2rem] overflow-hidden cursor-pointer border-2 transition-all duration-500 snap-start shrink-0 select-none ${
+                        className={`group relative min-w-[250px] aspect-[5/6] rounded-[2rem] overflow-hidden cursor-pointer border-2 transition-all duration-500 snap-start shrink-0 select-none ${
                             isActive ? 'border-neon-green shadow-2xl shadow-neon-green/20 scale-105' : 'border-white/5 hover:border-neon-green/30'
                         }`}
                         onClick={() => onCategoryChange(cat.id)}
@@ -114,7 +113,7 @@ const CategoryBar = ({ activeCategory, onCategoryChange, dbCategories = [] }) =>
                         {/* Content */}
                         <div className="absolute inset-0 p-6 flex flex-col justify-end z-10">
                             <div>
-                                <h3 className="text-2xl font-black text-white uppercase tracking-tighter mb-4">
+                                <h3 className="text-xl font-black text-white uppercase tracking-tighter mb-4">
                                     {cat.name}
                                 </h3>
                                 <button
@@ -122,7 +121,7 @@ const CategoryBar = ({ activeCategory, onCategoryChange, dbCategories = [] }) =>
                                         e.stopPropagation();
                                         handleViewAllInternal(cat.id);
                                     }}
-                                    className="flex items-center gap-2 text-neon-green font-black uppercase text-[11px] tracking-[0.2em] hover:gap-4 transition-all group"
+                                    className="flex items-center gap-2 text-neon-green font-black uppercase text-[10px] tracking-[0.1em] hover:gap-4 transition-all group"
                                 >
                                     {t('home.categories.view_all')}
                                     <ArrowUpRight className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />

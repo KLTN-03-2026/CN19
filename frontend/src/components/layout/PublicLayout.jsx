@@ -107,6 +107,7 @@ const PublicLayout = () => {
               <Link to="/" className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white font-medium transition-colors">{t('nav.home')}</Link>
               <Link to="/events" className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white font-medium transition-colors">{t('nav.events')}</Link>
               <Link to="/marketplace" className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white font-medium transition-colors">{t('nav.marketplace')}</Link>
+              <Link to="/blog" className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white font-medium transition-colors">{t('nav.blog')}</Link>
             </nav>
 
             {/* Các Nút Điều hướng Hệ thống & Auth (Bên Phải) */}
@@ -234,7 +235,7 @@ const PublicLayout = () => {
         </div>
       </header>
 
-      <main className="flex-grow pt-20">
+      <main className="flex-grow pt-8">
         <Outlet />
       </main>
 

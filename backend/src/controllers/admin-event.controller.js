@@ -1,3 +1,4 @@
+const { ethers } = require('ethers');
 const prisma = require('../config/prisma');
 const web3Service = require('../services/web3.service');
 
@@ -77,7 +78,14 @@ const approveEvent = async (req, res) => {
        if (!smartContractAddress) {
           try {
             // Lấy ví BTC, nếu không có thì dùng ví admin hệ thống làm backup
-            const ownerWallet = event.organizer.user.wallet_address || process.env.CONTRACT_ADDRESS; 
+            let ownerWallet = event.organizer.user.wallet_address || process.env.CONTRACT_ADDRESS; 
+            
+            // Xử lý trường hợp ví bị lưu sai format (e.g. thiếu ký tự)
+            if (!ownerWallet || !ethers.isAddress(ownerWallet)) {
+              console.warn(`⚠️ [Admin Controller] Ví Organizer không hợp lệ (${ownerWallet}), đang dùng ví Admin dự phòng.`);
+              ownerWallet = process.env.ADMIN_WALLET_ADDRESS || this.signer.address; // Giả sử có biến này hoặc lấy từ signer
+            }
+
             console.log(`[Admin Controller] Đang yêu cầu deploy cho ví: ${ownerWallet}`);
             
             smartContractAddress = await web3Service.deployEventContract(ownerWallet);

@@ -61,9 +61,9 @@ const createPrimaryOrder = async (req, res) => {
         });
       }
 
-      // Giả thiết platform_fee = 0 cho thị trường sơ cấp hiện tại
-      const platform_fee = 0;
-      const total_amount = subtotal + platform_fee;
+      // Platform fee (Hoa hồng 2%) trích từ doanh thu của BTC để chi trả Gas
+      const platform_fee = subtotal * 0.02;
+      const total_amount = subtotal; // Khách hàng trả đúng giá vé niêm yết (Phí gas đã nằm trong giá vé)
 
       // Hạn giữ chỗ = hiện tại + 10 phút
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000);

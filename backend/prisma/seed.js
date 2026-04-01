@@ -48,7 +48,7 @@ async function main() {
         password_hash: passwordHash,
         status: 'active',
         phone_number: `09${Math.floor(10000000 + Math.random() * 90000000)}`,
-        wallet_address: `0x${Math.random().toString(16).slice(2, 42)}`
+        wallet_address: `0x${Array.from({length: 40}, () => Math.floor(Math.random() * 16).toString(16)).join('')}`
       }
     });
     users[u.email] = created;
@@ -165,7 +165,6 @@ async function main() {
       total_amount: 4400000,
       payment_method: 'VNPay',
       transaction_id: 'TXN-123456',
-      total_amount: 4400000,
       expires_at: new Date(Date.now() + 86400000)
     }
   });

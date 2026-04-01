@@ -34,6 +34,7 @@ const CreateEvent = () => {
   const [isVideoUploading, setIsVideoUploading] = useState(false);
   const [previewSeatingCharts, setPreviewSeatingCharts] = useState([]);
   const [isSeatingChartsUploading, setIsSeatingChartsUploading] = useState(false);
+  const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const [targetStatus, setTargetStatus] = useState('pending');
 
   const { register, control, handleSubmit, watch, setValue, formState: { errors } } = useForm({
@@ -53,7 +54,6 @@ const CreateEvent = () => {
       allow_resale: true,
       allow_transfer: true,
       royalty_fee_percent: 5,
-      refund_deadline_days: 7,
       seating_charts: [],
       ticket_tiers: [{ tier_name: 'Vé Thường', price: '', quantity_total: '', section_name: 'Khán đài A', benefits: '' }]
     }
@@ -107,7 +107,7 @@ const CreateEvent = () => {
           }
         }
       );
-      setValue('image_url', res.data.secure_url);
+      setValue('image_url', res.data.secure_url, { shouldValidate: true });
       toast.success("Tải ảnh lên thành công!");
     } catch (error) {
       toast.error("Lỗi khi tải ảnh lên Cloudinary.");
@@ -259,10 +259,31 @@ const CreateEvent = () => {
     }
   };
 
-  const nextStep = (e) => {
+  const nextStep = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
-    setStep(step + 1);
+    
+    // Validate current step before proceeding
+    let fieldsToValidate = [];
+    if (step === 1) fieldsToValidate = ['title', 'category_id', 'image_url'];
+    if (step === 2) fieldsToValidate = ['event_date', 'location_address'];
+    if (step === 3) {
+      const isValid = await trigger('ticket_tiers');
+      if (!isValid) {
+        toast.error('Vui lòng kiểm tra lại thông tin các hạng vé.');
+        return;
+      }
+      setStep(step + 1);
+      return;
+    }
+
+    const isStepValid = await trigger(fieldsToValidate);
+    if (isStepValid) {
+      setStep(step + 1);
+    } else {
+      toast.error('Vui lòng điền đầy đủ các thông tin bắt buộc.');
+    }
   };
+
   const prevStep = (e) => {
     if (e && e.preventDefault) e.preventDefault();
     setStep(step - 1);
@@ -298,7 +319,7 @@ const CreateEvent = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto pb-20 animate-in fade-in slide-in-from-bottom-8 duration-700">
+    <div className="max-w-4xl mx-auto pb-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
       
       <div className="flex items-center justify-between mb-8">
         <div>
@@ -310,6 +331,11 @@ const CreateEvent = () => {
       {renderStepHeader()}
 
       <form onSubmit={handleSubmit(onSubmit)} className="bg-white dark:bg-[#111114] rounded-3xl border border-gray-100 dark:border-white/5 shadow-2xl p-8 lg:p-12 relative overflow-hidden transition-colors">
+        {/* Hidden Registered Fields for Validation */}
+        <input type="hidden" {...register('image_url', { required: true })} />
+        <input type="hidden" {...register('location_address', { required: true })} />
+        <input type="hidden" {...register('latitude')} />
+        <input type="hidden" {...register('longitude')} />
         
         {/* Step 1: Thông tin chung */}
         {step === 1 && (
@@ -323,17 +349,54 @@ const CreateEvent = () => {
                         placeholder="VD: Crypto Night 2026"
                     />
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-2 relative">
                     <label className="text-xs font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">Danh mục <span className="text-red-500">*</span></label>
-                    <select 
-                        {...register('category_id', { required: true })}
-                        className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-blue-600 transition-all text-gray-900 dark:text-white"
-                    >
-                        <option value="">Chọn danh mục</option>
-                        {categories.map(cat => (
-                           <option key={cat.id} value={cat.id}>{cat.name}</option>
-                        ))}
-                    </select>
+                    <div className="relative">
+                        <button 
+                            type="button"
+                            onClick={() => setIsCategoryOpen(!isCategoryOpen)}
+                            className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-left flex items-center justify-between focus:outline-none focus:border-blue-600 transition-all text-gray-900 dark:text-white"
+                        >
+                            <span>{categories.find(c => c.id === watch('category_id'))?.name || 'Chọn danh mục'}</span>
+                            <ChevronRight className={`w-4 h-4 transition-transform duration-300 ${isCategoryOpen ? 'rotate-90' : 'rotate-0'}`} />
+                        </button>
+                        
+                        {isCategoryOpen && (
+                            <>
+                                <div className="fixed inset-0 z-40" onClick={() => setIsCategoryOpen(false)}></div>
+                                <div className="absolute top-full left-0 w-full mt-2 bg-white dark:bg-[#1a1a1e] border border-gray-100 dark:border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                                    <div className="max-h-60 overflow-y-auto py-2">
+                                        <div 
+                                            className="px-4 py-2 text-sm font-bold text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 cursor-pointer uppercase tracking-widest text-[10px]"
+                                            onClick={() => {
+                                                setValue('category_id', '', { shouldValidate: true });
+                                                setIsCategoryOpen(false);
+                                            }}
+                                        >
+                                            Chọn danh mục
+                                        </div>
+                                        {categories.map(cat => (
+                                            <div 
+                                                key={cat.id} 
+                                                onClick={() => {
+                                                    setValue('category_id', cat.id, { shouldValidate: true });
+                                                    setIsCategoryOpen(false);
+                                                }}
+                                                className={`px-4 py-3 text-sm font-bold cursor-pointer transition-colors flex items-center justify-between ${
+                                                    watch('category_id') === cat.id 
+                                                    ? 'bg-blue-600 text-white' 
+                                                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5'
+                                                }`}
+                                            >
+                                                {cat.name}
+                                                {watch('category_id') === cat.id && <CheckCircle2 className="w-4 h-4" />}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </>
+                        )}
+                    </div>
                 </div>
              </div>
 
@@ -576,14 +639,17 @@ const CreateEvent = () => {
         {/* Step 3: Hạng vé */}
         {step === 3 && (
           <div className="space-y-8 animate-in slide-in-from-right-8 fade-in duration-500">
-             <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold uppercase tracking-widest text-blue-600">Cấu hình hạng vé</h3>
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white uppercase tracking-tighter">Cấu hình hạng vé</h3>
+                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Tạo ít nhất một hạng vé để mở bán</p>
+                </div>
                 <button 
                     type="button"
                     onClick={() => append({ tier_name: '', price: '', quantity_total: '', section_name: '', benefits: '' })}
-                    className="flex items-center text-[10px] font-bold uppercase tracking-widest bg-blue-600 text-white px-4 py-2 rounded-lg hover:brightness-110 transition-all shadow-lg shadow-blue-600/20"
+                    className="flex items-center bg-blue-600 text-white px-5 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:brightness-110 transition-all shadow-lg shadow-blue-600/20"
                 >
-                    <PlusCircle className="w-4 h-4 mr-2" />
+                    <PlusCircle className="w-3.5 h-3.5 mr-2" />
                     Thêm hạng vé
                 </button>
              </div>
@@ -605,9 +671,12 @@ const CreateEvent = () => {
                                 <input 
                                     type="number"
                                     {...register(`ticket_tiers.${index}.price`, { required: true })}
-                                    className="w-full bg-transparent border-b border-gray-200 dark:border-white/10 py-1 text-sm font-bold focus:outline-none focus:border-blue-600 transition-all"
+                                    className="w-full bg-transparent border-b border-gray-200 dark:border-white/10 py-1 text-sm font-bold focus:outline-none focus:border-blue-600 transition-all placeholder:text-gray-300 dark:placeholder:text-gray-600"
                                     placeholder="VD: 500000"
                                 />
+                                <p className="text-[10px] text-blue-600 dark:text-blue-400 font-medium mt-1 leading-relaxed">
+                                    * BTC nhận về: {(watch(`ticket_tiers.${index}.price`) * 0.98).toLocaleString()} VNĐ (Đã trừ phí Gas 2%)
+                                </p>
                             </div>
                             <div className="space-y-1">
                                 <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 italic">Số lượng</label>
@@ -690,25 +759,33 @@ const CreateEvent = () => {
                             />
                             <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">%</span>
                         </div>
+                        <p className="text-[10px] text-blue-600 dark:text-blue-400 font-medium leading-relaxed mt-2 italic">
+                            * Phí này bạn sẽ nhận được mỗi khi một vé của sự kiện này được người dùng bán lại trên Marketplace.
+                        </p>
                     </div>
 
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 italic">Hạn cuối hoàn tiền (Ngày trước sự kiện)</label>
-                        <input 
-                            type="number"
-                            {...register('refund_deadline_days')}
-                            className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-blue-600 transition-all"
-                        />
+                    <div className="p-4 bg-blue-600/5 rounded-xl border border-blue-600/10 flex items-start space-x-3">
+                        <Info className="w-4 h-4 text-blue-600 mt-0.5" />
+                        <div className="text-[10px] text-blue-700 dark:text-blue-400 font-medium leading-relaxed">
+                            <b>Phí dịch vụ & Gas (2%):</b> Hệ thống trích 2% hoa hồng từ doanh thu để chi trả phí Gas Blockchain (Mint vé, Vận hành). Khách hàng sẽ trả đúng giá vé bạn niêm yết. 
+                            <br/><span className="text-red-500 mt-1 block">* Lưu ý: Phí này không hoàn lại cho BTC nếu sự kiện bị hủy.</span>
+                        </div>
                     </div>
                 </div>
              </div>
 
-             <div className="p-8 bg-black rounded-3xl border border-blue-600/20 text-center space-y-4">
+             <div className="p-8 bg-black rounded-3xl border border-blue-600/20 text-center space-y-4 shadow-[0_20px_50px_rgba(37,99,235,0.1)]">
                 <CheckCircle2 className="w-12 h-12 text-blue-600 mx-auto" />
                 <h3 className="text-xl font-bold text-white uppercase tracking-tighter">Mọi thứ đã sẵn sàng!</h3>
                 <p className="text-sm text-gray-400 font-medium max-w-lg mx-auto leading-relaxed">
                     Sau khi nhấn <b>"Gửi yêu cầu"</b>, sự kiện sẽ được chuyển trạng thái chờ duyệt. Admin sẽ kiểm tra thông tin và kích hoạt mở bán trên nền tảng.
                 </p>
+                <div className="mt-6 p-4 bg-red-600/10 rounded-2xl border border-red-600/20 text-left">
+                    <p className="text-[10px] text-red-500 font-bold uppercase tracking-widest mb-1">Quy định bồi hoàn & Trách nhiệm:</p>
+                    <p className="text-[10px] text-gray-400 font-medium leading-relaxed italic">
+                        Nếu sự kiện bị hủy/dời lịch lỗi từ BTC, bạn có nghĩa vụ hoàn trả <b>100% số tiền khách đã trả</b>. Phí hoa hồng 2% (đã dùng trả gas/vận hành) sẽ không được hoàn lại cho BTC. Hệ thống sẽ tự động khấu trừ để ưu tiên quyền lợi khách hàng.
+                    </p>
+                </div>
              </div>
           </div>
         )}
@@ -765,8 +842,8 @@ const CreateEvent = () => {
         onClose={() => setIsMapModalOpen(false)}
         onConfirm={(data) => {
             setValue('location_address', data.text, { shouldValidate: true });
-            setValue('latitude', data.lat);
-            setValue('longitude', data.lng);
+            setValue('latitude', data.lat, { shouldValidate: true });
+            setValue('longitude', data.lng, { shouldValidate: true });
         }}
       />
     </div>
