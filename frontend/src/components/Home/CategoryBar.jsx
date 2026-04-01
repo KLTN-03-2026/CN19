@@ -95,7 +95,7 @@ const CategoryBar = ({ activeCategory, onCategoryChange, dbCategories = [] }) =>
                 return (
                     <div
                         key={`${cat.id}-${idx}`}
-                        className={`group relative min-w-[250px] aspect-[5/6] rounded-[2rem] overflow-hidden cursor-pointer border-2 transition-all duration-500 snap-start shrink-0 select-none ${
+                        className={`group relative min-w-[220px] aspect-[3.4/4] rounded-[2rem] overflow-hidden cursor-pointer border-2 transition-all duration-500 snap-start shrink-0 select-none ${
                             isActive ? 'border-neon-green shadow-2xl shadow-neon-green/20 scale-105' : 'border-white/5 hover:border-neon-green/30'
                         }`}
                         onClick={() => onCategoryChange(cat.id)}
@@ -113,7 +113,7 @@ const CategoryBar = ({ activeCategory, onCategoryChange, dbCategories = [] }) =>
                         {/* Content */}
                         <div className="absolute inset-0 p-6 flex flex-col justify-end z-10">
                             <div>
-                                <h3 className="text-xl font-black text-white uppercase tracking-tighter mb-4">
+                                <h3 className="text-xl font-black text-white uppercase mb-2">
                                     {cat.name}
                                 </h3>
                                 <button
@@ -121,7 +121,7 @@ const CategoryBar = ({ activeCategory, onCategoryChange, dbCategories = [] }) =>
                                         e.stopPropagation();
                                         handleViewAllInternal(cat.id);
                                     }}
-                                    className="flex items-center gap-2 text-neon-green font-black uppercase text-[10px] tracking-[0.1em] hover:gap-4 transition-all group"
+                                    className="flex items-center gap-2 text-neon-green font-bold text-[13px] hover:gap-4 transition-all group"
                                 >
                                     {t('home.categories.view_all')}
                                     <ArrowUpRight className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />

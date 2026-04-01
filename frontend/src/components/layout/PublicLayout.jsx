@@ -5,6 +5,7 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import Footer from './Footer';
+import ScrollToTop from './ScrollToTop';
 
 const PublicLayout = () => {
   const { isAuthenticated, user, logout } = useAuthStore();
@@ -74,6 +75,7 @@ const PublicLayout = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-dark-bg bg-grid-pattern transition-colors duration-500 flex flex-col font-sans relative">
+      <ScrollToTop />
       
       {/* Cục mây (Aura) số 1: To và bồng bềnh, đi chậm theo chuột (Delay dài 1000ms), kết hợp nhịp thở (animate-pulse) */}
       <div 

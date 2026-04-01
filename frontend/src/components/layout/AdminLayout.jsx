@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import toast from 'react-hot-toast';
+import ScrollToTop from './ScrollToTop';
 
 const AdminLayout = () => {
   const { user, logout } = useAuthStore();
@@ -61,6 +62,7 @@ const AdminLayout = () => {
 
   return (
     <div className="min-h-screen bg-white dark:bg-[#0a0a0c] text-gray-900 dark:text-white flex transition-colors duration-300">
+      <ScrollToTop />
       {/* Sidebar */}
       <aside 
         className={`${

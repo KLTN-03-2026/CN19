@@ -19,7 +19,7 @@ const EventCard = ({ event, className = "", variant = "default" }) => {
     return (
         <Link 
             to={`/events/${event.id}`}
-            className={`group relative overflow-hidden rounded-[2.5rem] bg-gray-100 dark:bg-[#0a0a0b] border border-gray-100 dark:border-white/5 transition-all duration-500 hover:scale-[1.02] hover:border-neon-green/30 hover:shadow-[0_20px_50px_rgba(82,196,45,0.2)] block shrink-0 w-[280px] md:w-[300px] aspect-[3/4] ${className}`}
+            className={`group relative overflow-hidden rounded-[2.5rem] bg-gray-100 dark:bg-[#0a0a0b] border border-gray-100 dark:border-white/5 transition-all duration-500 hover:scale-[1.02] hover:border-neon-green/30 hover:shadow-[0_20px_50px_rgba(82,196,45,0.2)] block shrink-0 w-[280px] md:w-[300px] aspect-[4/5] ${className}`}
         >
             {/* Poster Background Image */}
             <div className="absolute inset-0 z-0 bg-gray-200 dark:bg-white/5 flex items-center justify-center">

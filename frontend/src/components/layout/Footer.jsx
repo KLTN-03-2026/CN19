@@ -40,7 +40,7 @@ const Footer = () => {
                                 placeholder={t('footer.email_placeholder', 'Nhập email của bạn...')}
                                 className="font-medium bg-transparent border-none outline-none text-gray-900 dark:text-white px-4 py-2 text-sm w-full placeholder:text-gray-400 dark:placeholder:text-gray-500"
                             />
-                            <button className="bg-neon-green hover:bg-neon-hover text-white px-6 py-2.5 rounded-xl text-sm font-semibold transition-colors whitespace-nowrap">
+                            <button className="bg-neon-green hover:bg-neon-hover text-white px-6 py-2.5 rounded-xl text-sm font-sans font-bold transition-colors whitespace-nowrap">
                                 {t('footer.subscribe_btn', 'Đăng ký')}
                             </button>
                         </div>
@@ -79,8 +79,8 @@ const Footer = () => {
                         {[
                             { key: 'events', label: 'Sự kiện', path: '/events' },
                             { key: 'marketplace', label: 'Chợ vé (Marketplace)', path: '/marketplace' },
-                            { key: 'nfts', label: 'Xác thực NFT', path: '#' },
-                            { key: 'organizer', label: 'Dành cho Ban tổ chức', path: '#' }
+                            { key: 'blog', label: 'Blog', path: '/blog' },
+                            { key: 'organizer', label: 'Dành cho Ban tổ chức', path: '/organizer-register' }
                         ].map((item) => (
                             <li key={item.key}>
                                 <Link to={item.path} className="text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-neon-green dark:hover:text-neon-green transition-colors">
@@ -98,10 +98,10 @@ const Footer = () => {
                     </h4>
                     <ul className="space-y-4">
                         {[
-                            { key: 'help', label: 'Trung tâm trợ giúp', path: '#' },
-                            { key: 'terms', label: 'Điều khoản dịch vụ', path: '#' },
-                            { key: 'privacy', label: 'Chính sách bảo mật', path: '#' },
-                            { key: 'refund', label: 'Chính sách hoàn tiền', path: '#' }
+                            { key: 'help', label: 'Trung tâm trợ giúp', path: '/faq' },
+                            { key: 'terms', label: 'Điều khoản dịch vụ', path: '/customer-terms' },
+                            { key: 'privacy', label: 'Chính sách bảo mật', path: '/privacy-policy' },
+                            { key: 'refund', label: 'Chính sách hoàn tiền', path: '/refund-policy' }
                         ].map((item) => (
                             <li key={item.key}>
                                 <Link to={item.path} className="text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-neon-green dark:hover:text-neon-green transition-colors">

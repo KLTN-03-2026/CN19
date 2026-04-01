@@ -170,20 +170,20 @@ const Home = () => {
         <div className="max-w-[1400px] mx-auto px-6">
             <div className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
                 <div>
-                    <h2 className="text-2xl md:text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tighter">
+                    <h2 className="text-xl md:text-xl font-black text-gray-900 dark:text-white uppercase tracking-tighter">
                         {t('home.for_you.title')} <span className="text-neon-green">{t('home.for_you.title_highlight')}</span>
                     </h2>
-                    <p className="text-[11px] font-black text-gray-400 dark:text-white/30 tracking-[0.1em] mt-3">
+                    <p className="text-[11px] text-gray-400 dark:text-white/30 tracking-[0.1em] mt-2">
                         {t('home.for_you.subtitle')}
                     </p>
                 </div>
                 <div className="hidden md:block h-px flex-1 bg-gray-100 dark:bg-white/5 mx-10 mb-5"></div>
             </div>
 
-            <div className="flex gap-10 overflow-x-auto pb-12 no-scrollbar px-4 -mx-4 snap-x">
+            <div className="flex gap-10 overflow-x-auto pb-8 no-scrollbar px-4 -mx-4 snap-x">
                 {isRecLoading ? (
                     [...Array(4)].map((_, i) => (
-                        <div key={i} className="min-w-[280px] md:min-w-[320px] h-[390px] md:h-[480px] bg-gray-100 dark:bg-white/5 rounded-[3rem] animate-pulse"></div>
+                        <div key={i} className="min-w-[280px] md:min-w-[320px] h-[360px] md:h-[400px] bg-gray-100 dark:bg-white/5 rounded-[3rem] animate-pulse"></div>
                     ))
                 ) : (
                     recommendations.map(event => (
@@ -199,7 +199,7 @@ const Home = () => {
       {/* 🎸 Category Explorer Icons Bar */}
       <section className="max-w-[1400px] mx-auto px-6 py-2 relative z-20">
         <div className="flex items-center justify-between mb-10">
-            <h2 className="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tighter">
+            <h2 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tighter">
                 {t('home.categories.title')}
             </h2>
             <div className="h-px flex-1 bg-gray-100 dark:bg-white/5 ml-10"></div>
@@ -212,26 +212,26 @@ const Home = () => {
       </section>
 
       {/* 🕒 Time-Based Events */}
-      <section className="max-w-[1400px] mx-auto px-4 py-4 bg-gray-50/50 dark:bg-white/[0.01] rounded-[5rem] my-10 border border-gray-100 dark:border-white/5">
+      <section className="max-w-[1400px] mx-auto px-4 py-4 bg-gray-50/50 dark:bg-white/[0.01] rounded-[5rem] my-8 border border-gray-100 dark:border-white/5">
         <div className="flex flex-col md:flex-row items-center justify-between gap-8 mb-4 px-6">
             <div>
-                <h2 className="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tighter">
+                <h2 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tighter">
                     {t('home.time_filter.title')} <span className="text-neon-green">{t('home.time_filter.title_highlight')}</span>
                 </h2>
-                <p className="text-[9px] font-black text-gray-400 dark:text-white/30 uppercase tracking-[0.1em] mt-3">
+                <p className="text-[11px] text-gray-400 dark:text-white/30 tracking-[0.1em] mt-2">
                     {t('home.time_filter.subtitle')}
                 </p>
             </div>
             <div className="flex bg-white dark:bg-[#0c0c0e] p-2 rounded-3xl border border-gray-200 dark:border-white/10 shadow-xl">
                 <button 
                     onClick={() => setTimeFilter('week')}
-                    className={`px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${timeFilter === 'week' ? 'bg-neon-green text-black scale-105 shadow-lg shadow-neon-green/20' : 'text-gray-500 hover:text-gray-300'}`}
+                    className={`px-3 py-2 rounded-2xl text-[10px] font-black tracking-widest transition-all duration-300 ${timeFilter === 'week' ? 'bg-neon-green text-black scale-105 shadow-lg shadow-neon-green/20' : 'text-gray-500 hover:text-gray-300'}`}
                 >
                     {t('home.time_filter.this_week')}
                 </button>
                 <button 
                     onClick={() => setTimeFilter('month')}
-                    className={`px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all duration-300 ${timeFilter === 'month' ? 'bg-neon-green text-black scale-105 shadow-lg shadow-neon-green/20' : 'text-gray-500 hover:text-gray-300'}`}
+                    className={`px-3 py-2 rounded-2xl text-[10px] font-black tracking-widest transition-all duration-300 ${timeFilter === 'month' ? 'bg-neon-green text-black scale-105 shadow-lg shadow-neon-green/20' : 'text-gray-500 hover:text-gray-300'}`}
                 >
                     {t('home.time_filter.this_month')}
                 </button>
@@ -272,20 +272,20 @@ const Home = () => {
                 >
                     <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-6">
-                            <h2 className="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tighter leading-none pr-4 border-r-4 border-neon-green">
+                            <h2 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tighter leading-none pr-4 border-r-4 border-neon-green">
                                 {cat.name}
                             </h2>
-                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest pt-2">
+                            <span className="text-[10px] font-bold text-gray-400 tracking-widest pt-2">
                                 {categoryEvents.length} {'Sự kiện'}
                             </span>
                         </div>
                         <Link 
                             to={`/events?category=${cat.id}`} 
-                            className="group flex items-center gap-4 text-xs font-black uppercase tracking-widest text-gray-500 hover:text-neon-green transition-all"
+                            className="group flex items-center gap-4 text-sm font-bold text-gray-500 hover:text-neon-green transition-all"
                         >
                             <span className="opacity-60 group-hover:opacity-100">{t('home.events.view_all')}</span>
-                            <div className="w-12 h-12 rounded-full border border-gray-200 dark:border-white/10 flex items-center justify-center group-hover:border-neon-green group-hover:bg-neon-green/10 transition-all shadow-xl">
-                                <ArrowRight className="w-5 h-5" />
+                            <div className="w-8 h-8 rounded-full border border-gray-200 dark:border-white/10 flex items-center justify-center group-hover:border-neon-green group-hover:bg-neon-green/10 transition-all shadow-xl">
+                                <ArrowRight className="w-4 h-4" />
                             </div>
                         </Link>
                     </div>
@@ -355,9 +355,9 @@ const Home = () => {
                     alt="Why BASTICKET" 
                     className="w-full rounded-[3rem] shadow-2xl rotate-3 hover:rotate-0 transition-transform duration-700"
                 />
-                <div className="absolute -bottom-10 -left-10 p-8 bg-neon-green rounded-3xl shadow-xl hidden md:block">
+                <div className="absolute -bottom-8 -left-10 p-6 bg-neon-green rounded-3xl shadow-xl hidden md:block">
                     <div className="flex items-center gap-4 text-black">
-                        <div className="text-4xl font-black italic tracking-tighter">10K+</div>
+                        <div className="text-3xl font-black italic tracking-tighter">10K+</div>
                         <div className="text-[10px] font-black uppercase tracking-widest leading-none">
                           {t('home.features.trust_stat')}
                         </div>

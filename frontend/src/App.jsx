@@ -11,6 +11,14 @@ import Profile from './pages/Profile/Profile';
 import MyTickets from './pages/Customer/MyTickets';
 import ResaleTicket from './pages/Customer/ResaleTicket';
 
+// Support Pages
+import CustomerTerms from './pages/Support/CustomerTerms';
+import OrganizerTerms from './pages/Support/OrganizerTerms';
+import PrivacyPolicy from './pages/Support/PrivacyPolicy';
+import RefundPolicy from './pages/Support/RefundPolicy';
+import FAQ from './pages/Support/FAQ';
+import Blog from './pages/Support/Blog';
+
 // Auth Pages
 import Login from './pages/Auth/Login';
 import Register from './pages/Auth/Register';
@@ -87,6 +95,15 @@ const router = createBrowserRouter([
         ) 
       },
       { path: 'organizer-register', element: <RegisterOrganizer /> },
+      
+      // Support Routes
+      { path: 'customer-terms', element: <CustomerTerms /> },
+      { path: 'organizer-terms', element: <OrganizerTerms /> },
+      { path: 'privacy-policy', element: <PrivacyPolicy /> },
+      { path: 'refund-policy', element: <RefundPolicy /> },
+      { path: 'faq', element: <FAQ /> },
+      { path: 'blog', element: <Blog /> },
+
       { path: '*', element: <Navigate to="/" replace /> }
     ]
   },
