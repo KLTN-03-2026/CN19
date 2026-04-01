@@ -14,7 +14,8 @@ import {
     TrendingUp,
     ShieldCheck,
     Coins,
-    AlertTriangle
+    AlertTriangle,
+    Info
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { organizerService } from '../../services/organizer.service';
@@ -56,6 +57,25 @@ const EventDetail = () => {
             navigate('/organizer/my-events');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleTogglePolicy = async (field, currentValue) => {
+        const eventDate = new Date(event.event_date);
+        const now = new Date();
+        const diffDays = (eventDate - now) / (1000 * 60 * 60 * 24);
+
+        if (diffDays < 2) {
+            toast.error('Không thể thay đổi chính sách khi còn chưa đầy 2 ngày đến sự kiện.');
+            return;
+        }
+
+        try {
+            await organizerService.updateEvent(id, { [field]: !currentValue });
+            toast.success('Cập nhật chính sách thành công!');
+            fetchEvent();
+        } catch (err) {
+            toast.error(err.response?.data?.error || 'Đã xảy ra lỗi khi cập nhật.');
         }
     };
 
@@ -221,6 +241,30 @@ const EventDetail = () => {
                                 {event.description || 'Không có mô tả cho sự kiện này.'}
                             </div>
                         </div>
+
+                        {/* Sơ đồ sự kiện */}
+                        {event.seating_charts && event.seating_charts.length > 0 && (
+                            <div className="pt-6 border-t border-gray-100 dark:border-white/5">
+                                <h3 className="text-xs font-black text-gray-900 dark:text-white uppercase tracking-widest mb-4 flex items-center">
+                                    <MapPin className="w-4 h-4 mr-2 text-blue-600" />
+                                    Sơ đồ sự kiện
+                                </h3>
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                    {event.seating_charts.map((url, index) => (
+                                        <div key={index} className="relative aspect-video rounded-2xl overflow-hidden border border-gray-100 dark:border-white/10 group cursor-pointer" onClick={() => window.open(url, '_blank')}>
+                                            <img 
+                                                src={url} 
+                                                alt={`Sơ đồ ${index + 1}`} 
+                                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                                            />
+                                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                                                <ExternalLink className="w-6 h-6 text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg" />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -279,13 +323,41 @@ const EventDetail = () => {
                                 </div>
                                 <span className="text-[10px] font-black text-gray-900 dark:text-white">{event.royalty_fee_percent}%</span>
                             </div>
-                            <div className="flex items-center justify-between p-3 bg-gray-50/50 dark:bg-white/5 rounded-2xl">
+                            
+                            {/* Toggle Resale */}
+                            <div className="flex items-center justify-between p-3 bg-gray-50/50 dark:bg-white/5 rounded-2xl hover:border-blue-500/30 transition-all border border-transparent">
+                                <div className="flex items-center gap-3">
+                                    <ShieldCheck className="w-4 h-4 text-blue-500" />
+                                    <span className="text-[10px] font-black text-gray-500 uppercase">Cho phép Đăng bán lại</span>
+                                </div>
+                                <button 
+                                    onClick={() => handleTogglePolicy('allow_resale', event.allow_resale)}
+                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${event.allow_resale ? 'bg-blue-600' : 'bg-gray-300 dark:bg-white/10'}`}
+                                >
+                                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${event.allow_resale ? 'translate-x-6' : 'translate-x-1'}`} />
+                                </button>
+                            </div>
+
+                            {/* Toggle Transfer */}
+                            <div className="flex items-center justify-between p-3 bg-gray-50/50 dark:bg-white/5 rounded-2xl hover:border-blue-500/30 transition-all border border-transparent">
                                 <div className="flex items-center gap-3">
                                     <Users className="w-4 h-4 text-green-500" />
-                                    <span className="text-[10px] font-black text-gray-500 uppercase">Hỗ trợ chuyển nhượng</span>
+                                    <span className="text-[10px] font-black text-gray-500 uppercase">Hỗ trợ Chuyển nhượng</span>
                                 </div>
-                                <span className="text-[10px] font-black text-gray-900 dark:text-white uppercase">{event.allow_resale ? 'BẬT' : 'TẮT'}</span>
+                                <button 
+                                    onClick={() => handleTogglePolicy('allow_transfer', event.allow_transfer)}
+                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${event.allow_transfer ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-white/10'}`}
+                                >
+                                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${event.allow_transfer ? 'translate-x-6' : 'translate-x-1'}`} />
+                                </button>
                             </div>
+                        </div>
+                        
+                        <div className="p-3 bg-blue-600/5 rounded-xl border border-blue-600/10 flex items-start gap-2">
+                            <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                            <p className="text-[9px] text-blue-700 dark:text-blue-400 font-medium leading-relaxed italic">
+                                * Quyền chuyển nhượng và đăng bán lại có thể được điều chỉnh (Bật/Tắt) cho đến trước 2 ngày diễn ra sự kiện.
+                            </p>
                         </div>
                     </div>
 

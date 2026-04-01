@@ -17,7 +17,9 @@ import {
   Moon,
   UserCircle,
   Home,
-  Users
+  Users,
+  Package,
+  FileText
 } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import toast from 'react-hot-toast';
@@ -53,6 +55,8 @@ const OrganizerLayout = () => {
     { path: '/organizer/revenue', icon: Wallet, label: 'Doanh thu & Rút tiền' },
     { path: '/organizer/staff', icon: Users, label: 'Quản lý nhân viên' },
     { path: '/organizer/participants', icon: Users, label: 'Danh sách tham gia' },
+    { path: '/organizer/products', icon: Package, label: 'Quản lý sản phẩm' },
+    { path: '/organizer/blog', icon: FileText, label: 'Blog' },
     { path: '/organizer/settings', icon: Settings, label: 'Cài đặt' },
   ];
 
