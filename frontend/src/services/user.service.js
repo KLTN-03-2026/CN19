@@ -17,6 +17,10 @@ export const userService = {
     const response = await api.get('/users/wallet-balance');
     return response.data;
   },
+  findByEmail: async (email) => {
+    const response = await api.get(`/users/find-by-email?email=${email}`);
+    return response.data;
+  },
   linkExternalWallet: async (address) => {
     const response = await api.post('/users/link-external-wallet', { address });
     return response.data;

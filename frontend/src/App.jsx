@@ -8,6 +8,8 @@ import Events from './pages/Home/Events';
 import PublicEventDetail from './pages/Home/PublicEventDetail';
 import OrganizerPublicProfile from './pages/Home/OrganizerPublicProfile';
 import Profile from './pages/Profile/Profile';
+import MyTickets from './pages/Customer/MyTickets';
+import ResaleTicket from './pages/Customer/ResaleTicket';
 
 // Auth Pages
 import Login from './pages/Auth/Login';
@@ -65,6 +67,22 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute>
             <Profile />
+          </ProtectedRoute>
+        ) 
+      },
+      { 
+        path: 'my-tickets', 
+        element: (
+          <ProtectedRoute>
+            <MyTickets />
+          </ProtectedRoute>
+        ) 
+      },
+      { 
+        path: 'my-tickets/:id/resale', 
+        element: (
+          <ProtectedRoute>
+            <ResaleTicket />
           </ProtectedRoute>
         ) 
       },

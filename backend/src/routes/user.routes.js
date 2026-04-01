@@ -9,6 +9,9 @@ router.use(authenticate);
 // [GET] /api/users/profile
 router.get('/profile', userController.getProfile);
 
+// [GET] /api/users/find-by-email
+router.get('/find-by-email', userController.findByEmail);
+
 // [PUT] /api/users/profile
 router.put('/profile', userController.updateProfile);
 

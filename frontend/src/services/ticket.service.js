@@ -19,9 +19,15 @@ export const ticketService = {
         return res.data;
     },
 
+    // Lấy chi tiết 1 vé
+    getTicketById: async (id) => {
+        const res = await api.get(`/tickets/${id}`);
+        return res.data;
+    },
+
     // Lấy mã QR động cho vé
     getQrCode: async (ticketId) => {
-        const res = await api.post(`/tickets/${ticketId}/qr`);
+        const res = await api.get(`/tickets/${ticketId}/qr-code`);
         return res.data;
     },
 

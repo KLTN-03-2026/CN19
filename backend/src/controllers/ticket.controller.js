@@ -1,23 +1,82 @@
 const prisma = require('../config/prisma');
 const crypto = require('crypto');
 const web3Service = require('../services/web3.service');
+const sendEmail = require('../utils/sendEmail');
 
 // [UC_xx] Xem danh sách vé của tôi
 const getMyTickets = async (req, res) => {
   try {
     const userId = req.user.userId;
     const tickets = await prisma.ticket.findMany({
-      where: { current_owner_id: userId },
-      include: {
-        event: { select: { title: true, event_date: true, smart_contract_address: true } },
-        ticket_tier: { select: { tier_name: true, section_name: true } }
+      where: { 
+        OR: [
+          { current_owner_id: userId },
+          { original_buyer_id: userId }
+        ]
       },
-      orderBy: { created_at: 'desc' }
+      include: {
+        event: { 
+          select: { 
+            id: true,
+            title: true, 
+            event_date: true, 
+            event_time: true,
+            location_address: true,
+            image_url: true,
+            status: true,
+            allow_resale: true,
+            allow_transfer: true,
+            smart_contract_address: true 
+          } 
+        },
+        ticket_tier: { 
+          select: { 
+            tier_name: true, 
+            section_name: true,
+            price: true
+          } 
+        }
+      },
     });
 
-    res.status(200).json({ data: tickets });
+    // Bổ sung thêm flag để frontend dễ phân biệt
+    const enrichedTickets = tickets.map(t => ({
+      ...t,
+      is_current_owner: t.current_owner_id === userId,
+      is_original_buyer: t.original_buyer_id === userId
+    }));
+
+    res.status(200).json({ data: enrichedTickets });
   } catch (error) {
     console.error('Lỗi khi tải danh sách vé:', error);
+    res.status(500).json({ error: 'Lỗi hệ thống khi tải danh sách vé: ' + error.message });
+  }
+};
+
+// [UC_xx] Lấy chi tiết 1 vé
+const getTicketDetail = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { id } = req.params;
+
+    const ticket = await prisma.ticket.findUnique({
+      where: { id },
+      include: {
+        event: true,
+        ticket_tier: true,
+        current_owner: {
+           select: { id: true, email: true, full_name: true }
+        }
+      }
+    });
+
+    if (!ticket || ticket.current_owner_id !== userId) {
+      return res.status(404).json({ error: 'Không tìm thấy vé hoặc bạn không sở hữu vé này.' });
+    }
+
+    res.status(200).json({ data: ticket });
+  } catch (error) {
+    console.error('Lỗi lấy chi tiết vé:', error);
     res.status(500).json({ error: 'Lỗi server.' });
   }
 };
@@ -134,6 +193,44 @@ const transferTicket = async (req, res) => {
       });
     });
 
+    // Gửi email thông báo (Không đợi phản hồi)
+    const sender = await prisma.user.findUnique({ where: { id: userId } });
+    if (sender) {
+        // Email cho người chuyển
+        sendEmail(
+            sender.email,
+            '[BASTICKET] Xác nhận chuyển nhượng vé thành công',
+            `<div style="font-family: sans-serif; padding: 20px; color: #333;">
+                <h2 style="color: #28a745;">Chuyển nhượng thành công!</h2>
+                <p>Chào <b>${sender.full_name || 'bạn'}</b>,</p>
+                <p>Vé của bạn cho sự kiện <b>${ticket.event.title}</b> đã được chuyển nhượng thành công.</p>
+                <p><b>Người nhận:</b> ${receiver.full_name || 'N/A'} (${receiver.email})</p>
+                <p><b>Mã giao dịch (TX):</b> <a href="https://mumbai.polygonscan.com/tx/${txHash}">${txHash}</a></p>
+                <hr/>
+                <p style="font-size: 12px; color: #777;">Cảm ơn bạn đã sử dụng BASTICKET.</p>
+            </div>`
+        );
+
+        // Email cho người nhận
+        sendEmail(
+            receiver.email,
+            '[BASTICKET] Bạn vừa nhận được một vé NFT mới!',
+            `<div style="font-family: sans-serif; padding: 20px; color: #333;">
+                <h2 style="color: #28a745;">Bạn có vé mới!</h2>
+                <p>Chào <b>${receiver.full_name || 'bạn'}</b>,</p>
+                <p>Bạn vừa nhận được vé sự kiện <b>${ticket.event.title}</b> từ <b>${sender.full_name || sender.email}</b>.</p>
+                <p>Hãy đăng nhập vào BASTICKET và kiểm tra mục <b>"Vé của tôi"</b> để sử dụng vé.</p>
+                <div style="margin: 30px 0;">
+                    <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/my-tickets" 
+                       style="background: #28a745; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">
+                       Xem vé ngay
+                    </a>
+                </div>
+                <p style="font-size: 12px; color: #777;">Đây là tài sản NFT được xác thực trên Blockchain.</p>
+            </div>`
+        );
+    }
+
     res.status(200).json({ message: 'Chuyển nhượng vé thành công!', txHash });
 
   } catch (error) {
@@ -172,6 +269,7 @@ const getBlockchainInfo = async (req, res) => {
 
 module.exports = {
   getMyTickets,
+  getTicketDetail,
   getQrCode,
   transferTicket,
   getBlockchainInfo

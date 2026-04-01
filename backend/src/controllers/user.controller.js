@@ -154,10 +154,38 @@ const getWalletBalance = async (req, res) => {
   }
 };
 
+// [UC_xx] Tìm người dùng qua Email (để chuyển nhượng)
+const findByEmail = async (req, res) => {
+  try {
+    const { email } = req.query;
+    if (!email) return res.status(400).json({ error: 'Thiếu email tìm kiếm.' });
+
+    const user = await prisma.user.findUnique({
+      where: { email },
+      select: {
+        id: true,
+        email: true,
+        full_name: true,
+        avatar_url: true
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'Không tìm thấy người dùng này.' });
+    }
+
+    res.status(200).json({ data: user });
+  } catch (error) {
+    console.error('Lỗi tìm người dùng:', error);
+    res.status(500).json({ error: 'Lỗi server.' });
+  }
+};
+
 module.exports = {
   getProfile,
   updateProfile,
   changePassword,
   linkExternalWallet,
-  getWalletBalance
+  getWalletBalance,
+  findByEmail
 };

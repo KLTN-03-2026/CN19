@@ -9,6 +9,9 @@ router.use(authenticate);
 // [GET] /api/tickets
 router.get('/', ticketController.getMyTickets);
 
+// [GET] /api/tickets/:id
+router.get('/:id', ticketController.getTicketDetail);
+
 // [GET] /api/tickets/:id/qr-code
 router.get('/:id/qr-code', ticketController.getQrCode);
 

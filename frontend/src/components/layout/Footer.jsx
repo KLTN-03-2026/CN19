@@ -17,7 +17,7 @@ const Footer = () => {
     const { t } = useTranslation();
 
     return (
-        <footer className="font-sans bg-white dark:bg-dark-bg border-t border-gray-200 dark:border-dark-border pt- pb-6 transition-colors duration-300">
+        <footer className="font-sans bg-white dark:bg-dark-bg border-t border-gray-200 dark:border-dark-border pt-6 pb-6 transition-colors duration-300">
             {/* Top Section with Newsletter */}
             <div className="max-w-[1400px] mx-auto px-6 mb-12">
                 <div className="bg-gray-50 dark:bg-dark-card border border-gray-200 dark:border-dark-border dark:glow-card-green rounded-3xl p-8 md:p- flex flex-col lg:flex-row items-center justify-between gap-8 relative overflow-hidden">
