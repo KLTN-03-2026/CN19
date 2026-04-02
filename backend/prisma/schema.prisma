@@ -53,6 +53,7 @@ model Organizer {
   is_verified       Boolean   @default(false)
   description       String?
   events            Event[]
+  merchandise       Merchandise[]
   user              User      @relation(fields: [user_id], references: [id])
 }
 
@@ -110,6 +111,7 @@ model Event {
   seating_charts         String[]               @default([])
   created_at             DateTime               @default(now())
   updated_at             DateTime               @updatedAt
+  merchandise            Merchandise[]
 }
 
 model EmergencyRequest {
@@ -164,6 +166,7 @@ model Order {
   event            Event             @relation(fields: [event_id], references: [id])
   items            OrderItem[]
   tickets          Ticket[]
+  merchandise_items MerchandiseOrderItem[]
 }
 
 model OrderItem {
@@ -332,4 +335,32 @@ model Notification {
   is_read    Boolean  @default(false)
   created_at DateTime @default(now())
   user       User     @relation(fields: [user_id], references: [id])
+}
+
+model Merchandise {
+  id            String                 @id @default(uuid())
+  organizer_id  String
+  event_id      String?
+  name          String
+  description   String?
+  price         Decimal
+  stock         Int                    @default(0)
+  image_url     String?
+  is_active     Boolean                @default(true)
+  created_at    DateTime               @default(now())
+  updated_at    DateTime               @updatedAt
+  organizer     Organizer              @relation(fields: [organizer_id], references: [id])
+  event         Event?                 @relation(fields: [event_id], references: [id])
+  order_items   MerchandiseOrderItem[]
+}
+
+model MerchandiseOrderItem {
+  id              String      @id @default(uuid())
+  merchandise_id  String
+  order_id        String
+  quantity        Int
+  unit_price      Decimal
+  subtotal        Decimal
+  merchandise     Merchandise @relation(fields: [merchandise_id], references: [id])
+  order           Order       @relation(fields: [order_id], references: [id])
 }
