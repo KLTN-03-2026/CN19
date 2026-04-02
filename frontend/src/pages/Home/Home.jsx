@@ -2,6 +2,12 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, Shield, Zap, Users, ArrowRight, TrendingUp, Calendar } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+
+const nameMapToEn = {
+  'Âm nhạc': 'Music', 'Hội thảo': 'Workshop', 'Sân khấu': 'Theater',
+  'Ẩm thực': 'Food', 'Thể thao': 'Sports', 'Du lịch': 'Travel',
+  'Từ thiện': 'Charity', 'Lễ hội': 'Festival', 'Công nghệ': 'Technology',
+};
 import { useQuery } from '@tanstack/react-query';
 import eventService from '../../services/event.service';
 import EventCard from '../../components/Home/EventCard';
@@ -46,7 +52,8 @@ const GlowCard = ({ children, className = "" }) => {
 };
 
 const Home = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const isEn = i18n.language.startsWith('en');
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchKeyword, setSearchKeyword] = useState('');
   const [timeFilter, setTimeFilter] = useState('week'); // 'week' or 'month'
@@ -273,10 +280,10 @@ const Home = () => {
                     <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center gap-6">
                             <h2 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tighter leading-none pr-4 border-r-4 border-neon-green">
-                                {cat.name}
+                                {isEn ? (nameMapToEn[cat.name] || cat.name) : cat.name}
                             </h2>
                             <span className="text-[10px] font-bold text-gray-400 tracking-widest pt-2">
-                                {categoryEvents.length} {'Sự kiện'}
+                                {categoryEvents.length} {t('common.events')}
                             </span>
                         </div>
                         <Link 

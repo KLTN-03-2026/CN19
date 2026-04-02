@@ -14,15 +14,29 @@ const iconMap = {
     'Công nghệ': Cpu, 'Technology': Cpu,
 };
 
+// Map Vietnamese DB names → English display names
+const nameMapToEn = {
+    'Âm nhạc': 'Music',
+    'Hội thảo': 'Workshop',
+    'Sân khấu': 'Theater',
+    'Ẩm thực': 'Food',
+    'Thể thao': 'Sports',
+    'Du lịch': 'Travel',
+    'Từ thiện': 'Charity',
+    'Lễ hội': 'Festival',
+    'Công nghệ': 'Technology',
+};
+
 const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?q=80&w=1000';
 const CategoryBar = ({ activeCategory, onCategoryChange, dbCategories = [] }) => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
     const scrollRef = useRef(null);
     const isHovering = useRef(false);
+    const isEn = i18n.language.startsWith('en');
 
     const categories = dbCategories.map(cat => ({
         id: cat.id,
-        name: cat.name,
+        name: isEn ? (nameMapToEn[cat.name] || cat.name) : cat.name,
         icon: iconMap[cat.name] || Rocket,
         image: cat.image_url || FALLBACK_IMAGE,
     }));
