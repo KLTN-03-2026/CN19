@@ -35,6 +35,8 @@ import EventDetail from './pages/Organizer/EventDetail';
 import EditEvent from './pages/Organizer/EditEvent';
 import StaffManagement from './pages/Organizer/StaffManagement';
 import TicketManagement from './pages/Organizer/TicketManagement';
+import MerchandiseManagement from './pages/Organizer/MerchandiseManagement';
+import MerchandiseDetail from './pages/Organizer/MerchandiseDetail';
 
 // Admin Pages
 import AdminLayout from './components/layout/AdminLayout';
@@ -145,6 +147,8 @@ const router = createBrowserRouter([
       { path: 'tickets', element: <TicketManagement /> },
       { path: 'revenue', element: <div className="p-8 text-2xl font-bold">Doanh thu & Rút tiền (Coming Soon)</div> },
       { path: 'staff', element: <StaffManagement /> },
+      { path: 'products', element: <MerchandiseManagement /> },
+      { path: 'products/:id', element: <MerchandiseDetail /> },
       { path: 'participants', element: <div className="p-8 text-2xl font-bold">Danh sách người tham gia (Coming Soon)</div> },
       { path: 'settings', element: <div className="p-8 text-2xl font-bold">Cài đặt (Coming Soon)</div> },
       { path: '', element: <Navigate to="dashboard" replace /> }

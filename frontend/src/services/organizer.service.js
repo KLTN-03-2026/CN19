@@ -47,5 +47,36 @@ export const organizerService = {
   getPublicProfile: async (id) => {
     const res = await api.get(`/organizers/${id}`);
     return res.data;
+  },
+
+  // ======= Merchandise =======
+  getMerchandise: async () => {
+    const res = await api.get('/organizer/merchandise');
+    return res.data;
+  },
+
+  getMerchandiseById: async (id) => {
+    const res = await api.get(`/organizer/merchandise/${id}`);
+    return res.data;
+  },
+
+  createMerchandise: async (data) => {
+    const res = await api.post('/organizer/merchandise', data);
+    return res.data;
+  },
+
+  updateMerchandise: async (id, data) => {
+    const res = await api.put(`/organizer/merchandise/${id}`, data);
+    return res.data;
+  },
+
+  deleteMerchandise: async (id) => {
+    const res = await api.delete(`/organizer/merchandise/${id}`);
+    return res.data;
+  },
+
+  toggleMerchandise: async (id) => {
+    const res = await api.patch(`/organizer/merchandise/${id}/toggle`);
+    return res.data;
   }
 };
