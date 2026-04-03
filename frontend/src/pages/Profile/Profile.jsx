@@ -37,18 +37,37 @@ const Profile = () => {
     avatarUrl: user?.avatar_url || '',
   });
 
+  // Helper chuyển đổi DD/MM/YYYY của CCCD sang YYYY-MM-DD cho input
+  const formatOcrDate = (dateStr) => {
+    if (!dateStr || !dateStr.includes('/')) return '';
+    const [d, m, y] = dateStr.split('/');
+    return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+  };
+
   useEffect(() => {
     if (user) {
+      // Ưu tiên lấy ngày sinh từ CCCD nếu là BTC và info cá nhân trống
+      let dobValue = user.date_of_birth ? new Date(user.date_of_birth).toISOString().split('T')[0] : '';
+      if (!dobValue && user.role === 'organizer' && user.organizer_profile?.dob_raw) {
+        dobValue = formatOcrDate(user.organizer_profile.dob_raw);
+      }
+
+      // Ưu tiên lấy địa chỉ từ hồ sơ CCCD nếu là BTC và chưa có địa chỉ ngoại trú
+      let addressValue = user.address || '';
+      if (!addressValue && user.role === 'organizer' && user.organizer_profile?.address_raw) {
+        addressValue = user.organizer_profile.address_raw;
+      }
+
       setFormData({
         fullName: user.full_name || user.fullName || '',
         phoneNumber: user.phone_number || '',
-        address: user.address || '',
-        dateOfBirth: user.date_of_birth ? new Date(user.date_of_birth).toISOString().split('T')[0] : '',
+        address: addressValue,
+        dateOfBirth: dobValue,
         avatarUrl: user.avatar_url || '',
       });
       fetchWalletBalance();
       
-      // Đồng bộ thông tin mới nhất từ DB lỡ như LocalStorage bị cũ (thiếu địa chỉ ví)
+      // Đồng bộ thông tin mới nhất từ DB
       const syncProfile = async () => {
         try {
           const res = await userService.getProfile();
