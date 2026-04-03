@@ -20,7 +20,12 @@ import {
   History,
   Sun,
   Moon,
-  Home
+  Home,
+  Package,
+  FileText,
+  FileDown,
+  Ticket,
+  LifeBuoy
 } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import toast from 'react-hot-toast';
@@ -57,6 +62,11 @@ const AdminLayout = () => {
     { path: '/admin/refunds', icon: RotateCcw, label: 'Yêu cầu hoàn tiền' },
     { path: '/admin/fraud', icon: ShieldAlert, label: 'Cảnh báo gian lận' },
     { path: '/admin/transactions', icon: History, label: 'Quản lý giao dịch' },
+    { path: '/admin/products', icon: Package, label: 'Quản lý sản phẩm' },
+    { path: '/admin/blog', icon: FileText, label: 'Quản lý blog' },
+    { path: '/admin/vouchers', icon: Ticket, label: 'Mã giảm giá' },
+    { path: '/admin/support', icon: LifeBuoy, label: 'Hỗ trợ & Khiếu nại' },
+    { path: '/admin/reports', icon: FileDown, label: 'Thống kê & Báo cáo' },
     { path: '/admin/settings', icon: Settings, label: 'Cấu hình hệ thống' },
   ];
 
@@ -69,7 +79,7 @@ const AdminLayout = () => {
           isSidebarOpen ? 'w-64' : 'w-20'
         } bg-gray-50 dark:bg-[#111114] border-r border-gray-200 dark:border-white/5 transition-all duration-300 flex flex-col z-50 fixed h-full lg:sticky lg:top-0 lg:h-screen`}
       >
-        <div className="p-6 flex items-center justify-between">
+        <div className="pt-6 pr-6 pl-6 pb-4 flex items-center justify-between">
           <div className={`flex items-center space-x-3 ${!isSidebarOpen && 'hidden'}`}>
             <div className="w-8 h-8 bg-neon-green rounded-lg flex items-center justify-center">
               <ShieldCheck className="w-5 h-5 text-black" />
@@ -81,7 +91,7 @@ const AdminLayout = () => {
           </button>
         </div>
 
-        <nav className="flex-1 mt-4 px-3 space-y-1">
+        <nav className="flex-1 mt-3 px-3 space-y-1">
           {menuItems.map((item) => {
             const isActive = location.pathname === item.path;
             const Icon = item.icon;
