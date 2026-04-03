@@ -14,6 +14,7 @@ import {
   CheckCircle2,
   AlertCircle,
   Clock,
+  Users,
   ChevronRight,
   AlertTriangle,
   LayoutGrid,
@@ -58,6 +59,14 @@ const MyEvents = () => {
         }
     };
 
+    const handleClearFilters = () => {
+        setSearchQuery('');
+        setFilterStatus('all');
+        setFilterCategory('all');
+        setFilterDate('');
+        toast.success('Đã xóa tất cả bộ lọc');
+    };
+
     const handleEmergencyAction = async (data) => {
         if (!selectedEvent) return;
         try {
@@ -83,12 +92,14 @@ const MyEvents = () => {
         }
     };
 
-    const getStatusInfo = (status) => {
+    const getStatusInfo = (status, event) => {
+        const isEnded = status === 'ended' || (event && new Date(event.end_date || event.event_date) < new Date());
+        if (isEnded) return { label: 'Đã kết thúc', color: 'bg-red-500/10 text-red-500', icon: Calendar };
+
         switch (status) {
             case 'draft': return { label: 'Bản nháp', color: 'bg-gray-500/10 text-gray-500', icon: Clock };
             case 'pending': return { label: 'Chờ duyệt', color: 'bg-yellow-500/10 text-yellow-500', icon: AlertCircle };
             case 'active': return { label: 'Đang bán', color: 'bg-green-500/10 text-green-500', icon: CheckCircle2 };
-            case 'ended': return { label: 'Đã kết thúc', color: 'bg-red-500/10 text-red-500', icon: Calendar };
             case 'pending_cancel': return { label: 'Chờ hủy', color: 'bg-red-500/10 text-red-600', icon: AlertCircle };
             case 'pending_reschedule': return { label: 'Chờ dời lịch', color: 'bg-blue-500/10 text-blue-600', icon: Calendar };
             default: return { label: status, color: 'bg-gray-500/10 text-gray-500', icon: Clock };
@@ -97,12 +108,17 @@ const MyEvents = () => {
 
     const filteredEvents = events.filter(event => {
         const matchesSearch = event.title.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesStatus = filterStatus === 'all' || event.status === filterStatus;
+        const isEnded = event.status === 'ended' || new Date(event.end_date || event.event_date) < new Date();
+        
+        const matchesStatus = filterStatus === 'all' || 
+                             (filterStatus === 'ended' ? isEnded : event.status === filterStatus);
+        
         const matchesCategory = filterCategory === 'all' || event.category_id === filterCategory;
         
         let matchesDate = true;
         if (filterDate) {
-            const eventDateStr = new Date(event.event_date).toISOString().split('T')[0];
+            // Sử dụng en-CA để lấy YYYY-MM-DD từ ngày địa phương
+            const eventDateStr = new Date(event.event_date).toLocaleDateString('en-CA');
             matchesDate = eventDateStr === filterDate;
         }
 
@@ -133,7 +149,7 @@ const MyEvents = () => {
             {/* Controls Section - Sticky for better UX */}
             <div className="sticky top-0 z-30 py-4 -my-4 bg-white/10 dark:bg-[#0a0a0c]/10 backdrop-blur-xl">
                 <div className="bg-white dark:bg-[#111114] p-4 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm space-y-4">
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
                     <div className="lg:col-span-2 relative group">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-blue-600 transition-colors" />
                         <input 
@@ -168,6 +184,18 @@ const MyEvents = () => {
                             value={filterDate}
                             onChange={(e) => setFilterDate(e.target.value)}
                         />
+                    </div>
+
+                    <div className="flex items-center">
+                        {(searchQuery || filterStatus !== 'all' || filterCategory !== 'all' || filterDate !== '') && (
+                            <button 
+                                onClick={handleClearFilters}
+                                className="px-5 py-3 bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border border-red-500/20 shadow-sm flex items-center justify-center gap-2 group whitespace-nowrap"
+                            >
+                                <Trash2 className="w-3.5 h-3.5 group-hover:rotate-12 transition-transform" />
+                                Xóa bộ lọc
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -242,9 +270,18 @@ const MyEvents = () => {
                                     </div>
 
                                     <div className="p-5 space-y-4">
-                                        <div className="space-y-1">
-                                            <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">{event.category?.name}</span>
-                                            <h3 className="text-base font-black text-gray-900 dark:text-white line-clamp-1 uppercase group-hover:text-blue-600 transition-colors">{event.title}</h3>
+                                        <div className="flex items-center justify-between gap-2">
+                                            <div className="space-y-1">
+                                                <span className="text-[10px] font-black text-blue-600 uppercase tracking-widest">{event.category?.name}</span>
+                                                <h3 className="text-base font-black text-gray-900 dark:text-white line-clamp-1 uppercase group-hover:text-blue-600 transition-colors">{event.title}</h3>
+                                            </div>
+                                            <button 
+                                                onClick={() => navigate(`/organizer/events/${event.id}/participants`)}
+                                                className="p-2.5 bg-blue-600/10 text-blue-600 hover:bg-blue-600 hover:text-white rounded-xl transition-all shadow-sm"
+                                                title="Danh sách tham gia"
+                                            >
+                                                <Users className="w-4 h-4" />
+                                            </button>
                                         </div>
 
                                         <div className="space-y-2 text-[10px] text-gray-500 dark:text-gray-400 font-bold">
@@ -331,6 +368,7 @@ const MyEvents = () => {
 
                                     {/* Actions */}
                                     <div className="flex items-center gap-2 lg:border-l lg:border-gray-100 lg:dark:border-white/5 lg:pl-6 shrink-0">
+                                        <button onClick={() => navigate(`/organizer/events/${event.id}/participants`)} className="p-2.5 bg-blue-600/10 text-blue-600 hover:bg-blue-600 hover:text-white rounded-xl transition-all shadow-sm" title="Danh sách tham gia"><Users className="w-4 h-4" /></button>
                                         <button onClick={() => navigate(`/organizer/events/${event.id}`)} className="p-2.5 bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:bg-blue-600 hover:text-white rounded-xl transition-all" title="Chi tiết"><ExternalLink className="w-4 h-4" /></button>
                                         {(event.status === 'draft' || event.status === 'pending') && (
                                             <>

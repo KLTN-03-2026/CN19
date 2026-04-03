@@ -7,7 +7,7 @@ const organizerBlogController = {
     createBlog: async (req, res) => {
         try {
             const { title, content, image_url, event_id, status } = req.body;
-            const author_id = req.user.id;
+            const author_id = req.user.id || req.user.userId;
 
             if (!title || !content) {
                 return res.status(400).json({ error: 'Tiêu đề và nội dung không được để trống.' });
@@ -39,7 +39,7 @@ const organizerBlogController = {
     // Lấy danh sách bài viết của BTC hiện tại
     getOrganizerBlogs: async (req, res) => {
         try {
-            const author_id = req.user.id;
+            const author_id = req.user.id || req.user.userId;
             const blogs = await prisma.blog.findMany({
                 where: { author_id },
                 include: {
@@ -88,7 +88,7 @@ const organizerBlogController = {
         try {
             const { id } = req.params;
             const { title, content, image_url, event_id, status } = req.body;
-            const author_id = req.user.id;
+            const author_id = req.user.id || req.user.userId;
 
             // Kiểm tra quyền sở hữu
             const existingBlog = await prisma.blog.findUnique({ where: { id } });
@@ -125,7 +125,7 @@ const organizerBlogController = {
     deleteBlog: async (req, res) => {
         try {
             const { id } = req.params;
-            const author_id = req.user.id;
+            const author_id = req.user.id || req.user.userId;
 
             const existingBlog = await prisma.blog.findUnique({ where: { id } });
             if (!existingBlog || existingBlog.author_id !== author_id) {
@@ -143,7 +143,7 @@ const organizerBlogController = {
     // Lấy danh sách review từ khách hàng cho các sự kiện của BTC này
     getCustomerReviews: async (req, res) => {
         try {
-            const author_id = req.user.id;
+            const author_id = req.user.id || req.user.userId;
             
             const organizer = await prisma.organizer.findUnique({
                 where: { user_id: author_id }
@@ -187,7 +187,7 @@ const organizerBlogController = {
         try {
             const { id } = req.params;
             const { status } = req.body; // 'published', 'hidden'
-            const author_id = req.user.id;
+            const author_id = req.user.id || req.user.userId;
 
             const organizer = await prisma.organizer.findUnique({
                 where: { user_id: author_id }

@@ -289,23 +289,71 @@ const updateResalePolicy = async (req, res) => {
   }
 };
 
-// [UC_19] Xem danh sách người tham gia
+// [UC_19] Xem danh sách người tham gia của MỘT sự kiện cụ thể
 const getAttendees = async (req, res) => {
   try {
     const { id } = req.params;
-    await verifyEventOwnership(id, req.user.userId);
+    const userId = req.user.userId;
+
+    await verifyEventOwnership(id, userId);
 
     const tickets = await prisma.ticket.findMany({
-      where: { event_id: id, status: 'minted' }, // Đã thanh toán và đang sở hữu vé
+      where: { event_id: id, status: 'active' },
       include: {
-        current_owner: { select: { email: true, phone_number: true } },
-        ticket_tier: { select: { tier_name: true } }
-      }
+        current_owner: { 
+          select: { 
+            id: true,
+            full_name: true, 
+            email: true, 
+            phone_number: true,
+            avatar_url: true
+          } 
+        },
+        ticket_tier: { select: { tier_name: true } },
+        event: { select: { title: true } }
+      },
+      orderBy: { order: { created_at: 'desc' } }
     });
 
     res.status(200).json({ data: tickets });
   } catch (error) {
     res.status(400).json({ error: error.message || 'Lỗi server.' });
+  }
+};
+
+// [UC_19] Xem TẤT CẢ người tham gia của Ban tổ chức
+const getAllOrganizerAttendees = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const organizer = await prisma.organizer.findUnique({ where: { user_id: userId } });
+    if (!organizer) return res.status(403).json({ error: 'Không tìm thấy hồ sơ Ban tổ chức.' });
+
+    const tickets = await prisma.ticket.findMany({
+      where: {
+        event: {
+          organizer_id: organizer.id
+        },
+        status: 'active'
+      },
+      include: {
+        current_owner: { 
+          select: { 
+            id: true,
+            full_name: true, 
+            email: true, 
+            phone_number: true,
+            avatar_url: true
+          } 
+        },
+        ticket_tier: { select: { tier_name: true } },
+        event: { select: { title: true } }
+      },
+      orderBy: { order: { created_at: 'desc' } }
+    });
+
+    res.status(200).json({ data: tickets });
+  } catch (error) {
+    res.status(500).json({ error: 'Lỗi lấy tất cả người tham gia: ' + error.message });
   }
 };
 
@@ -379,6 +427,7 @@ module.exports = {
   requestCancelOrReschedule,
   updateResalePolicy,
   getAttendees,
+  getAllOrganizerAttendees,
   getOrganizerEvents,
   getEventById,
   deleteEvent

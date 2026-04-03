@@ -114,5 +114,16 @@ export const organizerService = {
   moderateBlog: async (id, status) => {
     const res = await api.patch(`/organizer/blogs/${id}/moderate`, { status });
     return res.data;
+  },
+
+  // ======= Participants =======
+  getEventParticipants: async (eventId) => {
+    const res = await api.get(`/organizer/events/${eventId}/attendees`);
+    return res.data;
+  },
+
+  getAllParticipants: async () => {
+    const res = await api.get('/organizer/events/all-attendees');
+    return res.data;
   }
 };

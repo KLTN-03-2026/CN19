@@ -50,8 +50,11 @@ const ResaleTicket = () => {
             return;
         }
 
-        if (ticket.event.price_ceiling && resalePrice > ticket.event.price_ceiling) {
-            toast.error(`Giá bán không được vượt quá giá trần: ${ticket.event.price_ceiling.toLocaleString()} VND`);
+        const originalPrice = ticket.ticket_tier.price;
+        const maxResalePrice = originalPrice * 1.08;
+
+        if (resalePrice > maxResalePrice) {
+            toast.error(`Giá bán không được vượt quá 108% giá gốc: ${maxResalePrice.toLocaleString()} VND (Chống đầu cơ)`);
             return;
         }
 
@@ -77,8 +80,9 @@ const ResaleTicket = () => {
 
     if (!ticket) return null;
 
-    const royaltyFee = (resalePrice * ticket.event.royalty_fee_percent) / 100;
+    const royaltyFee = (resalePrice * 3) / 100; // Fixed 3%
     const netProfit = resalePrice - royaltyFee;
+    const buyerPays = parseFloat(resalePrice) + (resalePrice * 0.03) + 10000; // Price + 3% + 10k
 
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-dark-bg transition-colors duration-500 pt-24 pb-20 px-4 sm:px-8">
@@ -158,9 +162,9 @@ const ResaleTicket = () => {
                                 </p>
                             </div>
                             <div className="p-6 bg-dark-card border border-white/5 rounded-3xl space-y-2">
-                                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Giá trần (Price Ceiling)</p>
+                                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Giá trần niêm yết (+8%)</p>
                                 <p className="text-2xl font-black text-red-500 tracking-tighter">
-                                    {ticket.event.price_ceiling ? `${ticket.event.price_ceiling.toLocaleString()} VND` : 'Không giới hạn'}
+                                    {(ticket.ticket_tier.price * 1.08).toLocaleString()} <span className="text-xs text-red-500/50 ml-1">VND</span>
                                 </p>
                             </div>
                         </div>
@@ -193,15 +197,28 @@ const ResaleTicket = () => {
                                 <div className="space-y-4 pt-6 border-t border-white/5">
                                     <div className="flex justify-between items-center px-2">
                                         <div className="flex items-center gap-2">
-                                            <p className="text-[11px] font-black text-gray-500 uppercase tracking-widest">Phí bản quyền (Royalty Fee)</p>
+                                            <p className="text-[11px] font-black text-gray-500 uppercase tracking-widest">Phí bản quyền (Royalty)</p>
                                             <div className="group relative">
                                                 <Info className="w-3 h-3 text-gray-600 cursor-help" />
-                                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-3 bg-white text-black text-[9px] font-bold uppercase tracking-widest rounded-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-2xl">
-                                                    Khoản phí ({ticket.event.royalty_fee_percent}%) trích lại cho Ban tổ chức dựa trên giá bán của bạn.
+                                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-3 bg-white text-black text-[9px] font-bold uppercase tracking-widest rounded-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-2xl z-50">
+                                                    Khoản phí (Cố định 3%) trích lại cho Ban tổ chức dựa trên giá bán của bạn để duy trì hệ thống & bản quyền.
                                                 </div>
                                             </div>
                                         </div>
                                         <p className="text-sm font-black text-red-500">-{royaltyFee.toLocaleString()} VND</p>
+                                    </div>
+
+                                    <div className="flex justify-between items-center px-2">
+                                        <div className="flex items-center gap-2">
+                                            <p className="text-[11px] font-black text-gray-500 uppercase tracking-widest">Giá hiển thị cho người mua</p>
+                                            <div className="group relative">
+                                                <Info className="w-3 h-3 text-gray-600 cursor-help" />
+                                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-3 bg-white text-black text-[9px] font-bold uppercase tracking-widest rounded-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-2xl z-50">
+                                                    Bao gồm: Giá niêm yết + 3% Phí giao dịch + 10.000đ Phí Xác thực Blockchain/AI.
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <p className="text-sm font-black text-blue-500">{buyerPays.toLocaleString()} VND</p>
                                     </div>
                                     
                                     <div className="p-8 bg-neon-green/5 rounded-[2rem] border border-neon-green/20 flex flex-col sm:flex-row sm:items-center justify-between gap-6">

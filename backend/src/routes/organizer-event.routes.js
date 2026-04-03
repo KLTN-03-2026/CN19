@@ -17,16 +17,19 @@ router.post('/:id/cancel-request', controller.requestCancelOrReschedule);
 // [PUT] /api/organizer/events/:id/resale-policy
 router.put('/:id/resale-policy', controller.updateResalePolicy);
 
+// [GET] /api/organizer/events/all-attendees (Tất cả người tham gia của BTC)
+router.get('/all-attendees', controller.getAllOrganizerAttendees);
+
 // [GET] /api/organizer/events (Danh sách sự kiện của BTC)
 router.get('/', controller.getOrganizerEvents);
+
+// [GET] /api/organizer/events/:id/attendees
+router.get('/:id/attendees', controller.getAttendees);
 
 // [GET] /api/organizer/events/:id (Chi tiết sự kiện của BTC)
 router.get('/:id', controller.getEventById);
 
 // [DELETE] /api/organizer/events/:id (Xóa sự kiện nháp/chờ duyệt)
 router.delete('/:id', controller.deleteEvent);
-
-// [GET] /api/organizer/events/:id/attendees
-router.get('/:id/attendees', controller.getAttendees);
 
 module.exports = router;
