@@ -37,7 +37,7 @@ const CreateEvent = () => {
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const [targetStatus, setTargetStatus] = useState('pending');
 
-  const { register, control, handleSubmit, watch, setValue, formState: { errors } } = useForm({
+  const { register, control, handleSubmit, watch, setValue, trigger, formState: { errors } } = useForm({
     defaultValues: {
       title: '',
       category_id: '',
@@ -53,7 +53,8 @@ const CreateEvent = () => {
       longitude: '',
       allow_resale: true,
       allow_transfer: true,
-      royalty_fee_percent: 5,
+      royalty_fee_percent: 3,
+      resale_price_limit_percent: 108,
       seating_charts: [],
       ticket_tiers: [{ tier_name: 'Vé Thường', price: '', quantity_total: '', section_name: 'Khán đài A', benefits: '' }]
     }
@@ -675,7 +676,7 @@ const CreateEvent = () => {
                                     placeholder="VD: 500000"
                                 />
                                 <p className="text-[10px] text-blue-600 dark:text-blue-400 font-medium mt-1 leading-relaxed">
-                                    * BTC nhận về: {(watch(`ticket_tiers.${index}.price`) * 0.98).toLocaleString()} VNĐ (Đã trừ phí Gas 2%)
+                                    * BTC nhận về: {Math.max(0, watch(`ticket_tiers.${index}.price`) * 0.92 - 10000).toLocaleString()} VNĐ (Đã trừ: 5% phí sàn & 3% phí cổng giao dịch & 10,000đ phí Blockchain/AI)
                                 </p>
                             </div>
                             <div className="space-y-1">
@@ -747,28 +748,69 @@ const CreateEvent = () => {
                 </div>
 
                 <div className="space-y-6">
-                    <h4 className="text-xs font-bold uppercase tracking-widest text-blue-600">Phí và thời hạn</h4>
+                    <h4 className="text-xs font-bold uppercase tracking-widest text-blue-600">Phí và Luật Marketplace</h4>
                     
+                    {/* Luôn hiển thị Phí bản quyền */}
                     <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 italic">Phí bản quyền (%)</label>
+                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 italic">Phí bản quyền (Cố định)</label>
                         <div className="relative">
-                            <input 
-                                type="number"
-                                {...register('royalty_fee_percent')}
-                                className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-blue-600 transition-all"
-                            />
-                            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">%</span>
+                            <div className="w-full bg-gray-100 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-xl px-4 py-3 text-sm font-bold opacity-70 flex justify-between items-center">
+                                <span>{watch('royalty_fee_percent')}%</span>
+                                <Info className="w-4 h-4 text-blue-600" />
+                            </div>
                         </div>
-                        <p className="text-[10px] text-blue-600 dark:text-blue-400 font-medium leading-relaxed mt-2 italic">
-                            * Phí này bạn sẽ nhận được mỗi khi một vé của sự kiện này được người dùng bán lại trên Marketplace.
+                        <p className="text-[10px] text-blue-600 dark:text-blue-400 font-medium leading-relaxed italic">
+                            * BTC nhận {watch('royalty_fee_percent')}% hoa hồng vĩnh viễn trên mỗi giao dịch tại Marketplace.
                         </p>
                     </div>
 
-                    <div className="p-4 bg-blue-600/5 rounded-xl border border-blue-600/10 flex items-start space-x-3">
-                        <Info className="w-4 h-4 text-blue-600 mt-0.5" />
-                        <div className="text-[10px] text-blue-700 dark:text-blue-400 font-medium leading-relaxed">
-                            <b>Phí dịch vụ & Gas (2%):</b> Hệ thống trích 2% hoa hồng từ doanh thu để chi trả phí Gas Blockchain (Mint vé, Vận hành). Khách hàng sẽ trả đúng giá vé bạn niêm yết. 
-                            <br/><span className="text-red-500 mt-1 block">* Lưu ý: Phí này không hoàn lại cho BTC nếu sự kiện bị hủy.</span>
+                    {/* Hiển thị giới hạn giá bán khi allow_resale = true */}
+                    {watch('allow_resale') && (
+                        <div className="space-y-2 animate-in slide-in-from-top-4 duration-300">
+                            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 italic">Giới hạn giá bán lại tối đa (%)</label>
+                            <div className="relative">
+                                <input 
+                                    type="number"
+                                    max={108}
+                                    {...register('resale_price_limit_percent', { 
+                                        required: true,
+                                        max: { value: 108, message: 'Tối đa 108%' }
+                                    })}
+                                    className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-blue-600 transition-all"
+                                />
+                                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">%</span>
+                            </div>
+                            {errors.resale_price_limit_percent && (
+                                <p className="text-[10px] text-red-500 font-bold italic">{errors.resale_price_limit_percent.message}</p>
+                            )}
+                            <p className="text-[10px] text-gray-400 font-medium leading-relaxed italic">
+                                * Luật Smart Contract: Giá bán lại không được vượt quá {watch('resale_price_limit_percent')}% giá gốc để ngăn chặn đầu cơ.
+                            </p>
+                        </div>
+                    )}
+
+                    <div className="p-4 bg-blue-600/5 rounded-xl border border-blue-600/10 space-y-4">
+                        <div className="flex items-center space-x-2 pb-2 border-b border-blue-600/10">
+                            <CheckCircle2 className="w-4 h-4 text-blue-600" />
+                            <h5 className="text-[10px] font-bold text-blue-700 dark:text-blue-400 uppercase tracking-widest">Phân bổ dòng tiền Resale</h5>
+                        </div>
+                        <div className="space-y-2">
+                             <div className="flex justify-between items-center text-[10px]">
+                                <span className="text-gray-500">Người mua trả:</span>
+                                <span className="font-bold dark:text-white">Giá vé + 3% Phí + 10k phí xác thực</span>
+                             </div>
+                             <div className="flex justify-between items-center text-[10px]">
+                                <span className="text-gray-500">Người bán nhận:</span>
+                                <span className="font-bold text-green-600">Giá bán - 3% Bản quyền (BTC)</span>
+                             </div>
+                             <div className="flex justify-between items-center text-[10px]">
+                                <span className="text-gray-500">BTC nhận:</span>
+                                <span className="font-bold text-blue-600">+3% Phí bản quyền (về ví BTC)</span>
+                             </div>
+                             <div className="flex justify-between items-center text-[10px]">
+                                <span className="text-gray-500">Hệ thống nhận:</span>
+                                <span className="font-bold text-purple-600">3% Phí + 10k Phí Blockchain/AI</span>
+                             </div>
                         </div>
                     </div>
                 </div>

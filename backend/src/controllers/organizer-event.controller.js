@@ -1,4 +1,5 @@
 const prisma = require('../config/prisma');
+const sendEmail = require('../utils/sendEmail');
 
 // Utils: Kiểm tra quyền sở hữu sự kiện
 const verifyEventOwnership = async (eventId, userId) => {
@@ -28,11 +29,14 @@ const createEvent = async (req, res) => {
       location_address, latitude, longitude,
       ticket_tiers,
       seating_charts,
-      allow_resale, allow_transfer, allow_refund, royalty_fee_percent, refund_deadline_days,
+      allow_resale, allow_transfer, allow_refund, royalty_fee_percent, resale_price_limit_percent, refund_deadline_days,
       status
     } = req.body;
 
-    const organizer = await prisma.organizer.findUnique({ where: { user_id: userId } });
+    const organizer = await prisma.organizer.findUnique({ 
+      where: { user_id: userId },
+      include: { user: true }
+    });
     if (!organizer) return res.status(403).json({ error: 'Không tìm thấy hồ sơ Ban tổ chức.' });
 
     // Validate ticket tiers
@@ -69,7 +73,8 @@ const createEvent = async (req, res) => {
         allow_resale: allow_resale !== undefined ? allow_resale : true,
         allow_transfer: allow_transfer !== undefined ? allow_transfer : true,
         allow_refund: allow_refund !== undefined ? allow_refund : true,
-        royalty_fee_percent: royalty_fee_percent ? parseFloat(royalty_fee_percent) : 0,
+        royalty_fee_percent: royalty_fee_percent ? parseFloat(royalty_fee_percent) : 3.0,
+        resale_price_limit_percent: resale_price_limit_percent ? parseFloat(resale_price_limit_percent) : 108.0,
         refund_deadline_days: refund_deadline_days ? parseInt(refund_deadline_days) : 0,
         ticket_tiers: {
           create: ticket_tiers.map(tier => ({
@@ -86,6 +91,38 @@ const createEvent = async (req, res) => {
     });
 
     res.status(201).json({ message: 'Tạo sự kiện thành công. Đang chờ Admin phê duyệt.', data: newEvent });
+
+    // Gửi email thông báo cho BTC (Non-blocking)
+    if (status !== 'draft') {
+      const emailContent = `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #eee; border-radius: 10px; overflow: hidden;">
+          <div style="background-color: #2563eb; padding: 30px; text-align: center;">
+            <h1 style="color: white; margin: 0; font-size: 24px; text-transform: uppercase;">Xác nhận tạo sự kiện</h1>
+          </div>
+          <div style="padding: 30px; line-height: 1.6; color: #333;">
+            <p>Chào <strong>${organizer.user.full_name || 'Ban tổ chức'}</strong>,</p>
+            <p>Sự kiện <strong>"${title}"</strong> của bạn đã được gửi thành công lên hệ thống BASTICKET.</p>
+            <div style="background-color: #f8fafc; border-left: 4px solid #2563eb; padding: 20px; margin: 25px 0;">
+              <p style="margin: 0; font-weight: bold; color: #1e293b;">Thông tin phê duyệt:</p>
+              <p style="margin: 10px 0 0 0;">Đội ngũ kiểm duyệt của chúng tôi sẽ xem xét nội dung sự kiện của bạn. Dự kiến sự kiện sẽ được <strong>duyệt và mở bán trong vòng 24 giờ tới</strong>.</p>
+            </div>
+            <p>Trong thời gian chờ đợi, bạn có thể theo dõi trạng thái sự kiện tại trang Dashboard dành cho Ban tổ chức.</p>
+            <div style="text-align: center; margin-top: 35px;">
+              <a href="${process.env.FRONTEND_URL}/organizer/dashboard" style="background-color: #2563eb; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px;">ĐẾN DASHBOARD BTC</a>
+            </div>
+          </div>
+          <div style="background-color: #f1f5f9; padding: 20px; text-align: center; font-size: 12px; color: #64748b;">
+            <p>© 2026 BASTICKET System - Nền tảng bán vé sự kiện thông minh</p>
+          </div>
+        </div>
+      `;
+      
+      sendEmail(
+        organizer.user.email, 
+        `[BASTICKET] Xác nhận nhận yêu cầu tạo sự kiện: ${title}`, 
+        emailContent
+      ).catch(err => console.error('Lỗi khi gửi email xác nhận sự kiện:', err));
+    }
   } catch (error) {
     console.error('Lỗi tạo sự kiện (Chi tiết):', error);
     if (error.code) {
@@ -112,7 +149,7 @@ const updateEvent = async (req, res) => {
       location_address, latitude, longitude,
       ticket_tiers,
       seating_charts,
-      allow_resale, allow_transfer, allow_refund, royalty_fee_percent, refund_deadline_days,
+      allow_resale, allow_transfer, allow_refund, royalty_fee_percent, resale_price_limit_percent, refund_deadline_days,
       status
     } = req.body;
 
@@ -148,6 +185,7 @@ const updateEvent = async (req, res) => {
         allow_transfer: allow_transfer !== undefined ? allow_transfer : undefined,
         allow_refund: allow_refund !== undefined ? allow_refund : undefined,
         royalty_fee_percent: royalty_fee_percent !== undefined ? parseFloat(royalty_fee_percent) : undefined,
+        resale_price_limit_percent: resale_price_limit_percent !== undefined ? parseFloat(resale_price_limit_percent) : undefined,
         refund_deadline_days: refund_deadline_days !== undefined ? parseInt(refund_deadline_days) : undefined,
         // Cập nhật hạng vé: Xóa cũ, tạo mới (Đơn giản nhất cho logic CreateEvent data)
         ticket_tiers: ticket_tiers ? {

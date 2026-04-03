@@ -101,7 +101,8 @@ model Event {
   allow_transfer         Boolean                @default(true)
   allow_refund           Boolean                @default(true)
   price_ceiling          Decimal?
-  royalty_fee_percent    Decimal                @default(5.0)
+  royalty_fee_percent    Decimal                @default(3.0) // Chỉnh sửa mặc định thành 3%
+  resale_price_limit_percent Decimal            @default(108.0) // Thêm giới hạn giá bán lại mặc định 108%
   smart_contract_address String?
   refund_deadline_days   Int?
   description            String?
