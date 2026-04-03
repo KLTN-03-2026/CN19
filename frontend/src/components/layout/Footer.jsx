@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { 
   Shield, 
   Facebook, 
@@ -15,6 +15,13 @@ import { useTranslation } from 'react-i18next';
 
 const Footer = () => {
     const { t } = useTranslation();
+    const navigate = useNavigate();
+    const [email, setEmail] = React.useState('');
+
+    const handleSubscribe = () => {
+        if (!email) return;
+        navigate(`/register?email=${encodeURIComponent(email)}`);
+    };
 
     return (
         <footer className="font-sans bg-white dark:bg-dark-bg border-t border-gray-200 dark:border-dark-border pt-6 pb-6 transition-colors duration-300">
@@ -37,10 +44,15 @@ const Footer = () => {
                         <div className="flex bg-white dark:bg-dark-bg p-1.5 rounded-2xl border border-gray-200 dark:border-dark-border shadow-sm w-full lg:w-[450px] focus-within:border-neon-green focus-within:ring-1 focus-within:ring-neon-green transition-all">
                             <input 
                                 type="email" 
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
                                 placeholder={t('footer.email_placeholder', 'Nhập email của bạn...')}
                                 className="font-medium bg-transparent border-none outline-none text-gray-900 dark:text-white px-4 py-2 text-sm w-full placeholder:text-gray-400 dark:placeholder:text-gray-500"
                             />
-                            <button className="bg-neon-green hover:bg-neon-hover text-white px-6 py-2.5 rounded-xl text-sm font-sans font-bold transition-colors whitespace-nowrap">
+                            <button 
+                                onClick={handleSubscribe}
+                                className="bg-neon-green hover:bg-neon-hover text-white px-6 py-2.5 rounded-xl text-sm font-sans font-bold transition-colors whitespace-nowrap"
+                            >
                                 {t('footer.subscribe_btn', 'Đăng ký')}
                             </button>
                         </div>

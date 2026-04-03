@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import { Info, Eye, EyeOff, User, Phone, ShieldCheck, X, Lock, Calendar } from 'lucide-react';
@@ -11,7 +11,15 @@ import { signInWithPopup } from 'firebase/auth';
 import { Turnstile } from '@marsidev/react-turnstile';
 
 const Register = () => {
-  const { register, handleSubmit, watch, formState: { errors } } = useForm();
+  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm();
+  const [searchParams] = useSearchParams();
+  const emailParam = searchParams.get('email');
+
+  useEffect(() => {
+    if (emailParam) {
+      setValue('email', decodeURIComponent(emailParam));
+    }
+  }, [emailParam, setValue]);
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState(null);

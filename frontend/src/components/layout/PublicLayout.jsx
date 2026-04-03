@@ -74,7 +74,7 @@ const PublicLayout = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-dark-bg bg-grid-pattern transition-colors duration-500 flex flex-col font-sans relative">
+    <div className="min-h-screen mt-8 bg-gray-50 dark:bg-dark-bg bg-grid-pattern transition-colors duration-500 flex flex-col font-sans relative">
       <ScrollToTop />
       
       {/* Cục mây (Aura) số 1: To và bồng bềnh, đi chậm theo chuột (Delay dài 1000ms), kết hợp nhịp thở (animate-pulse) */}
