@@ -11,9 +11,10 @@ import {
   AlertCircle,
   Clock,
   ExternalLink,
-  Search,
-  CheckCircle2,
-  XCircle
+  ArrowUpDown,
+  Filter,
+  ChevronRight,
+  Search
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { format } from 'date-fns';
@@ -26,6 +27,8 @@ const CategoryDetail = () => {
   const [category, setCategory] = useState(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [organizerFilter, setOrganizerFilter] = useState('all');
 
   useEffect(() => {
     fetchCategoryDetail();
@@ -46,9 +49,16 @@ const CategoryDetail = () => {
     }
   };
 
-  const filteredEvents = category?.events?.filter(event => 
-    event.title.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
+  const filteredEvents = category?.events?.filter(event => {
+    const matchesSearch = event.title.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === 'all' ? true : event.status === statusFilter;
+    const matchesOrganizer = organizerFilter === 'all' ? true : event.organizer?.organization_name === organizerFilter;
+    
+    return matchesSearch && matchesStatus && matchesOrganizer;
+  }) || [];
+
+  // Lấy danh sách BTC duy nhất từ các sự kiện trong danh mục này
+  const uniqueOrganizers = [...new Set(category?.events?.map(e => e.organizer?.organization_name).filter(Boolean))];
 
   if (loading) {
     return (
@@ -85,14 +95,14 @@ const CategoryDetail = () => {
               <Tags className="w-4 h-4" />
               <span>Cấu trúc Danh mục</span>
             </div>
-            <h1 className="text-3xl font-black text-gray-900 dark:text-white uppercase tracking-tight">
+            <h1 className="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tight">
               {category.name}
             </h1>
           </div>
         </div>
 
         <div className="flex items-center space-x-3">
-          <span className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest ${
+          <span className={`px-4 py-1.5 rounded-full text-sm font-black ${
             category.is_active 
               ? 'bg-green-500/10 text-green-500 border border-green-500/20' 
               : 'bg-red-500/10 text-red-500 border border-red-500/20'
@@ -111,7 +121,7 @@ const CategoryDetail = () => {
             </div>
             <div>
               <p className="text-sm text-gray-500">Tổng sự kiện</p>
-              <p className="text-2xl font-black text-gray-900 dark:text-white">{category._count?.events || 0}</p>
+              <p className="text-xl font-black text-gray-900 dark:text-white">{category._count?.events || 0}</p>
             </div>
           </div>
         </div>
@@ -123,7 +133,7 @@ const CategoryDetail = () => {
             </div>
             <div>
               <p className="text-sm text-gray-500">Lần cuối cập nhật</p>
-              <p className="text-lg font-bold text-gray-900 dark:text-white">
+              <p className="text-sm font-bold text-gray-900 dark:text-white">
                 {category.updated_at ? format(new Date(category.updated_at), 'dd/MM/yyyy HH:mm', { locale: vi }) : 'Chưa có'}
               </p>
             </div>
@@ -158,15 +168,50 @@ const CategoryDetail = () => {
             </span>
           </h2>
 
-          <div className="relative w-full md:w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input 
-              type="text" 
-              placeholder="Tìm sự kiện trong mục này..." 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl focus:outline-none focus:border-neon-green transition-colors"
-            />
+          <div className="flex flex-col md:flex-row items-center gap-3 w-full md:w-auto">
+            {/* Search Input */}
+            <div className="relative w-full md:w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input 
+                type="text" 
+                placeholder="Tìm sự kiện trong mục này..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 text-sm bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl focus:outline-none focus:border-neon-green transition-colors dark:text-white"
+              />
+            </div>
+
+            {/* Status Filter */}
+            <div className="relative w-full md:w-40">
+              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+              <select 
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-full pl-9 pr-8 py-2 text-xs font-bold bg-gray-50 dark:bg-[#1a1a1e] border border-gray-200 dark:border-white/10 rounded-xl focus:outline-none focus:border-neon-green appearance-none cursor-pointer dark:text-white"
+              >
+                <option value="all">Tất cả trạng thái</option>
+                <option value="active">Đang hoạt động</option>
+                <option value="pending">Chờ duyệt</option>
+                <option value="cancelled">Đã hủy</option>
+              </select>
+              <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 rotate-90 pointer-events-none" />
+            </div>
+
+            {/* Organizer Filter */}
+            <div className="relative w-full md:w-48">
+              <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+              <select 
+                value={organizerFilter}
+                onChange={(e) => setOrganizerFilter(e.target.value)}
+                className="w-full pl-9 pr-8 py-2 text-xs font-bold bg-gray-50 dark:bg-[#1a1a1e] border border-gray-200 dark:border-white/10 rounded-xl focus:outline-none focus:border-neon-green appearance-none cursor-pointer dark:text-white"
+              >
+                <option value="all">Tất cả BTC</option>
+                {uniqueOrganizers.map(org => (
+                  <option key={org} value={org}>{org}</option>
+                ))}
+              </select>
+              <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 rotate-90 pointer-events-none" />
+            </div>
           </div>
         </div>
 
@@ -226,8 +271,9 @@ const CategoryDetail = () => {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <button 
-                        onClick={() => navigate(`/admin/events`)} // Link to main events for filter later? Or detail page
+                        onClick={() => navigate(`/admin/events/${event.id}`)}
                         className="p-2 text-gray-400 hover:text-neon-green hover:bg-neon-green/10 rounded-lg transition-all"
+                        title="Xem chi tiết sự kiện"
                       >
                         <ExternalLink className="w-4 h-4" />
                       </button>
