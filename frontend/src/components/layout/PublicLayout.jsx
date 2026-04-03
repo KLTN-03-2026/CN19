@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
-import { Shield, Moon, Sun, Globe, User, Ticket, LogOut, ChevronDown, LayoutDashboard } from 'lucide-react';
+import { Shield, Moon, Sun, Globe, User, Ticket, LogOut, ChevronDown, LayoutDashboard, Settings } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
@@ -211,6 +211,17 @@ const PublicLayout = () => {
                         <User className="w-4 h-4" />
                         <span>{i18n.language.startsWith('vi') ? 'Hồ sơ của tôi' : 'My Profile'}</span>
                       </Link>
+
+                      {user?.role === 'organizer' && (
+                        <Link
+                          to="/organizer/settings"
+                          onClick={() => setDropdownOpen(false)}
+                          className="flex items-center space-x-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
+                        >
+                          <Settings className="w-4 h-4 text-blue-600" />
+                          <span>{i18n.language.startsWith('vi') ? 'Cài đặt BTC' : 'Organizer Settings'}</span>
+                        </Link>
+                      )}
                       <Link
                         to="/my-tickets"
                         onClick={() => setDropdownOpen(false)}

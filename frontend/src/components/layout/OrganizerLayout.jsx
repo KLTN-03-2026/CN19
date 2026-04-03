@@ -58,7 +58,6 @@ const OrganizerLayout = () => {
     { path: '/organizer/participants', icon: Users, label: 'Danh sách tham gia' },
     { path: '/organizer/products', icon: Package, label: 'Quản lý sản phẩm' },
     { path: '/organizer/blog', icon: FileText, label: 'Blog' },
-    { path: '/organizer/settings', icon: Settings, label: 'Cài đặt' },
   ];
 
   return (
