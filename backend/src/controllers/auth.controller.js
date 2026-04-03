@@ -179,7 +179,7 @@ const login = async (req, res) => {
 // [UC_03_A] Gửi OTP Đăng ký Ban Tổ chức (Hỗ trợ cả User mới lẫn Customer nâng cấp)
 const sendOrganizerOtp = async (req, res) => {
   try {
-    const { phone_number, full_name, password, organization_name, address, existing_user_id, business_license } = req.body;
+    const { phone_number, full_name, password, organization_name, address, existing_user_id, business_license, description, latitude, longitude } = req.body;
     const email = req.body.email?.trim();
 
     // Nếu là Customer đã đăng nhập nâng cấp thì kiểm tra tồn tại qua existing_user_id
@@ -245,7 +245,8 @@ const verifyOrganizerOtp = async (req, res) => {
 
     const { 
       full_name, phone_number, password, organization_name, address, existing_user_id, business_license, 
-      kyc_data // Nhận thêm dữ liệu kyc_data từ frontend
+      description, latitude, longitude, // Nhận thêm trường vị trí và mô tả
+      kyc_data 
     } = record.data;
 
     let userId;
@@ -255,14 +256,28 @@ const verifyOrganizerOtp = async (req, res) => {
       const hasProfile = await prisma.organizer.findUnique({ where: { user_id: existing_user_id } });
       if (hasProfile) return res.status(400).json({ error: 'Tài khoản này đã có hồ sơ Ban Tổ Chức.' });
 
-      // Lưu Organizer Profile ở trạng thái pending với đầy đủ dữ liệu KYC
+      // 1. Cập nhật thông tin vị trí và địa chỉ vào bảng User
+      await prisma.user.update({
+        where: { id: existing_user_id },
+        data: {
+          address: address || null,
+          latitude: latitude ? parseFloat(latitude) : null,
+          longitude: longitude ? parseFloat(longitude) : null
+        }
+      });
+
+      // 2. Lưu Organizer Profile ở trạng thái pending với đầy đủ dữ liệu KYC
       await prisma.organizer.create({
         data: {
           user_id: existing_user_id,
           organization_name: organization_name || '',
           business_license: business_license || null,
+          description: description || null,
+          identity_card: kyc_data?.id_number || null,
           kyc_status: 'pending',
-          // --- Lưu dữ liệu eKYC mới ---
+          is_verified: true, // Ép xác thực luôn cho KLTN
+          kyc_verified_at: new Date(), 
+          // --- Lưu dữ liệu eKYC ---
           id_number: kyc_data?.id_number || null,
           full_name_raw: kyc_data?.full_name || null,
           dob_raw: kyc_data?.dob || null,
@@ -290,6 +305,9 @@ const verifyOrganizerOtp = async (req, res) => {
           full_name: full_name || '',
           phone_number,
           password_hash,
+          address: address || null,
+          latitude: latitude ? parseFloat(latitude) : null,
+          longitude: longitude ? parseFloat(longitude) : null,
           role: 'customer', 
           status: 'active',
           wallet_address: randomWallet.address,
@@ -298,8 +316,12 @@ const verifyOrganizerOtp = async (req, res) => {
             create: {
               organization_name: organization_name || '',
               business_license: business_license || null,
+              description: description || null,
+              identity_card: kyc_data?.id_number || null,
               kyc_status: 'pending',
-              // --- Lưu dữ liệu eKYC mới ---
+              is_verified: true, // Ép xác thực luôn cho KLTN
+              kyc_verified_at: new Date(),
+              // --- Lưu dữ liệu eKYC ---
               id_number: kyc_data?.id_number || null,
               full_name_raw: kyc_data?.full_name || null,
               dob_raw: kyc_data?.dob || null,

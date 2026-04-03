@@ -165,9 +165,12 @@ const RegisterOrganizer = () => {
         full_name: values.organizerName, 
         password: values.password || undefined, 
         organization_name: values.organizerName, 
-        address: values.address, 
-        business_license: kycUrls.license, 
+        address: values.address, // Địa chỉ ngoại trú / nơi ở hiện tại
+        description: values.description, // Mô tả ban tổ chức
+        latitude: latLng?.lat,
+        longitude: latLng?.lng,
         existing_user_id: isCustomerUpgrade ? user?.id : undefined,
+        business_license: kycUrls.license, 
         kyc_data: {
           ...ocrData, 
           front_image_url: kycUrls.front, 
@@ -568,6 +571,7 @@ const RegisterOrganizer = () => {
 
       <AddressMapModal isOpen={isMapModalOpen} onClose={() => setIsMapModalOpen(false)} onConfirm={(data) => {
          setValue('address', data.text, { shouldValidate: true });
+         setLatLng({ lat: data.lat, lng: data.lng }); // Lưu tọa độ vào state
       }} />
     </div>
   );
