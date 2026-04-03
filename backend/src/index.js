@@ -38,6 +38,7 @@ const adminSystemRoutes = require('./routes/admin-system.routes');
 const scannerRoutes = require('./routes/scanner.routes');
 
 // 7. Utilities & Others
+const kycRoutes = require('./routes/kyc.routes');
 const aiRoutes = require('./routes/ai.routes');
 const metadataRoutes = require('./routes/metadata.routes');
 const utilsRoutes = require('./routes/utils.routes');
@@ -81,6 +82,7 @@ app.use('/api/admin', adminSystemRoutes);  // points inside to /config, /fraud-a
 app.use('/api/staff', scannerRoutes);
 
 // Utilities, AI, Web3
+app.use('/api/kyc', kycRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/metadata', metadataRoutes);
 app.use('/api/utils', utilsRoutes);

@@ -50,6 +50,19 @@ model Organizer {
   kyc_verified_at   DateTime?
   business_license  String?
   identity_card     String?
+  
+  // --- New KYC Fields ---
+  id_number         String?
+  full_name_raw     String?
+  dob_raw           String?
+  address_raw       String?
+  front_image_url   String?
+  back_image_url    String?
+  face_image_url    String?
+  facematch_score   Float?
+  liveness_score    Float?
+  kyc_raw_data      Json?
+  
   is_verified       Boolean   @default(false)
   description       String?
   events            Event[]

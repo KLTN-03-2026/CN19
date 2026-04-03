@@ -2,12 +2,18 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
-import { Building2, Briefcase, Mail, Phone, MapPin, UploadCloud, FileText, Lock, ArrowRight, ArrowLeft, X, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { 
+  Building2, Briefcase, Mail, Phone, MapPin, UploadCloud, FileText, 
+  Lock as LockIcon, ArrowRight, ArrowLeft, X, ShieldCheck, CheckCircle2,
+  RefreshCw, Camera
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import AddressMapModal from '../../components/AddressMapModal';
 import { useAuthStore } from '../../store/useAuthStore';
 import { authService } from '../../services/auth.service';
+import WebcamCapture from '../../components/KYC/WebcamCapture';
 import axios from 'axios';
+import api from '../../services/api';
 
 const RegisterOrganizer = () => {
   const { t } = useTranslation();
@@ -30,127 +36,148 @@ const RegisterOrganizer = () => {
   const [isMapModalOpen, setIsMapModalOpen] = useState(false);
   const [latLng, setLatLng] = useState(null);
 
-  // --- State cho Bước 2: Upload ---
-  const [file, setFile] = useState(null);
-  const [kycUrl, setKycUrl] = useState('');
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [isDragActive, setIsDragActive] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
+  // --- State cho eKYC ---
+  const [kycUrls, setKycUrls] = useState({ front: '', back: '', selfie: '', license: '' });
+  const [ocrData, setOcrData] = useState(null);
+  const [biometricResult, setBiometricResult] = useState(null);
+  const [isProcessingAI, setIsProcessingAI] = useState(false);
 
-  // --- State cho Bước 3: OTP ---
+  // --- State cho OTP ---
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [countdown, setCountdown] = useState(59);
   const otpInputs = useRef([]);
 
-  // Hàm chuyển bước an toàn (Validate trước khi qua Bước 2)
   const handleNextStep = async () => {
     if (step === 1) {
-      // Nếu là Customer upgrade thì chỉ cần validate organizerName
-      const fieldsToValidate = isCustomerUpgrade 
-        ? ['organizerName', 'address']
-        : ['organizerName', 'email', 'password', 'phone', 'address'];
-      const isValid = await trigger(fieldsToValidate);
+      const isValid = await trigger(isCustomerUpgrade ? ['organizerName', 'address'] : ['organizerName', 'email', 'password', 'phone', 'address']);
       if (isValid) setStep(2);
       else toast.error(t('org.error_fill'));
+    } else if (step === 2) {
+      if (!kycUrls.front || !kycUrls.back || !ocrData || !kycUrls.license) {
+        toast.error("Vui lòng tải lên đủ CCCD (đã bóc tách) và Giấy phép kinh doanh.");
+        return;
+      }
+      setStep(3);
+    } else if (step === 3) {
+      if (!kycUrls.selfie || !biometricResult) {
+        toast.error("Vui lòng hoàn tất xác thực khuôn mặt.");
+        return;
+      }
+      handleSendRequest();
     }
   };
 
-  // --- Xử lý Drag & Drop (Bước 2) ---
-  const handleDrag = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") setIsDragActive(true);
-    else if (e.type === "dragleave") setIsDragActive(false);
+  // Dùng ref để tránh vòng lặp vô hạn khi gọi API lỗi
+  const lastProcessedUrls = useRef("");
+
+  // Tự động kích hoạt OCR khi đã có đủ 2 mặt ảnh
+  useEffect(() => {
+    const currentUrls = `${kycUrls.front}-${kycUrls.back}`;
+    // Chỉ kích hoạt nếu: có đủ 2 mặt, chưa có ocrData, không đang xử lý, và chưa từng gọi cho cặp URL này
+    if (kycUrls.front && kycUrls.back && !ocrData && !isProcessingAI && lastProcessedUrls.current !== currentUrls) {
+      console.log('--- useEffect trigger OCR ---', currentUrls);
+      lastProcessedUrls.current = currentUrls;
+      triggerOCR(kycUrls.front, kycUrls.back);
+    }
+  }, [kycUrls.front, kycUrls.back, ocrData, isProcessingAI]);
+
+  const triggerOCR = async (front, back) => {
+    if (!front || !back) {
+      console.warn("Dữ liệu ảnh không đủ để bóc tách OCR.");
+      return;
+    }
+    const toastId = toast.loading("Đang bóc tách dữ liệu AI...");
+    try {
+      console.log('--- Bắt đầu gọi API OCR ---');
+      console.log('Front URL:', front);
+      console.log('Back URL:', back);
+      setIsProcessingAI(true);
+      const res = await api.post('/kyc/ocr', { front_url: front, back_url: back });
+      console.log('Kết quả OCR thành công:', res.data);
+      setOcrData(res.data.data);
+      toast.success("Xác thực thông tin thẻ thành công!", { id: toastId });
+    } catch (error) {
+      console.error('Lỗi OCR chi tiết:', error.response?.data || error.message);
+      const errMsg = error.response?.data?.error || "Không thể bóc tách thông tin thẻ.";
+      toast.error(errMsg, { id: toastId });
+      // Đảm bảo ocrData vẫn null để nút TIẾP TỤC bị mờ
+      setOcrData(null);
+    } finally {
+      setIsProcessingAI(false);
+    }
   };
 
-  const processFile = (selectedFile) => {
+  const uploadToCloudinary = async (side, selectedFile) => {
     if (!selectedFile) return;
-    const validTypes = ['image/jpeg', 'image/png', 'application/pdf'];
-    if (!validTypes.includes(selectedFile.type)) {
-      toast.error(t('org.error_file_type'));
-      return;
-    }
-    if (selectedFile.size > 5 * 1024 * 1024) {
-      toast.error(t('org.error_file_size'));
-      return;
-    }
-    
-    setFile(selectedFile);
-    setUploadProgress(0);
-    uploadToCloudinary(selectedFile);
-  };
-
-  const uploadToCloudinary = async (selectedFile) => {
     const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
     const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
-
-    if (!cloudName || cloudName === 'your_cloud_name') {
-      toast.error("Cloudinary chưa được cấu hình.");
-      return;
-    }
-
-    setIsUploading(true);
+    setIsLoading(true);
     const formData = new FormData();
     formData.append('file', selectedFile);
     formData.append('upload_preset', uploadPreset);
-
     try {
-      const res = await axios.post(
-        `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`, // Dùng 'auto' để hỗ trợ cả PDF
-        formData,
-        {
-          onUploadProgress: (progressEvent) => {
-            const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-            setUploadProgress(progress);
-          }
-        }
-      );
-      setKycUrl(res.data.secure_url);
-      toast.success(t('org.upload_success') || "Tải tài liệu lên thành công!");
+      const res = await axios.post(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, formData);
+      const url = res.data.secure_url;
+      setKycUrls(prev => ({ ...prev, [side]: url }));
     } catch (error) {
-      toast.error("Lỗi khi tải tài liệu lên Cloudinary.");
-      console.error(error);
+      toast.error("Lỗi khi tải ảnh.");
     } finally {
-      setIsUploading(false);
+      setIsLoading(false);
     }
   };
 
-  const handleDrop = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragActive(false);
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      processFile(e.dataTransfer.files[0]);
+  const handleSelfieCapture = async (dataUri) => {
+    if (!dataUri) return;
+    setIsLoading(true);
+    const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+    const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+    const formData = new FormData();
+    formData.append('file', dataUri);
+    formData.append('upload_preset', uploadPreset);
+    try {
+      const res = await axios.post(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, formData);
+      const selfieUrl = res.data.secure_url;
+      setKycUrls(prev => ({ ...prev, selfie: selfieUrl }));
+      setIsProcessingAI(true);
+      const bioRes = await api.post('/kyc/verify-biometric', { 
+        id_card_face_url: kycUrls.front, 
+        captured_face_url: selfieUrl 
+      });
+      setBiometricResult(bioRes.data.data);
+      toast.success("Xác thực sinh trắc học thành công!");
+    } catch (error) {
+      console.error('Lỗi Biometric:', error.response?.data || error.message);
+      const errMsg = error.response?.data?.error || "Lỗi xác thực sinh trắc học.";
+      toast.error(errMsg);
+    } finally {
+      setIsLoading(false);
+      setIsProcessingAI(false);
     }
   };
 
-  const handleFileChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      processFile(e.target.files[0]);
-    }
-  };
-
-  // --- Xử lý Submit Step 2 -> Gửi OTP Step 3 ---
   const handleSendRequest = async () => {
-    if (!file) {
-      toast.error(t('org.error_missing_file'));
-      return;
-    }
     try {
       setIsLoading(true);
       const values = watch();
       await authService.sendOrganizerOtp({
-        email: values.email,
-        phone_number: values.phone,
-        full_name: values.organizerName,
-        password: values.password || undefined,
-        organization_name: values.organizerName,
-        address: values.address,
-        business_license: kycUrl, // Gửi link Cloudinary về backend
-        existing_user_id: isCustomerUpgrade ? user?.id : undefined
+        email: values.email, 
+        phone_number: values.phone, 
+        full_name: values.organizerName, 
+        password: values.password || undefined, 
+        organization_name: values.organizerName, 
+        address: values.address, 
+        business_license: kycUrls.license, 
+        existing_user_id: isCustomerUpgrade ? user?.id : undefined,
+        kyc_data: {
+          ...ocrData, 
+          front_image_url: kycUrls.front, 
+          back_image_url: kycUrls.back, 
+          face_image_url: kycUrls.selfie, 
+          facematch_score: biometricResult?.similarity, 
+          liveness_score: biometricResult?.is_live ? 100 : 0
+        }
       });
-      toast.success(t('org.otp_sent') || 'Đã gửi OTP đến email!');
-      setStep(3);
+      setStep(4);
       setCountdown(59);
     } catch (err) {
       toast.error(err.response?.data?.error || 'Lỗi gửi OTP.');
@@ -159,20 +186,9 @@ const RegisterOrganizer = () => {
     }
   };
 
-  // --- Xử lý Gửi lại OTP (Gọi lại từ hàm gốc) ---
-  const handleResendOtp = async () => {
-    // Chỉ clear ô OTP cũ
-    setOtp(['', '', '', '', '', '']);
-    // Focus lại ô nhập đầu tiên
-    if (otpInputs.current[0]) otpInputs.current[0].focus();
-    // Gọi lại flow gửi OTP
-    await handleSendRequest();
-  };
-
-  // --- Xử lý OTP (Bước 3) ---
   useEffect(() => {
     let timer;
-    if (step === 3 && countdown > 0) {
+    if (step === 4 && countdown > 0) {
       timer = setInterval(() => setCountdown(prev => prev - 1), 1000);
     }
     return () => clearInterval(timer);
@@ -183,8 +199,6 @@ const RegisterOrganizer = () => {
     const newOtp = [...otp];
     newOtp[index] = value;
     setOtp(newOtp);
-
-    // Tự nhảy focus sang ô tiếp theo
     if (value !== '' && index < 5) {
       otpInputs.current[index + 1].focus();
     }
@@ -198,15 +212,11 @@ const RegisterOrganizer = () => {
 
   const verifyOTPAndSubmit = async () => {
     const otpCode = otp.join('');
-    if (otpCode.length < 6) {
-      toast.error(t('org.error_otp_length'));
-      return;
-    }
+    if (otpCode.length < 6) return;
     try {
       setIsLoading(true);
-      const emailVal = watch('email');
-      await authService.verifyOrganizerOtp({ email: emailVal, otp: otpCode });
-      toast.success(t('org.success_submit') || 'Hồ sơ đã gửi thành công! Vui lòng chờ Admin duyệt.');
+      await authService.verifyOrganizerOtp({ email: watch('email'), otp: otpCode });
+      toast.success(t('org.success_submit') || 'Đăng ký thành công!');
       navigate('/');
     } catch (err) {
       toast.error(err.response?.data?.error || 'Xác thực OTP thất bại.');
@@ -215,9 +225,6 @@ const RegisterOrganizer = () => {
     }
   };
 
-  // Lấy ra giá trị để xem file tải lên là Image hay PDF
-  const previewUrl = file && file.type.startsWith('image/') ? URL.createObjectURL(file) : null;
-
   if (user?.organizer_profile?.kyc_status === 'pending') {
     return (
       <div className="min-h-[85vh] flex items-center justify-center px-4 py-12 relative z-10">
@@ -225,19 +232,10 @@ const RegisterOrganizer = () => {
           <div className="w-20 h-20 bg-yellow-500/10 rounded-full flex items-center justify-center">
             <ShieldCheck className="w-12 h-12 text-yellow-500 animate-pulse" />
           </div>
-          <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
-            {t('org.pending_title') || 'Hồ sơ đang chờ duyệt'}
-          </h2>
-          <p className="text-gray-500 dark:text-gray-400 leading-relaxed">
-            {t('org.pending_desc') || 'Hệ thống đã nhận được hồ sơ của bạn. Ban quản trị BASTICKET đang tiến hành kiểm tra thông tin và sẽ phản hồi trong vòng 24h làm việc.'}
-          </p>
+          <h2 className="text-3xl font-bold text-gray-900 dark:text-white">{t('org.pending_title')}</h2>
+          <p className="text-gray-500 dark:text-gray-400 leading-relaxed">{t('org.pending_desc')}</p>
           <div className="w-full h-px bg-gray-100 dark:bg-dark-border my-4" />
-          <button 
-            onClick={() => navigate('/')}
-            className="px-8 py-3 bg-gray-100 hover:bg-gray-200 dark:bg-white/5 dark:hover:bg-white/10 text-gray-900 dark:text-white rounded-xl font-bold transition-all"
-          >
-            Quay lại Trang chủ
-          </button>
+          <button onClick={() => navigate('/')} className="px-8 py-3 bg-gray-100 hover:bg-gray-200 dark:bg-white/5 dark:hover:bg-white/10 text-gray-900 dark:text-white rounded-xl font-bold transition-all">Quay lại Trang chủ</button>
         </div>
       </div>
     );
@@ -245,24 +243,17 @@ const RegisterOrganizer = () => {
 
   return (
     <div className="min-h-[85vh] flex items-center justify-center px-4 py-12 relative z-10">
-      
-      {/* Wrapper 2 cột */}
       <div className="w-full max-w-[1100px] min-h-[600px] bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-2xl shadow-2xl relative overflow-hidden flex flex-col md:flex-row transition-colors z-20">
         
-        {/* CỘT TRÁI: Hình ảnh & Lợi ích */}
+        {/* CỘT TRÁI - COPY Y NGUYÊN CLASS */}
         <div className="hidden md:flex md:w-[45%] bg-gradient-to-br from-gray-900 to-black text-white p-12 flex-col justify-between relative overflow-hidden border-r border-dark-border">
-          {/* Lưới nền trang trí */}
           <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
           <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-neon-green rounded-full mix-blend-screen filter blur-[80px] opacity-40"></div>
           <div className="absolute bottom-1/4 right-1/4 w-32 h-32 bg-blue-500 rounded-full mix-blend-screen filter blur-[80px] opacity-40"></div>
-
           <div className="relative z-10">
             <Building2 className="w-14 h-14 text-neon-green mb-6" />
             <h2 className="text-3xl font-black mb-4 leading-snug">{t('org.partner_with')}<br/><span className="text-neon-green">BASTICKET</span></h2>
-            <p className="text-gray-400 mb-8 leading-relaxed">
-              {t('org.desc')}
-            </p>
-            
+            <p className="text-gray-400 mb-8 leading-relaxed font-normal">{t('org.desc')}</p>
             <div className="space-y-4">
               <div className="flex items-center space-x-3 text-gray-300">
                 <ShieldCheck className="w-5 h-5 text-neon-green" />
@@ -278,48 +269,35 @@ const RegisterOrganizer = () => {
               </div>
             </div>
           </div>
-          
-          <div className="relative z-10 text-xs text-gray-500">
-            {t('org.footer')}
-          </div>
+          <div className="relative z-10 text-xs text-gray-500">{t('org.footer')}</div>
         </div>
 
-        {/* CỘT PHẢI: Form Đăng Ký */}
+        {/* CỘT PHẢI - COPY Y NGUYÊN CLASS, KHÔNG THÊM BẤT CỨ GÌ */}
         <div className="w-full md:w-[55%] p-8 md:p-12 relative flex flex-col justify-center">
-          
-          {/* Thanh Tiến Trình */}
           <div className="mb-8">
             <div className="flex justify-between items-center mb-2">
               <span className={`text-xs font-bold uppercase tracking-wider ${step >= 1 ? 'text-neon-green' : 'text-gray-400'}`}>{t('org.step1')}</span>
               <span className={`text-xs font-bold uppercase tracking-wider ${step >= 2 ? 'text-neon-green' : 'text-gray-400'}`}>{t('org.step2')}</span>
             </div>
             <div className="h-1.5 w-full bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-neon-green transition-all duration-500 ease-out" 
-                style={{ width: step === 1 ? '50%' : '100%' }}
-              ></div>
+              <div className="h-full bg-neon-green transition-all duration-500 ease-out" style={{ width: step === 1 ? '33.3%' : step === 2 ? '66.6%' : '100%' }}></div>
             </div>
           </div>
 
           <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
-            {step === 1 ? t('org.setup_acc') : t('org.upload_kyc')}
+            {step === 1 ? t('org.setup_acc') : step === 2 ? 'Tải lên CCCD' : step === 3 ? 'Xác thực sinh trắc' : 'Xác thực OTP'}
           </h3>
 
           <form className="flex-1 flex flex-col justify-between" onSubmit={(e) => e.preventDefault()}>
-            
-            {/* --- BƯỚC 1: THÔNG TIN TÀI KHOẢN --- */}
             {step === 1 && (
               <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
-                
                 <div className="relative">
                   <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wide">{t('org.name_label')}</label>
                   <input type="text" {...register("organizerName", { required: true })}
                     className={`w-full pl-4 pr-10 py-3 bg-white border ${errors.organizerName ? 'border-red-500' : 'border-gray-300'} text-gray-900 placeholder-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-neon-green transition-colors`}
                     placeholder={t('org.name_placeholder')}
                   />
-                  <div className="absolute top-[32px] right-0 pr-3 flex items-center pointer-events-none text-gray-400">
-                    <Briefcase className="w-5 h-5" />
-                  </div>
+                  <div className="absolute top-[32px] right-0 pr-3 flex items-center pointer-events-none text-gray-400"><Briefcase className="w-5 h-5" /></div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -330,32 +308,21 @@ const RegisterOrganizer = () => {
                     </label>
                     <input type="email" {...register("email", { required: !isCustomerUpgrade })}
                       readOnly={isCustomerUpgrade}
-                      className={`w-full pl-4 pr-10 py-3 bg-white border border-gray-300 text-gray-900 placeholder-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-neon-green ${
-                        isCustomerUpgrade ? 'opacity-60 cursor-not-allowed' : ''
-                      }`}
+                      className={`w-full pl-4 pr-10 py-3 bg-white border border-gray-300 text-gray-900 placeholder-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-neon-green ${isCustomerUpgrade ? 'opacity-60 cursor-not-allowed' : ''}`}
                     />
                     <div className="absolute top-[32px] right-0 pr-3 flex items-center text-gray-400"><Mail className="w-5 h-5" /></div>
                   </div>
-                  
-                  {/* Mật khẩu: hiển thị che •••••• nếu là customer nâng cấp, cho nhập nếu là user mới */}
                   <div className="relative">
                     <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase">
                       {t('auth.pass')} (*)
                       {isCustomerUpgrade && <span className="ml-2 text-[10px] bg-neon-green/10 text-neon-green px-1.5 py-0.5 rounded-full normal-case font-bold">Từ tài khoản</span>}
                     </label>
-                    <input 
-                      type="password"
-                      {...(isCustomerUpgrade 
-                        ? {} // Không đăng ký ràng buộc nếu customer upgrade
-                        : register("password", { required: true, minLength: 6 })
-                      )}
+                    <input type="password" {...(isCustomerUpgrade ? {} : register("password", { required: true, minLength: 6 }))}
                       readOnly={isCustomerUpgrade}
                       defaultValue={isCustomerUpgrade ? '99999999' : undefined}
-                      className={`w-full pl-4 pr-10 py-3 bg-white border border-gray-300 text-gray-900 placeholder-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-neon-green ${
-                        isCustomerUpgrade ? 'opacity-60 cursor-not-allowed' : ''
-                      }`}
+                      className={`w-full pl-4 pr-10 py-3 bg-white border border-gray-300 text-gray-900 placeholder-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-neon-green ${isCustomerUpgrade ? 'opacity-60 cursor-not-allowed' : ''}`}
                     />
-                    <div className="absolute top-[32px] right-0 pr-3 flex items-center text-gray-400"><Lock className="w-5 h-5" /></div>
+                    <div className="absolute top-[32px] right-0 pr-3 flex items-center text-gray-400"><LockIcon className="w-5 h-5" /></div>
                   </div>
                 </div>
 
@@ -367,10 +334,7 @@ const RegisterOrganizer = () => {
                     </label>
                     <input type="text" {...register("phone", { required: true })}
                       readOnly={isCustomerUpgrade && !!user?.phone_number}
-                      placeholder={isCustomerUpgrade && !user?.phone_number ? 'Vui lòng bổ sung SĐT' : ''}
-                      className={`w-full pl-4 pr-10 py-3 bg-white border border-gray-300 text-gray-900 placeholder-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-neon-green ${
-                        isCustomerUpgrade && user?.phone_number ? 'opacity-60 cursor-not-allowed' : ''
-                      }`}
+                      className={`w-full pl-4 pr-10 py-3 bg-white border border-gray-300 text-gray-900 placeholder-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-neon-green ${isCustomerUpgrade && user?.phone_number ? 'opacity-60 cursor-not-allowed' : ''}`}
                     />
                     <div className="absolute top-[32px] right-0 pr-3 flex items-center text-gray-400"><Phone className="w-5 h-5" /></div>
                   </div>
@@ -402,156 +366,209 @@ const RegisterOrganizer = () => {
               </div>
             )}
 
-            {/* --- BƯỚC 2: TẢI TÀI LIỆU --- */}
             {step === 2 && (
-              <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300 flex flex-col h-full">
+              <div className="space-y-4 animate-in fade-in duration-300 flex flex-col h-full overflow-y-auto pr-1 custom-scrollbar">
                 
-                <div className="flex-1">
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                    {t('org.upload_desc')}
-                  </p>
-                  
-                  {/* Khu vực Drag & Drop */}
-                  <div 
-                    onClick={() => document.getElementById('file-upload').click()}
-                    onDragEnter={handleDrag} onDragLeave={handleDrag} onDragOver={handleDrag} onDrop={handleDrop}
-                    className={`relative w-full h-[220px] rounded-2xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all ${
-                      isDragActive 
-                        ? 'border-neon-green bg-green-50/5 dark:bg-neon-green/10' 
-                        : 'border-gray-300 dark:border-dark-border hover:border-neon-green hover:bg-gray-50 dark:hover:bg-dark-bg'
-                    }`}
-                  >
-                    <input id="file-upload" type="file" className="hidden" accept=".jpg,.png,.pdf" onChange={handleFileChange} />
-                    
-                    {!file ? (
-                      <>
-                        <UploadCloud className={`w-12 h-12 mb-3 ${isDragActive ? 'text-neon-green' : 'text-gray-400'}`} />
-                        <p className="text-gray-700 dark:text-white font-semibold">{t('org.drag_drop')}</p>
-                        <p className="text-gray-400 text-xs mt-1">{t('org.or_click')}</p>
-                        <div className="mt-4 px-3 py-1 bg-gray-100 dark:bg-[#111] rounded-lg text-xs text-gray-500 font-medium">{t('org.supported_files')}</div>
-                      </>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center w-full relative group">
-                        {previewUrl ? (
-                          <img src={previewUrl} alt="Preview" className="h-32 object-contain rounded-lg shadow-md mb-2" />
-                        ) : (
-                          <FileText className="w-16 h-16 text-neon-green mb-2" />
-                        )}
-                        <p className="text-sm font-medium text-gray-900 dark:text-white max-w-[80%] truncate">{file.name}</p>
-                        
-                        {/* Thanh Upload Progress (Chỉ hiện khi progress < 100) */}
-                        {uploadProgress < 100 && (
-                          <div className="w-[80%] h-1.5 bg-gray-200 mt-3 rounded-full overflow-hidden">
-                            <div className="h-full bg-neon-green transition-all" style={{ width: `${uploadProgress}%` }}></div>
-                          </div>
-                        )}
-                        {uploadProgress === 100 && (
-                          <CheckCircle2 className="w-5 h-5 text-neon-green absolute top-2 right-2" />
+                {/* 1. Phần CCCD (eKYC) */}
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-500 mb-2 uppercase tracking-widest">Xác thực ID (CCCD/CMND)</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    {['front', 'back'].map((side) => (
+                      <div key={side} className="relative group">
+                        <div onClick={() => !kycUrls[side] && document.getElementById(`file-${side}`).click()}
+                          className={`relative w-full h-[140px] rounded-2xl border-2 border-dashed flex flex-col items-center justify-center transition-all ${
+                            kycUrls[side] 
+                              ? 'border-neon-green bg-green-50/5' 
+                              : 'border-gray-300 hover:border-neon-green cursor-pointer'
+                          }`}
+                        >
+                          <input id={`file-${side}`} type="file" className="hidden" accept="image/*" onChange={(e) => uploadToCloudinary(side, e.target.files[0])} />
+                          {kycUrls[side] ? (
+                            <img src={kycUrls[side]} alt={side} className="w-full h-full object-cover rounded-2xl shadow-sm" />
+                          ) : (
+                            <><UploadCloud className="w-8 h-8 mb-2 text-gray-400" /><p className="text-[10px] font-bold text-gray-400 uppercase">Mặt {side === 'front' ? 'trước' : 'sau'}</p></>
+                          )}
+                        </div>
+                        {kycUrls[side] && (
+                          <button 
+                            type="button"
+                            onClick={() => removeImage(side)}
+                            className="absolute -top-2 -right-2 w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform z-30"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
                         )}
                       </div>
-                    )}
+                    ))}
                   </div>
                 </div>
 
-                <div className="flex space-x-3 mt-auto">
-                  <button type="button" onClick={() => setStep(1)}
-                    className="px-5 py-4 border border-gray-300 dark:border-dark-border text-gray-700 dark:text-white rounded-xl hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors"
+                {/* 2. Phần Giấy phép kinh doanh (License) */}
+                <div className="relative group">
+                  <label className="block text-[10px] font-bold text-gray-500 mb-2 uppercase tracking-widest">Giấy phép kinh doanh / Pháp lý</label>
+                  <div onClick={() => !kycUrls.license && document.getElementById('file-license').click()}
+                    className={`relative w-full h-[120px] rounded-2xl border-2 border-dashed flex flex-col items-center justify-center transition-all ${
+                      kycUrls.license 
+                        ? 'border-neon-green bg-green-50/5' 
+                        : 'border-gray-300 hover:border-neon-green cursor-pointer'
+                    }`}
                   >
-                    <ArrowLeft className="w-5 h-5" />
-                  </button>
-                  <button type="button" onClick={handleSendRequest}
-                    disabled={isUploading || isLoading || !kycUrl}
-                    className="flex-1 py-4 bg-neon-green hover:bg-neon-hover text-black font-bold rounded-xl shadow-[0_0_15px_rgba(82,196,45,0.4)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isUploading ? t('org.uploading') || 'Đang tải lên...' : t('org.submit_btn')}
-                  </button>
+                    <input id="file-license" type="file" className="hidden" accept="image/*,.pdf" onChange={(e) => uploadToCloudinary('license', e.target.files[0])} />
+                    {kycUrls.license ? (
+                      <div className="flex items-center space-x-3 p-4">
+                        <FileText className="w-10 h-10 text-neon-green" />
+                        <span className="text-xs font-bold text-gray-700 dark:text-white truncate max-w-[200px]">Đã tải lên giấy tờ</span>
+                      </div>
+                    ) : (
+                      <><UploadCloud className="w-8 h-8 mb-2 text-gray-400" /><p className="text-[10px] font-bold text-gray-400 uppercase">Tải lên Giấy phép (.png, .jpg, .pdf)</p></>
+                    )}
+                  </div>
+                  {kycUrls.license && (
+                    <button 
+                      type="button"
+                      onClick={() => removeImage('license')}
+                      className="absolute top-[28px] -right-2 w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform z-30"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
 
+                {/* Trạng thái AI */}
+                {isProcessingAI ? (
+                  <div className="flex items-center justify-center space-x-2 p-3 bg-neon-green/5 border border-dashed border-neon-green/30 rounded-xl animate-pulse">
+                    <RefreshCw className="w-4 h-4 animate-spin text-neon-green" />
+                    <span className="text-[10px] font-bold text-neon-green uppercase tracking-wider">Đang bóc tách AI...</span>
+                  </div>
+                ) : (
+                  !ocrData && kycUrls.front && kycUrls.back && (
+                    <div className="flex flex-col items-center space-y-1">
+                       <button type="button" onClick={() => { lastProcessedUrls.current = ""; triggerOCR(kycUrls.front, kycUrls.back); }}
+                        className="text-[10px] font-black text-red-500 uppercase hover:underline"
+                       >
+                         Thử lại bóc tách
+                       </button>
+                    </div>
+                  )
+                )}
+
+                {ocrData && (
+                  <div className="px-5 py-4 bg-gray-50 dark:bg-black/20 border border-gray-100 dark:border-dark-border rounded-2xl space-y-3 shadow-sm">
+                    <div className="flex items-center justify-between border-b border-gray-100 dark:border-dark-border pb-2">
+                       <p className="text-[10px] font-black text-neon-green uppercase tracking-widest">THÔNG TIN TRÍCH XUẤT</p>
+                       <span className="text-[9px] bg-neon-green/10 text-neon-green px-2 py-0.5 rounded-full font-bold">XÁC MINH AI</span>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-y-3 gap-x-4">
+                      <div className="col-span-2">
+                        <p className="text-[9px] text-gray-400 uppercase font-bold mb-0.5">Họ và Tên</p>
+                        <p className="text-sm font-bold text-gray-900 dark:text-white uppercase leading-tight">{ocrData.full_name}</p>
+                      </div>
+                      
+                      <div>
+                        <p className="text-[9px] text-gray-400 uppercase font-bold mb-0.5">Số CCCD</p>
+                        <p className="text-sm font-mono font-bold text-gray-900 dark:text-white">{ocrData.id_number}</p>
+                      </div>
+
+                      <div>
+                        <p className="text-[9px] text-gray-400 uppercase font-bold mb-0.5">Ngày sinh</p>
+                        <p className="text-sm font-bold text-gray-900 dark:text-white">{ocrData.dob}</p>
+                      </div>
+
+                      <div>
+                        <p className="text-[9px] text-gray-400 uppercase font-bold mb-0.5">Giới tính</p>
+                        <p className="text-sm font-bold text-gray-900 dark:text-white uppercase">{ocrData.sex || 'N/A'}</p>
+                      </div>
+
+                      <div>
+                        <p className="text-[9px] text-gray-400 uppercase font-bold mb-0.5">Quốc tịch</p>
+                        <p className="text-sm font-bold text-gray-900 dark:text-white uppercase">{ocrData.nationality || 'VIỆT NAM'}</p>
+                      </div>
+
+                      <div className="col-span-2">
+                        <p className="text-[9px] text-gray-400 uppercase font-bold mb-0.5">Quê quán</p>
+                        <p className="text-[11px] font-medium text-gray-600 dark:text-gray-300 leading-normal">{ocrData.home || 'N/A'}</p>
+                      </div>
+
+                      <div className="col-span-2">
+                        <p className="text-[9px] text-gray-400 uppercase font-bold mb-0.5">Địa chỉ thường trú</p>
+                        <p className="text-[11px] font-medium text-gray-600 dark:text-gray-300 leading-normal">{ocrData.address}</p>
+                      </div>
+
+                      <div>
+                        <p className="text-[9px] text-gray-400 uppercase font-bold mb-0.5">Ngày hết hạn</p>
+                        <p className="text-sm font-bold text-gray-900 dark:text-white">{ocrData.doe || 'N/A'}</p>
+                      </div>
+
+                      <div>
+                        <p className="text-[9px] text-gray-400 uppercase font-bold mb-0.5">Ngày cấp</p>
+                        <p className="text-sm font-bold text-gray-900 dark:text-white">{ocrData.issue_date || 'N/A'}</p>
+                      </div>
+
+                      <div className="col-span-2">
+                        <p className="text-[9px] text-gray-400 uppercase font-bold mb-0.5">Nơi cấp</p>
+                        <p className="text-[11px] font-medium text-gray-600 dark:text-gray-300 leading-normal">{ocrData.issue_loc || 'N/A'}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex space-x-3 mt-auto pt-2">
+                  <button type="button" onClick={() => setStep(1)} className="px-5 py-4 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors">
+                    <ArrowLeft className="w-5 h-5" />
+                  </button>
+                  <button type="button" onClick={handleNextStep} disabled={!ocrData || !kycUrls.license || isProcessingAI || isLoading} 
+                    className="flex-1 py-4 bg-neon-green text-black font-bold rounded-xl disabled:opacity-50 tracking-wider uppercase flex items-center justify-center space-x-2 shadow-[0_0_15px_rgba(82,196,45,0.4)] transition-all"
+                  >
+                    TIẾP TỤC
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {step === 3 && (
+              <div className="space-y-6 animate-in fade-in duration-300 flex flex-col items-center">
+                <WebcamCapture onCapture={handleSelfieCapture} />
+                {biometricResult && (
+                  <div className={`w-full p-4 rounded-2xl border-2 flex justify-between items-center ${biometricResult.similarity >= 80 ? 'border-neon-green bg-green-50/5' : 'border-red-500 bg-red-50'}`}>
+                    <span className="text-xs font-bold text-gray-500 uppercase">Khớp: {biometricResult.similarity.toFixed(2)}%</span>
+                    <ShieldCheck className={biometricResult.similarity >= 80 ? 'text-neon-green' : 'text-red-500'} />
+                  </div>
+                )}
+                <div className="flex space-x-3 w-full mt-auto">
+                  <button type="button" onClick={() => setStep(2)} className="px-5 py-4 border border-gray-300 dark:border-dark-border text-gray-700 dark:text-white rounded-xl hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors"><ArrowLeft className="w-5 h-5" /></button>
+                  <button type="button" onClick={handleNextStep} disabled={!biometricResult || biometricResult.similarity < 80 || isLoading} className="flex-1 py-4 bg-neon-green hover:bg-neon-hover text-black font-bold rounded-xl shadow-[0_0_15px_rgba(82,196,45,0.4)] transition-all">GỬI OTP</button>
+                </div>
               </div>
             )}
           </form>
         </div>
-
       </div>
 
-      {/* --- BƯỚC 3: MODAL OTP (Phủ mờ toàn màn hình) --- */}
-      {step === 3 && (
+      {step === 4 && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-md transition-opacity"></div>
-          
           <div className="relative bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-2xl p-8 max-w-[420px] w-full shadow-2xl animate-in fade-in zoom-in-95 duration-300 flex flex-col items-center">
-            
-            <button onClick={() => setStep(2)} className="absolute top-4 right-4 text-gray-400 hover:text-white"><X className="w-5 h-5" /></button>
-            
+            <button onClick={() => setStep(3)} className="absolute top-4 right-4 text-gray-400 hover:text-white"><X className="w-5 h-5" /></button>
             <ShieldCheck className="w-16 h-16 text-neon-green mb-4" />
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{t('org.otp_title')}</h2>
-            <p className="text-gray-500 dark:text-gray-400 text-sm text-center mb-6">
-              {t('org.otp_desc')}
-            </p>
-
-            {/* OTP Inputs */}
+            <p className="text-gray-500 dark:text-gray-400 text-sm text-center mb-6">{t('org.otp_desc')}</p>
             <div className="flex justify-center space-x-2 sm:space-x-3 mb-6">
               {otp.map((digit, i) => (
-                <input
-                  key={i}
-                  type="text"
-                  maxLength="1"
-                  value={digit}
-                  ref={(el) => otpInputs.current[i] = el}
-                  onChange={(e) => handleOtpChange(i, e.target.value)}
-                  onKeyDown={(e) => handleOtpKeyDown(i, e)}
-                  className="w-12 h-14 bg-white border border-gray-300 text-gray-900 text-center text-xl font-black rounded-lg focus:outline-none focus:ring-2 focus:ring-neon-green focus:shadow-[0_0_10px_rgba(82,196,45,0.3)] transition-all"
-                />
+                <input key={i} type="text" maxLength="1" value={digit} ref={(el) => otpInputs.current[i] = el} onChange={(e) => handleOtpChange(i, e.target.value)} onKeyDown={(e) => handleOtpKeyDown(i, e)} className="w-12 h-14 bg-white border border-gray-300 text-gray-900 text-center text-xl font-black rounded-lg focus:outline-none focus:ring-2 focus:ring-neon-green transition-all" />
               ))}
             </div>
-
-            <button 
-              onClick={verifyOTPAndSubmit}
-              disabled={isLoading}
-              className={`w-full py-3.5 rounded-xl font-bold text-black transition-all ${
-                isLoading ? 'bg-gray-500 cursor-not-allowed' : 'bg-neon-green hover:bg-neon-hover shadow-[0_0_15px_rgba(82,196,45,0.4)]'
-              }`}
-            >
-              {isLoading ? t('org.configuring') : t('org.confirm_register')}
-            </button>
-
+            <button onClick={verifyOTPAndSubmit} disabled={isLoading} className="w-full py-4 bg-neon-green hover:bg-neon-hover text-black font-bold rounded-xl shadow-[0_0_15px_rgba(82,196,45,0.4)] transition-all">Xác thực</button>
             <div className="mt-4 text-sm font-medium text-gray-500">
-              {countdown > 0 ? (
-                <span>{t('org.resend_in')} <span className="text-neon-green font-bold">{countdown}s</span></span>
-              ) : (
-                <button 
-                  type="button" 
-                  onClick={handleResendOtp}
-                  disabled={isLoading}
-                  className="text-neon-green font-bold hover:underline disabled:opacity-50 transition-all"
-                >
-                  {t('org.resend_now') || 'Gửi lại mã ngay'}
-                </button>
-              )}
+              {countdown > 0 ? <span>{t('org.resend_in')} <span className="text-neon-green font-bold">{countdown}s</span></span> : <button onClick={handleSendRequest} className="text-neon-green font-bold hover:underline">Gửi lại</button>}
             </div>
-
-            {/* Note text requirement */}
-            <div className="mt-8 border-t border-gray-100 dark:border-dark-border pt-4 w-full">
-              <p className="text-xs text-gray-400 dark:text-gray-500 text-center leading-relaxed">
-                <Lock className="w-3 h-3 inline-block mr-1 -mt-0.5" />
-                {t('org.data_encrypted')}
-              </p>
-            </div>
-
           </div>
         </div>
       )}
 
-      {/* --- MODAL CHỌN ĐỊA CHỈ & BẢN ĐỒ --- */}
-      <AddressMapModal 
-        isOpen={isMapModalOpen} 
-        onClose={() => setIsMapModalOpen(false)}
-        onConfirm={(data) => {
-           setValue('address', data.text, { shouldValidate: true });
-           setLatLng({ lat: data.lat, lng: data.lng });
-        }}
-      />
-
+      <AddressMapModal isOpen={isMapModalOpen} onClose={() => setIsMapModalOpen(false)} onConfirm={(data) => {
+         setValue('address', data.text, { shouldValidate: true });
+      }} />
     </div>
   );
 };

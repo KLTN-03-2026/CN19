@@ -59,10 +59,10 @@ const AddressMapModal = ({ isOpen, onClose, onConfirm }) => {
   // 1. Fetch Provinces lần đầu
   useEffect(() => {
     if (isOpen) {
-      fetch('https://esgoo.net/api-tinhthanh/1/0.htm')
+      fetch('https://provinces.open-api.vn/api/p/')
         .then(res => res.json())
         .then(data => {
-            if (data.error === 0) setProvinces(data.data);
+            if (data) setProvinces(data);
         })
         .catch(err => console.error("Province Error:", err));
     }
@@ -70,52 +70,50 @@ const AddressMapModal = ({ isOpen, onClose, onConfirm }) => {
 
   // 2. Fetch Districts khi Province đổi
   const handleProvinceChange = (e) => {
-    const provId = e.target.value;
-    const prov = provinces.find(p => p.id === provId);
+    const provCode = e.target.value;
+    const prov = provinces.find(p => p.code == provCode);
     setSelectedProv(prov);
     setSelectedDist(null);
     setSelectedWard(null);
     setDistricts([]);
     setWards([]);
 
-    if (provId) {
-      fetch(`https://esgoo.net/api-tinhthanh/2/${provId}.htm`)
+    if (provCode) {
+      fetch(`https://provinces.open-api.vn/api/p/${provCode}?depth=2`)
         .then(res => res.json())
         .then(data => {
-            if (data.error === 0) setDistricts(data.data);
+            if (data && data.districts) setDistricts(data.districts);
         });
         
-      // Gán map tới Tỉnh
       geocodeAndFly(`${prov.name}, Việt Nam`);
     }
   };
 
   // 3. Fetch Wards khi District đổi
   const handleDistrictChange = (e) => {
-    const distId = e.target.value;
-    const dist = districts.find(d => d.id === distId);
+    const distCode = e.target.value;
+    const dist = districts.find(d => d.code == distCode);
     setSelectedDist(dist);
     setSelectedWard(null);
     setWards([]);
 
-    if (distId) {
-      fetch(`https://esgoo.net/api-tinhthanh/3/${distId}.htm`)
+    if (distCode) {
+      fetch(`https://provinces.open-api.vn/api/d/${distCode}?depth=2`)
         .then(res => res.json())
         .then(data => {
-            if (data.error === 0) setWards(data.data);
+            if (data && data.wards) setWards(data.wards);
         });
 
-      // Gán map tới Quận + Tỉnh
-      geocodeAndFly(`${dist.full_name}, ${selectedProv?.name}, Việt Nam`);
+      geocodeAndFly(`${dist.name}, ${selectedProv?.name}, Việt Nam`);
     }
   };
 
   const handleWardChange = (e) => {
-    const wardId = e.target.value;
-    const ward = wards.find(w => w.id === wardId);
+    const wardCode = e.target.value;
+    const ward = wards.find(w => w.code == wardCode);
     setSelectedWard(ward);
     if(ward) {
-        geocodeAndFly(`${ward.full_name}, ${selectedDist?.full_name}, ${selectedProv?.name}, Việt Nam`);
+        geocodeAndFly(`${ward.name}, ${selectedDist?.name}, ${selectedProv?.name}, Việt Nam`);
     }
   };
 
@@ -147,7 +145,7 @@ const AddressMapModal = ({ isOpen, onClose, onConfirm }) => {
         toast.error(t('map.err_incomplete'));
         return;
     }
-    const fullString = `${detailAdd}, ${selectedWard.full_name}, ${selectedDist.full_name}, ${selectedProv.name}`;
+    const fullString = `${detailAdd}, ${selectedWard.name}, ${selectedDist.name}, ${selectedProv.name}`;
     onConfirm({
         text: fullString,
         lat: position.lat,
@@ -182,7 +180,7 @@ const AddressMapModal = ({ isOpen, onClose, onConfirm }) => {
               <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase">{t('map.province_label')}</label>
               <select onChange={handleProvinceChange} className="w-full px-4 py-3 bg-white border border-gray-300 text-gray-900 rounded-xl focus:ring-2 focus:ring-neon-green outline-none">
                 <option value="">{t('map.province_placeholder')}</option>
-                {provinces.map(p => <option key={p.id} value={p.id} className="text-black">{p.name}</option>)}
+                {provinces.map(p => <option key={p.code} value={p.code} className="text-black">{p.name}</option>)}
               </select>
             </div>
 
@@ -190,7 +188,7 @@ const AddressMapModal = ({ isOpen, onClose, onConfirm }) => {
               <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase">{t('map.district_label')}</label>
               <select onChange={handleDistrictChange} disabled={!selectedProv} className="w-full px-4 py-3 bg-white border border-gray-300 text-gray-900 rounded-xl focus:ring-2 focus:ring-neon-green outline-none disabled:opacity-50">
                 <option value="">{t('map.district_placeholder')}</option>
-                {districts.map(d => <option key={d.id} value={d.id} className="text-black">{d.full_name}</option>)}
+                {districts.map(d => <option key={d.code} value={d.code} className="text-black">{d.name}</option>)}
               </select>
             </div>
 
@@ -198,7 +196,7 @@ const AddressMapModal = ({ isOpen, onClose, onConfirm }) => {
               <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase">{t('map.ward_label')}</label>
               <select onChange={handleWardChange} disabled={!selectedDist} className="w-full px-4 py-3 bg-white border border-gray-300 text-gray-900 rounded-xl focus:ring-2 focus:ring-neon-green outline-none disabled:opacity-50">
                 <option value="">{t('map.ward_placeholder')}</option>
-                {wards.map(w => <option key={w.id} value={w.id} className="text-black">{w.full_name}</option>)}
+                {wards.map(w => <option key={w.code} value={w.code} className="text-black">{w.name}</option>)}
               </select>
             </div>
 

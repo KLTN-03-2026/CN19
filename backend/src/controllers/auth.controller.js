@@ -243,7 +243,10 @@ const verifyOrganizerOtp = async (req, res) => {
     }
     if (record.otp !== otp) return res.status(400).json({ error: 'Mã OTP không chính xác!' });
 
-    const { full_name, phone_number, password, organization_name, address, existing_user_id, business_license } = record.data;
+    const { 
+      full_name, phone_number, password, organization_name, address, existing_user_id, business_license, 
+      kyc_data // Nhận thêm dữ liệu kyc_data từ frontend
+    } = record.data;
 
     let userId;
 
@@ -252,19 +255,29 @@ const verifyOrganizerOtp = async (req, res) => {
       const hasProfile = await prisma.organizer.findUnique({ where: { user_id: existing_user_id } });
       if (hasProfile) return res.status(400).json({ error: 'Tài khoản này đã có hồ sơ Ban Tổ Chức.' });
 
-      // Chỉ tạo Organizer Profile ở trạng thái pending, GIỮ NGUYÊN role là customer
+      // Lưu Organizer Profile ở trạng thái pending với đầy đủ dữ liệu KYC
       await prisma.organizer.create({
         data: {
           user_id: existing_user_id,
           organization_name: organization_name || '',
           business_license: business_license || null,
-          kyc_status: 'pending'
+          kyc_status: 'pending',
+          // --- Lưu dữ liệu eKYC mới ---
+          id_number: kyc_data?.id_number || null,
+          full_name_raw: kyc_data?.full_name || null,
+          dob_raw: kyc_data?.dob || null,
+          address_raw: kyc_data?.address || null,
+          front_image_url: kyc_data?.front_image_url || null,
+          back_image_url: kyc_data?.back_image_url || null,
+          face_image_url: kyc_data?.face_image_url || null,
+          facematch_score: kyc_data?.facematch_score || null,
+          liveness_score: kyc_data?.liveness_score || null,
+          kyc_raw_data: kyc_data?.raw || null
         }
       });
-      // BỎ LỆNH UPDATE ROLE TẠI ĐÂY - Admin sẽ duyệt và đổi role sau
       userId = existing_user_id;
     } else {
-      // Kịch bản 1: User hoàn toàn mới - Tạo User mới với role 'customer' + Profile BTC pending
+      // Kịch bản 1: User hoàn toàn mới - Tạo User mới + Profile BTC
       const salt = await bcrypt.genSalt(10);
       const password_hash = await bcrypt.hash(password, salt);
 
@@ -277,7 +290,7 @@ const verifyOrganizerOtp = async (req, res) => {
           full_name: full_name || '',
           phone_number,
           password_hash,
-          role: 'customer', // Luôn khởi đầu là customer
+          role: 'customer', 
           status: 'active',
           wallet_address: randomWallet.address,
           wallet_private_key: randomWallet.privateKey,
@@ -285,7 +298,18 @@ const verifyOrganizerOtp = async (req, res) => {
             create: {
               organization_name: organization_name || '',
               business_license: business_license || null,
-              kyc_status: 'pending'
+              kyc_status: 'pending',
+              // --- Lưu dữ liệu eKYC mới ---
+              id_number: kyc_data?.id_number || null,
+              full_name_raw: kyc_data?.full_name || null,
+              dob_raw: kyc_data?.dob || null,
+              address_raw: kyc_data?.address || null,
+              front_image_url: kyc_data?.front_image_url || null,
+              back_image_url: kyc_data?.back_image_url || null,
+              face_image_url: kyc_data?.face_image_url || null,
+              facematch_score: kyc_data?.facematch_score || null,
+              liveness_score: kyc_data?.liveness_score || null,
+              kyc_raw_data: kyc_data?.raw || null
             }
           }
         }
