@@ -37,6 +37,8 @@ import StaffManagement from './pages/Organizer/StaffManagement';
 import TicketManagement from './pages/Organizer/TicketManagement';
 import MerchandiseManagement from './pages/Organizer/MerchandiseManagement';
 import MerchandiseDetail from './pages/Organizer/MerchandiseDetail';
+import BlogManagement from './pages/Organizer/BlogManagement';
+import CreateBlog from './pages/Organizer/CreateBlog';
 
 // Admin Pages
 import AdminLayout from './components/layout/AdminLayout';
@@ -150,6 +152,9 @@ const router = createBrowserRouter([
       { path: 'products', element: <MerchandiseManagement /> },
       { path: 'products/:id', element: <MerchandiseDetail /> },
       { path: 'participants', element: <div className="p-8 text-2xl font-bold">Danh sách người tham gia (Coming Soon)</div> },
+      { path: 'blog', element: <BlogManagement /> },
+      { path: 'blog/create', element: <CreateBlog /> },
+      { path: 'blog/:id/edit', element: <CreateBlog /> },
       { path: 'settings', element: <div className="p-8 text-2xl font-bold">Cài đặt (Coming Soon)</div> },
       { path: '', element: <Navigate to="dashboard" replace /> }
     ]

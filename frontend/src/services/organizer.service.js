@@ -78,5 +78,41 @@ export const organizerService = {
   toggleMerchandise: async (id) => {
     const res = await api.patch(`/organizer/merchandise/${id}/toggle`);
     return res.data;
+  },
+
+  // ======= Blog =======
+  getMyBlogs: async () => {
+    const res = await api.get('/organizer/blogs');
+    return res.data;
+  },
+
+  getBlogById: async (id) => {
+    const res = await api.get(`/organizer/blogs/${id}`);
+    return res.data;
+  },
+
+  createBlog: async (data) => {
+    const res = await api.post('/organizer/blogs', data);
+    return res.data;
+  },
+
+  updateBlog: async (id, data) => {
+    const res = await api.put(`/organizer/blogs/${id}`, data);
+    return res.data;
+  },
+
+  deleteBlog: async (id) => {
+    const res = await api.delete(`/organizer/blogs/${id}`);
+    return res.data;
+  },
+
+  getCustomerReviews: async () => {
+    const res = await api.get('/organizer/blogs/all-customer-reviews');
+    return res.data;
+  },
+
+  moderateBlog: async (id, status) => {
+    const res = await api.patch(`/organizer/blogs/${id}/moderate`, { status });
+    return res.data;
   }
 };

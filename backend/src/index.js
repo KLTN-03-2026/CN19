@@ -18,6 +18,7 @@ const ticketRoutes = require('./routes/ticket.routes');
 const marketplaceRoutes = require('./routes/marketplace.routes');
 const transactionRoutes = require('./routes/transaction.routes');
 const refundRoutes = require('./routes/refund.routes');
+const blogRoutes = require('./routes/blog.routes');
 
 // 4. Organizer
 const organizerRoutes = require('./routes/organizer.routes');
@@ -26,6 +27,7 @@ const staffRoutes = require('./routes/staff.routes');
 const organizerStatRoutes = require('./routes/organizer-stat.routes');
 const organizerTicketRoutes = require('./routes/organizer-ticket.routes');
 const organizerMerchandiseRoutes = require('./routes/organizer-merchandise.routes');
+const organizerBlogRoutes = require('./routes/organizer-blog.routes');
 
 // 5. Admin
 const adminUserRoutes = require('./routes/admin-user.routes');
@@ -62,6 +64,7 @@ app.use('/api/tickets', ticketRoutes);
 app.use('/api/marketplace/listings', marketplaceRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/refunds', refundRoutes);
+app.use('/api/blogs', blogRoutes);
 
 // Organizer
 app.use('/api/organizers', organizerRoutes); // Public profile of organizer
@@ -70,6 +73,7 @@ app.use('/api/organizer/staffs', staffRoutes);
 app.use('/api/organizer/stats', organizerStatRoutes);
 app.use('/api/organizer/tickets', organizerTicketRoutes);
 app.use('/api/organizer/merchandise', organizerMerchandiseRoutes);
+app.use('/api/organizer/blogs', organizerBlogRoutes);
 
 // Admin
 app.use('/api/admin/users', adminUserRoutes);
