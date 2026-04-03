@@ -180,7 +180,7 @@ const MerchandiseManagement = () => {
   const formatPrice = (p) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(p);
 
   return (
-    <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="space-y-3 animate-in fade-in slide-in-from-bottom-4  duration-700">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
@@ -207,8 +207,8 @@ const MerchandiseManagement = () => {
             <Package className="w-5 h-5 text-blue-500" />
           </div>
           <div>
-            <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Tổng sản phẩm</p>
-            <p className="text-xl font-black text-gray-900 dark:text-white">{stats.total}</p>
+            <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase ]">Tổng sản phẩm</p>
+            <p className="text-l font-black text-gray-900 dark:text-white">{stats.total}</p>
           </div>
         </div>
         <div className="bg-white dark:bg-[#16161a] rounded-2xl border border-gray-100 dark:border-white/5 p-4 flex items-center gap-4">
@@ -216,8 +216,8 @@ const MerchandiseManagement = () => {
             <Tag className="w-5 h-5 text-green-500" />
           </div>
           <div>
-            <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Đang bán</p>
-            <p className="text-xl font-black text-gray-900 dark:text-white">{stats.active}</p>
+            <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase ">Đang bán</p>
+            <p className="text-l font-black text-gray-900 dark:text-white">{stats.active}</p>
           </div>
         </div>
         <div className="bg-white dark:bg-[#16161a] rounded-2xl border border-gray-100 dark:border-white/5 p-4 flex items-center gap-4">
@@ -225,8 +225,8 @@ const MerchandiseManagement = () => {
             <Archive className="w-5 h-5 text-red-500" />
           </div>
           <div>
-            <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">Hết hàng</p>
-            <p className="text-xl font-black text-gray-900 dark:text-white">{stats.outOfStock}</p>
+            <p className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase ">Hết hàng</p>
+            <p className="text-l font-black text-gray-900 dark:text-white">{stats.outOfStock}</p>
           </div>
         </div>
       </div>

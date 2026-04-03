@@ -65,8 +65,11 @@ const EventDetail = () => {
         const now = new Date();
         const diffDays = (eventDate - now) / (1000 * 60 * 60 * 24);
 
-        if (diffDays < 2) {
-            toast.error('Không thể thay đổi chính sách khi còn chưa đầy 2 ngày đến sự kiện.');
+        // Cho phép sửa nếu là Draft/Pending bất kể thời gian
+        const isEditableStatus = event.status === 'draft' || event.status === 'pending';
+
+        if (!isEditableStatus && diffDays < 2) {
+            toast.error('Không thể thay đổi chính sách khi còn chưa đầy 2 ngày đến sự kiện (đối với sự kiện đã duyệt).');
             return;
         }
 
@@ -319,9 +322,17 @@ const EventDetail = () => {
                             <div className="flex items-center justify-between p-3 bg-gray-50/50 dark:bg-white/5 rounded-2xl">
                                 <div className="flex items-center gap-3">
                                     <Coins className="w-4 h-4 text-amber-500" />
-                                    <span className="text-[10px] font-black text-gray-500 uppercase">Phí bản quyền (Resale)</span>
+                                    <span className="text-[10px] font-black text-gray-500 uppercase">Phí bản quyền (BTC nhận)</span>
                                 </div>
                                 <span className="text-[10px] font-black text-gray-900 dark:text-white">{event.royalty_fee_percent}%</span>
+                            </div>
+
+                            <div className="flex items-center justify-between p-3 bg-gray-50/50 dark:bg-white/5 rounded-2xl">
+                                <div className="flex items-center gap-3">
+                                    <TrendingUp className="w-4 h-4 text-blue-500" />
+                                    <span className="text-[10px] font-black text-gray-500 uppercase">Giới hạn giá bán lại</span>
+                                </div>
+                                <span className="text-[10px] font-black text-gray-900 dark:text-white">Tối đa {event.resale_price_limit_percent || 108}%</span>
                             </div>
                             
                             {/* Toggle Resale */}

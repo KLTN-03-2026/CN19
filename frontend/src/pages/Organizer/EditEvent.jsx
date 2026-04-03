@@ -56,7 +56,7 @@ const EditEvent = () => {
             longitude: '',
             allow_resale: true,
             allow_transfer: true,
-            royalty_fee_percent: 5,
+            royalty_fee_percent: 3,
             refund_deadline_days: 0,
             seating_charts: [],
             ticket_tiers: []
@@ -582,7 +582,7 @@ const EditEvent = () => {
                                             <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 italic">Giá vé (VNĐ)</label>
                                             <input type="number" {...register(`ticket_tiers.${index}.price`, { required: true })} className="w-full bg-transparent border-b border-gray-200 dark:border-white/10 py-1 text-sm font-bold focus:outline-none focus:border-blue-600" />
                                             <p className="text-[10px] text-blue-600 dark:text-blue-400 font-medium mt-1">
-                                                * Bạn nhận về: {(watch(`ticket_tiers.${index}.price`) * 0.98).toLocaleString()} VNĐ
+                                                * Bạn nhận về: {Math.max(0, watch(`ticket_tiers.${index}.price`) * 0.92 - 10000).toLocaleString()} VNĐ (Đã trừ: 8% phí sàn/giao dịch & 10,000đ phí Blockchain/AI)
                                             </p>
                                         </div>
                                         <div className="space-y-1">
@@ -624,7 +624,7 @@ const EditEvent = () => {
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 italic">Phí bản quyền (%)</label>
                                     <div className="relative">
-                                        <input type="number" {...register('royalty_fee_percent')} className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-blue-600 transition-all" />
+                                        <input type="number" {...register('royalty_fee_percent')} readOnly className="w-full bg-gray-100 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none cursor-not-allowed opacity-70" />
                                         <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">%</span>
                                     </div>
                                     <p className="text-[10px] text-blue-600 dark:text-blue-400 font-medium mt-2 italic">* Phí này được chuyển cho BTC mỗi khi vé được bán lại trên Marketplace.</p>
@@ -633,8 +633,8 @@ const EditEvent = () => {
                                 <div className="p-4 bg-blue-600/5 rounded-xl border border-blue-600/10 flex items-start space-x-3 mt-4">
                                     <Info className="w-4 h-4 text-blue-600 mt-0.5" />
                                     <p className="text-[10px] text-blue-700 dark:text-blue-400 font-medium leading-relaxed">
-                                        <b>Phí dịch vụ & Gas (2%):</b> Hệ thống trích 2% hoa hồng từ doanh thu để trả phí Gas Blockchain. Khách hàng chỉ trả đúng giá bạn niêm yết.
-                                        <br/><span className="text-red-500 mt-1 block">* Lưu ý: Phí này không hoàn lại cho BTC nếu sự kiện bị hủy.</span>
+                                        <b>Hợp đồng phí dịch vụ:</b> Hệ thống khấu trừ 8% phí sàn/xử lý giao dịch và 10.000đ phí Xác thực Blockchain/AI trên mỗi vé bán ra.
+                                        <br/><span className="text-red-500 mt-1 block">* Lưu ý: Phí Xác thực 10.000đ không hoàn lại cho BTC nếu sự kiện bị hủy.</span>
                                     </p>
                                 </div>
                             </div>
@@ -649,7 +649,7 @@ const EditEvent = () => {
                             <div className="mt-6 p-4 bg-red-600/10 rounded-2xl border border-red-600/20 text-left">
                                 <p className="text-[10px] text-red-500 font-bold uppercase tracking-widest mb-1">Quy định bồi hoàn & Trách nhiệm:</p>
                                 <p className="text-[10px] text-gray-400 font-medium leading-relaxed italic">
-                                    Nếu sự kiện bị hủy/dời lịch, bạn có nghĩa vụ hoàn trả <b>100% tiền khách đã trả</b>. Phí hoa hồng 2% (đã dùng cho gas/vận hành) sẽ không được hoàn lại cho BTC.
+                                    Nếu sự kiện bị hủy/dời lịch, bạn có nghĩa vụ hoàn trả <b>100% tiền khách đã trả</b>. Phí Xác thực 10.000đ (đã dùng cho Blockchain/AI) sẽ không được hoàn lại cho BTC.
                                 </p>
                             </div>
                         </div>

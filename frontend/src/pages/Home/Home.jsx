@@ -122,7 +122,7 @@ const Home = () => {
   };
 
   return (
-    <div className="bg-white dark:bg-dark-bg transition-colors duration-500 font-sans selection:bg-neon-green/30">
+    <div className="bg-white  dark:bg-dark-bg transition-colors duration-500 font-sans selection:bg-neon-green/30">
       
       {/* 🚀 Hero Section */}
       <section className="relative h-[85vh] min-h-[600px] flex items-center justify-center overflow-hidden">
