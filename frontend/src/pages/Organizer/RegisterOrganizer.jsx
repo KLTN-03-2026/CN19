@@ -248,7 +248,7 @@ const RegisterOrganizer = () => {
     <div className="min-h-[85vh] flex items-center justify-center px-4 py-12 relative z-10">
       <div className="w-full max-w-[1100px] min-h-[600px] bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-2xl shadow-2xl relative overflow-hidden flex flex-col md:flex-row transition-colors z-20">
         
-        {/* CỘT TRÁI - COPY Y NGUYÊN CLASS */}
+        {/* CỘT TRÁI */}
         <div className="hidden md:flex md:w-[45%] bg-gradient-to-br from-gray-900 to-black text-white p-12 flex-col justify-between relative overflow-hidden border-r border-dark-border">
           <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
           <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-neon-green rounded-full mix-blend-screen filter blur-[80px] opacity-40"></div>
@@ -275,7 +275,7 @@ const RegisterOrganizer = () => {
           <div className="relative z-10 text-xs text-gray-500">{t('org.footer')}</div>
         </div>
 
-        {/* CỘT PHẢI - COPY Y NGUYÊN CLASS, KHÔNG THÊM BẤT CỨ GÌ */}
+        {/* CỘT PHẢI */}
         <div className="w-full md:w-[55%] p-8 md:p-12 relative flex flex-col justify-center">
           <div className="mb-8">
             <div className="flex justify-between items-center mb-2">

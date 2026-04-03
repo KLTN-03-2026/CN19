@@ -249,6 +249,19 @@ const verifyOrganizerOtp = async (req, res) => {
       kyc_data 
     } = record.data;
 
+    // 2. Kiểm tra tính duy nhất của CCCD (Double check trước khi lưu)
+    if (kyc_data?.id_number) {
+      const existingId = await prisma.organizer.findFirst({
+        where: { 
+          OR: [
+            { id_number: kyc_data.id_number },
+            { identity_card: kyc_data.id_number }
+          ]
+        }
+      });
+      if (existingId) return res.status(400).json({ error: 'Số CCCD này đã được sử dụng cho một Ban tổ chức khác.' });
+    }
+
     let userId;
 
     if (existing_user_id) {

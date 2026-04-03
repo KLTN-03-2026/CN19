@@ -30,6 +30,22 @@ const ocrIdCard = async (req, res) => {
       return res.status(400).json({ error: 'Không thể bóc tách thông tin từ ảnh tải lên.' });
     }
 
+    // 2. Kiểm tra tính duy nhất của CCCD (Mới: Một CCCD chỉ 1 tài khoản)
+    const existingId = await prisma.organizer.findFirst({
+      where: { 
+        OR: [
+          { id_number: frontInfo.id },
+          { identity_card: frontInfo.id }
+        ]
+      }
+    });
+
+    if (existingId) {
+      return res.status(400).json({ 
+        error: 'Số CMND/CCCD này đã được sử dụng để đăng ký một Ban tổ chức khác. Vui lòng kiểm tra lại.' 
+      });
+    }
+
     res.status(200).json({
       message: 'OCR thành công.',
       data: {
