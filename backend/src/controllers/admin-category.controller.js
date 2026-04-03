@@ -80,6 +80,25 @@ const updateCategory = async (req, res) => {
       }
     }
 
+    // Nếu yêu cầu ẩn danh mục (is_active: false), kiểm tra xem có sự kiện nào không
+    if (is_active === false) {
+      const categoryWithEvents = await prisma.category.findUnique({
+        where: { id },
+        include: {
+          _count: {
+            select: { events: true }
+          }
+        }
+      });
+
+      if (categoryWithEvents && categoryWithEvents._count.events > 0) {
+        return res.status(400).json({ 
+          success: false, 
+          message: `Không thể ẩn danh mục này vì vẫn đang có ${categoryWithEvents._count.events} sự kiện hiện hữu.` 
+        });
+      }
+    }
+
     const updated = await prisma.category.update({
       where: { id },
       data: {

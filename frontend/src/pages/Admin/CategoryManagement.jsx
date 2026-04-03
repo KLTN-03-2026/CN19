@@ -17,7 +17,8 @@ import {
   Eye,
   Filter,
   Clock,
-  ArrowUpDown
+  ArrowUpDown,
+  ChevronRight
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { adminService } from '../../services/admin.service';
@@ -162,17 +163,23 @@ const CategoryManagement = () => {
     }
   };
 
-  const toggleStatus = async (id, currentStatus) => {
+  const toggleStatus = async (category) => {
+    // Kiếm tra xem có sự kiện hay không trước khi ẩn
+    if (category.is_active && category._count.events > 0) {
+      toast.error(`Không thể ẩn danh mục này vì đang có ${category._count.events} sự kiện.`);
+      return;
+    }
+
     try {
-      const response = await adminService.updateCategory(id, { 
-        is_active: !currentStatus 
+      const response = await adminService.updateCategory(category.id, { 
+        is_active: !category.is_active 
       });
       if (response.success) {
-        toast.success(currentStatus ? 'Đã ẩn danh mục' : 'Đã hiện danh mục');
+        toast.success(category.is_active ? 'Đã ẩn danh mục' : 'Đã hiện danh mục');
         fetchCategories();
       }
     } catch (error) {
-      toast.error('Lỗi khi cập nhật trạng thái');
+      toast.error(error.response?.data?.message || 'Lỗi khi cập nhật trạng thái');
     }
   };
 
@@ -217,17 +224,17 @@ const CategoryManagement = () => {
   };
 
   return (
-    <div className="p-6">
+    <div className="p-1">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
         <div>
-          <h1 className="text-2xl font-black text-gray-900 dark:text-white flex items-center space-x-3">
+          <h1 className="text-xl font-black uppercase text-gray-900 dark:text-white flex items-center space-x-3">
             <div className="p-2 bg-neon-green/10 rounded-lg">
               <Tags className="w-6 h-6 text-neon-green" />
             </div>
             <span>Quản lý Danh mục Sự kiện</span>
           </h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">
+          <p className="text-gray-500 dark:text-gray-400 mt-1 font-[10px] italic">
             Quản lý các loại hình sự kiện trong hệ thống ({categories.length} danh mục)
           </p>
         </div>
@@ -257,29 +264,31 @@ const CategoryManagement = () => {
         <div className="flex items-center gap-3 w-full md:w-auto">
           {/* Status Filter */}
           <div className="relative w-full md:w-44">
-            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
             <select 
-              className="w-full bg-gray-50 dark:bg-white/10 border border-gray-200 dark:border-white/20 rounded-xl py-3 pl-9 pr-4 text-xs font-bold appearance-none focus:outline-none focus:border-neon-green transition-all dark:text-white text-gray-900"
+              className="w-full font-medium bg-gray-50 dark:bg-[#1a1a1e] border border-gray-200 dark:border-white/20 rounded-xl py-3 pl-9 pr-10 text-xs font-bold appearance-none focus:outline-none focus:border-neon-green transition-all dark:text-white text-gray-900 cursor-pointer"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
             >
-              <option value="all">Tất cả trạng thái</option>
-              <option value="active">Đang hoạt động</option>
-              <option value="hidden">Đã ẩn</option>
+              <option value="all" className="dark:bg-[#111114] font-medium">Tất cả trạng thái</option>
+              <option value="active" className="dark:bg-[#111114] font-medium">Đang hoạt động</option>
+              <option value="hidden" className="dark:bg-[#111114] font-medium">Đã ẩn</option>
             </select>
+            <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 rotate-90 pointer-events-none" />
           </div>
-
+ 
           {/* Date Sort */}
           <div className="relative w-full md:w-44">
-            <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
             <select 
-              className="w-full bg-gray-50 dark:bg-white/10 border border-gray-200 dark:border-white/20 rounded-xl py-3 pl-9 pr-4 text-xs font-bold appearance-none focus:outline-none focus:border-neon-green transition-all dark:text-white text-gray-900"
+              className="w-full font-medium bg-gray-50 dark:bg-[#1a1a1e] border border-gray-200 dark:border-white/20 rounded-xl py-3 pl-9 pr-10 text-xs font-bold appearance-none focus:outline-none focus:border-neon-green transition-all dark:text-white text-gray-900 cursor-pointer"
               value={dateSort}
               onChange={(e) => setDateSort(e.target.value)}
             >
-              <option value="newest">Mới nhất trước</option>
-              <option value="oldest">Cũ nhất trước</option>
+              <option value="newest" className="dark:bg-[#111114] font-medium">Mới nhất trước</option>
+              <option value="oldest" className="dark:bg-[#111114] font-medium">Cũ nhất trước</option>
             </select>
+            <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 rotate-90 pointer-events-none" />
           </div>
         </div>
       </div>
@@ -297,7 +306,7 @@ const CategoryManagement = () => {
               <thead>
                 <tr className="bg-gray-50/50 dark:bg-white/5 border-b border-gray-100 dark:border-white/5">
                   <th className="px-6 py-4 text-[10px] font-black uppercase text-gray-400 tracking-wider">Tên Danh mục</th>
-                  <th className="px-6 py-4 text-[10px] font-black uppercase text-gray-400 tracking-wider text-center">Số lượng Sự kiện</th>
+                  <th className="px-6 py-4 text-[10px] font-black uppercase text-gray-400 tracking-wider text-center">Số lượng</th>
                   <th className="px-6 py-4 text-[10px] font-black uppercase text-gray-400 tracking-wider text-center">Trạng thái</th>
                   <th className="px-6 py-4 text-[10px] font-black uppercase text-gray-400 tracking-wider text-center">Ngày tạo</th>
                   <th className="px-6 py-4 text-[10px] font-black uppercase text-gray-400 tracking-wider text-right">Thao tác</th>
@@ -324,13 +333,19 @@ const CategoryManagement = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase transition-all ${
-                        c.is_active 
-                        ? 'bg-green-500/10 text-green-500' 
-                        : 'bg-red-500/10 text-red-500'
-                      }`}>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleStatus(c);
+                        }}
+                        className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase transition-all hover:scale-105 active:scale-95 ${
+                          c.is_active 
+                          ? 'bg-green-500/10 text-green-500' 
+                          : 'bg-red-500/10 text-red-500'
+                        }`}
+                      >
                         {c.is_active ? 'Đang hoạt động' : 'Đã ẩn'}
-                      </span>
+                      </button>
                     </td>
                     <td className="px-6 py-4 text-center">
                       <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
@@ -447,18 +462,31 @@ const CategoryManagement = () => {
 
               {/* Status Toggle */}
               <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-white/5 rounded-2xl border border-gray-100 dark:border-white/10">
-                <div>
-                  <label className="block text-sm font-bold text-gray-900 dark:text-white">
+                <div className="flex-1">
+                  <label className="block text-sm font-bold text-gray-900 dark:text-white flex items-center">
                     Trạng thái hoạt động
+                    {editingCategory?._count?.events > 0 && isCategoryActive && (
+                      <span className="ml-2 text-[8px] bg-amber-500/10 text-amber-500 px-1.5 py-0.5 rounded border border-amber-500/20 uppercase">Ràng buộc</span>
+                    )}
                   </label>
-                  <p className="text-xs text-gray-500">Cho phép danh mục hiển thị trên hệ thống</p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {editingCategory?._count?.events > 0 && isCategoryActive
+                      ? `Đang có ${editingCategory._count.events} sự kiện (Không thể ẩn)`
+                      : 'Cho phép danh mục hiển thị trên hệ thống'}
+                  </p>
                 </div>
                 <button
                   type="button"
-                  onClick={() => setIsCategoryActive(!isCategoryActive)}
+                  onClick={() => {
+                    if (editingCategory?._count?.events > 0 && isCategoryActive) {
+                      toast.error('Không thể ẩn danh mục này vì đang có sự kiện.');
+                      return;
+                    }
+                    setIsCategoryActive(!isCategoryActive);
+                  }}
                   className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
                     isCategoryActive ? 'bg-neon-green' : 'bg-gray-300 dark:bg-gray-700'
-                  }`}
+                  } ${editingCategory?._count?.events > 0 && isCategoryActive ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   <span
                     className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
