@@ -249,6 +249,13 @@ const verifyOrganizerOtp = async (req, res) => {
       kyc_data 
     } = record.data;
 
+    // Hàm chuyển đổi DD/MM/YYYY -> Date object
+    const parseDate = (dateStr) => {
+      if (!dateStr || !dateStr.includes('/')) return null;
+      const [day, month, year] = dateStr.split('/');
+      return new Date(`${year}-${month}-${day}`);
+    };
+
     // 2. Kiểm tra tính duy nhất của CCCD (Double check trước khi lưu)
     if (kyc_data?.id_number) {
       const existingId = await prisma.organizer.findFirst({
@@ -269,13 +276,14 @@ const verifyOrganizerOtp = async (req, res) => {
       const hasProfile = await prisma.organizer.findUnique({ where: { user_id: existing_user_id } });
       if (hasProfile) return res.status(400).json({ error: 'Tài khoản này đã có hồ sơ Ban Tổ Chức.' });
 
-      // 1. Cập nhật thông tin vị trí và địa chỉ vào bảng User
+      // 1. Cập nhật thông tin vị trí, địa chỉ và NGÀY SINH vào bảng User
       await prisma.user.update({
         where: { id: existing_user_id },
         data: {
           address: address || null,
           latitude: latitude ? parseFloat(latitude) : null,
-          longitude: longitude ? parseFloat(longitude) : null
+          longitude: longitude ? parseFloat(longitude) : null,
+          date_of_birth: kyc_data?.dob ? parseDate(kyc_data.dob) : undefined
         }
       });
 
@@ -321,6 +329,7 @@ const verifyOrganizerOtp = async (req, res) => {
           address: address || null,
           latitude: latitude ? parseFloat(latitude) : null,
           longitude: longitude ? parseFloat(longitude) : null,
+          date_of_birth: kyc_data?.dob ? parseDate(kyc_data.dob) : null, // Thêm ngày sinh cho User mới
           role: 'customer', 
           status: 'active',
           wallet_address: randomWallet.address,
