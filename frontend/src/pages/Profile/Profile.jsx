@@ -244,7 +244,7 @@ const Profile = () => {
                  {user?.full_name || user?.fullName || t('profile.user')}
                </h1>
                
-               <span className="inline-flex items-center px-4 py-1.5 bg-neon-green/10 text-neon-green text-[10px] font-black uppercase tracking-widest rounded-full border border-neon-green/20 mb-3 relative z-10">
+               <span className="inline-flex items-center px-4 py-1 bg-neon-green/10 text-neon-green text-[10px] font-black uppercase rounded-full border border-neon-green/20 mb-3 relative z-10">
                  {t(`profile.roles.${user?.role || 'customer'}`)}
                </span>
                
@@ -271,7 +271,7 @@ const Profile = () => {
                   >
                     <div className="flex items-center gap-3">
                       <Icon className="w-5 h-5" />
-                      <span className="uppercase text-[11px] tracking-widest">{tab.label}</span>
+                      <span className="uppercase text-[12px]">{tab.label}</span>
                     </div>
                     <ChevronRight className={`w-4 h-4 transition-transform ${isActive ? 'translate-x-1' : ''}`} />
                   </button>
@@ -286,7 +286,7 @@ const Profile = () => {
               
               {activeTab === 'info' && (
                 <div className="space-y-12">
-                  <form onSubmit={handleUpdateProfile} className="space-y-8">
+                  <form onSubmit={handleUpdateProfile} className="space-y-6">
                     <div className="flex items-center justify-between mb-2">
                       <h3 className="text-sm font-black text-neon-green uppercase ">
                         {t('profile.tabs.info')}
@@ -295,7 +295,7 @@ const Profile = () => {
                         <button 
                           type="button"
                           onClick={() => setIsEditing(true)}
-                          className="flex items-center gap-2 px-4 py-2 bg-neon-green/10 text-neon-green rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-neon-green hover:text-black transition-all"
+                          className="flex items-center gap-2 px-4 py-2 bg-neon-green/10 text-neon-green rounded-xl text-[10px] font-black uppercase hover:bg-neon-green hover:text-black transition-all"
                         >
                           <Save className="w-3 h-3 rotate-180" />
                           {t('profile.labels.edit')}
@@ -305,7 +305,7 @@ const Profile = () => {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 ml-4">
+                        <label className="text-[10px] font-black uppercase text-gray-400 dark:text-gray-500 ml-4">
                           {t('profile.labels.name')}
                         </label>
                         <input 
@@ -313,11 +313,11 @@ const Profile = () => {
                           value={formData.fullName}
                           readOnly={!isEditing}
                           onChange={(e) => setFormData({...formData, fullName: e.target.value})}
-                          className={`w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl px-6 py-4 text-gray-900 dark:text-white font-bold transition-all outline-none ${isEditing ? 'focus:border-neon-green shadow-sm' : 'cursor-default opacity-80'}`}
+                          className={`w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl px-6 py-3 text-gray-900 dark:text-white font-medium transition-all outline-none ${isEditing ? 'focus:border-neon-green shadow-sm' : 'cursor-default opacity-80'}`}
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 ml-4">
+                        <label className="text-[10px] font-black uppercase text-gray-400 dark:text-gray-500 ml-4">
                           {t('profile.labels.phone')}
                         </label>
                         <input 
@@ -326,14 +326,14 @@ const Profile = () => {
                           readOnly={!isEditing}
                           onChange={(e) => setFormData({...formData, phoneNumber: e.target.value})}
                           placeholder="Ex: 0912345678"
-                          className={`w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl px-6 py-4 text-gray-900 dark:text-white font-bold transition-all outline-none ${isEditing ? 'focus:border-neon-green shadow-sm' : 'cursor-default opacity-80'}`}
+                          className={`w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl px-6 py-3 text-gray-900 dark:text-white font-medium transition-all outline-none ${isEditing ? 'focus:border-neon-green shadow-sm' : 'cursor-default opacity-80'}`}
                         />
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                       <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 ml-4">
+                        <label className="text-[10px] font-black uppercase text-gray-400 dark:text-gray-500 ml-4">
                           {t('profile.labels.dob')}
                         </label>
                         <input 
@@ -341,13 +341,13 @@ const Profile = () => {
                           value={formData.dateOfBirth}
                           readOnly={!isEditing}
                           onChange={(e) => setFormData({...formData, dateOfBirth: e.target.value})}
-                          className={`w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl px-6 py-4 text-gray-900 dark:text-white font-bold transition-all outline-none [color-scheme:light] dark:[color-scheme:dark] ${isEditing ? 'focus:border-neon-green shadow-sm' : 'cursor-default opacity-80'}`}
+                          className={`w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl px-6 py-3 text-gray-900 dark:text-white font-medium transition-all outline-none [color-scheme:light] dark:[color-scheme:dark] ${isEditing ? 'focus:border-neon-green shadow-sm' : 'cursor-default opacity-80'}`}
                         />
                       </div>
                       
                       {user?.role === 'organizer' ? (
                         <div className="space-y-2 animate-in fade-in duration-300">
-                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 ml-4">
+                          <label className="text-[10px] font-black uppercase text-gray-400 dark:text-gray-500 ml-4">
                             {t('profile.labels.address')}
                           </label>
                           <input 
@@ -356,7 +356,7 @@ const Profile = () => {
                             readOnly={!isEditing}
                             onChange={(e) => setFormData({...formData, address: e.target.value})}
                             placeholder={t('profile.placeholders.address')}
-                            className={`w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl px-6 py-4 text-gray-900 dark:text-white font-bold transition-all outline-none ${isEditing ? 'focus:border-neon-green shadow-sm' : 'cursor-default opacity-80'}`}
+                            className={`w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl px-6 py-3 text-gray-900 dark:text-white font-medium transition-all outline-none ${isEditing ? 'focus:border-neon-green shadow-sm' : 'cursor-default opacity-80'}`}
                           />
                         </div>
                       ) : (
@@ -367,14 +367,14 @@ const Profile = () => {
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 ml-4">
+                      <label className="text-[10px] font-black uppercase text-gray-400 dark:text-gray-500 ml-4">
                         {t('profile.labels.email')}
                       </label>
                       <input 
                         type="email"
                         value={user?.email}
                         readOnly
-                        className="w-full bg-gray-100 dark:bg-white/[0.02] border border-gray-200 dark:border-white/10 rounded-2xl px-6 py-4 text-gray-400 dark:text-gray-600 font-bold cursor-not-allowed outline-none"
+                        className="w-full bg-gray-100 dark:bg-white/[0.02] border border-gray-200 dark:border-white/10 rounded-2xl px-6 py-3 text-gray-400 dark:text-gray-600 font-medium cursor-not-allowed outline-none"
                       />
                     </div>
 
@@ -383,7 +383,7 @@ const Profile = () => {
                         <button 
                           type="submit"
                           disabled={loading}
-                          className="bg-neon-green text-black px-10 py-4 rounded-2xl font-black uppercase text-xs tracking-[0.2em] hover:shadow-[0_0_30px_rgba(82,196,45,0.4)] transition-all duration-300 flex items-center gap-2"
+                          className="bg-neon-green text-black px-6 py-4 rounded-2xl font-black uppercase text-xs hover:shadow-[0_0_30px_rgba(82,196,45,0.4)] transition-all duration-300 flex items-center gap-2"
                         >
                           {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                           {t('profile.labels.save')}
@@ -391,7 +391,7 @@ const Profile = () => {
                         <button 
                           type="button"
                           onClick={handleCancel}
-                          className="px-10 py-4 rounded-2xl font-black uppercase text-xs tracking-[0.2em] text-gray-500 hover:text-gray-900 dark:hover:text-white transition-all"
+                          className="bg-gray-200 px-10 py-4 rounded-2xl font-black uppercase text-xs text-gray-500 hover:text-gray-900 dark:hover:text-white transition-all"
                         >
                           {t('profile.labels.cancel')}
                         </button>
@@ -400,24 +400,24 @@ const Profile = () => {
                   </form>
 
                   {user?.role === 'organizer' && user?.organizer_profile && (
-                    <div className="pt-10 border-t border-gray-100 dark:border-white/5 space-y-8 animate-in fade-in duration-500">
-                       <h3 className="text-sm font-black text-neon-green uppercase tracking-[0.3em]">
+                    <div className="pt-10 border-t border-gray-100 dark:border-white/5 space-y- animate-in fade-in duration-500">
+                       <h3 className="text-sm font-black text-neon-green uppercase">
                          {t('profile.organizer.title')}
                        </h3>
                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                           <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 ml-4">
+                            <label className="text-[10px] font-black uppercase text-gray-400 dark:text-gray-500 ml-4">
                               {t('profile.organizer.name')}
                             </label>
-                            <div className="w-full bg-gray-100 dark:bg-white/[0.02] border border-gray-200 dark:border-white/10 rounded-2xl px-6 py-4 text-gray-400 dark:text-gray-600 font-bold">
+                            <div className="w-full bg-gray-100 dark:bg-white/[0.02] border border-gray-200 dark:border-white/10 rounded-2xl px-6 py-3 text-gray-400 dark:text-gray-600 font-medium">
                                {user.organizer_profile.organization_name}
                             </div>
                           </div>
                           <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 ml-4">
+                            <label className="text-[10px] font-black uppercase t-gray-400 dark:text-gray-500 ml-4">
                               {t('profile.organizer.kyc')}
                             </label>
-                            <div className="w-full bg-gray-100 dark:bg-white/[0.02] border border-gray-200 dark:border-white/10 rounded-2xl px-6 py-4 flex items-center justify-between">
+                            <div className="w-full bg-gray-100 dark:bg-white/[0.02] border border-gray-200 dark:border-white/10 rounded-2xl px-6 py-3 flex items-center justify-between">
                                <span className="font-black uppercase text-[10px] tracking-widest text-neon-green">
                                  {user.organizer_profile.kyc_status}
                                </span>
@@ -426,10 +426,10 @@ const Profile = () => {
                           </div>
                        </div>
                        <div className="space-y-2">
-                          <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 dark:text-gray-500 ml-4">
+                          <label className="text-[10px] font-black uppercase text-gray-400 dark:text-gray-500 ml-4">
                             {t('profile.organizer.desc')}
                           </label>
-                          <div className="w-full bg-gray-100 dark:bg-white/[0.02] border border-gray-200 dark:border-white/10 rounded-2xl px-6 py-4 text-gray-400 dark:text-gray-600 font-bold min-h-[100px]">
+                          <div className="w-full bg-gray-100 dark:bg-white/[0.02] border border-gray-200 dark:border-white/10 rounded-2xl px-6 py-3 text-gray-400 dark:text-gray-600 font-medium min-h-[100px]">
                             {user.organizer_profile.description || '...'}
                           </div>
                        </div>
@@ -448,14 +448,14 @@ const Profile = () => {
                         <Wallet className="w-8 h-8 text-neon-green" />
                       </div>
                       <div>
-                        <h4 className="text-sm font-black text-neon-green uppercase tracking-widest leading-none mb-1">{t('profile.wallet.title')}</h4>
-                        <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-tight italic">{t('profile.wallet.desc')}</p>
+                        <h4 className="text-sm font-black text-neon-green uppercase leading-none mb-1">{t('profile.wallet.title')}</h4>
+                        <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold">{t('profile.wallet.desc')}</p>
                       </div>
                     </div>
 
                     <div className="space-y-6 relative z-10">
                       <div className="bg-white/50 dark:bg-black/40 border border-gray-200 dark:border-white/10 rounded-2xl p-6">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-2">{t('profile.wallet.address')}</p>
+                        <p className="text-[10px] font-black uppercase text-gray-400 dark:text-gray-500 mb-2">{t('profile.wallet.address')}</p>
                         <div className="flex items-center justify-between gap-4">
                           <code className="text-xs md:text-sm font-mono text-gray-900 dark:text-neon-green font-bold break-all">
                             {user?.wallet_address || t('profile.wallet.no_wallet')}
@@ -472,7 +472,7 @@ const Profile = () => {
                       </div>
 
                       <div className="flex items-end gap-2">
-                        <span className="text-4xl font-black text-gray-900 dark:text-white leading-none">{walletBalance}</span>
+                        <span className="text-3xl font-black text-gray-900 dark:text-white leading-none">{walletBalance}</span>
                         <span className="text-sm font-black text-neon-green uppercase tracking-widest mb-1">POL</span>
                       </div>
                     </div>
@@ -480,13 +480,13 @@ const Profile = () => {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="p-6 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl">
-                        <h5 className="text-[10px] font-black text-gray-900 dark:text-white uppercase tracking-widest mb-2 flex items-center gap-2">
+                        <h5 className="text-[10px] font-black text-gray-900 dark:text-white uppercase mb-2 flex items-center gap-2">
                           <Globe className="w-3 h-3 text-neon-green" /> {t('profile.wallet.network')}
                         </h5>
                         <p className="text-sm font-bold text-gray-600 dark:text-gray-400">Polygon Amoy Testnet</p>
                     </div>
                     <div className="p-6 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl">
-                        <h5 className="text-[10px] font-black text-gray-900 dark:text-white uppercase tracking-widest mb-2 flex items-center gap-2">
+                        <h5 className="text-[10px] font-black text-gray-900 dark:text-white uppercase mb-2 flex items-center gap-2">
                           <Lock className="w-3 h-3 text-neon-green" /> {t('profile.wallet.type')}
                         </h5>
                         <p className="text-sm font-bold text-gray-600 dark:text-gray-400">Custodial (ERC-4337 Ready)</p>
@@ -498,24 +498,24 @@ const Profile = () => {
               {activeTab === 'security' && (
                 <div className="space-y-12 animate-in fade-in duration-500">
                    <div className="space-y-2">
-                      <h3 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tighter">
+                      <h3 className="text-xl font-black text-gray-900 dark:text-white uppercase">
                         {t('profile.security.title')}
                       </h3>
-                      <p className="text-xs font-bold text-gray-500 dark:text-gray-400 italic">
+                      <p className="text-xs font-bold text-gray-500 dark:text-gray-400 ">
                         {t('profile.security.desc')}
                       </p>
                    </div>
 
                    {/* Change Password Form */}
                    <div className="p-8 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-[2rem] space-y-6">
-                      <h4 className="text-xs font-black text-neon-green uppercase tracking-widest flex items-center gap-2">
+                      <h4 className="text-xs font-black text-neon-green uppercase flex items-center gap-2">
                         <Lock className="w-4 h-4" /> {t('profile.security.change_pass')}
                       </h4>
                       <form onSubmit={handleChangePassword} className="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           <div className="space-y-1">
                             <div className="flex justify-between items-center px-2">
-                              <label className="text-[10px] font-black uppercase text-gray-400">{t('profile.security.old_pass')}</label>
+                              <label className="text-[12px] font-black text-gray-400">{t('profile.security.old_pass')}</label>
                               <Link to="/forgot-password" size="sm" className="text-[10px] font-bold text-neon-green hover:underline">
                                 {t('profile.forgot.title')}?
                               </Link>
@@ -529,7 +529,7 @@ const Profile = () => {
                             />
                           </div>
                           <div className="space-y-1">
-                            <label className="text-[10px] font-black uppercase text-gray-400 ml-2">{t('profile.security.new_pass')}</label>
+                            <label className="text-[12px] font-black text-gray-400 ml-2">{t('profile.security.new_pass')}</label>
                             <input 
                               type="password"
                               required
@@ -539,7 +539,7 @@ const Profile = () => {
                             />
                           </div>
                           <div className="space-y-1">
-                            <label className="text-[10px] font-black uppercase text-gray-400 ml-2">{t('profile.security.confirm_new_pass')}</label>
+                            <label className="text-[12px] font-black text-gray-400 ml-2">{t('profile.security.confirm_new_pass')}</label>
                             <input 
                               type="password"
                               required
@@ -552,7 +552,7 @@ const Profile = () => {
                         <button 
                           type="submit"
                           disabled={changingPass}
-                          className="px-8 py-3 bg-neon-green text-black font-black uppercase text-[10px] tracking-widest rounded-xl hover:shadow-[0_0_20px_rgba(82,196,45,0.3)] transition-all disabled:opacity-50 flex items-center gap-2"
+                          className="px-8 py-3 bg-neon-green text-black font-black uppercase text-[10px] rounded-xl hover:shadow-[0_0_20px_rgba(82,196,45,0.3)] transition-all disabled:opacity-50 flex items-center gap-2"
                         >
                           {changingPass ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
                           {t('profile.security.change_pass')}
@@ -561,7 +561,7 @@ const Profile = () => {
                    </div>
 
                    <div className="pt-2 border-t border-gray-100 dark:border-white/5">
-                      <h4 className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-[0.2em] mb-6 inline-block border-b-2 border-neon-green pb-1">
+                      <h4 className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase mb-6 inline-block border-b-2 border-neon-green pb-1">
                         {t('profile.security.preferences')}
                       </h4>
                       
