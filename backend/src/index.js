@@ -35,6 +35,8 @@ const adminEventRoutes = require('./routes/admin-event.routes');
 const adminCategoryRoutes = require('./routes/admin-category.routes');
 const adminFinanceRoutes = require('./routes/admin-finance.routes');
 const adminSystemRoutes = require('./routes/admin-system.routes');
+const adminMerchandiseRoutes = require('./routes/admin-merchandise.routes');
+const adminBlogRoutes = require('./routes/admin-blog.routes');
 
 // 6. Staff
 const scannerRoutes = require('./routes/scanner.routes');
@@ -81,6 +83,8 @@ app.use('/api/admin/events', adminEventRoutes);
 app.use('/api/admin/categories', adminCategoryRoutes);
 app.use('/api/admin', adminFinanceRoutes); // points inside to /refunds, /payouts
 app.use('/api/admin', adminSystemRoutes);  // points inside to /config, /fraud-alerts, /stats
+app.use('/api/admin/merchandise', adminMerchandiseRoutes);
+app.use('/api/admin/blogs', adminBlogRoutes);
 
 // Staff
 app.use('/api/staff', scannerRoutes);

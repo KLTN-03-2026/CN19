@@ -63,5 +63,45 @@ export const adminService = {
   forceCancelEvent: async (id, data) => {
     const response = await api.put(`/admin/events/${id}/force-cancel`, data);
     return response.data;
+  },
+
+  // Quản lý Sản phẩm (Merchandise)
+  getMerchandise: async (params) => {
+    const response = await api.get('/admin/merchandise', { params });
+    return response.data;
+  },
+  getMerchandiseById: async (id) => {
+    const response = await api.get(`/admin/merchandise/${id}`);
+    return response.data;
+  },
+  toggleMerchandiseStatus: async (id) => {
+    const response = await api.put(`/admin/merchandise/${id}/toggle`);
+    return response.data;
+  },
+  deleteMerchandise: async (id) => {
+    const response = await api.delete(`/admin/merchandise/${id}`);
+    return response.data;
+  },
+
+  // Quản lý Blog
+  getBlogs: async (params) => {
+    const response = await api.get('/admin/blogs', { params });
+    return response.data;
+  },
+  getBlogById: async (id) => {
+    const response = await api.get(`/admin/blogs/${id}`);
+    return response.data;
+  },
+  createBlog: async (data) => {
+    const response = await api.post('/admin/blogs', data);
+    return response.data;
+  },
+  toggleBlogStatus: async (id) => {
+    const response = await api.put(`/admin/blogs/${id}/toggle`);
+    return response.data;
+  },
+  deleteBlog: async (id) => {
+    const response = await api.delete(`/admin/blogs/${id}`);
+    return response.data;
   }
 };
