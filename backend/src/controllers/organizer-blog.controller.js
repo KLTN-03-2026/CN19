@@ -6,7 +6,7 @@ const organizerBlogController = {
     // Tạo bài viết mới
     createBlog: async (req, res) => {
         try {
-            const { title, content, image_url, event_id, status } = req.body;
+            const { title, content, image_url, images, event_id, status } = req.body;
             const author_id = req.user.id || req.user.userId;
 
             if (!title || !content) {
@@ -21,6 +21,7 @@ const organizerBlogController = {
                     title,
                     content,
                     image_url,
+                    images: images || [],
                     slug,
                     status: status || 'published',
                     author_id,
@@ -86,8 +87,7 @@ const organizerBlogController = {
     // Cập nhật bài viết
     updateBlog: async (req, res) => {
         try {
-            const { id } = req.params;
-            const { title, content, image_url, event_id, status } = req.body;
+            const { title, content, image_url, images, event_id, status } = req.body;
             const author_id = req.user.id || req.user.userId;
 
             // Kiểm tra quyền sở hữu
@@ -100,6 +100,7 @@ const organizerBlogController = {
                 title,
                 content,
                 image_url,
+                images: images || [],
                 event_id: event_id || null,
                 status
             };

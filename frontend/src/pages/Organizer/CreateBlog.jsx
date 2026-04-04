@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
     ArrowLeft, 
@@ -10,10 +10,11 @@ import {
     FileText, 
     Eye,
     CheckCircle2,
-    Send
+    Send,
+    Clock
 } from 'lucide-react';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+import Quill from 'quill';
+import 'quill/dist/quill.snow.css';
 import toast from 'react-hot-toast';
 import axios from 'axios';
 import { organizerService } from '../../services/organizer.service';
@@ -26,11 +27,14 @@ const CreateBlog = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [isFetching, setIsFetching] = useState(isEditMode);
     const [events, setEvents] = useState([]);
+    const editorRef = useRef(null);
+    const quillInstance = useRef(null);
     
     const [formData, setFormData] = useState({
         title: '',
         content: '',
         image_url: '',
+        images: [],
         event_id: '',
         status: 'published'
     });
@@ -44,6 +48,43 @@ const CreateBlog = () => {
             fetchBlogDetail();
         }
     }, [id]);
+
+    // Khởi tạo Quill thủ công để tránh lỗi findDOMNode của ReactQuill trên React 19
+    useEffect(() => {
+        if (editorRef.current && !quillInstance.current) {
+            quillInstance.current = new Quill(editorRef.current, {
+                theme: 'snow',
+                modules: {
+                    toolbar: [
+                        [{ 'header': [1, 2, 3, false] }],
+                        ['bold', 'italic', 'underline', 'strike'],
+                        [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                        ['link', 'image', 'video'],
+                        ['clean'],
+                        [{ 'color': [] }, { 'background': [] }],
+                        [{ 'align': [] }]
+                    ]
+                },
+                placeholder: 'Viết nội dung bài viết tại đây...'
+            });
+
+            quillInstance.current.on('text-change', () => {
+                setFormData(prev => ({
+                    ...prev,
+                    content: quillInstance.current.root.innerHTML
+                }));
+            });
+        }
+    }, [isFetching]); // Re-init after fetching if in edit mode
+
+    // Cập nhật nội dung Quill khi fetch được dữ liệu (chế độ Edit)
+    useEffect(() => {
+        if (quillInstance.current && formData.content && isEditMode) {
+            if (quillInstance.current.root.innerHTML !== formData.content) {
+                quillInstance.current.root.innerHTML = formData.content;
+            }
+        }
+    }, [isFetching, formData.content]);
 
     const fetchEvents = async () => {
         try {
@@ -62,6 +103,7 @@ const CreateBlog = () => {
                 title: blog.title,
                 content: blog.content,
                 image_url: blog.image_url,
+                images: blog.images || [],
                 event_id: blog.event_id || '',
                 status: blog.status
             });
@@ -105,12 +147,55 @@ const CreateBlog = () => {
             console.error(error);
         } finally {
             setIsLoading(false);
+            setUploadProgress(0);
         }
+    };
+
+    const handleGalleryUpload = async (e) => {
+        const files = Array.from(e.target.files);
+        if (files.length === 0) return;
+
+        const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
+        const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+
+        try {
+            setIsLoading(true);
+            const uploadPromises = files.map(file => {
+                const uploadFormData = new FormData();
+                uploadFormData.append('file', file);
+                uploadFormData.append('upload_preset', uploadPreset);
+                return axios.post(
+                    `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+                    uploadFormData
+                );
+            });
+
+            const results = await Promise.all(uploadPromises);
+            const newUrls = results.map(res => res.data.secure_url);
+            
+            setFormData(prev => ({
+                ...prev,
+                images: [...prev.images, ...newUrls]
+            }));
+            toast.success(`Đã tải lên ${newUrls.length} ảnh gallery!`);
+        } catch (error) {
+            toast.error('Lỗi khi tải ảnh gallery.');
+            console.error(error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const removeGalleryImage = (index) => {
+        setFormData(prev => ({
+            ...prev,
+            images: prev.images.filter((_, i) => i !== index)
+        }));
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!formData.title || !formData.content) {
+        if (!formData.title || !formData.content || formData.content === '<p><br></p>') {
             toast.error('Vui lòng nhập đầy đủ tiêu đề và nội dung.');
             return;
         }
@@ -130,18 +215,6 @@ const CreateBlog = () => {
         } finally {
             setIsLoading(false);
         }
-    };
-
-    const quillModules = {
-        toolbar: [
-            [{ 'header': [1, 2, 3, false] }],
-            ['bold', 'italic', 'underline', 'strike'],
-            [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-            ['link', 'image', 'video'],
-            ['clean'],
-            [{ 'color': [] }, { 'background': [] }],
-            [{ 'align': [] }]
-        ],
     };
 
     if (isFetching) {
@@ -191,15 +264,8 @@ const CreateBlog = () => {
                         {/* Rich Text Editor */}
                         <div className="space-y-2">
                             <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Nội dung bài viết</label>
-                            <div className="quill-modern-container">
-                                <ReactQuill 
-                                    theme="snow"
-                                    value={formData.content}
-                                    onChange={(content) => setFormData({ ...formData, content })}
-                                    modules={quillModules}
-                                    placeholder="Viết nội dung bài viết tại đây..."
-                                    className="dark:text-white"
-                                />
+                            <div className="quill-modern-container min-h-[400px] text-gray-900 dark:text-white">
+                                <div ref={editorRef}></div>
                             </div>
                         </div>
                     </div>
@@ -243,6 +309,37 @@ const CreateBlog = () => {
                             )}
                         </div>
                         <p className="text-[9px] text-gray-500 italic text-center">Khuyến nghị tỉ lệ 16:9, tối đa 5MB.</p>
+                    </div>
+
+                    {/* Gallery Card */}
+                    <div className="bg-white dark:bg-[#111114] p-6 rounded-[2.5rem] border border-gray-100 dark:border-white/5 shadow-sm space-y-4">
+                        <h3 className="text-[10px] font-black text-gray-900 dark:text-white uppercase tracking-widest mb-4 flex items-center justify-between">
+                            <span className="flex items-center">
+                                <ImageIcon className="w-4 h-4 mr-2 text-blue-600" />
+                                Thư viện ảnh (Gallery)
+                            </span>
+                            <span className="text-[9px] text-gray-400 font-bold">{formData.images.length} ảnh</span>
+                        </h3>
+
+                        <div className="grid grid-cols-3 gap-2">
+                            {formData.images.map((url, index) => (
+                                <div key={index} className="relative aspect-square rounded-xl overflow-hidden group border border-gray-100 dark:border-white/5">
+                                    <img src={url} alt={`Gallery ${index}`} className="w-full h-full object-cover" />
+                                    <button 
+                                        type="button"
+                                        onClick={() => removeGalleryImage(index)}
+                                        className="absolute top-1 right-1 p-1 bg-red-600 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-all shadow-lg"
+                                    >
+                                        <X className="w-3 h-3" />
+                                    </button>
+                                </div>
+                            ))}
+                            <label className="aspect-square rounded-xl border-2 border-dashed border-gray-200 dark:border-white/10 flex flex-col items-center justify-center cursor-pointer hover:border-blue-600/50 transition-all group">
+                                <ImageIcon className="w-4 h-4 text-gray-400 group-hover:text-blue-600 transition-colors" />
+                                <span className="text-[8px] font-black uppercase text-gray-400 mt-1">Thêm</span>
+                                <input type="file" className="hidden" accept="image/*" multiple onChange={handleGalleryUpload} />
+                            </label>
+                        </div>
                     </div>
 
                     {/* Blog Settings Card */}
@@ -341,6 +438,9 @@ const CreateBlog = () => {
                 .dark .quill-modern-container .ql-toolbar {
                     border-color: rgba(255,255,255,0.05) !important;
                     background: rgba(255,255,255,0.02);
+                }
+                .dark .ql-editor {
+                    color: inherit;
                 }
                 .dark .ql-snow .ql-stroke { stroke: #9ca3af; }
                 .dark .ql-snow .ql-fill { fill: #9ca3af; }
