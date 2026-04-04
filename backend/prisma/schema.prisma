@@ -390,6 +390,7 @@ model Blog {
   slug          String    @unique
   content       String    @db.Text
   image_url     String?
+  images        String[]  @default([])
   type          String    @default("ORGANIZER_NEWS") // "ORGANIZER_NEWS", "CUSTOMER_REVIEW"
   status        String    @default("published")      // "published", "draft", "hidden"
   views         Int       @default(0)

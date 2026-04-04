@@ -110,7 +110,7 @@ const BlogManagement = () => {
           </p>
         </div>
         <button 
-          onClick={() => navigate('/admin/blogs/create')}
+          onClick={() => navigate('/admin/blog/create')}
           className="flex items-center justify-center space-x-2 bg-neon-green hover:bg-neon-green/90 text-black px-6 py-3 rounded-xl font-black uppercase text-xs transition-all hover:scale-105 active:scale-95 shadow-lg shadow-neon-green/20"
         >
           <Plus className="w-4 h-4" />

@@ -80,7 +80,7 @@ const adminBlogController = {
   // Admin tạo bài viết mới (Tin tức hệ thống)
   createBlog: async (req, res) => {
     try {
-      const { title, content, image_url, event_id, status } = req.body;
+      const { title, content, image_url, images, event_id, status } = req.body;
       const author_id = req.user.id || req.user.userId;
 
       if (!title || !content) {
@@ -94,6 +94,7 @@ const adminBlogController = {
           title,
           content,
           image_url,
+          images: images || [],
           slug,
           status: status || 'published',
           author_id,
