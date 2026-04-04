@@ -50,6 +50,10 @@ import CategoryDetail from './pages/Admin/CategoryDetail';
 import EventManagement from './pages/Admin/EventManagement';
 import AdminEventDetail from './pages/Admin/EventDetail';
 import UserDetail from './pages/Admin/UserDetail';
+import ProductManagement from './pages/Admin/ProductManagement';
+import ProductDetail from './pages/Admin/ProductDetail';
+import AdminBlogManagement from './pages/Admin/BlogManagement';
+import AdminCreateBlog from './pages/Admin/AdminCreateBlog';
 
 // Component Bảo vệ Route theo Role
 // @ts-ignore
@@ -127,6 +131,10 @@ const router = createBrowserRouter([
       { path: 'events/:id', element: <AdminEventDetail /> },
       { path: 'categories', element: <CategoryManagement /> },
       { path: 'categories/:id', element: <CategoryDetail /> },
+      { path: 'products', element: <ProductManagement /> },
+      { path: 'products/:id', element: <ProductDetail /> },
+      { path: 'blog', element: <AdminBlogManagement /> },
+      { path: 'blogs/create', element: <AdminCreateBlog /> },
       { path: 'refunds', element: <div className="text-2xl font-black">Yêu cầu Hoàn tiền (Coming Soon)</div> },
       { path: 'fraud', element: <div className="text-2xl font-black">Cảnh báo Gian lận (Coming Soon)</div> },
       { path: 'transactions', element: <div className="text-2xl font-black">Quản lý Giao dịch (Coming Soon)</div> },
