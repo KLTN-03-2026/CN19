@@ -5,11 +5,15 @@ const adminCouponController = {
   // Lấy danh sách toàn bộ mã giảm giá
   getAllCoupons: async (req, res) => {
     try {
-      const { search, status } = req.query;
+      const { search, status, discount_type } = req.query;
       
       const where = {};
       if (search) {
         where.code = { contains: search, mode: 'insensitive' };
+      }
+      
+      if (discount_type) {
+        where.discount_type = discount_type;
       }
       
       if (status === 'active') {
@@ -25,6 +29,7 @@ const adminCouponController = {
         where,
         orderBy: { created_at: 'desc' },
         include: {
+          event: { select: { title: true } },
           _count: {
             select: { orders: true }
           }
@@ -72,7 +77,7 @@ const adminCouponController = {
       const { 
         code, description, discount_type, discount_value, 
         min_order_amount, max_discount_amount, usage_limit, 
-        start_date, end_date 
+        start_date, end_date, event_id 
       } = req.body;
 
       if (!code || !discount_type || !discount_value || !start_date || !end_date) {
@@ -96,6 +101,7 @@ const adminCouponController = {
           usage_limit: usage_limit ? parseInt(usage_limit) : null,
           start_date: new Date(start_date),
           end_date: new Date(end_date),
+          event_id: event_id || null,
           is_active: true
         }
       });
@@ -114,7 +120,7 @@ const adminCouponController = {
       const { 
         description, discount_type, discount_value, 
         min_order_amount, max_discount_amount, usage_limit, 
-        start_date, end_date, is_active 
+        start_date, end_date, is_active, event_id 
       } = req.body;
 
       const coupon = await prisma.coupon.findUnique({ where: { id } });
@@ -133,6 +139,7 @@ const adminCouponController = {
           usage_limit: usage_limit !== undefined ? (usage_limit ? parseInt(usage_limit) : null) : undefined,
           start_date: start_date ? new Date(start_date) : undefined,
           end_date: end_date ? new Date(end_date) : undefined,
+          event_id: event_id !== undefined ? (event_id || null) : undefined,
           is_active
         }
       });

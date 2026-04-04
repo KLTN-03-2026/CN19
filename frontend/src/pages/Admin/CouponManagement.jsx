@@ -26,16 +26,18 @@ const CouponManagement = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState('all');
 
   useEffect(() => {
     fetchCoupons();
-  }, [statusFilter]);
+  }, [statusFilter, typeFilter]);
 
   const fetchCoupons = async () => {
     try {
       setLoading(true);
       const params = {};
       if (statusFilter !== 'all') params.status = statusFilter;
+      if (typeFilter !== 'all') params.discount_type = typeFilter;
       if (searchTerm) params.search = searchTerm;
 
       const response = await adminService.getCoupons(params);
@@ -132,6 +134,21 @@ const CouponManagement = () => {
         </form>
         
         <div className="flex items-center gap-3 w-full md:w-auto">
+          {/* Discount Type Filter */}
+          <div className="relative w-full md:w-44">
+            <Tag className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
+            <select 
+              className="w-full font-medium bg-gray-50 dark:bg-[#1a1a1e] border border-gray-200 dark:border-white/20 rounded-xl py-3 pl-9 pr-10 text-xs font-bold appearance-none focus:outline-none focus:border-neon-green transition-all dark:text-white text-gray-900 cursor-pointer"
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+            >
+              <option value="all">Tất cả loại giảm</option>
+              <option value="PERCENTAGE">Phần trăm (%)</option>
+              <option value="FIXED_AMOUNT">Cố định (đ)</option>
+            </select>
+            <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 rotate-90 pointer-events-none" />
+          </div>
+
           <div className="relative w-full md:w-48">
             <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
             <select 
@@ -162,6 +179,7 @@ const CouponManagement = () => {
               <thead>
                 <tr className="bg-gray-50/50 dark:bg-white/5 border-b border-gray-100 dark:border-white/5">
                   <th className="px-6 py-4 text-[10px] font-black uppercase text-gray-400 tracking-wider">Thông tin Mã</th>
+                  <th className="px-6 py-4 text-[10px] font-black uppercase text-gray-400 tracking-wider">Phạm vi</th>
                   <th className="px-6 py-4 text-[10px] font-black uppercase text-gray-400 tracking-wider">Loại giảm giá</th>
                   <th className="px-6 py-4 text-[10px] font-black uppercase text-gray-400 tracking-wider">Giá trị</th>
                   <th className="px-6 py-4 text-[10px] font-black uppercase text-gray-400 tracking-wider text-center">Lượt dùng</th>
@@ -184,6 +202,18 @@ const CouponManagement = () => {
                             <div className="text-[10px] text-gray-400 mt-0.5 line-clamp-1">{coupon.description || 'Không có mô tả'}</div>
                           </div>
                         </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        {coupon.event ? (
+                          <div className="flex flex-col">
+                            <span className="text-[9px] font-black uppercase text-blue-500 mb-1">Sự kiện cụ thể</span>
+                            <div className="text-[10px] font-bold text-gray-700 dark:text-gray-300 line-clamp-1 max-w-[150px]">
+                              {coupon.event.title}
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter italic">Tất cả sự kiện</span>
+                        )}
                       </td>
                       <td className="px-6 py-4">
                         <span className={`text-[9px] font-black uppercase px-2 py-1 rounded-full ${

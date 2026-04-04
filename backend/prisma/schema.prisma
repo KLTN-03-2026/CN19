@@ -130,6 +130,7 @@ model Event {
   updated_at             DateTime               @updatedAt
   merchandise            Merchandise[]
   blogs                  Blog[]
+  coupons                Coupon[]
 }
 
 model EmergencyRequest {
@@ -446,5 +447,8 @@ model Coupon {
   is_active        Boolean   @default(true)
   created_at       DateTime  @default(now())
   updated_at       DateTime  @updatedAt
+  
+  event_id         String?
+  event            Event?    @relation(fields: [event_id], references: [id])
   orders           Order[]
 }

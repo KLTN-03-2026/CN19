@@ -24,6 +24,8 @@ const CreateCoupon = () => {
 
   const [isLoading, setIsLoading] = useState(false);
   const [isFetching, setIsFetching] = useState(isEditMode);
+  const [events, setEvents] = useState([]);
+  const [couponScope, setCouponScope] = useState('all'); // 'all' | 'specific'
   
   const [formData, setFormData] = useState({
     code: '',
@@ -35,37 +37,47 @@ const CreateCoupon = () => {
     usage_limit: '',
     start_date: '',
     end_date: '',
+    event_id: '',
     is_active: true
   });
 
   useEffect(() => {
-    if (isEditMode) {
-      fetchCouponDetail();
-    }
+    fetchInitialData();
   }, [id]);
 
-  const fetchCouponDetail = async () => {
+  const fetchInitialData = async () => {
     try {
-      const res = await adminService.getCouponById(id);
-      if (res.success) {
-        const coupon = res.data;
-        setFormData({
-          code: coupon.code,
-          description: coupon.description || '',
-          discount_type: coupon.discount_type,
-          discount_value: coupon.discount_value,
-          min_order_amount: coupon.min_order_amount || '',
-          max_discount_amount: coupon.max_discount_amount || '',
-          usage_limit: coupon.usage_limit || '',
-          start_date: coupon.start_date.split('T')[0],
-          end_date: coupon.end_date.split('T')[0],
-          is_active: coupon.is_active
-        });
+      setIsFetching(true);
+      // Fetch events for selection
+      const eventsRes = await adminService.getEvents({ status: 'active' });
+      // Inconsistent API: admin-event doesn't return .success, just .data
+      if (eventsRes && eventsRes.data) {
+        setEvents(eventsRes.data);
+      }
+
+      if (isEditMode) {
+        const res = await adminService.getCouponById(id);
+        if (res.success) {
+          const coupon = res.data;
+          setFormData({
+            code: coupon.code,
+            description: coupon.description || '',
+            discount_type: coupon.discount_type,
+            discount_value: coupon.discount_value,
+            min_order_amount: coupon.min_order_amount || '',
+            max_discount_amount: coupon.max_discount_amount || '',
+            usage_limit: coupon.usage_limit || '',
+            start_date: coupon.start_date.split('T')[0],
+            end_date: coupon.end_date.split('T')[0],
+            event_id: coupon.event_id || '',
+            is_active: coupon.is_active
+          });
+          setCouponScope(coupon.event_id ? 'specific' : 'all');
+        }
       }
     } catch (error) {
-      console.error('Fetch Coupon Error:', error);
-      toast.error('Không thể tải thông tin mã giảm giá.');
-      navigate('/admin/coupons');
+      console.error('Fetch Initial Data Error:', error);
+      toast.error('Không thể tải dữ liệu ban đầu.');
     } finally {
       setIsFetching(false);
     }
@@ -74,18 +86,29 @@ const CreateCoupon = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    // Prepare data
+    const submitData = {
+      ...formData,
+      event_id: couponScope === 'all' ? null : formData.event_id
+    };
+    
     // Basic validation
-    if (!formData.code || !formData.discount_value || !formData.start_date || !formData.end_date) {
+    if (!submitData.code || !submitData.discount_value || !submitData.start_date || !submitData.end_date) {
       toast.error('Vui lòng điền đầy đủ các thông tin bắt buộc.');
       return;
     }
 
-    if (formData.discount_type === 'PERCENTAGE' && (formData.discount_value <= 0 || formData.discount_value > 100)) {
+    if (couponScope === 'specific' && !submitData.event_id) {
+      toast.error('Vui lòng chọn sự kiện áp dụng.');
+      return;
+    }
+
+    if (submitData.discount_type === 'PERCENTAGE' && (submitData.discount_value <= 0 || submitData.discount_value > 100)) {
       toast.error('Phần trăm giảm giá phải từ 1 đến 100.');
       return;
     }
 
-    if (new Date(formData.end_date) <= new Date(formData.start_date)) {
+    if (new Date(submitData.end_date) <= new Date(submitData.start_date)) {
       toast.error('Ngày kết thúc phải sau ngày bắt đầu.');
       return;
     }
@@ -93,10 +116,10 @@ const CreateCoupon = () => {
     try {
       setIsLoading(true);
       if (isEditMode) {
-        await adminService.updateCoupon(id, formData);
+        await adminService.updateCoupon(id, submitData);
         toast.success('Cập nhật mã giảm giá thành công!');
       } else {
-        await adminService.createCoupon(formData);
+        await adminService.createCoupon(submitData);
         toast.success('Tạo mã giảm giá mới thành công!');
       }
       navigate('/admin/coupons');
@@ -204,8 +227,48 @@ const CreateCoupon = () => {
               </div>
             </div>
 
+            {/* Scope Selection */}
+            <div className="space-y-4 pt-4 border-t border-gray-50 dark:border-white/5">
+              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Phạm vi áp dụng</label>
+              <div className="grid grid-cols-2 gap-4">
+                <button 
+                  type="button"
+                  onClick={() => setCouponScope('all')}
+                  className={`py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest flex flex-col items-center justify-center gap-2 border transition-all ${couponScope === 'all' ? 'bg-neon-green/10 border-neon-green text-neon-green shadow-lg shadow-neon-green/10' : 'border-gray-100 dark:border-white/5 text-gray-400'}`}
+                >
+                  <CheckCircle2 className={`w-5 h-5 ${couponScope === 'all' ? 'text-neon-green' : 'text-gray-300 dark:text-gray-600'}`} />
+                  Tất cả sự kiện
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => setCouponScope('specific')}
+                  className={`py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest flex flex-col items-center justify-center gap-2 border transition-all ${couponScope === 'specific' ? 'bg-blue-500/10 border-blue-500 text-blue-500 shadow-lg shadow-blue-500/10' : 'border-gray-100 dark:border-white/5 text-gray-400'}`}
+                >
+                  <Calendar className={`w-5 h-5 ${couponScope === 'specific' ? 'text-blue-500' : 'text-gray-300 dark:text-gray-600'}`} />
+                  Sự kiện nhất định
+                </button>
+              </div>
+
+              {couponScope === 'specific' && (
+                <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                  <select 
+                    className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-2xl py-4 px-6 text-sm font-bold dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                    value={formData.event_id}
+                    onChange={(e) => setFormData({ ...formData, event_id: e.target.value })}
+                  >
+                    <option value="">-- Chọn sự kiện áp dụng --</option>
+                    {events.map(event => (
+                      <option key={event.id} value={event.id}>
+                        {event.title} ({new Date(event.event_date).toLocaleDateString('vi-VN')})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+
             {/* Limits */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4 border-t border-gray-50 dark:border-white/5">
               <div className="space-y-2">
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Đơn hàng tối thiểu</label>
                 <div className="relative">
