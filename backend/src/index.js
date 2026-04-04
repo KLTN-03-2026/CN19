@@ -37,6 +37,7 @@ const adminFinanceRoutes = require('./routes/admin-finance.routes');
 const adminSystemRoutes = require('./routes/admin-system.routes');
 const adminMerchandiseRoutes = require('./routes/admin-merchandise.routes');
 const adminBlogRoutes = require('./routes/admin-blog.routes');
+const adminCouponRoutes = require('./routes/admin-coupon.routes');
 
 // 6. Staff
 const scannerRoutes = require('./routes/scanner.routes');
@@ -85,6 +86,7 @@ app.use('/api/admin', adminFinanceRoutes); // points inside to /refunds, /payout
 app.use('/api/admin', adminSystemRoutes);  // points inside to /config, /fraud-alerts, /stats
 app.use('/api/admin/merchandise', adminMerchandiseRoutes);
 app.use('/api/admin/blogs', adminBlogRoutes);
+app.use('/api/admin/coupons', adminCouponRoutes);
 
 // Staff
 app.use('/api/staff', scannerRoutes);

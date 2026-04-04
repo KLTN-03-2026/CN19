@@ -54,6 +54,8 @@ import ProductManagement from './pages/Admin/ProductManagement';
 import ProductDetail from './pages/Admin/ProductDetail';
 import AdminBlogManagement from './pages/Admin/BlogManagement';
 import AdminCreateBlog from './pages/Admin/AdminCreateBlog';
+import CouponManagement from './pages/Admin/CouponManagement';
+import CreateCoupon from './pages/Admin/CreateCoupon';
 
 // Component Bảo vệ Route theo Role
 // @ts-ignore
@@ -134,7 +136,10 @@ const router = createBrowserRouter([
       { path: 'products', element: <ProductManagement /> },
       { path: 'products/:id', element: <ProductDetail /> },
       { path: 'blog', element: <AdminBlogManagement /> },
-      { path: 'blogs/create', element: <AdminCreateBlog /> },
+      { path: 'blog/create', element: <AdminCreateBlog /> },
+      { path: 'coupons', element: <CouponManagement /> },
+      { path: 'coupons/create', element: <CreateCoupon /> },
+      { path: 'coupons/edit/:id', element: <CreateCoupon /> },
       { path: 'refunds', element: <div className="text-2xl font-black">Yêu cầu Hoàn tiền (Coming Soon)</div> },
       { path: 'fraud', element: <div className="text-2xl font-black">Cảnh báo Gian lận (Coming Soon)</div> },
       { path: 'transactions', element: <div className="text-2xl font-black">Quản lý Giao dịch (Coming Soon)</div> },

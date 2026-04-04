@@ -103,5 +103,31 @@ export const adminService = {
   deleteBlog: async (id) => {
     const response = await api.delete(`/admin/blogs/${id}`);
     return response.data;
+  },
+
+  // Quản lý Mã giảm giá (Coupons)
+  getCoupons: async (params) => {
+    const response = await api.get('/admin/coupons', { params });
+    return response.data;
+  },
+  getCouponById: async (id) => {
+    const response = await api.get(`/admin/coupons/${id}`);
+    return response.data;
+  },
+  createCoupon: async (data) => {
+    const response = await api.post('/admin/coupons', data);
+    return response.data;
+  },
+  updateCoupon: async (id, data) => {
+    const response = await api.put(`/admin/coupons/${id}`, data);
+    return response.data;
+  },
+  toggleCouponStatus: async (id) => {
+    const response = await api.patch(`/admin/coupons/${id}/toggle`);
+    return response.data;
+  },
+  deleteCoupon: async (id) => {
+    const response = await api.delete(`/admin/coupons/${id}`);
+    return response.data;
   }
 };

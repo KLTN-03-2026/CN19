@@ -25,7 +25,8 @@ import {
   FileText,
   FileDown,
   Ticket,
-  LifeBuoy
+  LifeBuoy,
+  Tag
 } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import toast from 'react-hot-toast';
@@ -64,7 +65,7 @@ const AdminLayout = () => {
     { path: '/admin/transactions', icon: History, label: 'Quản lý giao dịch' },
     { path: '/admin/products', icon: Package, label: 'Quản lý sản phẩm' },
     { path: '/admin/blog', icon: FileText, label: 'Quản lý blog' },
-    { path: '/admin/vouchers', icon: Ticket, label: 'Mã giảm giá' },
+    { path: '/admin/coupons', icon: Tag, label: 'Mã giảm giá' },
     { path: '/admin/support', icon: LifeBuoy, label: 'Hỗ trợ & Khiếu nại' },
     { path: '/admin/reports', icon: FileDown, label: 'Thống kê & Báo cáo' },
     { path: '/admin/settings', icon: Settings, label: 'Cấu hình hệ thống' },
