@@ -13,10 +13,11 @@ import {
   Power,
   PowerOff,
   Edit,
-  AlertCircle
+  AlertCircle,
+  Eye
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { adminService } from '../../services/admin.service';
 
@@ -85,7 +86,7 @@ const CouponManagement = () => {
 
   const getStatusBadge = (coupon) => {
     const now = new Date();
-    const endDate = new Date(coupon.end_date);
+    const endDate = parseISO(coupon.end_date);
     
     if (!coupon.is_active) {
       return { label: 'Tạm dừng', color: 'bg-gray-500/10 text-gray-500' };
@@ -252,6 +253,13 @@ const CouponManagement = () => {
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-end space-x-2">
+                          <button 
+                            onClick={() => navigate(`/admin/coupons/${coupon.id}`)}
+                            className="p-2 text-gray-400 hover:text-neon-green hover:bg-neon-green/10 rounded-lg transition-all"
+                            title="Xem chi tiết"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
                           <button 
                             onClick={() => toggleStatus(coupon.id, coupon.is_active)}
                             className={`p-2 rounded-lg transition-all ${

@@ -1,4 +1,5 @@
 const { PrismaClient } = require('@prisma/client');
+const { parseISO } = require('date-fns');
 const prisma = new PrismaClient();
 
 const adminCouponController = {
@@ -50,8 +51,9 @@ const adminCouponController = {
       const coupon = await prisma.coupon.findUnique({
         where: { id },
         include: {
+          event: { select: { title: true } },
           orders: {
-            take: 10,
+            take: 20,
             orderBy: { created_at: 'desc' },
             include: {
               customer: { select: { full_name: true, email: true } }
@@ -99,8 +101,8 @@ const adminCouponController = {
           min_order_amount: min_order_amount ? parseFloat(min_order_amount) : null,
           max_discount_amount: max_discount_amount ? parseFloat(max_discount_amount) : null,
           usage_limit: usage_limit ? parseInt(usage_limit) : null,
-          start_date: new Date(start_date),
-          end_date: new Date(end_date),
+          start_date: parseISO(start_date),
+          end_date: parseISO(end_date),
           event_id: event_id || null,
           is_active: true
         }
@@ -137,8 +139,8 @@ const adminCouponController = {
           min_order_amount: min_order_amount !== undefined ? (min_order_amount ? parseFloat(min_order_amount) : null) : undefined,
           max_discount_amount: max_discount_amount !== undefined ? (max_discount_amount ? parseFloat(max_discount_amount) : null) : undefined,
           usage_limit: usage_limit !== undefined ? (usage_limit ? parseInt(usage_limit) : null) : undefined,
-          start_date: start_date ? new Date(start_date) : undefined,
-          end_date: end_date ? new Date(end_date) : undefined,
+          start_date: start_date ? parseISO(start_date) : undefined,
+          end_date: end_date ? parseISO(end_date) : undefined,
           event_id: event_id !== undefined ? (event_id || null) : undefined,
           is_active
         }

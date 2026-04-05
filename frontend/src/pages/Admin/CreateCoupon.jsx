@@ -15,6 +15,10 @@ import {
   Trash2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { format, parseISO } from 'date-fns';
+import { vi } from 'date-fns/locale';
+import DatePicker from 'react-datepicker';
+import "react-datepicker/dist/react-datepicker.css";
 import { adminService } from '../../services/admin.service';
 
 const CreateCoupon = () => {
@@ -312,27 +316,61 @@ const CreateCoupon = () => {
             
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Ngày bắt đầu</label>
+                <div className="flex justify-between items-end">
+                  <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Ngày bắt đầu</label>
+                  {formData.start_date && (
+                    <div className="flex flex-col items-end">
+                      <span className="text-[10px] font-bold text-neon-green bg-neon-green/10 px-2 py-0.5 rounded-lg mb-1">
+                        {format(parseISO(formData.start_date), 'dd/MM/yyyy')}
+                      </span>
+                      <span className="text-[9px] text-gray-400 font-medium italic">
+                        (Ngày {format(parseISO(formData.start_date), 'dd')} tháng {format(parseISO(formData.start_date), 'MM')}, {format(parseISO(formData.start_date), 'yyyy')})
+                      </span>
+                    </div>
+                  )}
+                </div>
                 <div className="relative">
-                  <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  <input 
-                    type="date"
-                    className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-xl py-3 pl-11 pr-4 text-xs font-bold dark:text-white"
-                    value={formData.start_date}
-                    onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                  <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 z-10" />
+                  <DatePicker
+                    selected={formData.start_date ? parseISO(formData.start_date) : null}
+                    onChange={(date) => setFormData({ 
+                      ...formData, 
+                      start_date: date ? format(date, 'yyyy-MM-dd') : '' 
+                    })}
+                    dateFormat="dd/MM/yyyy"
+                    placeholderText="dd/mm/yyyy"
+                    className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-xl py-3 pl-11 pr-4 text-xs font-bold dark:text-white focus:outline-none focus:border-neon-green transition-all"
+                    autoComplete="off"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Ngày kết thúc</label>
+                <div className="flex justify-between items-end">
+                  <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Ngày kết thúc</label>
+                  {formData.end_date && (
+                    <div className="flex flex-col items-end">
+                      <span className="text-[10px] font-bold text-red-500 bg-red-500/10 px-2 py-0.5 rounded-lg mb-1">
+                        {format(parseISO(formData.end_date), 'dd/MM/yyyy')}
+                      </span>
+                      <span className="text-[9px] text-gray-400 font-medium italic">
+                        (Ngày {format(parseISO(formData.end_date), 'dd')} tháng {format(parseISO(formData.end_date), 'MM')}, {format(parseISO(formData.end_date), 'yyyy')})
+                      </span>
+                    </div>
+                  )}
+                </div>
                 <div className="relative">
-                  <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  <input 
-                    type="date"
-                    className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-xl py-3 pl-11 pr-4 text-xs font-bold dark:text-white"
-                    value={formData.end_date}
-                    onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+                  <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 z-10" />
+                  <DatePicker
+                    selected={formData.end_date ? parseISO(formData.end_date) : null}
+                    onChange={(date) => setFormData({ 
+                      ...formData, 
+                      end_date: date ? format(date, 'yyyy-MM-dd') : '' 
+                    })}
+                    dateFormat="dd/MM/yyyy"
+                    placeholderText="dd/mm/yyyy"
+                    className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-xl py-3 pl-11 pr-4 text-xs font-bold dark:text-white focus:outline-none focus:border-neon-green transition-all"
+                    autoComplete="off"
                   />
                 </div>
               </div>

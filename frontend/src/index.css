@@ -84,3 +84,36 @@ input[type="date"]::-webkit-inner-spin-button,
 input[type="date"]::-webkit-clear-button {
   display: none;
 }
+
+/* custom-datepicker.css override */
+.react-datepicker-wrapper {
+  width: 100%;
+}
+
+.react-datepicker {
+  @apply bg-white dark:bg-[#111114] border-gray-100 dark:border-white/10 rounded-[1.5rem] shadow-2xl font-sans overflow-hidden !important;
+}
+
+.react-datepicker__header {
+  @apply bg-gray-50 dark:bg-white/5 border-b border-gray-100 dark:border-white/10 pt-4 !important;
+}
+
+.react-datepicker__current-month, .react-datepicker__day-name {
+  @apply text-gray-900 dark:text-white font-black uppercase text-[10px] tracking-widest !important;
+}
+
+.react-datepicker__day {
+  @apply text-gray-700 dark:text-gray-300 font-bold rounded-lg transition-all hover:bg-neon-green/10 hover:text-neon-green !important;
+}
+
+.react-datepicker__day--selected {
+  @apply bg-neon-green text-black font-black !important;
+}
+
+.react-datepicker__day--keyboard-selected {
+  @apply bg-neon-green/20 text-neon-green !important;
+}
+
+.react-datepicker__navigation-icon::before {
+  @apply border-gray-400 !important;
+}
