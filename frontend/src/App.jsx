@@ -119,7 +119,6 @@ const router = createBrowserRouter([
       { path: 'privacy-policy', element: <PrivacyPolicy /> },
       { path: 'refund-policy', element: <RefundPolicy /> },
       { path: 'faq', element: <FAQ /> },
-      { path: 'blog', element: <Blog /> },
       { path: 'community', element: <CommunityPage /> },
 
       { path: '*', element: <Navigate to="/" replace /> }

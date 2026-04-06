@@ -7,9 +7,10 @@ const cors = require('cors');
 const authRoutes = require('./routes/auth.routes');
 const userRoutes = require('./routes/user.routes');
 
-// 2. Events & Categories
+// 2. Events, Categories & Coupons
 const categoryRoutes = require('./routes/category.routes');
 const eventRoutes = require('./routes/event.routes');
+const couponRoutes = require('./routes/coupon.routes');
 
 // 3. Orders, Payments & Tickets
 const orderRoutes = require('./routes/order.routes');
@@ -62,6 +63,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/events', eventRoutes);
+app.use('/api/coupons', couponRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/tickets', ticketRoutes);

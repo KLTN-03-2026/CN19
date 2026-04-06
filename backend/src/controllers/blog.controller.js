@@ -1,5 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../config/prisma');
 const slugify = require('slugify');
 
 const blogController = {
@@ -183,7 +182,13 @@ const blogController = {
             const skip = (parseInt(page) - 1) * parseInt(limit);
 
             const where = { status: 'published' };
-            if (type && type !== 'all') where.type = type;
+            
+            // Nếu không yêu cầu type cụ thể, mặc định chỉ lấy tin Admin & BTC cho trang Blog
+            if (type && type !== 'all') {
+                where.type = type;
+            } else {
+                where.type = { in: ['SYSTEM_NEWS', 'ORGANIZER_NEWS'] };
+            }
             if (search) {
                 where.OR = [
                     { title: { contains: search, mode: 'insensitive' } },
@@ -194,8 +199,19 @@ const blogController = {
             const blogs = await prisma.blog.findMany({
                 where,
                 include: {
-                    author: { select: { id: true, full_name: true, avatar_url: true, role: true, date_of_birth: true } },
-                    event: { select: { id: true, title: true, slug: true } },
+                    author: { 
+                        select: { 
+                            id: true, 
+                            full_name: true, 
+                            avatar_url: true, 
+                            role: true, 
+                            date_of_birth: true,
+                            organizer_profile: {
+                                select: { organization_name: true }
+                            }
+                        } 
+                    },
+                    event: { select: { id: true, title: true } },
                     _count: { select: { likes: true, comments: true } }
                 },
                 orderBy: { created_at: 'desc' },
@@ -247,8 +263,18 @@ const blogController = {
             const blog = await prisma.blog.findUnique({
                 where: { slug },
                 include: {
-                    author: { select: { id: true, full_name: true, avatar_url: true, role: true } },
-                    event: { select: { id: true, title: true, image_url: true, slug: true } },
+                    author: { 
+                        select: { 
+                            id: true, 
+                            full_name: true, 
+                            avatar_url: true, 
+                            role: true,
+                            organizer_profile: {
+                                select: { organization_name: true }
+                            }
+                        } 
+                    },
+                    event: { select: { id: true, title: true, image_url: true } },
                     comments: {
                         include: {
                             user: { select: { id: true, full_name: true, avatar_url: true } }

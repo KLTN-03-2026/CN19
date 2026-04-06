@@ -210,7 +210,7 @@ const BlogDetail = () => {
                                             {blog.event.title}
                                         </h3>
                                         <Link 
-                                            to={`/event/${blog.event.slug}`}
+                                            to={`/event/${blog.event.id}`}
                                             className="inline-flex items-center gap-3 px-8 py-4 bg-neon-green text-black font-black uppercase text-xs rounded-2xl hover:scale-105 active:scale-95 transition-all shadow-lg shadow-neon-green/20"
                                         >
                                             Đặt vé ngay <ChevronRight className="w-4 h-4" />
