@@ -110,6 +110,7 @@ model Event {
   refund_deadline_days   Int?
   description            String?
   image_url              String?
+  is_featured            Boolean                @default(false)
   end_date               DateTime?
   end_time               String?
   latitude               Float?
