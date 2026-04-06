@@ -6,6 +6,8 @@ import PublicLayout from './components/layout/PublicLayout';
 import Home from './pages/Home/Home';
 import Events from './pages/Home/Events';
 import PublicEventDetail from './pages/Home/PublicEventDetail';
+import BlogList from './pages/Home/BlogList';
+import BlogDetail from './pages/Home/BlogDetail';
 import OrganizerPublicProfile from './pages/Home/OrganizerPublicProfile';
 import Profile from './pages/Profile/Profile';
 import MyTickets from './pages/Customer/MyTickets';
@@ -77,8 +79,10 @@ const router = createBrowserRouter([
     children: [
       { path: '', element: <Home /> },
       { path: 'events', element: <Events /> },
-      { path: 'events/:id', element: <PublicEventDetail /> },
-      { path: 'organizers/:id', element: <OrganizerPublicProfile /> },
+      { path: 'event/:slug', element: <PublicEventDetail /> },
+      { path: 'blog', element: <BlogList /> },
+      { path: 'blog/:slug', element: <BlogDetail /> },
+      { path: 'organizer/:id', element: <OrganizerPublicProfile /> },
       { path: 'login', element: <Login /> },
       { path: 'register', element: <Register /> },
       { path: 'forgot-password', element: <ForgotPassword /> },

@@ -174,6 +174,113 @@ const blogController = {
         } catch (error) {
             res.status(500).json({ error: 'Lỗi khi thêm bình luận.' });
         }
+    },
+
+    // 5. Lấy danh sách blog công khai (Hỗ trợ phân trang, lọc loại)
+    getPublicBlogs: async (req, res) => {
+        try {
+            const { type, search, page = 1, limit = 9 } = req.query;
+            const skip = (parseInt(page) - 1) * parseInt(limit);
+
+            const where = { status: 'published' };
+            if (type && type !== 'all') where.type = type;
+            if (search) {
+                where.OR = [
+                    { title: { contains: search, mode: 'insensitive' } },
+                    { content: { contains: search, mode: 'insensitive' } }
+                ];
+            }
+
+            const blogs = await prisma.blog.findMany({
+                where,
+                include: {
+                    author: { select: { id: true, full_name: true, avatar_url: true, role: true, date_of_birth: true } },
+                    event: { select: { id: true, title: true, slug: true } },
+                    _count: { select: { likes: true, comments: true } }
+                },
+                orderBy: { created_at: 'desc' },
+                skip,
+                take: parseInt(limit)
+            });
+
+            // Sắp xếp lại để SYSTEM_NEWS lên đầu (Featured)
+            const sortedBlogs = [...blogs].sort((a, b) => {
+                if (a.type === 'SYSTEM_NEWS' && b.type !== 'SYSTEM_NEWS') return -1;
+                if (a.type !== 'SYSTEM_NEWS' && b.type === 'SYSTEM_NEWS') return 1;
+                return 0;
+            });
+
+            const total = await prisma.blog.count({ where });
+
+            res.json({
+                success: true,
+                data: sortedBlogs,
+                pagination: {
+                    total,
+                    page: parseInt(page),
+                    limit: parseInt(limit),
+                    totalPages: Math.ceil(total / limit)
+                }
+            });
+        } catch (error) {
+            console.error('getPublicBlogs error:', error);
+            res.status(500).json({ error: 'Lỗi khi lấy danh sách bài viết.' });
+        }
+    },
+
+    // 6. Lấy chi tiết bài viết theo Slug
+    getBlogBySlug: async (req, res) => {
+        try {
+            const { slug } = req.params;
+            const authHeader = req.headers.authorization;
+            let currentUserId = null;
+
+            if (authHeader && authHeader.startsWith('Bearer ')) {
+                const jwt = require('jsonwebtoken');
+                const token = authHeader.split(' ')[1];
+                try {
+                    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+                    currentUserId = decoded.id;
+                } catch (e) {}
+            }
+
+            const blog = await prisma.blog.findUnique({
+                where: { slug },
+                include: {
+                    author: { select: { id: true, full_name: true, avatar_url: true, role: true } },
+                    event: { select: { id: true, title: true, image_url: true, slug: true } },
+                    comments: {
+                        include: {
+                            user: { select: { id: true, full_name: true, avatar_url: true } }
+                        },
+                        orderBy: { created_at: 'desc' }
+                    },
+                    likes: currentUserId ? { where: { user_id: currentUserId } } : false,
+                    _count: { select: { likes: true } }
+                }
+            });
+
+            if (!blog || blog.status !== 'published') {
+                return res.status(404).json({ error: 'Không tìm thấy bài viết.' });
+            }
+
+            // Tăng lượt xem
+            await prisma.blog.update({
+                where: { id: blog.id },
+                data: { views: { increment: 1 } }
+            });
+
+            const result = {
+                ...blog,
+                is_liked: blog.likes ? blog.likes.length > 0 : false,
+                likes: undefined
+            };
+
+            res.json({ success: true, data: result });
+        } catch (error) {
+            console.error('getBlogBySlug error:', error);
+            res.status(500).json({ error: 'Lỗi khi lấy chi tiết bài viết.' });
+        }
     }
 };
 

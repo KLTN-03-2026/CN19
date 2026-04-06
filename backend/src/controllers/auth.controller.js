@@ -166,6 +166,7 @@ const login = async (req, res) => {
         phone_number: user.phone_number,
         full_name: user.full_name,
         avatar_url: user.avatar_url,
+        date_of_birth: user.date_of_birth,
         organizer_profile: user.organizer_profile
       }
     });
@@ -429,6 +430,7 @@ const googleLogin = async (req, res) => {
         role: user.role,
         status: user.status,
         avatar_url: user.avatar_url,
+        date_of_birth: user.date_of_birth,
         wallet_address: user.wallet_address,
         organizer_profile: user.organizer_profile
       }

@@ -4,6 +4,12 @@ const controller = require('../controllers/blog.controller');
 const { authenticate } = require('../middlewares/auth.middleware');
 
 // --- CÔNG KHAI (Public) ---
+// Lấy toàn bộ bài viết công khai (Hệ thống, BTC, Khách hàng)
+router.get('/', controller.getPublicBlogs);
+
+// Lấy chi tiết bài viết theo Slug
+router.get('/slug/:slug', controller.getBlogBySlug);
+
 // Lấy toàn bộ review của một sự kiện
 router.get('/event/:eventId', controller.getEventReviews);
 

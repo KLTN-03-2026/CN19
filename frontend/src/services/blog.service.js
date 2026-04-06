@@ -13,6 +13,18 @@ const blogService = {
     return res.data;
   },
 
+  // Lấy danh sách blog công khai
+  getPublicBlogs: async (params) => {
+    const res = await api.get('/blogs', { params });
+    return res.data;
+  },
+
+  // Lấy chi tiết blog theo slug
+  getBlogBySlug: async (slug) => {
+    const res = await api.get(`/blogs/slug/${slug}`);
+    return res.data;
+  },
+
   // Thích hoặc bỏ thích bài viết
   toggleLike: async (blogId) => {
     const res = await api.post(`/blogs/${blogId}/like`);
