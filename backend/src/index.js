@@ -19,6 +19,7 @@ const marketplaceRoutes = require('./routes/marketplace.routes');
 const transactionRoutes = require('./routes/transaction.routes');
 const refundRoutes = require('./routes/refund.routes');
 const blogRoutes = require('./routes/blog.routes');
+const communityRoutes = require('./routes/community.routes');
 
 // 4. Organizer
 const organizerRoutes = require('./routes/organizer.routes');
@@ -68,6 +69,7 @@ app.use('/api/marketplace/listings', marketplaceRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/refunds', refundRoutes);
 app.use('/api/blogs', blogRoutes);
+app.use('/api/community', communityRoutes);
 
 // Organizer
 app.use('/api/organizers', organizerRoutes); // Public profile of organizer

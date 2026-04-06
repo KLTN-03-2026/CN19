@@ -109,6 +109,7 @@ const PublicLayout = () => {
               <Link to="/" className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white font-medium transition-colors">{t('nav.home')}</Link>
               <Link to="/events" className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white font-medium transition-colors">{t('nav.events')}</Link>
               <Link to="/marketplace" className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white font-medium transition-colors">{t('nav.marketplace')}</Link>
+              <Link to="/community" className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white font-medium transition-colors">{t('nav.community')}</Link>
               <Link to="/blog" className="text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white font-medium transition-colors">{t('nav.blog')}</Link>
             </nav>
 

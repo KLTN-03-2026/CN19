@@ -10,7 +10,7 @@ i18n
       en: {
         translation: {
           nav: {
-            home: "Home", events: "Events", marketplace: "Marketplace", blog: "Blog", organizer: "For Organizers"
+            home: "Home", events: "Events", marketplace: "Marketplace", blog: "Blog", community: "Community", organizer: "For Organizers"
           },
           auth: {
             login: "Sign In", signup: "Sign Up", welcome: "Welcome back to BASTICKET", welcome_desc: "Secure login to the system.",
@@ -406,7 +406,7 @@ i18n
       vi: {
         translation: {
           nav: {
-            home: "Trang chủ", events: "Sự kiện", marketplace: "Chợ vé", blog: "Blog", organizer: "Dành cho BTC"
+            home: "Trang chủ", events: "Sự kiện", marketplace: "Chợ vé", blog: "Blog", community: "Cộng đồng", organizer: "Dành cho BTC"
           },
           auth: {
             login: "Đăng nhập", signup: "Đăng ký", welcome: "Chào mừng trở lại BASTICKET", welcome_desc: "Đăng nhập an toàn vào hệ thống.",

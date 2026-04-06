@@ -18,6 +18,7 @@ import PrivacyPolicy from './pages/Support/PrivacyPolicy';
 import RefundPolicy from './pages/Support/RefundPolicy';
 import FAQ from './pages/Support/FAQ';
 import Blog from './pages/Support/Blog';
+import CommunityPage from './pages/Community/CommunityPage';
 
 // Auth Pages
 import Login from './pages/Auth/Login';
@@ -115,6 +116,7 @@ const router = createBrowserRouter([
       { path: 'refund-policy', element: <RefundPolicy /> },
       { path: 'faq', element: <FAQ /> },
       { path: 'blog', element: <Blog /> },
+      { path: 'community', element: <CommunityPage /> },
 
       { path: '*', element: <Navigate to="/" replace /> }
     ]

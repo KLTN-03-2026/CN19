@@ -7,7 +7,7 @@ const blogController = {
     createReview: async (req, res) => {
         try {
             const { event_id, title, content, image_url } = req.body;
-            const user_id = req.user.id;
+            const user_id = req.user.userId;
 
             if (!event_id || !title || !content) {
                 return res.status(400).json({ error: 'Vui lòng điền đầy đủ thông tin.' });
@@ -121,7 +121,7 @@ const blogController = {
     toggleLike: async (req, res) => {
         try {
             const { blogId } = req.params;
-            const user_id = req.user.id;
+            const user_id = req.user.userId;
 
             const existingLike = await prisma.like.findUnique({
                 where: {
@@ -153,7 +153,7 @@ const blogController = {
         try {
             const { blogId } = req.params;
             const { content } = req.body;
-            const user_id = req.user.id;
+            const user_id = req.user.userId;
 
             if (!content) return res.status(400).json({ error: 'Nội dung bình luận không được để trống.' });
 
