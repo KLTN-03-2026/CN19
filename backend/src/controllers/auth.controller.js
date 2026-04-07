@@ -122,9 +122,14 @@ const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // 1. Tìm user theo Email
-    const user = await prisma.user.findUnique({
-      where: { email },
+    // 1. Tìm user theo Email hoặc SĐT
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: email },
+          { phone_number: email }
+        ]
+      },
       include: { organizer_profile: true }
     });
 
