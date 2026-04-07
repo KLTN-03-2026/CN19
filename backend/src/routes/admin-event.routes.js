@@ -20,4 +20,7 @@ router.put('/:id/force-cancel', controller.forceCancelEvent);
 // [POST] /api/admin/categories
 router.post('/categories', controller.createCategory);
 
+// [PATCH] /api/admin/events/:id/toggle-featured
+router.patch('/:id/toggle-featured', controller.toggleFeaturedEvent);
+
 module.exports = router;

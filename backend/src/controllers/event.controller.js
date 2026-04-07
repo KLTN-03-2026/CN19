@@ -80,6 +80,7 @@ const getRecommendations = async (req, res) => {
   try {
     const events = await prisma.event.findMany({
       where: { 
+        is_featured: true,
         status: 'active', 
         event_date: { gt: new Date() },
         category: { is_active: true }

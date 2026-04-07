@@ -182,6 +182,43 @@ const getEventById = async (req, res) => {
   }
 };
 
+// [UC_22] Bật/Tắt sự kiện nổi bật
+const toggleFeaturedEvent = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const event = await prisma.event.findUnique({
+      where: { id },
+      select: { is_featured: true }
+    });
+
+    if (!event) {
+      return res.status(404).json({ error: 'Không tìm thấy sự kiện.' });
+    }
+
+    const updatedEvent = await prisma.event.update({
+      where: { id },
+      data: { is_featured: !event.is_featured }
+    });
+
+    await prisma.adminActionLog.create({
+      data: { 
+        admin_id: req.user.userId, 
+        action_type: `event_toggle_featured`, 
+        target_id: id,
+        new_value: updatedEvent.is_featured.toString()
+      }
+    });
+
+    res.status(200).json({ 
+      message: updatedEvent.is_featured ? 'Đã bật trạng thái nổi bật' : 'Đã tắt trạng thái nổi bật',
+      is_featured: updatedEvent.is_featured 
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Lỗi server.' });
+  }
+};
+
 // [UC_24] Quản lý danh mục (Thêm mới)
 const createCategory = async (req, res) => {
     try {
@@ -198,5 +235,6 @@ module.exports = {
   getEventById,
   approveEvent,
   forceCancelEvent,
+  toggleFeaturedEvent,
   createCategory
 };
