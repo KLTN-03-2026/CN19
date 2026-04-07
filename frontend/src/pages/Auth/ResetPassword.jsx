@@ -56,10 +56,10 @@ const ResetPassword = () => {
       <div className="w-full max-w-[440px] bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-2xl shadow-2xl relative overflow-hidden flex flex-col glow-card-green transition-colors">
         
         <div className="border-b border-gray-100 dark:border-dark-border pt-10 pb-6 px-8 flex flex-col items-center justify-center text-center">
-          <div className="w-16 h-16 bg-neon-green/10 rounded-full flex items-center justify-center mb-4">
-            <KeyRound className="w-8 h-8 text-neon-green" />
+          <div className="w-14 h-14 bg-neon-green/10 rounded-full flex items-center justify-center mb-4">
+            <KeyRound className="w-6 h-6 text-neon-green" />
           </div>
-          <h2 className="text-3xl font-black text-gray-900 dark:text-white tracking-tighter">
+          <h2 className="text-2xl font-black text-gray-900 dark:text-white tracking-tighter">
             {t('profile.forgot.verify_title')}
           </h2>
           <p className="text-gray-500 dark:text-gray-400 mt-2 text-sm">
@@ -70,10 +70,10 @@ const ResetPassword = () => {
           </div>
         </div>
 
-        <form className="p-8 space-y-5" onSubmit={handleSubmit}>
+        <form className="pr-8 pl-8 pb-8 pt-4 space-y-5" onSubmit={handleSubmit}>
           {/* OTP Code */}
           <div className="space-y-2">
-            <label className="text-xs font-black uppercase tracking-widest text-gray-400 ml-1">
+            <label className="text-xs font-black text-gray-400 ml-1">
               {t('profile.forgot.otp_label')}
             </label>
             <input 
@@ -83,13 +83,13 @@ const ResetPassword = () => {
               value={otp}
               onChange={(e) => setOtp(e.target.value)}
               placeholder="123456"
-              className="w-full px-4 py-4 bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-dark-border rounded-xl text-center text-2xl font-black tracking-[0.5em] focus:border-neon-green outline-none transition-all dark:text-white placeholder:tracking-normal placeholder:text-gray-300"
+              className="w-full px-2 py-3 bg-gray-50 dark:bg-black/20 border border-gray-200 dark:border-dark-border rounded-xl text-center text-2xl font-black focus:border-neon-green outline-none transition-all dark:text-white placeholder:tracking-normal placeholder:text-gray-300"
             />
           </div>
 
           {/* New Password */}
           <div className="space-y-2">
-            <label className="text-xs font-black uppercase tracking-widest text-gray-400 ml-1">
+            <label className="text-xs font-black text-gray-400 ml-1">
               {t('profile.forgot.new_pass_label')}
             </label>
             <div className="relative">
@@ -113,7 +113,7 @@ const ResetPassword = () => {
 
           {/* Confirm Password */}
           <div className="space-y-2">
-            <label className="text-xs font-black uppercase tracking-widest text-gray-400 ml-1">
+            <label className="text-xs font-black text-gray-400 ml-1">
               Xác nhận mật khẩu
             </label>
             <input 
@@ -129,7 +129,7 @@ const ResetPassword = () => {
           <button
             type="submit"
             disabled={loading || otp.length < 6 || !newPassword}
-            className="w-full py-4 bg-neon-green hover:bg-neon-hover text-black font-black uppercase text-xs tracking-[0.2em] rounded-xl shadow-[0_0_20px_rgba(82,196,45,0.3)] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+            className="w-full py-4 bg-neon-green hover:bg-neon-hover text-black font-black uppercase text-xs rounded-xl shadow-[0_0_20px_rgba(82,196,45,0.3)] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : t('profile.forgot.reset_btn')}
           </button>
