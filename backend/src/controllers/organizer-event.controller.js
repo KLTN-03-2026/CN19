@@ -39,6 +39,27 @@ const createEvent = async (req, res) => {
     });
     if (!organizer) return res.status(403).json({ error: 'Không tìm thấy hồ sơ Ban tổ chức.' });
 
+    // Validate Dates: Ngày diễn ra và Ngày kết thúc là bắt buộc
+    if (!event_date || !end_date) {
+      return res.status(400).json({ error: 'Ngày diễn ra và ngày kết thúc sự kiện là bắt buộc.' });
+    }
+    const startObj = new Date(event_date);
+    const endObj = new Date(end_date);
+    startObj.setHours(0, 0, 0, 0);
+    endObj.setHours(0, 0, 0, 0);
+
+    if (startObj > endObj) {
+      return res.status(400).json({ error: 'Ngày kết thúc không được trước ngày diễn ra sự kiện.' });
+    } else if (startObj.getTime() === endObj.getTime()) {
+      if (event_time && end_time) {
+        const [startH, startM] = event_time.split(':').map(Number);
+        const [endH, endM] = end_time.split(':').map(Number);
+        if (startH * 60 + startM >= endH * 60 + endM) {
+          return res.status(400).json({ error: 'Nếu cùng một ngày, giờ kết thúc phải lớn hơn giờ bắt đầu.' });
+        }
+      }
+    }
+
     // Validate ticket tiers
     if (!ticket_tiers || !Array.isArray(ticket_tiers) || ticket_tiers.length === 0) {
       return res.status(400).json({ error: 'Vui lòng cung cấp ít nhất một hạng vé.' });
@@ -64,7 +85,7 @@ const createEvent = async (req, res) => {
         organizer_id: organizer.id,
         event_date: new Date(event_date),
         event_time,
-        end_date: end_date ? new Date(end_date) : null,
+        end_date: new Date(end_date),
         end_time,
         location_address,
         latitude: latitude ? parseFloat(latitude) : null,
@@ -164,6 +185,27 @@ const updateEvent = async (req, res) => {
       return res.status(400).json({ error: 'Không thể chỉnh sửa sự kiện đã bắt đầu bán vé hoặc đã kết thúc.' });
     }
 
+    // Validate Dates: Ngày diễn ra và Ngày kết thúc là bắt buộc
+    if (!event_date || !end_date) {
+      return res.status(400).json({ error: 'Ngày diễn ra và ngày kết thúc sự kiện là bắt buộc.' });
+    }
+    const startObj = new Date(event_date);
+    const endObj = new Date(end_date);
+    startObj.setHours(0, 0, 0, 0);
+    endObj.setHours(0, 0, 0, 0);
+
+    if (startObj > endObj) {
+      return res.status(400).json({ error: 'Ngày kết thúc không được trước ngày diễn ra sự kiện.' });
+    } else if (startObj.getTime() === endObj.getTime()) {
+      if (event_time && end_time) {
+        const [startH, startM] = event_time.split(':').map(Number);
+        const [endH, endM] = end_time.split(':').map(Number);
+        if (startH * 60 + startM >= endH * 60 + endM) {
+          return res.status(400).json({ error: 'Nếu cùng một ngày, giờ kết thúc phải lớn hơn giờ bắt đầu.' });
+        }
+      }
+    }
+
     // Cập nhật thông tin cơ bản
     const updatedEvent = await prisma.event.update({
       where: { id },
@@ -173,9 +215,9 @@ const updateEvent = async (req, res) => {
         image_url,
         video_url,
         category_id,
-        event_date: event_date ? new Date(event_date) : undefined,
+        event_date: new Date(event_date),
         event_time,
-        end_date: end_date ? new Date(end_date) : null,
+        end_date: new Date(end_date),
         end_time,
         location_address,
         latitude: latitude ? parseFloat(latitude) : undefined,

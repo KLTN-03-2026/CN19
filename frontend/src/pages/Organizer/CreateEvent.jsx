@@ -266,7 +266,7 @@ const CreateEvent = () => {
     // Validate current step before proceeding
     let fieldsToValidate = [];
     if (step === 1) fieldsToValidate = ['title', 'category_id', 'image_url'];
-    if (step === 2) fieldsToValidate = ['event_date', 'location_address'];
+    if (step === 2) fieldsToValidate = ['event_date', 'end_date', 'end_time', 'location_address'];
     if (step === 3) {
       const isValid = await trigger('ticket_tiers');
       if (!isValid) {
@@ -548,9 +548,10 @@ const CreateEvent = () => {
                     </label>
                     <input 
                         type="date"
-                        {...register('event_date', { required: true })}
-                        className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-blue-600 transition-all text-gray-900 dark:text-white"
+                        {...register('event_date', { required: 'Vui lòng chọn ngày diễn ra' })}
+                        className={`w-full bg-gray-50 dark:bg-white/5 border ${errors.event_date ? 'border-red-500' : 'border-gray-100 dark:border-white/10'} rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-blue-600 transition-all text-gray-900 dark:text-white`}
                     />
+                    {errors.event_date && <p className="text-[10px] text-red-500 font-bold italic mt-1">{errors.event_date.message}</p>}
                 </div>
                 <div className="space-y-2">
                     <label className="text-xs font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 flex items-center">
@@ -569,13 +570,26 @@ const CreateEvent = () => {
                 <div className="space-y-2">
                     <label className="text-xs font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 flex items-center">
                         <Calendar className="w-3 h-3 mr-2 text-red-600" />
-                        Ngày kết thúc
+                        Ngày kết thúc <span className="text-red-500 ml-1">*</span>
                     </label>
                     <input 
                         type="date"
-                        {...register('end_date')}
-                        className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-blue-600 transition-all text-gray-900 dark:text-white"
+                        {...register('end_date', { 
+                            required: 'Vui lòng chọn ngày kết thúc',
+                            validate: (value) => {
+                                const event_date = watch('event_date');
+                                if (!event_date) return true;
+                                const startObj = new Date(event_date);
+                                const endObj = new Date(value);
+                                startObj.setHours(0,0,0,0);
+                                endObj.setHours(0,0,0,0);
+                                if (startObj > endObj) return 'Không được trước ngày diễn ra sự kiện';
+                                return true;
+                            }
+                        })}
+                        className={`w-full bg-gray-50 dark:bg-white/5 border ${errors.end_date ? 'border-red-500' : 'border-gray-100 dark:border-white/10'} rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-blue-600 transition-all text-gray-900 dark:text-white`}
                     />
+                    {errors.end_date && <p className="text-[10px] text-red-500 font-bold italic mt-1">{errors.end_date.message}</p>}
                 </div>
                 <div className="space-y-2">
                     <label className="text-xs font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 flex items-center">
@@ -584,9 +598,31 @@ const CreateEvent = () => {
                     </label>
                     <input 
                         type="time"
-                        {...register('end_time')}
-                        className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-blue-600 transition-all text-gray-900 dark:text-white"
+                        {...register('end_time', {
+                            validate: (value) => {
+                                const event_date = watch('event_date');
+                                const end_date = watch('end_date');
+                                const event_time = watch('event_time');
+                                if (!event_date || !end_date || !event_time || !value) return true;
+                                
+                                const startObj = new Date(event_date);
+                                const endObj = new Date(end_date);
+                                startObj.setHours(0,0,0,0);
+                                endObj.setHours(0,0,0,0);
+                                
+                                if (startObj.getTime() === endObj.getTime()) {
+                                    const [startH, startM] = event_time.split(':').map(Number);
+                                    const [endH, endM] = value.split(':').map(Number);
+                                    if (startH * 60 + startM >= endH * 60 + endM) {
+                                        return 'Nểu trùng ngày, giờ kết thúc phải sau giờ diễn ra';
+                                    }
+                                }
+                                return true;
+                            }
+                        })}
+                        className={`w-full bg-gray-50 dark:bg-white/5 border ${errors.end_time ? 'border-red-500' : 'border-gray-100 dark:border-white/10'} rounded-xl px-4 py-3 text-sm font-bold focus:outline-none focus:border-blue-600 transition-all text-gray-900 dark:text-white`}
                     />
+                    {errors.end_time && <p className="text-[10px] text-red-500 font-bold italic mt-1">{errors.end_time.message}</p>}
                 </div>
              </div>
 
