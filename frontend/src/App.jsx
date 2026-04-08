@@ -79,7 +79,7 @@ const router = createBrowserRouter([
     children: [
       { path: '', element: <Home /> },
       { path: 'events', element: <Events /> },
-      { path: 'event/:slug', element: <PublicEventDetail /> },
+      { path: 'events/:id', element: <PublicEventDetail /> },
       { path: 'blog', element: <BlogList /> },
       { path: 'blog/:slug', element: <BlogDetail /> },
       { path: 'organizer/:id', element: <OrganizerPublicProfile /> },
