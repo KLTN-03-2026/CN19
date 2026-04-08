@@ -81,34 +81,92 @@ const scanQr = async (req, res) => {
 const getScanHistory = async (req, res) => {
   try {
     const staffId = req.user.userId;
-    // Log hiện tại schema.ScanHistory không có staff_id (sẽ dựa vào Assignment để lấy hoặc thêm cột sau)
-    // Để cho mock API return 200, tôi sẽ giả lập hoặc modify query (giả sử Query dựa trên Event)
+    const { event_id } = req.query; // Nhận event_id từ query nếu có
     
-    const assignments = await prisma.eventStaffAssignment.findMany({
-      where: { staff_id: staffId },
-      select: { event_id: true }
-    });
+    let whereClause = {};
 
-    const eventIds = assignments.map(a => a.event_id);
+    if (event_id) {
+      // Nếu có event_id, chỉ lấy log của event đó
+      whereClause = {
+        ticket: { event_id: event_id }
+      };
+    } else {
+      // Nếu không có, lấy tất cả các event mà nhân viên này được phân công
+      const assignments = await prisma.eventStaffAssignment.findMany({
+        where: { staff_id: staffId },
+        select: { event_id: true }
+      });
+      const eventIds = assignments.map(a => a.event_id);
+      whereClause = {
+        ticket: { event_id: { in: eventIds } }
+      };
+    }
 
     const logs = await prisma.scanHistory.findMany({
-      where: {
-        ticket: { event_id: { in: eventIds } }
-      },
+      where: whereClause,
       include: {
-        ticket: { select: { ticket_number: true, event: { select: { title: true } } } }
+        ticket: { 
+          select: { 
+            ticket_number: true, 
+            event: { select: { title: true } },
+            ticket_tier: { select: { tier_name: true } },
+            order: {
+              select: {
+                customer: { select: { full_name: true } }
+              }
+            }
+          } 
+        }
       },
       orderBy: { scanned_at: 'desc' },
-      take: 50
+      take: 100
     });
 
     res.status(200).json({ data: logs });
   } catch (error) {
+    console.error('Get Scan History Error:', error);
+    res.status(500).json({ error: 'Lỗi server.' });
+  }
+};
+
+// [UC_31] Lấy danh sách sự kiện được phân công (Dành cho Staff)
+const getMyEvents = async (req, res) => {
+  try {
+    const staffId = req.user.userId;
+
+    const assignments = await prisma.eventStaffAssignment.findMany({
+      where: { staff_id: staffId },
+      include: {
+        event: {
+          select: {
+            id: true,
+            title: true,
+            event_date: true,
+            event_time: true,
+            location_address: true,
+            image_url: true,
+            _count: {
+              select: { tickets: { where: { is_used: true } } }
+            }
+          }
+        }
+      }
+    });
+
+    const events = assignments.map(a => ({
+      ...a.event,
+      scanned_count: a.event._count.tickets
+    }));
+
+    res.status(200).json({ data: events });
+  } catch (error) {
+    console.error('Get My Events Error:', error);
     res.status(500).json({ error: 'Lỗi server.' });
   }
 };
 
 module.exports = {
   scanQr,
-  getScanHistory
+  getScanHistory,
+  getMyEvents
 };
