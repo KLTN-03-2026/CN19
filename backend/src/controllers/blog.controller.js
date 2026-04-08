@@ -12,21 +12,7 @@ const blogController = {
                 return res.status(400).json({ error: 'Vui lòng điền đầy đủ thông tin.' });
             }
 
-            // --- KIỂM TRA QUYỀN VIẾT REVIEW ---
-            // 1. Kiểm tra xem người dùng có sở hữu vé của sự kiện này không
-            const ticket = await prisma.ticket.findFirst({
-                where: {
-                    current_owner_id: user_id,
-                    event_id: event_id,
-                    status: { not: 'refunded' } // Vé không bị hoàn trả
-                }
-            });
-
-            if (!ticket) {
-                return res.status(403).json({ error: 'Bạn phải sở hữu vé của sự kiện này mới có thể viết cảm nhận.' });
-            }
-
-            // 2. Kiểm tra thời gian sự kiện (Chỉ được viết sau khi kết thúc)
+            // 1. Kiểm tra sự kiện
             const event = await prisma.event.findUnique({
                 where: { id: event_id }
             });
@@ -36,13 +22,25 @@ const blogController = {
             }
 
             const now = new Date();
-            const eventEndTime = event.end_date || event.event_date;
+            const eventEndTime = new Date(event.end_date || event.event_date);
+            const isEventEnded = now > eventEndTime;
 
-            if (now < eventEndTime) {
-                return res.status(400).json({ 
-                    error: 'Sự kiện chưa kết thúc. Bạn chỉ có thể viết cảm nhận sau khi sự kiện đã diễn ra xong.' 
+            // 2. KIỂM TRA QUYỀN THEO THỜI GIAN
+            // Nếu sự kiện đã kết thúc -> Đây là ĐÁNH GIÁ (Review) -> Bắt buộc phải có vé
+            if (isEventEnded) {
+                const ticket = await prisma.ticket.findFirst({
+                    where: {
+                        current_owner_id: user_id,
+                        event_id: event_id,
+                        status: { not: 'refunded' } // Vé không bị hoàn trả
+                    }
                 });
+
+                if (!ticket) {
+                    return res.status(403).json({ error: 'Sự kiện đã kết thúc, bạn phải từng sở hữu vé vé mới có thể viết đánh giá.' });
+                }
             }
+            // Nếu sự kiện chưa diễn ra -> Đây là THẢO LUẬN (Discussion) -> Ai cũng được đăng bài
 
             // --- TẠO BLOG ---
             const slug = slugify(title, { lower: true, strict: true, locale: 'vi' }) + '-' + Date.now();
@@ -56,11 +54,14 @@ const blogController = {
                     image_url,
                     slug,
                     type: 'CUSTOMER_REVIEW',
-                    status: 'published' // Review khách hàng mặc định hiển thị (hoặc có thể để chờ duyệt tùy bạn)
+                    status: 'published' // Review khách hàng mặc định hiển thị
                 }
             });
 
-            res.status(201).json({ message: 'Cảm ơn bạn đã chia sẻ cảm nhận!', data: blog });
+            res.status(201).json({ 
+                message: isEventEnded ? 'Cảm ơn bạn đã chia sẻ cảm nhận!' : 'Đã đăng bài thảo luận thành công!', 
+                data: blog 
+            });
         } catch (error) {
             console.error('Create Review Error:', error);
             res.status(500).json({ error: 'Đã xảy ra lỗi khi đăng bài viết.' });
@@ -96,6 +97,12 @@ const blogController = {
                         select: { full_name: true, avatar_url: true }
                     },
                     likes: currentUserId ? { where: { user_id: currentUserId } } : false,
+                    comments: {
+                        include: {
+                            user: { select: { id: true, full_name: true, avatar_url: true } }
+                        },
+                        orderBy: { created_at: 'asc' }
+                    },
                     _count: {
                         select: { comments: true, likes: true }
                     }
@@ -103,10 +110,38 @@ const blogController = {
                 orderBy: { created_at: 'desc' }
             });
 
+            // Lấy danh sách user_id của tác giả bài viết
+            const userIds = reviews.map(r => r.author_id);
+            
+            // Lấy thêm user_id của những người phản hồi (comment)
+            reviews.forEach(r => {
+                if (r.comments) {
+                    r.comments.forEach(c => userIds.push(c.user_id));
+                }
+            });
+            const uniqueUserIds = [...new Set(userIds)];
+
+            // Kiểm tra xem ai đã sở hữu vé sự kiện này
+            const tickets = await prisma.ticket.findMany({
+                where: {
+                    event_id: eventId,
+                    current_owner_id: { in: uniqueUserIds },
+                    status: { not: 'refunded' }
+                },
+                select: { current_owner_id: true }
+            });
+            
+            const usersWithTickets = new Set(tickets.map(t => t.current_owner_id));
+
             const data = reviews.map(r => ({
                 ...r,
                 is_liked: r.likes ? r.likes.length > 0 : false,
-                likes: undefined
+                likes: undefined,
+                has_ticket: usersWithTickets.has(r.author_id),
+                comments: r.comments ? r.comments.map(cmt => ({
+                    ...cmt,
+                    has_ticket: usersWithTickets.has(cmt.user_id)
+                })) : []
             }));
 
             res.status(200).json({ data });
