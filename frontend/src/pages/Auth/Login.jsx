@@ -184,9 +184,9 @@ const Login = () => {
 
           <div className="text-center text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
             {t('auth.terms1')}
-            <Link to="/terms" className="text-neon-green hover:underline">{t('auth.terms2')}</Link>
+            <Link to="/customer-terms" className="text-neon-green hover:underline">{t('auth.terms2')}</Link>
             {t('auth.terms3')}
-            <Link to="/privacy" className="text-neon-green hover:underline">{t('auth.terms4')}</Link>
+            <Link to="/privacy-policy" className="text-neon-green hover:underline">{t('auth.terms4')}</Link>
             {t('auth.terms5')}
           </div>
         </form>
