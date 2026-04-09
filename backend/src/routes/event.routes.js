@@ -13,4 +13,7 @@ router.get('/:id/availability', eventController.getEventAvailability);
 // [GET] /api/events/:id
 router.get('/:id', eventController.getEventById);
 
+// [GET] /api/events/:id/merchandise
+router.get('/:id/merchandise', eventController.getEventMerchandise);
+
 module.exports = router;

@@ -135,9 +135,29 @@ const getEventAvailability = async (req, res) => {
   }
 };
 
+// [UC_XX] Lấy danh sách sản phẩm mua kèm của sự kiện
+const getEventMerchandise = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const merchandise = await prisma.merchandise.findMany({
+      where: { 
+        event_id: id,
+        is_active: true,
+        stock: { gt: 0 }
+      },
+      orderBy: { created_at: 'desc' }
+    });
+    res.status(200).json({ data: merchandise });
+  } catch (error) {
+    console.error('Lỗi khi lấy Merchandise sự kiện:', error);
+    res.status(500).json({ error: 'Lỗi server.' });
+  }
+};
+
 module.exports = {
   getEvents,
   getEventById,
   getRecommendations,
-  getEventAvailability
+  getEventAvailability,
+  getEventMerchandise
 };

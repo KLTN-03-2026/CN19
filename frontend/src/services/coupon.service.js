@@ -1,10 +1,13 @@
 import api from './api';
 
 const couponService = {
-    // Lấy danh sách mã giảm giá nổi bật/công khai
-    getFeaturedCoupons: async () => {
-        const response = await api.get('/coupons/featured');
-        return response.data;
+    // Áp dụng mã giảm giá
+    applyCoupon: (data) => {
+        return api.post('/coupons/apply', data);
+    },
+
+    getEventCoupons: (eventId) => {
+        return api.get(`/coupons/event/${eventId}`);
     }
 };
 

@@ -337,7 +337,22 @@ i18n
             secure: "Secure",
             active: "Active",
             verified: "Verified",
-            paymentMethod: "Payment Method"
+            paymentMethod: "Payment Method",
+            addons: "Add-ons & Accessories",
+            couponCode: "Promo Code",
+            apply: "Apply",
+            merchandiseTotal: "Merchandise Subtotal",
+            discount: "Discount",
+            couponApplied: "Coupon applied successfully",
+            invalidCoupon: "Invalid or expired coupon",
+            remove: "Remove",
+            stock: "Left:",
+            selectVoucher: "Select Voucher",
+            availableVouchers: "Available Vouchers",
+            minSpend: "Min Spend",
+            expiry: "Expiry",
+            noAvailableVouchers: "No vouchers available for this event.",
+            condition: "Condition"
           }
         }
       },
@@ -651,7 +666,22 @@ i18n
             secure: "Bảo mật",
             active: "Hoạt động",
             verified: "Đã xác thực",
-            paymentMethod: "Phương thức thanh toán"
+            paymentMethod: "Phương thức thanh toán",
+            addons: "Sản phẩm mua kèm",
+            couponCode: "Mã giảm giá",
+            apply: "Áp dụng",
+            merchandiseTotal: "Tổng tiền phụ kiện",
+            discount: "Giảm giá",
+            couponApplied: "Áp dụng mã giảm giá thành công",
+            invalidCoupon: "Mã không hợp lệ hoặc hết hạn",
+            remove: "Gỡ bỏ",
+            stock: "Còn lại:",
+            selectVoucher: "CHỌN MÃ",
+            availableVouchers: "Mã giảm giá khả dụng",
+            minSpend: "Đơn tối thiểu",
+            expiry: "Hạn dùng",
+            noAvailableVouchers: "Chưa có mã giảm giá nào khả dụng cho sự kiện này.",
+            condition: "Điều kiện"
           }
         }
       }

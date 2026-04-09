@@ -1,6 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const controller = require('../controllers/admin-coupon.controller');
+const adminController = require('../controllers/admin-coupon.controller');
+const publicController = require('../controllers/coupon.controller');
+
+// [POST] /api/coupons/apply
+router.post('/apply', publicController.applyCoupon);
 
 // [GET] /api/coupons/featured
 // Lấy các mã giảm giá công khai đang hoạt động
@@ -28,5 +32,8 @@ router.get('/featured', async (req, res) => {
     res.status(500).json({ success: false, message: 'Lỗi hệ thống khi lấy mã giảm giá.' });
   }
 });
+
+// [GET] /api/coupons/event/:eventId
+router.get('/event/:eventId', publicController.getAvailableCoupons);
 
 module.exports = router;

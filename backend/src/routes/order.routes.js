@@ -8,6 +8,12 @@ router.use(authenticate);
 // [POST] /api/orders
 router.post('/', orderController.createPrimaryOrder);
 
+// [GET] /api/orders/:id
+router.get('/:id', orderController.getOrderById);
+
+// [PATCH] /api/orders/:id
+router.patch('/:id', orderController.updatePendingOrder);
+
 // [POST] /api/orders/marketplace
 router.post('/marketplace', orderController.createMarketplaceOrder);
 

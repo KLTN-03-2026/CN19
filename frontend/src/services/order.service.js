@@ -28,6 +28,13 @@ const orderService = {
     getOrderById: async (id) => {
         const response = await api.get(`/orders/${id}`);
         return response.data;
+    },
+
+    // Cập nhật đơn hàng (Thêm add-ons, coupon)
+    updateOrder: async (id, updateData) => {
+        // updateData: { merchandise_items, coupon_code }
+        const response = await api.patch(`/orders/${id}`, updateData);
+        return response.data;
     }
 };
 

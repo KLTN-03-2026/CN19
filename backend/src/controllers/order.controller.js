@@ -254,8 +254,139 @@ const getOrderById = async (req, res) => {
   }
 };
 
+// Cập nhật đơn hàng đang chờ (Thêm sản phẩm mua kèm & Mã giảm giá)
+const updatePendingOrder = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { merchandise_items, coupon_code } = req.body;
+    const userId = req.user.userId;
+
+    // 1. Kiểm tra đơn hàng hợp lệ
+    const order = await prisma.order.findUnique({
+      where: { id },
+      include: { 
+        items: true,
+        merchandise_items: true
+      }
+    });
+
+    if (!order) return res.status(404).json({ error: 'Không tìm thấy đơn hàng.' });
+    if (order.customer_id !== userId) return res.status(403).json({ error: 'Bạn không có quyền chỉnh sửa đơn hàng này.' });
+    if (order.status !== 'pending') return res.status(400).json({ error: 'Chỉ có thể cập nhật đơn hàng ở trạng thái chờ thanh toán.' });
+
+    // 2. Chạy Transaction để cập nhật
+    const updatedOrder = await prisma.$transaction(async (tx) => {
+      
+      // A. Hoàn trả tồn kho Merchandise cũ (nếu có)
+      if (order.merchandise_items.length > 0) {
+        for (const item of order.merchandise_items) {
+          await tx.merchandise.update({
+            where: { id: item.merchandise_id },
+            data: { stock: { increment: item.quantity } }
+          });
+        }
+        // Xóa các bản ghi MerchandiseOrderItem cũ
+        await tx.merchandiseOrderItem.deleteMany({ where: { order_id: id } });
+      }
+
+      let merchSubtotal = 0;
+      const newMerchItems = [];
+
+      // B. Xử lý Merchandise mới
+      if (merchandise_items && merchandise_items.length > 0) {
+        for (const item of merchandise_items) {
+          const m = await tx.merchandise.findUnique({ where: { id: item.merchandise_id } });
+          if (!m || !m.is_active || m.stock < item.quantity) {
+            throw new Error(`Sản phẩm ${m?.name || 'không xác định'} đã hết hàng hoặc không khả dụng.`);
+          }
+
+          // Trừ tồn kho
+          await tx.merchandise.update({
+            where: { id: m.id },
+            data: { stock: { decrement: item.quantity } }
+          });
+
+          const lineTotal = Number(m.price) * item.quantity;
+          merchSubtotal += lineTotal;
+
+          newMerchItems.push({
+            merchandise_id: m.id,
+            quantity: item.quantity,
+            unit_price: m.price,
+            subtotal: lineTotal
+          });
+        }
+      }
+
+      // C. Xử lý Coupon
+      let discountAmount = 0;
+      let couponId = null;
+
+      const ticketSubtotal = order.items.reduce((sum, item) => sum + Number(item.subtotal), 0);
+      const currentSubtotal = ticketSubtotal + merchSubtotal;
+
+      if (coupon_code) {
+        const coupon = await tx.coupon.findUnique({
+          where: { code: coupon_code.toUpperCase() }
+        });
+
+        if (!coupon || !coupon.is_active) throw new Error('Mã giảm giá không lệ hoặc đã hết hạn.');
+        
+        const now = new Date();
+        if (now < coupon.start_date || now > coupon.end_date) throw new Error('Mã giảm giá đã hết hạn.');
+
+        if (coupon.min_order_amount && currentSubtotal < Number(coupon.min_order_amount)) {
+          throw new Error('Đơn hàng không đạt giá trị tối thiểu để dùng mã này.');
+        }
+
+        // Tính giảm giá
+        if (coupon.discount_type === 'percentage') {
+          discountAmount = (currentSubtotal * Number(coupon.discount_value)) / 100;
+          if (coupon.max_discount_amount && discountAmount > Number(coupon.max_discount_amount)) {
+            discountAmount = Number(coupon.max_discount_amount);
+          }
+        } else {
+          discountAmount = Number(coupon.discount_value);
+        }
+        
+        couponId = coupon.id;
+      }
+
+      // D. Cập nhật Order chính
+      return await tx.order.update({
+        where: { id },
+        data: {
+          subtotal: currentSubtotal,
+          coupon_id: couponId,
+          discount_amount: discountAmount,
+          total_amount: currentSubtotal - discountAmount,
+          merchandise_items: {
+            create: newMerchItems
+          }
+        },
+        include: {
+          event: { select: { title: true, image_url: true, location_address: true, event_date: true } },
+          items: { include: { ticket_tier: true } },
+          merchandise_items: { include: { merchandise: true } },
+          coupon: true
+        }
+      });
+    });
+
+    res.status(200).json({ 
+      message: 'Cập nhật đơn hàng thành công!', 
+      data: updatedOrder 
+    });
+
+  } catch (error) {
+    console.error('Update Order Error:', error);
+    res.status(400).json({ error: error.message || 'Lỗi server.' });
+  }
+};
+
 module.exports = {
   createPrimaryOrder,
   createMarketplaceOrder,
-  getOrderById
+  getOrderById,
+  updatePendingOrder
 };
