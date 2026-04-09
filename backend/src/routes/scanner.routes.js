@@ -12,4 +12,7 @@ router.post('/scan', controller.scanQr);
 // [GET] /api/staff/scan-history
 router.get('/scan-history', controller.getScanHistory);
 
+// [GET] /api/staff/my-events
+router.get('/my-events', controller.getMyEvents);
+
 module.exports = router;

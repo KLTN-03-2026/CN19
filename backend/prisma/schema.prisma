@@ -13,7 +13,6 @@ model User {
   phone_number          String?                  @unique
   password_hash         String
   role                  String
-  permissions           String[]                 @default([])
   status                String                   @default("active")
   wallet_address        String?
   avatar_url            String?
@@ -25,10 +24,14 @@ model User {
   wallet_private_key    String?
   latitude              Decimal?
   longitude             Decimal?
+  permissions           String[]                 @default([])
   admin_logs            AdminActionLog[]
+  authored_blogs        Blog[]                   @relation("BlogAuthor")
   bot_logs              BotDetectionLog[]
+  comments              Comment[]
   created_assignments   EventStaffAssignment[]   @relation("Creator")
   staff_assignments     EventStaffAssignment[]   @relation("StaffMember")
+  likes                 Like[]
   listings              MarketplaceListing[]
   buyer_transactions    MarketplaceTransaction[] @relation("Buyer")
   seller_transactions   MarketplaceTransaction[] @relation("Seller")
@@ -40,37 +43,31 @@ model User {
   original_tickets      Ticket[]                 @relation("OriginalBuyer")
   transfers_sent        TicketTransfer[]         @relation("Sender")
   transfers_received    TicketTransfer[]         @relation("Receiver")
-  authored_blogs        Blog[]                   @relation("BlogAuthor")
-  comments              Comment[]
-  likes                 Like[]
 }
 
 model Organizer {
-  id                String    @id @default(uuid())
-  user_id           String    @unique
+  id                String        @id @default(uuid())
+  user_id           String        @unique
   organization_name String
-  kyc_status        String    @default("pending")
+  kyc_status        String        @default("pending")
   kyc_verified_at   DateTime?
   business_license  String?
   identity_card     String?
-  
-  // --- New KYC Fields ---
-  id_number         String?
-  full_name_raw     String?
-  dob_raw           String?
+  is_verified       Boolean       @default(false)
+  description       String?
   address_raw       String?
-  front_image_url   String?
   back_image_url    String?
+  dob_raw           String?
   face_image_url    String?
   facematch_score   Float?
-  liveness_score    Float?
+  front_image_url   String?
+  full_name_raw     String?
+  id_number         String?
   kyc_raw_data      Json?
-  
-  is_verified       Boolean   @default(false)
-  description       String?
+  liveness_score    Float?
   events            Event[]
   merchandise       Merchandise[]
-  user              User      @relation(fields: [user_id], references: [id])
+  user              User          @relation(fields: [user_id], references: [id])
 }
 
 model EventStaffAssignment {
@@ -93,62 +90,62 @@ model Category {
 }
 
 model Event {
-  id                     String                 @id @default(uuid())
-  organizer_id           String
-  category_id            String
-  title                  String
-  event_date             DateTime
-  event_time             String?
-  status                 String                 @default("draft")
-  allow_resale           Boolean                @default(true)
-  allow_transfer         Boolean                @default(true)
-  allow_refund           Boolean                @default(true)
-  price_ceiling          Decimal?
-  royalty_fee_percent    Decimal                @default(3.0) // Chỉnh sửa mặc định thành 3%
-  resale_price_limit_percent Decimal            @default(108.0) // Thêm giới hạn giá bán lại mặc định 108%
-  smart_contract_address String?
-  refund_deadline_days   Int?
-  description            String?
-  image_url              String?
-  is_featured            Boolean                @default(false)
-  end_date               DateTime?
-  end_time               String?
-  latitude               Float?
-  location_address       String?
-  longitude              Float?
-  video_url              String?
-  payouts                EscrowPayout[]
-  category               Category               @relation(fields: [category_id], references: [id])
-  organizer              Organizer              @relation(fields: [organizer_id], references: [id])
-  staff_assignments      EventStaffAssignment[]
-  marketplace_listings   MarketplaceListing[]
-  orders                 Order[]
-  tickets                Ticket[]
-  ticket_tiers           TicketTier[]
-  emergency_requests     EmergencyRequest[]
-  seating_charts         String[]               @default([])
-  created_at             DateTime               @default(now())
-  updated_at             DateTime               @updatedAt
-  merchandise            Merchandise[]
-  blogs                  Blog[]
-  coupons                Coupon[]
+  id                         String                 @id @default(uuid())
+  organizer_id               String
+  category_id                String
+  title                      String
+  event_date                 DateTime
+  event_time                 String?
+  status                     String                 @default("draft")
+  allow_resale               Boolean                @default(true)
+  allow_transfer             Boolean                @default(true)
+  allow_refund               Boolean                @default(true)
+  price_ceiling              Decimal?
+  royalty_fee_percent        Decimal                @default(3.0)
+  smart_contract_address     String?
+  refund_deadline_days       Int?
+  description                String?
+  image_url                  String?
+  end_date                   DateTime?
+  end_time                   String?
+  latitude                   Float?
+  location_address           String?
+  longitude                  Float?
+  video_url                  String?
+  created_at                 DateTime               @default(now())
+  updated_at                 DateTime               @updatedAt
+  seating_charts             String[]               @default([])
+  resale_price_limit_percent Decimal                @default(108.0)
+  is_featured                Boolean                @default(false)
+  blogs                      Blog[]
+  coupons                    Coupon[]
+  emergency_requests         EmergencyRequest[]
+  payouts                    EscrowPayout[]
+  category                   Category               @relation(fields: [category_id], references: [id])
+  organizer                  Organizer              @relation(fields: [organizer_id], references: [id])
+  staff_assignments          EventStaffAssignment[]
+  marketplace_listings       MarketplaceListing[]
+  merchandise                Merchandise[]
+  orders                     Order[]
+  tickets                    Ticket[]
+  ticket_tiers               TicketTier[]
 }
 
 model EmergencyRequest {
-  id             String   @id @default(uuid())
-  event_id       String
-  request_type   String   // 'cancel', 'reschedule'
-  reason         String
-  new_date       DateTime?
-  new_time       String?
-  new_end_date   DateTime?
-  new_end_time   String?
-  evidence_url   String?
-  status         String   @default("pending") // 'pending', 'approved', 'rejected'
-  admin_notes    String?
-  created_at     DateTime @default(now())
-  updated_at     DateTime @updatedAt
-  event          Event    @relation(fields: [event_id], references: [id])
+  id           String    @id @default(uuid())
+  event_id     String
+  request_type String
+  reason       String
+  new_date     DateTime?
+  new_time     String?
+  new_end_date DateTime?
+  new_end_time String?
+  evidence_url String?
+  status       String    @default("pending")
+  admin_notes  String?
+  created_at   DateTime  @default(now())
+  updated_at   DateTime  @updatedAt
+  event        Event     @relation(fields: [event_id], references: [id])
 }
 
 model TicketTier {
@@ -166,31 +163,30 @@ model TicketTier {
 }
 
 model Order {
-  id               String            @id @default(uuid())
-  customer_id      String
-  event_id         String
-  order_number     String            @unique
-  status           String
-  subtotal         Decimal
-  platform_fee     Decimal
-  total_amount     Decimal
-  payment_method   String
-  transaction_id   String?
-  transaction_hash String?
-  risk_score       Decimal?
-  is_bot_detected  Boolean           @default(false)
-  expires_at       DateTime
-  created_at       DateTime          @default(now())
-  bot_logs         BotDetectionLog[]
-  customer         User              @relation(fields: [customer_id], references: [id])
-  event            Event             @relation(fields: [event_id], references: [id])
-  items            OrderItem[]
-  tickets          Ticket[]
+  id                String                 @id @default(uuid())
+  customer_id       String
+  event_id          String
+  order_number      String                 @unique
+  status            String
+  subtotal          Decimal
+  platform_fee      Decimal
+  total_amount      Decimal
+  payment_method    String
+  transaction_id    String?
+  transaction_hash  String?
+  risk_score        Decimal?
+  is_bot_detected   Boolean                @default(false)
+  expires_at        DateTime
+  created_at        DateTime               @default(now())
+  coupon_id         String?
+  discount_amount   Decimal?               @default(0)
+  bot_logs          BotDetectionLog[]
   merchandise_items MerchandiseOrderItem[]
-  
-  coupon_id        String?
-  coupon           Coupon?           @relation(fields: [coupon_id], references: [id])
-  discount_amount  Decimal?          @default(0)
+  coupon            Coupon?                @relation(fields: [coupon_id], references: [id])
+  customer          User                   @relation(fields: [customer_id], references: [id])
+  event             Event                  @relation(fields: [event_id], references: [id])
+  items             OrderItem[]
+  tickets           Ticket[]
 }
 
 model OrderItem {
@@ -362,61 +358,60 @@ model Notification {
 }
 
 model Merchandise {
-  id            String                 @id @default(uuid())
-  organizer_id  String
-  event_id      String?
-  name          String
-  description   String?
-  price         Decimal
-  stock         Int                    @default(0)
-  image_url     String?
-  is_active     Boolean                @default(true)
-  created_at    DateTime               @default(now())
-  updated_at    DateTime               @updatedAt
-  organizer     Organizer              @relation(fields: [organizer_id], references: [id])
-  event         Event?                 @relation(fields: [event_id], references: [id])
-  order_items   MerchandiseOrderItem[]
+  id           String                 @id @default(uuid())
+  organizer_id String
+  event_id     String?
+  name         String
+  description  String?
+  price        Decimal
+  stock        Int                    @default(0)
+  image_url    String?
+  is_active    Boolean                @default(true)
+  created_at   DateTime               @default(now())
+  updated_at   DateTime               @updatedAt
+  event        Event?                 @relation(fields: [event_id], references: [id])
+  organizer    Organizer              @relation(fields: [organizer_id], references: [id])
+  order_items  MerchandiseOrderItem[]
 }
 
 model MerchandiseOrderItem {
-  id              String      @id @default(uuid())
-  merchandise_id  String
-  order_id        String
-  quantity        Int
-  unit_price      Decimal
-  subtotal        Decimal
-  merchandise     Merchandise @relation(fields: [merchandise_id], references: [id])
-  order           Order       @relation(fields: [order_id], references: [id])
+  id             String      @id @default(uuid())
+  merchandise_id String
+  order_id       String
+  quantity       Int
+  unit_price     Decimal
+  subtotal       Decimal
+  merchandise    Merchandise @relation(fields: [merchandise_id], references: [id])
+  order          Order       @relation(fields: [order_id], references: [id])
 }
-model Blog {
-  id            String    @id @default(uuid())
-  author_id     String
-  event_id      String?
-  title         String
-  slug          String    @unique
-  content       String    @db.Text
-  image_url     String?
-  images        String[]  @default([])
-  type          String    @default("ORGANIZER_NEWS") // "ORGANIZER_NEWS", "CUSTOMER_REVIEW"
-  status        String    @default("published")      // "published", "draft", "hidden"
-  views         Int       @default(0)
-  created_at    DateTime  @default(now())
-  updated_at    DateTime  @updatedAt
 
-  author        User      @relation("BlogAuthor", fields: [author_id], references: [id])
-  event         Event?    @relation(fields: [event_id], references: [id])
-  comments      Comment[]
-  likes         Like[]
+model Blog {
+  id         String    @id @default(uuid())
+  author_id  String
+  event_id   String?
+  title      String
+  slug       String    @unique
+  content    String
+  image_url  String?
+  type       String    @default("ORGANIZER_NEWS")
+  status     String    @default("published")
+  views      Int       @default(0)
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+  images     String[]  @default([])
+  author     User      @relation("BlogAuthor", fields: [author_id], references: [id])
+  event      Event?    @relation(fields: [event_id], references: [id])
+  comments   Comment[]
+  likes      Like[]
 }
 
 model Comment {
   id         String   @id @default(uuid())
   blog_id    String
   user_id    String
-  content    String   @db.Text
+  content    String
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
-
   blog       Blog     @relation(fields: [blog_id], references: [id], onDelete: Cascade)
   user       User     @relation(fields: [user_id], references: [id])
 }
@@ -426,7 +421,6 @@ model Like {
   blog_id    String
   user_id    String
   created_at DateTime @default(now())
-
   blog       Blog     @relation(fields: [blog_id], references: [id], onDelete: Cascade)
   user       User     @relation(fields: [user_id], references: [id])
 
@@ -434,22 +428,21 @@ model Like {
 }
 
 model Coupon {
-  id               String    @id @default(uuid())
-  code             String    @unique
-  description      String?
-  discount_type    String    // 'PERCENTAGE', 'FIXED_AMOUNT'
-  discount_value   Decimal
-  min_order_amount Decimal?
+  id                  String   @id @default(uuid())
+  code                String   @unique
+  description         String?
+  discount_type       String
+  discount_value      Decimal
+  min_order_amount    Decimal?
   max_discount_amount Decimal?
-  usage_limit      Int?
-  used_count       Int       @default(0)
-  start_date       DateTime
-  end_date         DateTime
-  is_active        Boolean   @default(true)
-  created_at       DateTime  @default(now())
-  updated_at       DateTime  @updatedAt
-  
-  event_id         String?
-  event            Event?    @relation(fields: [event_id], references: [id])
-  orders           Order[]
+  usage_limit         Int?
+  used_count          Int      @default(0)
+  start_date          DateTime
+  end_date            DateTime
+  is_active           Boolean  @default(true)
+  created_at          DateTime @default(now())
+  updated_at          DateTime @updatedAt
+  event_id            String?
+  event               Event?   @relation(fields: [event_id], references: [id])
+  orders              Order[]
 }

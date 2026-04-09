@@ -9,7 +9,19 @@ const scanQr = async (req, res) => {
     // 1. Tìm token động trong bảng DynamicQRToken
     const tokenRecord = await prisma.dynamicQRToken.findUnique({
       where: { token_hash: qr_hash },
-      include: { ticket: { include: { event: true } } }
+      include: { 
+      ticket: { 
+        include: { 
+          event: true,
+          ticket_tier: { select: { tier_name: true } },
+          order: {
+            select: {
+              customer: { select: { full_name: true } }
+            }
+          }
+        } 
+      } 
+    }
     });
 
     // 2. Kiểm tra tính hợp lệ

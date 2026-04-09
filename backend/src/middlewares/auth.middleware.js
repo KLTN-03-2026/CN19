@@ -29,26 +29,7 @@ const authorize = (...roles) => {
   };
 };
 
-const optionalAuthenticate = (req, res, next) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return next(); // Không có token cũng không sao
-  }
-
-  const token = authHeader.split(' ')[1];
-
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret_key');
-    req.user = decoded; // { userId, email, role }
-    next();
-  } catch (err) {
-    // Token lỗi hoặc hết hạn thì coi như khách lẻ, không chặn request
-    next();
-  }
-};
-
 module.exports = {
   authenticate,
-  authorize,
-  optionalAuthenticate
+  authorize
 };

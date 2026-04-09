@@ -1,8 +1,12 @@
 const prisma = require('../config/prisma');
+const orderService = require('../services/order.service');
 
 // [UC_04] Tìm kiếm, lọc sự kiện
 const getEvents = async (req, res) => {
   try {
+    // Tự động dọn dẹp các đơn hàng quá hạn để trả lại tồn kho
+    await orderService.releaseExpiredOrders();
+
     const { keyword, category_id, status, startDate, endDate } = req.query;
 
     const whereClause = {
@@ -46,6 +50,9 @@ const getEvents = async (req, res) => {
 // [UC_05] Xem chi tiết sự kiện
 const getEventById = async (req, res) => {
   try {
+    // Tự động dọn dẹp các đơn hàng quá hạn trước khi xem chi tiết (số lượng vé)
+    await orderService.releaseExpiredOrders();
+
     const { id } = req.params;
     
     const event = await prisma.event.findUnique({
@@ -75,65 +82,28 @@ const getEventById = async (req, res) => {
   }
 };
 
-// [UX] Gợi ý sự kiện cá nhân hóa & Trending
+// [UX] Gợi ý sự kiện (Ưu tiên Nổi bật & Sắp diễn ra)
 const getRecommendations = async (req, res) => {
   try {
-    const userId = req.user?.userId;
-    let recommendedCategoryIds = [];
-    let recommendationType = 'trending'; // 'trending' hoặc 'personalized'
-
-    // 1. Nếu đã đăng nhập, tìm 3 danh mục người dùng quan tâm nhất (qua lịch sử mua vé)
-    if (userId) {
-      const pastOrders = await prisma.order.findMany({
-        where: { user_id: userId },
-        take: 10,
-        orderBy: { created_at: 'desc' },
-        include: { event: { select: { category_id: true } } }
-      });
-
-      if (pastOrders.length > 0) {
-        // Đếm tần suất danh mục
-        const catCounts = {};
-        pastOrders.forEach(ord => {
-          const cid = ord.event.category_id;
-          catCounts[cid] = (catCounts[cid] || 0) + 1;
-        });
-        // Sắp xếp lấy danh mục nhiều nhất
-        recommendedCategoryIds = Object.keys(catCounts)
-          .sort((a, b) => catCounts[b] - catCounts[a])
-          .slice(0, 2);
-        
-        if (recommendedCategoryIds.length > 0) recommendationType = 'personalized';
-      }
-    }
-
-    // 2. Truy vấn sự kiện theo trọng số
-    // - Ưu tiên: is_featured -> Category khớp sở thích -> Lượt xem (Hot)
     const events = await prisma.event.findMany({
       where: { 
         status: 'active', 
         event_date: { gt: new Date() },
-        category: { is_active: true },
-        OR: [
-          { is_featured: true },
-          { category_id: { in: recommendedCategoryIds } }
-        ]
+        category: { is_active: true }
       },
       take: 6,
       orderBy: [
         { is_featured: 'desc' },
-        { views: 'desc' },
         { event_date: 'asc' }
       ],
       include: { 
         category: { select: { name: true } },
-        organizer: { select: { organization_name: true, is_verified: true } }
+        organizer: { select: { organization_name: true, is_verified: true } },
+        ticket_tiers: { select: { price: true } }
       }
     });
 
     res.status(200).json({ 
-      success: true,
-      recommendation_type: recommendationType,
       data: events 
     });
   } catch (error) {
