@@ -178,16 +178,10 @@ const Home = () => {
             <div className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
                 <div>
                     <h2 className="text-xl md:text-xl font-black text-gray-900 dark:text-white uppercase tracking-tighter">
-                        {recommendationsData?.recommendation_type === 'personalized' 
-                            ? (t('home.for_you.title_personalized') || t('home.for_you.title'))
-                            : t('home.for_you.title')
-                        } <span className="text-neon-green">{t('home.for_you.title_highlight')}</span>
+                        {t('home.for_you.title')} <span className="text-neon-green">{t('home.for_you.title_highlight')}</span>
                     </h2>
-                    <p className="text-[11px] text-gray-400 dark:text-white/30 tracking-[0.1em] mt-2 italic">
-                        {recommendationsData?.recommendation_type === 'personalized' 
-                            ? "Gợi ý chọn lọc dựa trên sở thích cá nhân của bạn"
-                            : t('home.for_you.subtitle')
-                        }
+                    <p className="text-[11px] text-gray-400 dark:text-white/30 tracking-[0.1em] mt-2">
+                        {t('home.for_you.subtitle')}
                     </p>
                 </div>
                 <div className="hidden md:block h-px flex-1 bg-gray-100 dark:bg-white/5 mx-10 mb-5"></div>

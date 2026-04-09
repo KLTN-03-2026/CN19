@@ -12,6 +12,8 @@ import OrganizerPublicProfile from './pages/Home/OrganizerPublicProfile';
 import Profile from './pages/Profile/Profile';
 import MyTickets from './pages/Customer/MyTickets';
 import ResaleTicket from './pages/Customer/ResaleTicket';
+import Checkout from './pages/Checkout/Checkout';
+import PaymentResult from './pages/Checkout/PaymentResult';
 
 // Support Pages
 import CustomerTerms from './pages/Support/CustomerTerms';
@@ -111,6 +113,15 @@ const router = createBrowserRouter([
           </ProtectedRoute>
         ) 
       },
+      { 
+        path: 'checkout/:orderId', 
+        element: (
+          <ProtectedRoute>
+            <Checkout />
+          </ProtectedRoute>
+        ) 
+      },
+      { path: 'payment-result', element: <PaymentResult /> },
       { path: 'organizer-register', element: <RegisterOrganizer /> },
       
       // Support Routes
