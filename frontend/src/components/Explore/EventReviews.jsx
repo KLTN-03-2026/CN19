@@ -31,6 +31,12 @@ const EventReviews = ({ eventId, eventEndTime }) => {
     const [activeMenuId, setActiveMenuId] = useState(null);
     const [commentText, setCommentText] = useState('');
 
+    // Editing States
+    const [editingReviewId, setEditingReviewId] = useState(null);
+    const [editingReviewContent, setEditingReviewContent] = useState('');
+    const [editingCommentId, setEditingCommentId] = useState(null);
+    const [editingCommentContent, setEditingCommentContent] = useState('');
+
     const isEventEnded = new Date() > new Date(eventEndTime);
 
     // 1. Lấy danh sách reviews
@@ -72,6 +78,41 @@ const EventReviews = ({ eventId, eventEndTime }) => {
         }
     });
 
+    // 5. Mutations: Edit & Delete
+    const deleteReviewMutation = useMutation({
+        mutationFn: blogService.deleteReview,
+        onSuccess: () => {
+            queryClient.invalidateQueries(['event-reviews', eventId]);
+            toast.success('Đã xóa thảo luận.');
+        }
+    });
+
+    const deleteCommentMutation = useMutation({
+        mutationFn: blogService.deleteComment,
+        onSuccess: () => {
+            queryClient.invalidateQueries(['event-reviews', eventId]);
+            toast.success('Đã xóa phản hồi.');
+        }
+    });
+
+    const updateReviewMutation = useMutation({
+        mutationFn: ({ id, data }) => blogService.updateReview(id, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries(['event-reviews', eventId]);
+            setEditingReviewId(null);
+            toast.success('Đã cập nhật thảo luận.');
+        }
+    });
+
+    const updateCommentMutation = useMutation({
+        mutationFn: ({ id, content }) => blogService.updateComment(id, content),
+        onSuccess: () => {
+            queryClient.invalidateQueries(['event-reviews', eventId]);
+            setEditingCommentId(null);
+            toast.success('Đã cập nhật phản hồi.');
+        }
+    });
+
     const handleSubmitReview = async (e) => {
         e.preventDefault();
         let finalTitle = newReview.title;
@@ -91,6 +132,18 @@ const EventReviews = ({ eventId, eventEndTime }) => {
         if (!isAuthenticated) return toast.error('Vui lòng đăng nhập để bình luận.');
         if (!commentText.trim()) return;
         addCommentMutation.mutate({ blogId, content: commentText });
+    };
+
+    const handleDeleteReview = (id) => {
+        if(window.confirm('Bạn có chắc chắn muốn xóa bài này?')) {
+            deleteReviewMutation.mutate(id);
+        }
+    };
+
+    const handleDeleteComment = (id) => {
+        if(window.confirm('Bạn có chắc chắn muốn xóa phản hồi này?')) {
+            deleteCommentMutation.mutate(id);
+        }
     };
 
     return (
@@ -201,30 +254,65 @@ const EventReviews = ({ eventId, eventEndTime }) => {
                             <div className="flex-1 min-w-0">
                                 {/* Comment Bubble */}
                                 <div className="flex items-center gap-2 group/revblock relative">
-                                    <div className="bg-gray-50 dark:bg-[#1a1a1d] rounded-[1.5rem] p-3 md:p-4 inline-block min-w-[200px] max-w-[90%] border border-gray-100 dark:border-white/5 shadow-sm">
+                                    <div className={`bg-gray-50 dark:bg-[#1a1a1d] rounded-[1.5rem] p-3 md:p-4 border border-gray-100 dark:border-white/5 shadow-sm min-w-[200px] max-w-[90%] ${editingReviewId === rev.id ? 'block w-full md:w-[600px]' : 'inline-block'}`}>
                                         <div className="flex items-center gap-2 mb-1 flex-wrap">
                                         <p className="font-bold text-gray-900 dark:text-white text-[13px] hover:underline cursor-pointer">{rev.author?.full_name}</p>
-                                        {rev.has_ticket ? (
-                                            <div className="flex items-center text-[10px] text-blue-500 font-bold bg-blue-500/10 px-1.5 py-0.5 rounded">
+                                        {rev.is_organizer && (
+                                            <div className="flex items-center text-[10px] text-black font-bold bg-neon-green px-1.5 py-0.5 rounded shadow-sm shadow-neon-green/10">
                                                 <CheckCircle2 className="w-3 h-3 mr-1" />
-                                                {isEventEnded ? 'Đã tham gia' : 'Có vé'}
+                                                Ban tổ chức
                                             </div>
-                                        ) : (
-                                            <div className="flex items-center text-[10px] text-gray-500 font-bold bg-gray-200 dark:bg-white/10 px-1.5 py-0.5 rounded">
-                                                {isEventEnded ? 'Quan tâm' : 'Đang hóng hớt'}
-                                            </div>
+                                        )}
+                                        {!rev.is_organizer && (
+                                            rev.has_ticket ? (
+                                                <div className="flex items-center text-[10px] text-blue-500 font-bold bg-blue-500/10 px-1.5 py-0.5 rounded">
+                                                    <CheckCircle2 className="w-3 h-3 mr-1" />
+                                                    {isEventEnded ? 'Đã tham gia' : 'Có vé'}
+                                                </div>
+                                            ) : (
+                                                <div className="flex items-center text-[10px] text-gray-500 font-bold bg-gray-200 dark:bg-white/10 px-1.5 py-0.5 rounded">
+                                                    {isEventEnded ? 'Quan tâm' : 'Đang hóng hớt'}
+                                                </div>
+                                            )
                                         )}
                                     </div>
                                     
-                                    {rev.title && rev.title.indexOf('Thảo luận của') === -1 && (
-                                        <h4 className="font-black text-gray-900 dark:text-white text-sm mb-1">{rev.title}</h4>
-                                    )}
-                                    <div className="text-gray-800 dark:text-gray-300 text-[14px] leading-relaxed break-words whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: rev.content }} />
-                                    
-                                    {rev.image_url && (
-                                        <div className="w-full max-w-xs md:max-w-md mt-3 rounded-xl overflow-hidden border border-gray-200 dark:border-white/10">
-                                            <img src={rev.image_url} className="w-full object-cover max-h-60" />
+                                    {editingReviewId === rev.id ? (
+                                        <div className="mt-2 w-full">
+                                            <textarea 
+                                                className="w-full bg-transparent border-b border-neon-green outline-none text-sm text-gray-900 dark:text-white pb-1 mb-2 resize-none overflow-hidden"
+                                                autoFocus
+                                                rows={1}
+                                                value={editingReviewContent}
+                                                onFocus={(e) => {
+                                                    e.target.style.height = 'auto';
+                                                    e.target.style.height = `${e.target.scrollHeight}px`;
+                                                    e.target.selectionStart = e.target.value.length;
+                                                }}
+                                                onChange={(e) => {
+                                                    e.target.style.height = 'auto';
+                                                    e.target.style.height = `${e.target.scrollHeight}px`;
+                                                    setEditingReviewContent(e.target.value);
+                                                }}
+                                            />
+                                            <div className="flex items-center gap-2">
+                                                <button onClick={() => updateReviewMutation.mutate({ id: rev.id, data: { title: rev.title, content: editingReviewContent, image_url: rev.image_url } })} className="text-xs bg-neon-green text-black px-3 py-1 rounded-full font-bold">Lưu</button>
+                                                <button onClick={() => setEditingReviewId(null)} className="text-xs bg-gray-200 dark:bg-white/10 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-full font-bold">Hủy</button>
+                                            </div>
                                         </div>
+                                    ) : (
+                                        <>
+                                            {rev.title && rev.title.indexOf('Thảo luận của') === -1 && (
+                                                <h4 className="font-black text-gray-900 dark:text-white text-sm mb-1">{rev.title}</h4>
+                                            )}
+                                            <div className="text-gray-800 dark:text-gray-300 text-[14px] leading-relaxed break-words whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: rev.content }} />
+                                            
+                                            {rev.image_url && (
+                                                <div className="w-full max-w-xs md:max-w-md mt-3 rounded-xl overflow-hidden border border-gray-200 dark:border-white/10">
+                                                    <img src={rev.image_url} className="w-full object-cover max-h-60" />
+                                                </div>
+                                            )}
+                                        </>
                                     )}
                                     </div>
 
@@ -241,10 +329,10 @@ const EventReviews = ({ eventId, eventEndTime }) => {
                                             
                                             {activeMenuId === rev.id && (
                                                 <div className="absolute left-full top-0 ml-1 bg-white dark:bg-[#1a1a1d] border border-gray-200 dark:border-white/10 rounded-xl shadow-lg w-36 py-1.5 z-20 animate-in fade-in zoom-in-95">
-                                                    <button onClick={() => {toast.info('Chức năng sửa đang phát triển'); setActiveMenuId(null);}} className="w-full text-left px-4 py-2 flex items-center text-xs font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+                                                    <button onClick={() => {setEditingReviewId(rev.id); setEditingReviewContent(rev.content); setActiveMenuId(null);}} className="w-full text-left px-4 py-2 flex items-center text-xs font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
                                                         Chỉnh sửa
                                                     </button>
-                                                    <button onClick={() => {toast.info('Chức năng xóa đang phát triển'); setActiveMenuId(null);}} className="w-full text-left px-4 py-2 flex items-center text-xs font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors">
+                                                    <button onClick={() => {handleDeleteReview(rev.id); setActiveMenuId(null);}} className="w-full text-left px-4 py-2 flex items-center text-xs font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors">
                                                         Xóa bình luận
                                                     </button>
                                                 </div>
@@ -280,22 +368,54 @@ const EventReviews = ({ eventId, eventEndTime }) => {
                                             <div key={cmt.id} className="flex gap-2 group/cmt">
                                                 <img src={cmt.user?.avatar_url || `https://ui-avatars.com/api/?name=${cmt.user?.full_name || 'M'}&background=111&color=fff`} className="w-7 h-7 rounded-full mt-1 shrink-0" />
                                                 <div className="flex flex-col items-start w-full min-w-0">
-                                                    <div className="flex items-center gap-2 group/cmtblock relative">
-                                                        <div className="bg-gray-100 dark:bg-white/5 rounded-[1rem] px-3 py-2 text-[13px] inline-block max-w-full border border-transparent dark:border-white/5">
+                                                    <div className="flex items-center gap-2 group/cmtblock relative w-full">
+                                                        <div className={`bg-gray-100 dark:bg-white/5 rounded-[1rem] px-3 py-2 text-[13px] border border-transparent dark:border-white/5 max-w-full ${editingCommentId === cmt.id ? 'block w-full md:w-[400px]' : 'inline-block'}`}>
                                                             <div className="flex items-center flex-wrap gap-1.5 mb-1">
                                                                 <span className="font-bold text-gray-900 dark:text-white leading-none">{cmt.user?.full_name}</span>
-                                                                {cmt.has_ticket ? (
-                                                                    <div className="flex items-center text-[9px] text-blue-500 font-bold bg-blue-500/10 px-1.5 py-0.5 rounded">
-                                                                        <CheckCircle2 className="w-2.5 h-2.5 mr-0.5" />
-                                                                        {isEventEnded ? 'Đã tham gia' : 'Có vé'}
-                                                                    </div>
-                                                                ) : (
-                                                                    <div className="flex items-center text-[9px] text-gray-500 font-bold bg-gray-200 dark:bg-white/10 px-1.5 py-0.5 rounded">
-                                                                        {isEventEnded ? 'Quan tâm' : 'Đang hóng hớt'}
+                                                                {cmt.is_organizer && (
+                                                                    <div className="flex items-center text-[9px] text-black font-bold bg-neon-green px-1.5 py-0.5 rounded shadow-sm shadow-neon-green/10">
+                                                                        Ban tổ chức
                                                                     </div>
                                                                 )}
+                                                                {!cmt.is_organizer && (
+                                                                    cmt.has_ticket ? (
+                                                                        <div className="flex items-center text-[9px] text-blue-500 font-bold bg-blue-500/10 px-1.5 py-0.5 rounded">
+                                                                            <CheckCircle2 className="w-2.5 h-2.5 mr-0.5" />
+                                                                            {isEventEnded ? 'Đã tham gia' : 'Có vé'}
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div className="flex items-center text-[9px] text-gray-500 font-bold bg-gray-200 dark:bg-white/10 px-1.5 py-0.5 rounded">
+                                                                            {isEventEnded ? 'Quan tâm' : 'Đang hóng hớt'}
+                                                                        </div>
+                                                                    )
+                                                                )}
                                                             </div>
-                                                            <span className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed inline break-words">{cmt.content}</span>
+                                                            {editingCommentId === cmt.id ? (
+                                                                <div className="w-full mt-1">
+                                                                    <textarea 
+                                                                        className="w-full bg-transparent border-b border-neon-green outline-none text-xs text-gray-900 dark:text-white pb-1 mb-2 resize-none overflow-hidden"
+                                                                        autoFocus
+                                                                        rows={1}
+                                                                        value={editingCommentContent}
+                                                                        onFocus={(e) => {
+                                                                            e.target.style.height = 'auto';
+                                                                            e.target.style.height = `${e.target.scrollHeight}px`;
+                                                                            e.target.selectionStart = e.target.value.length;
+                                                                        }}
+                                                                        onChange={(e) => {
+                                                                            e.target.style.height = 'auto';
+                                                                            e.target.style.height = `${e.target.scrollHeight}px`;
+                                                                            setEditingCommentContent(e.target.value);
+                                                                        }}
+                                                                    />
+                                                                    <div className="flex items-center gap-2">
+                                                                        <button onClick={() => updateCommentMutation.mutate({ id: cmt.id, content: editingCommentContent })} className="text-[10px] bg-neon-green text-black px-2 py-0.5 rounded-full font-bold">Lưu</button>
+                                                                        <button onClick={() => setEditingCommentId(null)} className="text-[10px] bg-gray-200 dark:bg-white/10 text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded-full font-bold">Hủy</button>
+                                                                    </div>
+                                                                </div>
+                                                            ) : (
+                                                                <span className="text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed inline break-words">{cmt.content}</span>
+                                                            )}
                                                         </div>
                                                         
                                                         {/* 3 Dots Menu for nested comments */}
@@ -311,10 +431,10 @@ const EventReviews = ({ eventId, eventEndTime }) => {
                                                                 
                                                                 {activeMenuId === cmt.id && (
                                                                     <div className="absolute left-full top-0 ml-1 bg-white dark:bg-[#1a1a1d] border border-gray-200 dark:border-white/10 rounded-xl shadow-lg w-36 py-1.5 z-20 animate-in fade-in zoom-in-95">
-                                                                        <button onClick={() => {toast.info('Chức năng sửa đang phát triển'); setActiveMenuId(null);}} className="w-full text-left px-4 py-2 flex items-center text-xs font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+                                                                        <button onClick={() => {setEditingCommentId(cmt.id); setEditingCommentContent(cmt.content); setActiveMenuId(null);}} className="w-full text-left px-4 py-2 flex items-center text-xs font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
                                                                             Chỉnh sửa
                                                                         </button>
-                                                                        <button onClick={() => {toast.info('Chức năng xóa đang phát triển'); setActiveMenuId(null);}} className="w-full text-left px-4 py-2 flex items-center text-xs font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors">
+                                                                        <button onClick={() => {handleDeleteComment(cmt.id); setActiveMenuId(null);}} className="w-full text-left px-4 py-2 flex items-center text-xs font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors">
                                                                             Xóa phản hồi
                                                                         </button>
                                                                     </div>

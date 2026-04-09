@@ -22,5 +22,12 @@ router.post('/:blogId/like', authenticate, controller.toggleLike);
 
 // Bình luận vào bài viết
 router.post('/:blogId/comment', authenticate, controller.addComment);
+// Cập nhật / Xóa Review cá nhân
+router.put('/reviews/:id', authenticate, controller.updateReview);
+router.delete('/reviews/:id', authenticate, controller.deleteReview);
+
+// Cập nhật / Xóa bình luận
+router.put('/comments/:id', authenticate, controller.updateComment);
+router.delete('/comments/:id', authenticate, controller.deleteComment);
 
 module.exports = router;

@@ -133,14 +133,23 @@ const blogController = {
             
             const usersWithTickets = new Set(tickets.map(t => t.current_owner_id));
 
+            // Lấy thông tin Organizer của sự kiện để gắn tag BTC
+            const event = await prisma.event.findUnique({
+                where: { id: eventId },
+                include: { organizer: { select: { user_id: true } } }
+            });
+            const organizerUserId = event?.organizer?.user_id;
+
             const data = reviews.map(r => ({
                 ...r,
                 is_liked: r.likes ? r.likes.length > 0 : false,
                 likes: undefined,
                 has_ticket: usersWithTickets.has(r.author_id),
+                is_organizer: r.author_id === organizerUserId,
                 comments: r.comments ? r.comments.map(cmt => ({
                     ...cmt,
-                    has_ticket: usersWithTickets.has(cmt.user_id)
+                    has_ticket: usersWithTickets.has(cmt.user_id),
+                    is_organizer: cmt.user_id === organizerUserId
                 })) : []
             }));
 
@@ -341,6 +350,77 @@ const blogController = {
         } catch (error) {
             console.error('getBlogBySlug error:', error);
             res.status(500).json({ error: 'Lỗi khi lấy chi tiết bài viết.' });
+        }
+    },
+
+    updateReview: async (req, res) => {
+        try {
+            const { id } = req.params;
+            const { title, content, image_url } = req.body;
+            
+            const review = await prisma.blog.findUnique({ where: { id } });
+            if (!review) return res.status(404).json({ error: 'Không tìm thấy thảo luận.' });
+            if (review.author_id !== req.user.userId) return res.status(403).json({ error: 'Không có quyền chỉnh sửa.' });
+
+            const updated = await prisma.blog.update({
+                where: { id },
+                data: { title, content, image_url }
+            });
+            res.json({ success: true, data: updated });
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ error: 'Lỗi server khi cập nhật thảo luận.' });
+        }
+    },
+
+    deleteReview: async (req, res) => {
+        try {
+            const { id } = req.params;
+            const review = await prisma.blog.findUnique({ where: { id } });
+            if (!review) return res.status(404).json({ error: 'Không tìm thấy thảo luận.' });
+            // Cả tác giả và event organizer đều có quyền xóa (có thể cải tiến thêm quyền của event organizer)
+            if (review.author_id !== req.user.userId && req.user.role !== 'admin') return res.status(403).json({ error: 'Không có quyền xóa.' });
+
+            await prisma.blog.delete({ where: { id } });
+            res.json({ success: true, message: 'Đã xóa thảo luận thành công.' });
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ error: 'Lỗi server khi xóa thảo luận.' });
+        }
+    },
+
+    updateComment: async (req, res) => {
+        try {
+            const { id } = req.params;
+            const { content } = req.body;
+            
+            const comment = await prisma.comment.findUnique({ where: { id } });
+            if (!comment) return res.status(404).json({ error: 'Không tìm thấy phản hồi.' });
+            if (comment.user_id !== req.user.userId) return res.status(403).json({ error: 'Không có quyền chỉnh sửa.' });
+
+            const updated = await prisma.comment.update({
+                where: { id },
+                data: { content }
+            });
+            res.json({ success: true, data: updated });
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ error: 'Lỗi server khi cập nhật phản hồi.' });
+        }
+    },
+
+    deleteComment: async (req, res) => {
+        try {
+            const { id } = req.params;
+            const comment = await prisma.comment.findUnique({ where: { id } });
+            if (!comment) return res.status(404).json({ error: 'Không tìm thấy phản hồi.' });
+            if (comment.user_id !== req.user.userId && req.user.role !== 'admin') return res.status(403).json({ error: 'Không có quyền xóa.' });
+
+            await prisma.comment.delete({ where: { id } });
+            res.json({ success: true, message: 'Đã xóa phản hồi thành công.' });
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ error: 'Lỗi server khi xóa phản hồi.' });
         }
     }
 };

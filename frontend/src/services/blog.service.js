@@ -35,6 +35,30 @@ const blogService = {
   addComment: async (blogId, content) => {
     const res = await api.post(`/blogs/${blogId}/comment`, { content });
     return res.data;
+  },
+
+  // Sửa bình luận chính (Review)
+  updateReview: async (id, data) => {
+    const res = await api.put(`/blogs/reviews/${id}`, data);
+    return res.data;
+  },
+
+  // Xóa bình luận chính (Review)
+  deleteReview: async (id) => {
+    const res = await api.delete(`/blogs/reviews/${id}`);
+    return res.data;
+  },
+
+  // Sửa phản hồi con
+  updateComment: async (id, content) => {
+    const res = await api.put(`/blogs/comments/${id}`, { content });
+    return res.data;
+  },
+
+  // Xóa phản hồi con
+  deleteComment: async (id) => {
+    const res = await api.delete(`/blogs/comments/${id}`);
+    return res.data;
   }
 };
 
