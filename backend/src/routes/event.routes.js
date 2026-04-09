@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const eventController = require('../controllers/event.controller');
+const { optionalAuthenticate } = require('../middlewares/auth.middleware');
 
-// [GET] /api/events/recommendations
-router.get('/recommendations', eventController.getRecommendations);
+// [GET] /api/events/recommendations - Ưu tiên Trending & Sở thích cá nhân
+router.get('/recommendations', optionalAuthenticate, eventController.getRecommendations);
 
 // [GET] /api/events
 router.get('/', eventController.getEvents);

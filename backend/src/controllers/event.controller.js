@@ -75,22 +75,69 @@ const getEventById = async (req, res) => {
   }
 };
 
-// [UX] Gợi ý sự kiện
+// [UX] Gợi ý sự kiện cá nhân hóa & Trending
 const getRecommendations = async (req, res) => {
   try {
+    const userId = req.user?.userId;
+    let recommendedCategoryIds = [];
+    let recommendationType = 'trending'; // 'trending' hoặc 'personalized'
+
+    // 1. Nếu đã đăng nhập, tìm 3 danh mục người dùng quan tâm nhất (qua lịch sử mua vé)
+    if (userId) {
+      const pastOrders = await prisma.order.findMany({
+        where: { user_id: userId },
+        take: 10,
+        orderBy: { created_at: 'desc' },
+        include: { event: { select: { category_id: true } } }
+      });
+
+      if (pastOrders.length > 0) {
+        // Đếm tần suất danh mục
+        const catCounts = {};
+        pastOrders.forEach(ord => {
+          const cid = ord.event.category_id;
+          catCounts[cid] = (catCounts[cid] || 0) + 1;
+        });
+        // Sắp xếp lấy danh mục nhiều nhất
+        recommendedCategoryIds = Object.keys(catCounts)
+          .sort((a, b) => catCounts[b] - catCounts[a])
+          .slice(0, 2);
+        
+        if (recommendedCategoryIds.length > 0) recommendationType = 'personalized';
+      }
+    }
+
+    // 2. Truy vấn sự kiện theo trọng số
+    // - Ưu tiên: is_featured -> Category khớp sở thích -> Lượt xem (Hot)
     const events = await prisma.event.findMany({
       where: { 
-        is_featured: true,
         status: 'active', 
         event_date: { gt: new Date() },
-        category: { is_active: true }
+        category: { is_active: true },
+        OR: [
+          { is_featured: true },
+          { category_id: { in: recommendedCategoryIds } }
+        ]
       },
       take: 6,
-      orderBy: { event_date: 'asc' },
-      include: { category: { select: { name: true } } }
+      orderBy: [
+        { is_featured: 'desc' },
+        { views: 'desc' },
+        { event_date: 'asc' }
+      ],
+      include: { 
+        category: { select: { name: true } },
+        organizer: { select: { organization_name: true, is_verified: true } }
+      }
     });
-    res.status(200).json({ data: events });
+
+    res.status(200).json({ 
+      success: true,
+      recommendation_type: recommendationType,
+      data: events 
+    });
   } catch (error) {
+    console.error('Lỗi Recommendation:', error);
     res.status(500).json({ error: 'Lỗi server.' });
   }
 };
