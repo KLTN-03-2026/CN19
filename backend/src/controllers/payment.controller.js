@@ -20,6 +20,11 @@ const PaymentController = {
             if (!order) return res.status(404).json({ error: 'Đơn hàng không tồn tại.' });
             if (order.status === 'paid') return res.status(400).json({ error: 'Đơn hàng này đã được thanh toán.' });
 
+            // Kiểm tra xem đơn hàng đã hết hạn chưa (10 phút giữ vé)
+            if (new Date() > order.expires_at) {
+                return res.status(400).json({ error: 'Đơn hàng đã hết hạn giữ vé. Vui lòng đặt lại vé mới.' });
+            }
+
             if (phuong_thuc === 'vnpay') {
                 return await createVNPayPayment(order, req, res);
             } else if (phuong_thuc === 'momo') {
@@ -29,7 +34,11 @@ const PaymentController = {
             }
         } catch (error) {
             console.error('Create Payment URL Error:', error);
-            res.status(500).json({ error: 'Lỗi khi tạo liên kết thanh toán.' });
+            // Trả về lỗi chi tiết nếu có để dễ debugging
+            const errorMessage = error.response ? 
+                (error.response.data.message || error.message) : 
+                error.message;
+            res.status(500).json({ error: `Lỗi khi tạo liên kết thanh toán: ${errorMessage}` });
         }
     },
 
@@ -121,8 +130,10 @@ const PaymentController = {
                 return res.status(200).json({ RspCode: '97', Message: 'Invalid signature' });
             }
 
-            // orderId từ MoMo có dạng: ORD_xxx_timestamp, cần lấy phần order_number
-            const orderNumber = orderId.includes('_') ? orderId.split('_')[0] : orderId;
+            // orderId từ MoMo giờ chỉ là MOMO{timestamp}
+            // Chúng ta cần lấy order_number từ payload của MoMo (orderInfo) hoặc extraData
+            // Cách đơn giản nhất: MoMo trả về orderInfo trong IPN
+            const orderNumber = orderInfo.includes(' ') ? orderInfo.split(' ').pop() : orderId;
 
             if (resultCode == 0) {
                 await processOrderSuccess(orderNumber, transId, 'MOMO', req.body);
@@ -173,7 +184,8 @@ async function createVNPayPayment(order, req, res) {
     let vnpUrl = process.env.VNP_URL.trim();
     let returnUrl = process.env.VNP_RETURN_URL.trim();
 
-    let expireDate = format(new Date(Date.now() + 15 * 60 * 1000), 'yyyyMMddHHmmss');
+    // VNPay ExpireDate: Tính toán dựa trên thời gian hết hạn của đơn hàng (expires_at)
+    let expireDate = format(new Date(order.expires_at), 'yyyyMMddHHmmss');
     let amount = Math.round(order.total_amount);
     let orderInfo = `ThanhToanDonHang${order.order_number}`;
     let locale = 'vn';
@@ -218,57 +230,91 @@ async function createVNPayPayment(order, req, res) {
     return res.status(200).json({ payment_url: vnpUrl });
 }
 
-// Helper function to create MoMo URL
+// Helper function to create MoMo URL (Real Sandbox)
 async function createMoMoPayment(order, req, res) {
     const partnerCode = process.env.MOMO_PARTNER_CODE.trim();
     const accessKey = process.env.MOMO_ACCESS_KEY.trim();
     const secretKey = process.env.MOMO_SECRET_KEY.trim();
     
-    const requestId = Date.now().toString();
-    const orderIdMoMo = `${order.order_number}_${Date.now()}`; // Unique mỗi lần
-    const orderInfo = `Thanh toan don hang ${order.order_number}`; // Raw string, NO encoding
-    const redirectUrl = process.env.MOMO_RETURN_URL;
-    const ipnUrl = process.env.MOMO_NOTIFY_URL;
+    // Per MoMo sample: orderId = partnerCode + timestamp
+    const orderId = partnerCode + Date.now();
+    const requestId = orderId; 
     const amount = Math.round(order.total_amount).toString();
-    const requestType = "captureWallet";
+    const orderInfo = `Thanh toan don hang ${order.order_number}`; 
+    const redirectUrl = process.env.MOMO_RETURN_URL;
+    const ipnUrl = process.env.MOMO_NOTIFY_URL; 
+    const requestType = "payWithMethod"; // Dùng lại payWithMethod theo mẫu bạn gửi
     const extraData = "";
+    const orderGroupId = "";
+    const autoCapture = true;
+    const lang = 'vi';
 
-    // Chuỗi hash theo đúng chuẩn MoMo (thứ tự alphabetical)
-    const rawSignature = `accessKey=${accessKey}&amount=${amount}&extraData=${extraData}&ipnUrl=${ipnUrl}&orderId=${orderIdMoMo}&orderInfo=${orderInfo}&partnerCode=${partnerCode}&redirectUrl=${redirectUrl}&requestId=${requestId}&requestType=${requestType}`;
+    // Tính toán thời gian còn lại (phút) cho MoMo
+    const remainingTimeMs = new Date(order.expires_at).getTime() - Date.now();
+    let orderExpireTime = Math.max(1, Math.floor(remainingTimeMs / 60000)); 
+
+    // Signature string (Order alphabetical)
+    const rawSignature = `accessKey=${accessKey}&amount=${amount}&extraData=${extraData}&ipnUrl=${ipnUrl}&orderId=${orderId}&orderInfo=${orderInfo}&partnerCode=${partnerCode}&redirectUrl=${redirectUrl}&requestId=${requestId}&requestType=${requestType}`;
     const signature = crypto.createHmac('sha256', secretKey).update(rawSignature).digest('hex');
 
-    console.log('--- MOMO DEBUG ---');
-    console.log('RAW HASH:', rawSignature);
-    console.log('SIGNATURE:', signature);
-    console.log('------------------');
-
-    const requestBody = {
+    const requestBody = JSON.stringify({
         partnerCode,
-        partnerName: 'BASTICKET',
-        storeId: 'BASTICKET',
+        partnerName: "BASTICKET",
+        storeId: "BASTICKET",
         requestId,
         amount,
-        orderId: orderIdMoMo,
+        orderId,
         orderInfo,
         redirectUrl,
         ipnUrl,
-        extraData,
+        lang,
         requestType,
-        signature,
-        lang: 'vi'
+        autoCapture,
+        orderExpireTime: parseInt(orderExpireTime),
+        extraData,
+        orderGroupId,
+        signature
+    });
+
+    const https = require('https');
+    const options = {
+        hostname: 'test-payment.momo.vn',
+        port: 443,
+        path: '/v2/gateway/api/create',
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Content-Length': Buffer.byteLength(requestBody)
+        }
     };
 
-    const response = await axios.post(process.env.MOMO_ENDPOINT, requestBody, {
-        headers: { 'Content-Type': 'application/json' }
+    return new Promise((resolve, reject) => {
+        const momoReq = https.request(options, momoRes => {
+            let data = '';
+            momoRes.on('data', chunk => data += chunk);
+            momoRes.on('end', () => {
+                try {
+                    const result = JSON.parse(data);
+                    if (result.resultCode === 0 && result.payUrl) {
+                        return res.status(200).json({ payment_url: result.payUrl });
+                    } else {
+                        return res.status(500).json({ 
+                            error: `MoMo Error: ${result.message}`
+                        });
+                    }
+                } catch (e) {
+                    res.status(500).json({ error: 'Lỗi khi xử lý phản hồi từ MoMo.' });
+                }
+            });
+        });
+
+        momoReq.on('error', (e) => {
+            res.status(500).json({ error: `Lỗi kết nối tới MoMo: ${e.message}` });
+        });
+
+        momoReq.write(requestBody);
+        momoReq.end();
     });
-    
-    console.log('MOMO RESPONSE:', JSON.stringify(response.data));
-    
-    if (!response.data.payUrl) {
-        throw new Error(response.data.message || 'Không nhận được URL thanh toán từ MoMo');
-    }
-    
-    return res.status(200).json({ payment_url: response.data.payUrl });
 }
 
 /**

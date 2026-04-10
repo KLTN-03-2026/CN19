@@ -118,11 +118,11 @@ const PaymentResult = () => {
 
           {status === 'failed' && (
             <div className="animate-in zoom-in-95 duration-500">
-               <div className="w-24 h-24 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-8 border border-red-500/20">
-                  <XCircle className="w-12 h-12 text-red-500" />
+               <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-red-500/20">
+                  <XCircle className="w-10 h-10 text-red-500" />
                </div>
                
-               <h2 className="text-3xl font-black text-gray-900 dark:text-white uppercase tracking-tighter mb-4">
+               <h2 className="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tighter mb-4">
                   {t('paymentResult.failedTitlePart1')} <span className="text-red-500">{t('paymentResult.failedTitlePart2')}</span>
                </h2>
                <p className="text-gray-500 dark:text-gray-400 font-medium mb-10 text-sm">
@@ -132,13 +132,13 @@ const PaymentResult = () => {
                <div className="flex flex-col gap-3">
                   <button 
                     onClick={() => navigate(-1)}
-                    className="w-full py-5 bg-neon-green text-black font-black uppercase text-xs tracking-[0.2em] rounded-2xl flex items-center justify-center gap-3 hover:scale-[1.02] transition-all shadow-lg shadow-neon-green/20"
+                    className="w-full py-4 bg-neon-green text-black font-black uppercase text-xs rounded-2xl flex items-center justify-center gap-3 hover:scale-[1.02] transition-all shadow-lg shadow-neon-green/20"
                   >
                     {t('paymentResult.retryPayment')} <ArrowRight className="w-5 h-5" />
                   </button>
                   <Link 
                     to="/events"
-                    className="w-full py-5 bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-white font-black uppercase text-[10px] tracking-[0.2em] rounded-2xl flex items-center justify-center hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"
+                    className="w-full py-4 bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-white font-black uppercase text-[10px] rounded-2xl flex items-center justify-center hover:bg-gray-200 dark:hover:bg-white/10 transition-colors"
                   >
                     {t('paymentResult.cancelAndBack')}
                   </Link>
@@ -149,7 +149,7 @@ const PaymentResult = () => {
         </div>
 
         {/* Footer info */}
-        <div className="mt- flex flex-col items-center gap-6">
+        <div className="mt-6 flex flex-col items-center gap-6">
            <div className="flex items-center gap-8">
               <ShieldCheck className="w-6 h-6 text-gray-300" />
               <Smartphone className="w-6 h-6 text-gray-300" />
