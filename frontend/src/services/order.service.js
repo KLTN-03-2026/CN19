@@ -35,6 +35,18 @@ const orderService = {
         // updateData: { merchandise_items, coupon_code }
         const response = await api.patch(`/orders/${id}`, updateData);
         return response.data;
+    },
+
+    // Tạo liên kết thanh toán
+    createPaymentUrl: async (ma_don_hang, phuong_thuc) => {
+        const response = await api.post('/payments/create-url', { ma_don_hang, phuong_thuc });
+        return response.data;
+    },
+
+    // Xác thực kết quả VNPay
+    verifyVNPayReturn: async (params) => {
+        const response = await api.get('/payments/vnpay-return', { params });
+        return response.data;
     }
 };
 

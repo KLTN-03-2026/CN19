@@ -187,6 +187,21 @@ model Order {
   event             Event                  @relation(fields: [event_id], references: [id])
   items             OrderItem[]
   tickets           Ticket[]
+  payments          Payment[]
+}
+
+model Payment {
+  id               String   @id @default(uuid())
+  order_id         String
+  method           String
+  transaction_id   String?
+  amount           Decimal
+  status           String   @default("pending")
+  response_data    Json?
+  paid_at          DateTime @default(now())
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+  order            Order    @relation(fields: [order_id], references: [id])
 }
 
 model OrderItem {

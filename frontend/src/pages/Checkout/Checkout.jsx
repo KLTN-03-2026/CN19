@@ -16,9 +16,9 @@ import {
   Info
 } from 'lucide-react';
 import orderService from '../../services/order.service';
-import paymentService from '../../services/payment.service';
 import merchandiseService from '../../services/merchandise.service';
 import couponService from '../../services/coupon.service';
+import { useOrder } from '../../hooks/useOrder';
 import { Plus, Minus, Tag, ShoppingBag, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
@@ -87,7 +87,7 @@ const Checkout = () => {
   const currentLocale = i18n.language === 'en' ? 'en-US' : 'vi-VN';
   
   const [paymentMethod, setPaymentMethod] = useState('vnpay');
-  const [isProcessing, setIsProcessing] = useState(false);
+  const { createPaymentUrl, isCreatingPaymentUrl } = useOrder();
   const [timeLeft, setTimeLeft] = useState(null);
 
   // --- Add-ons & Coupon State ---
@@ -96,6 +96,7 @@ const Checkout = () => {
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
   const [isUpdatingOrder, setIsUpdatingOrder] = useState(false);
   const [isVoucherModalOpen, setIsVoucherModalOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
 
   const { data, isLoading: isOrderLoading, error, refetch } = useQuery({
     queryKey: ['order', orderId],
@@ -151,19 +152,19 @@ const Checkout = () => {
   }, [order, navigate, t]);
 
   const handlePayment = async () => {
-    if (timeLeft <= 0) return;
-    setIsProcessing(true);
+    if (timeLeft <= 0 || !order) return;
     try {
-      let res;
-      if (paymentMethod === 'vnpay') {
-        res = await paymentService.createVNPayUrl(order.id);
-      } else if (paymentMethod === 'momo') {
-        res = await paymentService.createMoMoUrl(order.id);
+      const res = await createPaymentUrl({
+        ma_don_hang: order.order_number,
+        phuong_thuc: paymentMethod
+      });
+      if (res?.payment_url) {
+        window.location.href = res.payment_url;
+      } else {
+        toast.error("Không thể tạo liên kết thanh toán");
       }
-      if (res?.paymentUrl) window.location.href = res.paymentUrl;
     } catch (err) {
-      toast.error(t('profile.security.change_failed'));
-      setIsProcessing(false);
+      toast.error(err.response?.data?.error || "Có lỗi xảy ra khi thanh toán");
     }
   };
 
@@ -343,7 +344,7 @@ const Checkout = () => {
 
              </div>
 
-                             {/* Merchandise Section */}
+            {/* Merchandise Section */}
                 {merchandise.length > 0 && (
                    <div className="mt-8 bg-white dark:bg-[#111114] border border-gray-200 dark:border-white/10 rounded-[2.5rem] shadow-xl overflow-hidden p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                       <div className="flex items-center justify-between mb-6">
@@ -353,17 +354,20 @@ const Checkout = () => {
                          {isUpdatingOrder && <div className="w-4 h-4 border-2 border-neon-green/20 border-t-neon-green rounded-full animate-spin"></div>}
                       </div>
                       
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 gap-4">
                          {merchandise.map((m) => {
                             const qty = selectedMerch[m.id] || 0;
                             return (
-                               <div key={m.id} className={`p-4 rounded-2xl border transition-all flex items-center justify-between ${qty > 0 ? 'bg-neon-green/5 border-neon-green/30' : 'bg-gray-50 dark:bg-white/5 border-gray-100 dark:border-white/5'}`}>
-                                  <div className="flex items-center gap-4">
-                                     <div className="w-12 h-12 rounded-xl bg-black/10 overflow-hidden shrink-0">
-                                        <img src={m.image_url || 'https://via.placeholder.com/100'} className="w-full h-full object-cover" alt="" />
+                               <div key={m.id} className={`pl-2 pr-4 py-2 rounded-2xl border transition-all flex items-center justify-between ${qty > 0 ? 'bg-neon-green/5 border-neon-green/30' : 'bg-gray-50 dark:bg-white/5 border-gray-100 dark:border-white/5'}`}>
+                                  <div 
+                                    className="flex items-center gap-4 cursor-pointer group/item transition-opacity hover:opacity-80"
+                                    onClick={() => setSelectedProduct(m)}
+                                  >
+                                     <div className="w-25 h-23 rounded-xl bg-black/10 overflow-hidden shrink-0">
+                                        <img src={m.image_url || 'https://via.placeholder.com/100'} className="w-full h-full object-cover group-hover/item:scale-110 transition-transform duration-500" alt="" />
                                      </div>
                                      <div>
-                                        <p className="text-xs font-black uppercase tracking-tight leading-tight mb-1">{m.name}</p>
+                                        <p className="text-xs font-black leading-tight mb-1 group-hover/item:text-neon-green transition-colors">{m.name}</p>
                                         <p className="text-[11px] font-bold text-neon-green">{formatPrice(m.price, currentLocale)}</p>
                                      </div>
                                   </div>
@@ -378,7 +382,7 @@ const Checkout = () => {
                                      <span className="w-6 text-center text-xs font-black">{qty}</span>
                                      <button 
                                         onClick={() => handleMerchCount(m.id, 1, m.stock)}
-                                        className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-neon-green text-black transition-colors"
+                                        className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-neon-green text-white hover:text-black transition-colors"
                                      >
                                         <Plus className="w-3 h-3" />
                                      </button>
@@ -514,10 +518,10 @@ const Checkout = () => {
 
                 <button 
                   onClick={handlePayment}
-                  disabled={isProcessing || timeLeft <= 0}
+                  disabled={isCreatingPaymentUrl || timeLeft <= 0}
                   className="w-full py-4 bg-neon-green text-black font-black uppercase text-sm rounded-3xl hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all flex items-center justify-center gap-3 shadow-[0_15px_40px_rgba(82,196,45,0.25)] disabled:opacity-50"
                 >
-                  {isProcessing ? t('checkout.initializing') : t('checkout.payNow')} 
+                  {isCreatingPaymentUrl ? t('checkout.initializing') : t('checkout.payNow')} 
                 </button>
 
                 <div className="flex items-center justify-center gap-6">
@@ -637,6 +641,92 @@ const Checkout = () => {
                        </div>
                     ))
                  )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Product Detail Modal */}
+      <AnimatePresence>
+        {selectedProduct && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-6">
+            <motion.div 
+               initial={{ opacity: 0 }}
+               animate={{ opacity: 1 }}
+               exit={{ opacity: 0 }}
+               onClick={() => setSelectedProduct(null)}
+               className="absolute inset-0 bg-black/90 backdrop-blur-md"
+            />
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0, y: 30 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 30 }}
+              className="relative w-full max-w-2xl bg-white dark:bg-[#0a0a0c] border border-white/5 rounded-[3rem] shadow-2xl overflow-hidden flex flex-col md:flex-row max-h-[90vh]"
+            >
+              {/* Close Button Mobile */}
+              <button 
+                onClick={() => setSelectedProduct(null)}
+                className="absolute top-6 right-6 z-10 w-12 h-12 rounded-full bg-black/50 backdrop-blur-md text-white flex items-center justify-center hover:bg-neon-green hover:text-black transition-all md:hidden"
+              >
+                <X className="w-6 h-6" />
+              </button>
+
+              {/* Product Image */}
+              <div className="w-full md:w-1/2 h-64 md:h-auto overflow-hidden bg-black/10">
+                <img 
+                  src={selectedProduct.image_url || 'https://via.placeholder.com/400'} 
+                  className="w-full h-full object-cover"
+                  alt={selectedProduct.name}
+                />
+              </div>
+
+              {/* Product Info */}
+              <div className="flex-1 p-8 md:p-12 flex flex-col justify-between overflow-y-auto">
+                 <div>
+                    <div className="flex items-center justify-between mb-2">
+                       <span className="text-[10px] font-black uppercase text-neon-green tracking-widest">{t('checkout.addons')}</span>
+                       <button 
+                          onClick={() => setSelectedProduct(null)}
+                          className="hidden md:flex w-10 h-10 rounded-full hover:bg-gray-100 dark:hover:bg-white/5 items-center justify-center transition-colors"
+                       >
+                          <X className="w-5 h-5" />
+                       </button>
+                    </div>
+                    <h2 className="text-3xl font-black uppercase leading-tight mb-4">{selectedProduct.name}</h2>
+                    <p className="text-2xl font-black text-neon-green mb-8">{formatPrice(selectedProduct.price, currentLocale)}</p>
+                    
+                    <div className="space-y-4 mb-8">
+                       <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{t('support.faq.cats.app')}</p>
+                       <p className="text-sm text-gray-500 dark:text-gray-400 font-medium leading-relaxed">
+                          {selectedProduct.description || "Không có mô tả chi tiết cho sản phẩm này."}
+                       </p>
+                    </div>
+                 </div>
+
+                 <div className="pt-8 border-t border-gray-100 dark:border-white/5 flex flex-col gap-6">
+                    <div className="flex items-center justify-between">
+                       <span className="text-[11px] font-bold text-gray-500 uppercase">{t('checkout.stock')}</span>
+                       <span className="text-xs font-black text-neon-green px-3 py-1 bg-neon-green/10 rounded-full">{selectedProduct.stock}</span>
+                    </div>
+
+                    {/* Quantity Selector inside Modal */}
+                    <div className="ml-20 flex items-center justify-between bg-gray-50 dark:bg-white/5 p-4 rounded-3xl border border-gray-100 dark:border-white/5">
+                        <button 
+                           onClick={() => handleMerchCount(selectedProduct.id, -1, selectedProduct.stock)}
+                           className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+                        >
+                           <Minus className="w-4 h-4" />
+                        </button>
+                        <span className="w-8 text-center text-l font-black">{selectedMerch[selectedProduct.id] || 0}</span>
+                        <button 
+                            onClick={() => handleMerchCount(selectedProduct.id, 1, selectedProduct.stock)}
+                            className="w-8 h-8 flex items-center justify-center rounded-xl bg-neon-green text-black hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all shadow-md"
+                        >
+                           <Plus className="w-4 h-4" />
+                        </button>           
+                    </div>
+                 </div>
               </div>
             </motion.div>
           </div>

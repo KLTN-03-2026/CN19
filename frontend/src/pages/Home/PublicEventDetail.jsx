@@ -557,19 +557,19 @@ const PublicEventDetail = () => {
          {/* Gradient fade to hide content behind bar */}
          <div className="absolute bottom-[100%] inset-x-0 h-32 bg-gradient-to-t from-white dark:from-[#0a0a0c] to-transparent pointer-events-none transition-colors"></div>
          
-         <div className="px-4 pb-4 md:px-8 md:pb-8 max-w-[1400px] mx-auto">
+         <div className="px-4 pb-4 md:px-6 md:pb-6 max-w-[1400px] mx-auto">
            <div className="bg-gray-900/90 dark:bg-white/10 backdrop-blur-3xl border border-gray-800 dark:border-white/20 shadow-[0_-20px_80px_rgba(0,0,0,0.1)] dark:shadow-[0_-20px_80px_rgba(0,0,0,0.8)] rounded-[2.5rem] p-4 pr-4 pl-6 md:pl-10 flex flex-col sm:flex-row items-center justify-between gap-4 md:gap-8 transition-colors">
               
               <div className="flex items-center gap-6 w-full sm:w-auto overflow-hidden">
-                <div className="w-14 h-14 bg-neon-green/10 rounded-[1.5rem] flex items-center justify-center shrink-0 border border-neon-green/30 relative">
-                  <ShoppingCart className="w-6 h-6 text-neon-green" />
-                  <div className="absolute -top-2 -right-2 w-7 h-7 bg-white text-black font-black flex items-center justify-center rounded-full text-xs shadow-lg animate-bounce duration-500">
+                <div className="w-12 h-12 bg-neon-green/10 rounded-[1.5rem] flex items-center justify-center shrink-0 border border-neon-green/30 relative">
+                  <ShoppingCart className="w-5 h-5 text-neon-green" />
+                  <div className="absolute -top-0.5 -right-1 w-5 h-5 bg-white text-black font-black flex items-center justify-center rounded-full text-xs shadow-lg animate-bounce duration-500">
                     {totalSelectedTickets}
                   </div>
                 </div>
                 <div>
-                  <div className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 mb-1">{t('eventDetail.subtotal', 'Tổng Tạm Tính')}</div>
-                  <div className="text-2xl md:text-3xl font-black text-white tracking-tighter truncate max-w-[200px] md:max-w-none">
+                  <div className="text-[10px] font-black uppercase text-gray-400 mb-1">{t('eventDetail.subtotal', 'Tổng Tạm Tính')}</div>
+                  <div className="text-xl md:text-xl font-black text-white tracking-tighter truncate max-w-[200px] md:max-w-none">
                     {totalPrice === 0 ? t('eventDetail.free', 'MIỄN PHÍ') : formatPrice(totalPrice)}
                   </div>
                 </div>
@@ -578,7 +578,7 @@ const PublicEventDetail = () => {
               <button 
                 onClick={handleCheckout}
                 disabled={totalSelectedTickets === 0}
-                className="w-full sm:w-auto px-10 py-5 bg-neon-green hover:bg-white hover:scale-105 active:scale-95 text-black font-black uppercase text-sm tracking-[0.2em] rounded-[2rem] transition-all flex items-center justify-center gap-3 shadow-[0_10px_40px_rgba(82,196,45,0.4)] disabled:opacity-50 disabled:pointer-events-none"
+                className="w-full sm:w-auto px-10 py-5 bg-neon-green hover:bg-white hover:scale-105 active:scale-95 text-black font-black uppercase text-sm rounded-[2rem] transition-all flex items-center justify-center gap-3 shadow-[0_10px_40px_rgba(82,196,45,0.4)] disabled:opacity-50 disabled:pointer-events-none"
               >
                 {t('eventDetail.checkoutNow', 'Thanh toán ngay')} <ChevronRight className="w-5 h-5" />
               </button>

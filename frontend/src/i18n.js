@@ -353,6 +353,25 @@ i18n
             expiry: "Expiry",
             noAvailableVouchers: "No vouchers available for this event.",
             condition: "Condition"
+          },
+          paymentResult: {
+            verifying: "Verifying...",
+            verifyingDesc: "Please wait a moment while we process your transaction.",
+            successTitlePart1: "Masterpiece",
+            successTitlePart2: "Is Now Yours!",
+            successDesc: "Transaction successful. Your NFT tickets are being automatically minted and sent to your wallet.",
+            viewTickets: "View Tickets",
+            exploreMore: "Explore More Events",
+            failedTitlePart1: "Transaction",
+            failedTitlePart2: "Interrupted",
+            failedDesc: "Sorry, an error occurred during payment. Your seats/tickets are being held for 10 minutes.",
+            retryPayment: "Retry Payment",
+            cancelAndBack: "Cancel and Back",
+            securityInfo: "Secured by Polygon Blockchain & BASTICKET AI Anti-Bot technology.",
+            toastSuccessVNPay: "VNPay payment successful!",
+            toastSuccessMoMo: "MoMo payment successful!",
+            toastErrorGeneric: "Transaction failed.",
+            toastErrorVerify: "Payment verification failed."
           }
         }
       },
@@ -682,6 +701,25 @@ i18n
             expiry: "Hạn dùng",
             noAvailableVouchers: "Chưa có mã giảm giá nào khả dụng cho sự kiện này.",
             condition: "Điều kiện"
+          },
+          paymentResult: {
+            verifying: "Đang xác thực...",
+            verifyingDesc: "Vui lòng chờ trong giây lát trong khi chúng tôi xử lý giao dịch.",
+            successTitlePart1: "Tuyệt phẩm",
+            successTitlePart2: "Đã thuộc về bạn!",
+            successDesc: "Giao dịch thành công. Vé NFT đang được hệ thống tự động đúc và gửi vào ví của bạn.",
+            viewTickets: "Xem vé ngay",
+            exploreMore: "Khám phá thêm sự kiện",
+            failedTitlePart1: "Giao dịch",
+            failedTitlePart2: "Bị gián đoạn",
+            failedDesc: "Rất tiếc, đã có lỗi xảy ra trong quá trình thanh toán. Ghế/Vé của bạn vẫn đang được giữ trong 10 phút.",
+            retryPayment: "Thử thanh toán lại",
+            cancelAndBack: "Hủy bỏ và quay lại",
+            securityInfo: "Bảo mật bởi hệ thống Blockchain Polygon & Công nghệ AI Chống Bot của BASTICKET.",
+            toastSuccessVNPay: "Thanh toán VNPay thành công!",
+            toastSuccessMoMo: "Thanh toán MoMo thành công!",
+            toastErrorGeneric: "Giao dịch thất bại.",
+            toastErrorVerify: "Xác thực thanh toán thất bại."
           }
         }
       }
