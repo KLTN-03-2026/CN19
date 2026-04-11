@@ -19,7 +19,8 @@ import {
   Home,
   Users,
   Package,
-  FileText
+  FileText,
+  ClipboardList
 } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import toast from 'react-hot-toast';
@@ -53,6 +54,7 @@ const OrganizerLayout = () => {
     { path: '/organizer/my-events', icon: Calendar, label: 'Sự kiện của tôi' },
     { path: '/organizer/create-event', icon: PlusCircle, label: 'Tạo sự kiện' },
     { path: '/organizer/tickets', icon: Ticket, label: 'Quản lý vé' },
+    { path: '/organizer/orders', icon: ClipboardList, label: 'Quản lý đơn hàng' },
     { path: '/organizer/revenue', icon: Wallet, label: 'Doanh thu & Rút tiền' },
     { path: '/organizer/staff', icon: Users, label: 'Quản lý nhân viên' },
     { path: '/organizer/participants', icon: Users, label: 'Danh sách tham gia' },
