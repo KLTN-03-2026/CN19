@@ -65,8 +65,17 @@ model Organizer {
   id_number         String?
   kyc_raw_data      Json?
   liveness_score    Float?
+  
+  // Tài chính
+  balance           Decimal       @default(0)
+  bank_name         String?
+  account_number    String?
+  account_holder    String?
+
   events            Event[]
   merchandise       Merchandise[]
+  wallet_transactions WalletTransaction[]
+  withdrawal_requests WithdrawalRequest[]
   user              User          @relation(fields: [user_id], references: [id])
 }
 
@@ -180,6 +189,9 @@ model Order {
   created_at        DateTime               @default(now())
   coupon_id         String?
   discount_amount   Decimal?               @default(0)
+  
+  // Trạng thái đối soát tiền cho Organizer
+  is_settled        Boolean                @default(false)
   bot_logs          BotDetectionLog[]
   merchandise_items MerchandiseOrderItem[]
   coupon            Coupon?                @relation(fields: [coupon_id], references: [id])
@@ -460,4 +472,29 @@ model Coupon {
   event_id            String?
   event               Event?   @relation(fields: [event_id], references: [id])
   orders              Order[]
+}
+
+model WalletTransaction {
+  id           String   @id @default(uuid())
+  organizer_id String
+  amount       Decimal
+  type         String   // REVENUE (Cộng tiền vé), WITHDRAWAL (Rút tiền)
+  description  String?
+  status       String   @default("completed")
+  created_at   DateTime @default(now())
+  organizer    Organizer @relation(fields: [organizer_id], references: [id])
+}
+
+model WithdrawalRequest {
+  id              String    @id @default(uuid())
+  organizer_id    String
+  amount          Decimal
+  bank_name       String
+  account_number  String
+  account_holder  String
+  status          String    @default("pending") // pending, approved, rejected
+  admin_notes     String?
+  processed_at    DateTime?
+  created_at      DateTime  @default(now())
+  organizer       Organizer @relation(fields: [organizer_id], references: [id])
 }
