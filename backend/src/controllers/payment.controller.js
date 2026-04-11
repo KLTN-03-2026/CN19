@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const axios = require('axios');
 const prisma = require('../config/prisma');
 const blockchainService = require('../services/blockchain.service');
+const emailService = require('../services/email.service');
 const { format } = require('date-fns');
 
 /**
@@ -329,7 +330,8 @@ async function processOrderSuccess(orderNumber, transactionId, method, payload) 
             where: { order_number: orderNumber },
             include: { 
                 items: { include: { ticket_tier: true } },
-                customer: { select: { wallet_address: true, full_name: true } }
+                customer: { select: { wallet_address: true, full_name: true, email: true } },
+                event: true
             }
         });
 
@@ -377,6 +379,9 @@ async function processOrderSuccess(orderNumber, transactionId, method, payload) 
                 triggerNFTMinting(ticket, order.customer.wallet_address);
             }
         }
+
+        // 5. Gửi email xác nhận thành công (Chạy ngầm để không block transaction commit lâu)
+        emailService.sendBookingSuccessEmail(order, order.customer, order.event);
     });
 }
 
