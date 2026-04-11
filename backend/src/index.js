@@ -30,6 +30,8 @@ const organizerStatRoutes = require('./routes/organizer-stat.routes');
 const organizerTicketRoutes = require('./routes/organizer-ticket.routes');
 const organizerMerchandiseRoutes = require('./routes/organizer-merchandise.routes');
 const organizerBlogRoutes = require('./routes/organizer-blog.routes');
+const revenueRoutes = require('./routes/revenue.routes');
+const organizerOrderRoutes = require('./routes/organizer-order.routes');
 
 // 5. Admin
 const adminUserRoutes = require('./routes/admin-user.routes');
@@ -81,6 +83,8 @@ app.use('/api/organizer/stats', organizerStatRoutes);
 app.use('/api/organizer/tickets', organizerTicketRoutes);
 app.use('/api/organizer/merchandise', organizerMerchandiseRoutes);
 app.use('/api/organizer/blogs', organizerBlogRoutes);
+app.use('/api/organizer/revenue', revenueRoutes);
+app.use('/api/organizer/orders', organizerOrderRoutes);
 
 // Admin
 app.use('/api/admin/users', adminUserRoutes);
