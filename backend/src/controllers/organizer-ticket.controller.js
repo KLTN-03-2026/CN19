@@ -21,9 +21,9 @@ const getOrganizerTicketStats = async (req, res) => {
       _sum: { total_amount: true }
     });
 
-    // 2. Tổng vé đã bán (Tickets status là 'minted' hoặc 'used')
+    // 2. Tổng vé đã bán (Tickets status là 'valid', 'minted' hoặc 'used')
     const totalSold = await prisma.ticket.count({
-      where: { event_id: { in: eventIds }, status: { in: ['minted', 'used'] } }
+      where: { event_id: { in: eventIds }, status: { in: ['valid', 'minted', 'used'] } }
     });
 
     // 3. Tổng lượt tham gia (Tickets is_used = true)
@@ -40,7 +40,7 @@ const getOrganizerTicketStats = async (req, res) => {
         price: true,
         quantity_total: true,
         _count: {
-          select: { tickets: { where: { status: { in: ['minted', 'used'] } } } }
+          select: { tickets: { where: { status: { in: ['valid', 'minted', 'used'] } } } }
         }
       }
     });

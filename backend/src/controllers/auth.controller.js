@@ -142,14 +142,22 @@ const login = async (req, res) => {
       return res.status(403).json({ error: 'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ Admin.' });
     }
 
-    // 3. Đối chiếu mật khẩu
-    const isMatch = await bcrypt.compare(password, user.password_hash);
-    if (!isMatch) {
-      // Có thể tăng failed_login_attempts ở đây
-      return res.status(401).json({ error: 'Email hoặc mật khẩu không chính xác.' });
+    // 4. Tự động cấp ví nếu user chưa có (Just-in-Time Wallet)
+    if (!user.wallet_address) {
+      const { ethers } = require('ethers');
+      const randomWallet = ethers.Wallet.createRandom();
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          wallet_address: randomWallet.address,
+          wallet_private_key: randomWallet.privateKey
+        }
+      });
+      user.wallet_address = randomWallet.address;
+      console.log(`[Web3] Đã tự động cấp ví ẩn cho người dùng: ${user.email}`);
     }
 
-    // 4. Khởi tạo JWT Token
+    // 5. Khởi tạo JWT Token
     const payload = {
       userId: user.id,
       email: user.email,

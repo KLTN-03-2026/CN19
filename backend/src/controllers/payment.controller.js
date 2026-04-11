@@ -325,17 +325,21 @@ async function createMoMoPayment(order, req, res) {
  * 3. Kích hoạt Mint NFT trong nền
  */
 async function processOrderSuccess(orderNumber, transactionId, method, payload) {
-    return await prisma.$transaction(async (tx) => {
+    let createdTickets = [];
+    let orderData = null;
+
+    await prisma.$transaction(async (tx) => {
         const order = await tx.order.findUnique({
             where: { order_number: orderNumber },
             include: { 
                 items: { include: { ticket_tier: true } },
-                customer: { select: { wallet_address: true, full_name: true, email: true } },
+                customer: { select: { wallet_address: true, full_name: true, email: true, id: true } },
                 event: true
             }
         });
 
         if (!order || order.status === 'paid') return;
+        orderData = order;
 
         // 1. Cập nhật trạng thái Order
         await tx.order.update({
@@ -347,7 +351,7 @@ async function processOrderSuccess(orderNumber, transactionId, method, payload) 
             }
         });
 
-        // 2. Tạo bản ghi Payment (ThanhToan)
+        // 2. Tạo bản ghi Payment
         await tx.payment.create({
             data: {
                 order_id: order.id,
@@ -360,7 +364,7 @@ async function processOrderSuccess(orderNumber, transactionId, method, payload) 
             }
         });
 
-        // 3. Tạo bản ghi Ticket cho từng vé trong Order
+        // 3. Tạo bản ghi Ticket
         for (const item of order.items) {
             for (let i = 0; i < item.quantity; i++) {
                 const ticket = await tx.ticket.create({
@@ -374,15 +378,22 @@ async function processOrderSuccess(orderNumber, transactionId, method, payload) 
                         original_buyer_id: order.customer_id
                     }
                 });
-
-                // 4. [Web3] Mint NFT tự động (Hệ thống trả Gas)
-                triggerNFTMinting(ticket, order.customer.wallet_address);
+                createdTickets.push(ticket);
             }
         }
-
-        // 5. Gửi email xác nhận thành công (Chạy ngầm để không block transaction commit lâu)
-        emailService.sendBookingSuccessEmail(order, order.customer, order.event);
     });
+
+    // Sau khi Transaction thành công, chạy các tác vụ nền
+    if (orderData && createdTickets.length > 0) {
+        // 4. Gửi email xác nhận
+        emailService.sendBookingSuccessEmail(orderData, orderData.customer, orderData.event);
+
+        // 5. Đúc NFT tuần tự (Tránh lỗi Nonce too low)
+        console.log(`[Web3] Bắt đầu đúc ${createdTickets.length} vé cho đơn hàng ${orderNumber}...`);
+        for (const ticket of createdTickets) {
+            await triggerNFTMinting(ticket, orderData.customer.wallet_address);
+        }
+    }
 }
 
 /**
@@ -390,24 +401,29 @@ async function processOrderSuccess(orderNumber, transactionId, method, payload) 
  */
 async function triggerNFTMinting(ticket, walletAddress) {
     try {
-        // Chỉ Mint nếu khách hàng đã liên kết ví
         const toAddress = walletAddress || "0x0000000000000000000000000000000000000000"; 
-        
-        // Metadata URI (Ví dụ mẫu, thực tế sẽ cần upload lên IPFS)
         const tokenURI = `https://api.basticket.site/metadata/${ticket.id}`; 
         
+        console.log(`[Web3] [Ticket ${ticket.ticket_number}] Đang bắt đầu đúc NFT...`);
         const { tokenId, txHash } = await blockchainService.mintTicket(toAddress, tokenURI);
         
-        // Cập nhật lại vé với thông tin Blockchain
-        await prisma.ticket.update({
+        console.log(`[Web3] [Ticket ${ticket.ticket_number}] Đúc thành công! TokenId: ${tokenId}. Đang cập nhật Database...`);
+        
+        // Cập nhật lại vé với thông tin Blockchain và đổi status thành 'minted'
+        const updatedTicket = await prisma.ticket.update({
             where: { id: ticket.id },
             data: {
                 nft_token_id: tokenId,
-                nft_mint_tx_hash: txHash
+                nft_mint_tx_hash: txHash,
+                status: 'minted' // Quan trọng: Cập nhật status để UI và Stats hiển thị đúng
             }
         });
+        
+        console.log(`[Web3] [Ticket ${ticket.ticket_number}] Đã cập nhật trạng thái 'minted' thành công.`);
+        return updatedTicket;
     } catch (e) {
-        console.error(`[Error] Minting failed for Ticket ${ticket.id}:`, e);
+        console.error(`[Web3 Error] [Ticket ${ticket.id}] Lỗi khi đúc vé:`, e.message);
+        // Lưu ý: Chúng ta không đổi status sang failed ở đây để có thể thử lại (retry) sau này nếu cần
     }
 }
 
