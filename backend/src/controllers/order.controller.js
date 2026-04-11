@@ -78,9 +78,17 @@ const createPrimaryOrder = async (req, res) => {
     const aiAnalysis = { riskScore: 0 }; // Mặc định an toàn
 
     // Lấy sự kiện kiểm tra hợp lệ
-    const event = await prisma.event.findUnique({ where: { id: event_id } });
+    const event = await prisma.event.findUnique({ 
+      where: { id: event_id },
+      include: { organizer: true }
+    });
     if (!event || event.status !== 'active') {
       return res.status(400).json({ error: 'Sự kiện không tồn tại hoặc chưa mở bán.' });
+    }
+
+    // [Business Logic] Chặn Ban tổ chức tự đặt vé của chính mình
+    if (event.organizer && event.organizer.user_id === userId) {
+      return res.status(400).json({ error: 'Bạn là Ban tổ chức của sự kiện này, không thể tự đặt vé cho chính mình.' });
     }
 
     // [Business Logic] Chặn mua vé từ khuya ngày diễn ra sự kiện (00:00 của event_date)
@@ -170,7 +178,13 @@ const createMarketplaceOrder = async (req, res) => {
     // 1. Tìm listing
     const listing = await prisma.marketplaceListing.findUnique({
       where: { id: listing_id },
-      include: { ticket: true }
+      include: { 
+        ticket: { 
+          include: { 
+            event: { include: { organizer: true } } 
+          } 
+        } 
+      }
     });
 
     if (!listing || listing.status !== 'active') {
@@ -179,6 +193,11 @@ const createMarketplaceOrder = async (req, res) => {
 
     if (listing.seller_id === userId) {
       return res.status(400).json({ error: 'Bạn không thể mua vé của chính mình.' });
+    }
+
+    // [Business Logic] Chặn Ban tổ chức mua vé marketplace của sự kiện chính mình
+    if (listing.ticket.event.organizer.user_id === userId) {
+      return res.status(400).json({ error: 'Bạn là Ban tổ chức của sự kiện này, không thể mua lại vé từ khách hàng.' });
     }
 
     // 2. Transaction Lock

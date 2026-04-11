@@ -29,6 +29,7 @@ const PublicEventDetail = () => {
   const { getBehaviorData } = useBotBehavior();
   const { executeRecaptcha } = useGoogleReCaptcha();
   const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+  const user = useAuthStore(state => state.user);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -37,11 +38,13 @@ const PublicEventDetail = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-  
+
   const { data, isLoading, error } = useQuery({
     queryKey: ['event', id],
     queryFn: () => eventService.getEventById(id)
   });
+
+  const isOrganizer = user && data?.data?.organizer?.user?.id === user.id;
 
   if (isLoading) {
     return (
@@ -289,12 +292,18 @@ const PublicEventDetail = () => {
                            {lowestPrice === 0 ? t('eventDetail.free', 'MIỄN PHÍ') : formatPrice(lowestPrice)}
                         </p>
                      </div>
-                     <button 
-                       onClick={scrollToTickets}
-                       className="relative z-8 w-full lg:w-auto px-4 xl:px-4 py-4 xl:py-4 bg-neon-green text-black font-black uppercase text-xs xl:text-xs  rounded-[1.5rem] lg:rounded-[2rem] hover:bg-white hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 shadow-[0_0_30px_rgba(82,196,45,0.3)] shrink-0"
-                     >
-                       {t('eventDetail.buyNow', 'CHỌN VÉ NGAY')} <ArrowLeft className="w-5 h-5 rotate-180" />
-                     </button>
+                     {!isOrganizer ? (
+                       <button 
+                         onClick={scrollToTickets}
+                         className="relative z-8 w-full lg:w-auto px-4 xl:px-4 py-4 xl:py-4 bg-neon-green text-black font-black uppercase text-xs xl:text-xs  rounded-[1.5rem] lg:rounded-[2rem] hover:bg-white hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 shadow-[0_0_30px_rgba(82,196,45,0.3)] shrink-0"
+                       >
+                         {t('eventDetail.buyNow', 'CHỌN VÉ NGAY')} <ArrowLeft className="w-5 h-5 rotate-180" />
+                       </button>
+                     ) : (
+                       <div className="relative z-8 px-6 py-4 bg-neon-green/10 text-neon-green font-bold uppercase text-[10px] rounded-2xl border border-neon-green/30 flex items-center gap-2">
+                          <ShieldCheck className="w-4 h-4" /> Bạn là chủ sở hữu
+                       </div>
+                     )}
                   </div>
 
                   {/* Auxiliary Controls: Share, Heart */}
@@ -446,6 +455,20 @@ const PublicEventDetail = () => {
                   </div>
                 </div>
 
+                {isOrganizer && (
+                  <div className="mb-6 p-5 bg-neon-green/5 border border-neon-green/20 rounded-[2rem] flex flex-col items-center text-center gap-3">
+                    <div className="w-12 h-12 bg-neon-green/10 rounded-full flex items-center justify-center">
+                      <ShieldCheck className="w-6 h-6 text-neon-green" />
+                    </div>
+                    <div>
+                      <h4 className="font-black text-neon-green uppercase text-xs tracking-widest mb-1">Chế độ xem trước</h4>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                        Bạn là Ban Tổ Chức của sự kiện này. Hệ thống không cho phép bạn tự đặt vé của chính mình.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 <div className="space-y-2">
                   {event.ticket_tiers && event.ticket_tiers.length > 0 ? (
                     event.ticket_tiers.map(tier => {
@@ -494,14 +517,14 @@ const PublicEventDetail = () => {
                                   {isSoldOut ? t('eventDetail.soldOut', 'HẾT VÉ') : `${t('eventDetail.remaining', 'CÒN')} ${tier.quantity_available}`}
                                 </span>
                                 
-                                {!isSoldOut && (
+                                {!isSoldOut && !isOrganizer && (
                                   <div className="flex items-center gap-1 bg-gray-100 dark:bg-black/50 p-1.5 rounded-2xl border border-gray-200 dark:border-white/10 backdrop-blur-md">
                                     <button 
                                       onClick={() => handleTicketChange(tier.id, -1, tier.quantity_available)}
                                       disabled={selectedQty === 0}
                                       className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${selectedQty > 0 ? 'bg-white dark:bg-white/10 hover:bg-gray-50 dark:hover:bg-white/20 text-gray-900 dark:text-white shadow-sm' : 'text-gray-300 dark:text-white/20 cursor-not-allowed'}`}
                                     >
-                                      <Minus className="w-4 h-" />
+                                      <Minus className="w-4 h-4" />
                                     </button>
                                     <div className="w-10 text-center font-black text-lg text-gray-900 dark:text-white">
                                       {selectedQty}
@@ -525,12 +548,10 @@ const PublicEventDetail = () => {
                       <Ticket className="w-12 h-12 text-gray-300 dark:text-white/20 mx-auto mb-4" />
                       <p className="text-gray-400 dark:text-gray-400 font-bold uppercase tracking-widest text-sm">{t('eventDetail.noTickets', 'Sự kiện chưa có vé')}</p>
                     </div>
-                  )}
+                   )}
                 </div>
-
              </div>
           </div>
-          
         </div>
       </section>
       
@@ -544,16 +565,22 @@ const PublicEventDetail = () => {
                   <p className="text-[10px] font-black text-neon-green uppercase tracking-[0.2em] mt-0.5">{formattedDate}</p>
                </div>
             </div>
-            <button 
-                onClick={scrollToTickets}
-                className="px-8 py-3.5 bg-neon-green text-black font-black uppercase text-xs tracking-[0.2em] rounded-[1.5rem] hover:bg-black dark:hover:bg-white hover:text-white dark:hover:text-black transition-colors shadow-lg shadow-neon-green/20"
-            >
-              {t('eventDetail.buyTicket', 'MUA VÉ')}
-            </button>
+            {!isOrganizer ? (
+              <button 
+                  onClick={scrollToTickets}
+                  className="px-8 py-3.5 bg-neon-green text-black font-black uppercase text-xs tracking-[0.2em] rounded-[1.5rem] hover:bg-black dark:hover:bg-white hover:text-white dark:hover:text-black transition-colors shadow-lg shadow-neon-green/20"
+              >
+                {t('eventDetail.buyTicket', 'MUA VÉ')}
+              </button>
+            ) : (
+              <div className="px-6 py-3 bg-neon-green text-black font-black uppercase text-[10px] tracking-widest rounded-xl shadow-[0_0_20px_rgba(82,196,45,0.4)]">
+                Bạn là chủ sở hữu
+              </div>
+            )}
          </div>
       </div>
       {/* 💳 Floating Payment Checkout Bar (Visible when tickets are selected) */}
-      <div className={`fixed bottom-0 inset-x-0 z-50 transform transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${totalSelectedTickets > 0 ? 'translate-y-0' : 'translate-y-[150%]'}`}>
+      <div className={`fixed bottom-0 inset-x-0 z-50 transform transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${totalSelectedTickets > 0 && !isOrganizer ? 'translate-y-0' : 'translate-y-[150%]'}`}>
          {/* Gradient fade to hide content behind bar */}
          <div className="absolute bottom-[100%] inset-x-0 h-32 bg-gradient-to-t from-white dark:from-[#0a0a0c] to-transparent pointer-events-none transition-colors"></div>
          

@@ -64,7 +64,7 @@ const getEventById = async (req, res) => {
             id: true,
             organization_name: true, 
             is_verified: true,
-            user: { select: { avatar_url: true } }
+            user: { select: { id: true, avatar_url: true } }
           } 
         },
         ticket_tiers: true // Lấy ra các hạng vé để bán
