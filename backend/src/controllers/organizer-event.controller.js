@@ -411,6 +411,12 @@ const getOrganizerEvents = async (req, res) => {
       orderBy: { event_date: 'desc' },
       include: {
         category: { select: { name: true } },
+        ticket_tiers: {
+          select: {
+            quantity_total: true,
+            quantity_available: true
+          }
+        },
         _count: {
           select: { tickets: true }
         }
@@ -430,16 +436,49 @@ const getEventById = async (req, res) => {
     const { id } = req.params;
     const event = await verifyEventOwnership(id, req.user.userId);
     
-    // Lấy thêm thông tin hạng vé
+    // Lấy thêm thông tin hạng vé và tính toán doanh thu thực nhận
     const eventDetails = await prisma.event.findUnique({
       where: { id },
       include: {
         category: true,
-        ticket_tiers: true
+        ticket_tiers: true,
+        _count: {
+          select: {
+            tickets: {
+              where: { is_used: true }
+            }
+          }
+        }
       }
     });
 
-    res.status(200).json({ data: eventDetails });
+    // Tính toán doanh thu thực nhận ước tính (Net Revenue) từ vé
+    // Công thức: (Tổng tiền vé * 0.92) - (Số vé * 10000)
+    const paidOrders = await prisma.order.findMany({
+      where: {
+        event_id: id,
+        status: { in: ['paid', 'completed'] }
+      },
+      include: {
+        items: true
+      }
+    });
+
+    const estimated_net_revenue = paidOrders.reduce((total, order) => {
+      const ticketSubtotal = order.items.reduce((sum, item) => sum + (Number(item.unit_price) * item.quantity), 0);
+      const ticketCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
+      
+      // Net = (Gross * 0.92) - (Count * 10000)
+      const netOrder = (ticketSubtotal * 0.92) - (ticketCount * 10000);
+      return total + netOrder;
+    }, 0);
+
+    res.status(200).json({ 
+      data: { 
+        ...eventDetails, 
+        estimated_net_revenue 
+      } 
+    });
   } catch (error) {
     res.status(400).json({ error: error.message || 'Lỗi server.' });
   }

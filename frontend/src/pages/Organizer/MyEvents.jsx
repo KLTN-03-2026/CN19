@@ -250,7 +250,8 @@ const MyEvents = () => {
                         {filteredEvents.map((event) => {
                             const statusInfo = getStatusInfo(event.status);
                             const totalTickets = event.ticket_tiers?.reduce((sum, t) => sum + t.quantity_total, 0) || 0;
-                            const soldTickets = event._count?.tickets || 0;
+                            const availableTickets = event.ticket_tiers?.reduce((sum, t) => sum + t.quantity_available, 0) || 0;
+                            const soldTickets = totalTickets - availableTickets;
                             const progress = totalTickets > 0 ? Math.round((soldTickets / totalTickets) * 100) : 0;
 
                             return (
@@ -289,13 +290,29 @@ const MyEvents = () => {
                                             <div className="flex items-center line-clamp-1"><MapPin className="w-3.5 h-3.5 mr-2 text-blue-600" /> {event.location_address}</div>
                                         </div>
 
-                                        <div className="pt-4 border-t border-gray-100 dark:border-white/5 space-y-2">
-                                            <div className="flex items-center justify-between text-[10px] font-black uppercase">
-                                                <span className="text-gray-500">Tiến độ bán vé</span>
-                                                <span className="text-gray-900 dark:text-white">{soldTickets} / {totalTickets}</span>
+                                        {/* Updated Progress Section - Grid View */}
+                                        <div className="pt-4 border-t border-gray-100 dark:border-white/5 space-y-3">
+                                            <div className="flex items-end justify-between">
+                                                <div className="flex flex-col">
+                                                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Tiến độ bán vé</span>
+                                                    <div className="flex items-baseline gap-1">
+                                                        <span className="text-lg font-black text-blue-600 tracking-tighter">{soldTickets.toLocaleString()}</span>
+                                                        <span className="text-[10px] text-gray-400 font-bold">/ {totalTickets.toLocaleString()}</span>
+                                                    </div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <span className="text-xs font-black text-gray-900 dark:text-white bg-blue-600/10 px-2 py-1 rounded-lg">
+                                                        {progress}%
+                                                    </span>
+                                                </div>
                                             </div>
-                                            <div className="h-1.5 w-full bg-gray-100 dark:bg-white/5 rounded-full overflow-hidden">
-                                                <div className="h-full bg-gradient-to-r from-blue-600 to-indigo-600 transition-all duration-1000" style={{ width: `${progress}%` }} />
+                                            <div className="h-2 w-full bg-gray-100 dark:bg-white/5 rounded-full overflow-hidden border border-gray-100/50 dark:border-white/5">
+                                                <div 
+                                                    className="h-full bg-gradient-to-r from-blue-600 via-indigo-500 to-purple-600 transition-all duration-1000 relative" 
+                                                    style={{ width: `${progress}%` }}
+                                                >
+                                                    <div className="absolute inset-0 bg-[linear-gradient(45deg,rgba(255,255,255,0.2)_25%,transparent_25%,transparent_50%,rgba(255,255,255,0.2)_50%,rgba(255,255,255,0.2)_75%,transparent_75%,transparent)] bg-[length:20px_20px] animate-[progress-shine_2s_linear_infinite]" />
+                                                </div>
                                             </div>
                                         </div>
 
@@ -326,7 +343,8 @@ const MyEvents = () => {
                         {filteredEvents.map((event) => {
                             const statusInfo = getStatusInfo(event.status);
                             const totalTickets = event.ticket_tiers?.reduce((sum, t) => sum + t.quantity_total, 0) || 0;
-                            const soldTickets = event._count?.tickets || 0;
+                            const availableTickets = event.ticket_tiers?.reduce((sum, t) => sum + t.quantity_available, 0) || 0;
+                            const soldTickets = totalTickets - availableTickets;
                             const progress = totalTickets > 0 ? Math.round((soldTickets / totalTickets) * 100) : 0;
 
                             return (
@@ -355,14 +373,19 @@ const MyEvents = () => {
                                         </div>
                                     </div>
 
-                                    {/* Sales Progress */}
-                                    <div className="w-full lg:w-48 space-y-2">
-                                        <div className="flex items-center justify-between text-[10px] font-black uppercase">
-                                            <span className="text-gray-500">Bán vé: {progress}%</span>
-                                            <span className="text-gray-900 dark:text-white">{soldTickets}/{totalTickets}</span>
+                                    {/* Sales Progress - List View */}
+                                    <div className="w-full lg:w-64 space-y-2 border-l border-gray-100 dark:border-white/5 pl-6">
+                                        <div className="flex items-end justify-between">
+                                            <div className="flex flex-col">
+                                                <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Đã bán</span>
+                                                <span className="text-sm font-black text-blue-600">{soldTickets.toLocaleString()} <span className="text-gray-400 font-bold text-[10px]">/ {totalTickets.toLocaleString()}</span></span>
+                                            </div>
+                                            <span className="text-[10px] font-black text-white bg-blue-600 px-2 py-0.5 rounded-md self-center">
+                                                {progress}%
+                                            </span>
                                         </div>
                                         <div className="h-1.5 w-full bg-gray-100 dark:bg-white/5 rounded-full overflow-hidden">
-                                            <div className="h-full bg-blue-600" style={{ width: `${progress}%` }} />
+                                            <div className="h-full bg-gradient-to-r from-blue-600 to-indigo-600" style={{ width: `${progress}%` }} />
                                         </div>
                                     </div>
 
