@@ -52,7 +52,8 @@ const OrganizerOrderController = {
                 include: {
                     customer: { select: { full_name: true, email: true, avatar_url: true } },
                     event: { select: { title: true, event_date: true } },
-                    items: { include: { ticket_tier: true } }
+                    items: { include: { ticket_tier: true } },
+                    merchandise_items: true
                 },
                 orderBy: { created_at: 'desc' }
             });
@@ -77,10 +78,48 @@ const OrganizerOrderController = {
             const order = await prisma.order.findUnique({
                 where: { id },
                 include: {
-                    customer: true,
-                    event: { include: { organizer: true } },
-                    items: { include: { ticket_tier: true } },
-                    payment: true
+                    customer: { 
+                        select: { 
+                            id: true, 
+                            full_name: true, 
+                            email: true, 
+                            phone_number: true, 
+                            avatar_url: true 
+                        } 
+                    },
+                    event: { 
+                        include: { 
+                            organizer: true 
+                        } 
+                    },
+                    items: { 
+                        include: { 
+                            ticket_tier: {
+                                select: {
+                                    tier_name: true,
+                                    price: true
+                                }
+                            } 
+                        } 
+                    },
+                    merchandise_items: { 
+                        include: { 
+                            merchandise: true 
+                        } 
+                    },
+                    tickets: { 
+                        include: { 
+                            ticket_tier: {
+                                select: {
+                                    tier_name: true
+                                }
+                            }
+                        } 
+                    },
+                    payments: { 
+                        orderBy: { created_at: 'desc' },
+                        take: 5
+                    }
                 }
             });
 
@@ -90,6 +129,7 @@ const OrganizerOrderController = {
 
             res.status(200).json(order);
         } catch (error) {
+            console.error('Get Order Detail Error:', error);
             res.status(500).json({ error: 'Lỗi khi lấy chi tiết đơn hàng.' });
         }
     }

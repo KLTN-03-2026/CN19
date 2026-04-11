@@ -12,20 +12,38 @@ import {
   Clock,
   AlertCircle,
   Hash,
-  ArrowUpDown
+  ArrowUpDown,
+  Eye,
+  X,
+  CreditCard,
+  ShoppingBag,
+  Tag
 } from 'lucide-react';
 import api from '../../services/api';
 import { format } from 'date-fns';
 import { toast } from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
 
 const OrderManagement = () => {
+    const navigate = useNavigate();
     const [orders, setOrders] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [events, setEvents] = useState([]);
     const [filters, setFilters] = useState({
         status: '',
         is_settled: '',
+        event_id: '',
         search: ''
     });
+
+    const fetchEvents = async () => {
+        try {
+            const response = await api.get('/organizer/events');
+            setEvents(response.data.data);
+        } catch (error) {
+            console.error('Không thể tải danh sách sự kiện.');
+        }
+    };
 
     const fetchOrders = async () => {
         try {
@@ -39,6 +57,14 @@ const OrderManagement = () => {
             setIsLoading(false);
         }
     };
+
+    const handleViewDetail = (orderId) => {
+        navigate(`/organizer/orders/${orderId}`);
+    };
+
+    useEffect(() => {
+        fetchEvents();
+    }, []);
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -59,9 +85,9 @@ const OrderManagement = () => {
     return (
         <div className="min-h-screen bg-white dark:bg-[#0a0a0c] text-gray-900 dark:text-white transition-colors duration-300">
             {/* Header Area */}
-            <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-black uppercase tracking-tight">Quản lý Đơn hàng</h1>
+                    <h1 className="text-2xl font-black uppercase tracking-tight">Quản lý Đơn hàng</h1>
                     <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
                         Theo dõi chi tiết các giao dịch mua vé của khách hàng.
                     </p>
@@ -76,7 +102,7 @@ const OrderManagement = () => {
             </div>
 
             {/* Filters Bar */}
-            <div className="bg-gray-50 dark:bg-[#111114] p-4 rounded-[2rem] border border-gray-100 dark:border-white/5 mb-8 flex flex-wrap items-center gap-4">
+            <div className="bg-gray-50 dark:bg-[#111114] px-4 py-3 rounded-[1.5rem] border border-gray-100 dark:border-white/5 mb-6 flex flex-wrap items-center gap-4">
                 <div className="relative flex-1 min-w-[300px]">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                     <input 
@@ -88,6 +114,17 @@ const OrderManagement = () => {
                     />
                 </div>
                 
+                <select 
+                    className="bg-white dark:bg-zinc-950 border border-gray-100 dark:border-white/10 rounded-xl py-3 px-4 text-sm outline-none focus:border-blue-600 cursor-pointer max-w-[200px]"
+                    value={filters.event_id}
+                    onChange={(e) => setFilters({...filters, event_id: e.target.value})}
+                >
+                    <option value="">Tất cả sự kiện</option>
+                    {events.map(event => (
+                        <option key={event.id} value={event.id}>{event.title}</option>
+                    ))}
+                </select>
+
                 <select 
                     className="bg-white dark:bg-zinc-950 border border-gray-100 dark:border-white/10 rounded-xl py-3 px-4 text-sm outline-none focus:border-blue-600 cursor-pointer"
                     value={filters.status}
@@ -115,13 +152,14 @@ const OrderManagement = () => {
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm text-left">
                         <thead>
-                            <tr className="border-b border-gray-50 dark:border-white/5 text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500">
-                                <th className="px-8 py-5">Đơn hàng / Khách hàng</th>
-                                <th className="px-8 py-5">Sự kiện</th>
-                                <th className="px-8 py-5">Số lượng</th>
-                                <th className="px-8 py-5">Tổng tiền</th>
-                                <th className="px-8 py-5 text-center">Trạng thái</th>
-                                <th className="px-8 py-5">Đối soát</th>
+                            <tr className="border-b border-gray-50 dark:border-white/5 text-[10px] font-black uppercase text-gray-400 dark:text-gray-500">
+                                <th className="px-6 py-5">Đơn hàng / Khách hàng</th>
+                                <th className="px-6 py-5">Sự kiện</th>
+                                <th className="px-6 py-5">Số lượng</th>
+                                <th className="px-6 py-5">Tổng tiền</th>
+                                <th className="px-6 py-5 text-center">Trạng thái</th>
+                                <th className="px-6 py-5">Đối soát</th>
+                                <th className="px-6 py-5 text-right">Thao tác</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50 dark:divide-white/5">
@@ -134,21 +172,25 @@ const OrderManagement = () => {
                             ) : orders.length > 0 ? (
                                 orders.map((order) => (
                                     <tr key={order.id} className="hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors group">
-                                        <td className="px-8 py-6">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 bg-blue-600/10 rounded-full flex items-center justify-center">
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-start gap-2">
+                                                <div className="w-8 h-8 bg-blue-600/10 rounded-full flex items-center justify-center shrink-0 mt-1">
                                                     {order.customer?.avatar_url ? (
                                                         <img src={order.customer.avatar_url} className="w-full h-full rounded-full object-cover" alt="" />
                                                     ) : (
-                                                        <User className="w-5 h-5 text-blue-600" />
+                                                        <User className="w-4 h-4 text-blue-600" />
                                                     )}
                                                 </div>
-                                                <div>
-                                                    <div className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                                                <div className="flex flex-col gap-0.5">
+                                                    <div className="font-black text-blue-600 dark:text-blue-400 text-[11px] leading-tight">
                                                         #{order.order_number}
-                                                        <span className="text-[10px] font-medium text-gray-400 font-mono tracking-tighter">({order.id.slice(0, 8)})</span>
                                                     </div>
-                                                    <div className="text-xs text-gray-500">{order.customer?.full_name}</div>
+                                                    <div className="text-xs font-bold text-gray-900 dark:text-white leading-tight">
+                                                        {order.customer?.full_name}
+                                                    </div>
+                                                    <div className="text-[9px] font-mono font-medium text-gray-400 tracking-tighter opacity-70">
+                                                        ID: {order.id.slice(0, 13)}...
+                                                    </div>
                                                 </div>
                                             </div>
                                         </td>
@@ -160,39 +202,70 @@ const OrderManagement = () => {
                                             </div>
                                         </td>
                                         <td className="px-8 py-6">
-                                            <div className="flex items-center gap-1 font-bold">
-                                                <Ticket className="w-4 h-4 text-blue-600" />
-                                                {order.items.reduce((s, i) => s + i.quantity, 0)} vé
+                                            <div className="flex flex-col gap-1 font-bold">
+                                                <div className="flex items-center gap-1">
+                                                    <Ticket className="w-3 h-3 text-blue-600" />
+                                                    {order.items.reduce((s, i) => s + i.quantity, 0)} vé
+                                                </div>
+                                                {order.merchandise_items?.length > 0 && (
+                                                    <div className="flex items-center gap-1 text-[10px] text-purple-600">
+                                                        <ShoppingBag className="w-3 h-3" />
+                                                        + {order.merchandise_items.reduce((s, i) => s + i.quantity, 0)} sản phẩm
+                                                    </div>
+                                                )}
                                             </div>
                                         </td>
-                                        <td className="px-8 py-6 font-black text-gray-900 dark:text-white">
+                                        <td className="px-6 py-6 font-black text-gray-900 dark:text-white whitespace-nowrap">
                                             {Number(order.total_amount).toLocaleString()}đ
                                         </td>
-                                        <td className="px-8 py-6 text-center">
+                                        <td className="px-6 py-6 text-center">
                                             <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${getStatusStyle(order.status)}`}>
                                                 {order.status === 'paid' ? 'Đã thanh toán' : 
                                                  order.status === 'pending' ? 'Chờ xử lý' : 
                                                  order.status === 'cancelled' ? 'Đã hủy' : order.status}
                                             </span>
                                         </td>
-                                        <td className="px-8 py-6">
+                                        <td className="px-6 py-6">
                                             {order.is_settled ? (
                                                 <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-bold text-xs">
                                                     <CheckCircle2 className="w-4 h-4" />
                                                     Đã vào ví
                                                 </div>
                                             ) : (
-                                                <div className="flex items-center gap-2 text-gray-400 dark:text-gray-500 font-bold text-xs">
-                                                    <Clock className="w-4 h-4" />
-                                                    {order.status === 'paid' ? 'Chờ 3 ngày' : '---'}
+                                                <div className="space-y-1">
+                                                    <div className="flex items-center gap-2 text-gray-400 dark:text-gray-500 font-bold text-[10px] whitespace-nowrap">
+                                                        <Clock className="w-3 h-3" />
+                                                        {order.status === 'paid' ? 'Chờ 3 ngày đối soát' : '---'}
+                                                    </div>
+                                                    {order.status === 'paid' && (
+                                                        <div className="text-[9px] text-blue-600 font-black ml-5">
+                                                            {(() => {
+                                                                const ticketItems = (order.items || []).filter(i => i.ticket_tier_id);
+                                                                const ticketFee = ticketItems.reduce((s, i) => s + Number(i.subtotal), 0) * 0.08;
+                                                                const gasFee = ticketItems.reduce((s, i) => s + i.quantity, 0) * 10000;
+                                                                const merchFee = (order.merchandise_items || []).reduce((s, i) => s + Number(i.subtotal), 0) * 0.08;
+                                                                const totalFee = ticketFee + gasFee + merchFee;
+                                                                return `Ước tính: ${(Number(order.total_amount) - totalFee).toLocaleString()}đ`;
+                                                            })()}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             )}
+                                        </td>
+                                        <td className="px-6 py-6 text-right">
+                                            <button 
+                                                onClick={() => handleViewDetail(order.id)}
+                                                className="p-2 hover:bg-blue-600/10 text-blue-600 rounded-lg transition-all group-hover:scale-110"
+                                                title="Xem chi tiết"
+                                            >
+                                                <Eye className="w-5 h-5" />
+                                            </button>
                                         </td>
                                     </tr>
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan="6" className="p-20 text-center">
+                                    <td colSpan="7" className="p-20 text-center">
                                         <AlertCircle className="w-16 h-16 text-gray-100 dark:text-white/5 mx-auto mb-4" />
                                         <p className="text-gray-400 dark:text-gray-500 font-bold italic">Không tìm thấy đơn hàng nào.</p>
                                     </td>

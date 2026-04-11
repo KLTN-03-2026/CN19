@@ -47,6 +47,7 @@ import CreateBlog from './pages/Organizer/CreateBlog';
 import ParticipantManagement from './pages/Organizer/ParticipantManagement';
 import Revenue from './pages/Organizer/Revenue';
 import OrderManagement from './pages/Organizer/OrderManagement';
+import OrderDetail from './pages/Organizer/OrderDetail';
 
 // Admin Pages
 import AdminLayout from './components/layout/AdminLayout';
@@ -183,6 +184,7 @@ const router = createBrowserRouter([
       { path: 'tickets', element: <TicketManagement /> },
       { path: 'revenue', element: <Revenue /> },
       { path: 'orders', element: <OrderManagement /> },
+      { path: 'orders/:id', element: <OrderDetail /> },
       { path: 'staff', element: <StaffManagement /> },
       { path: 'products', element: <MerchandiseManagement /> },
       { path: 'products/:id', element: <MerchandiseDetail /> },

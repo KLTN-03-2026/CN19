@@ -129,9 +129,10 @@ const createPrimaryOrder = async (req, res) => {
         });
       }
 
-      // Platform fee (Hoa hồng 2%) trích từ doanh thu của BTC để chi trả Gas
-      const platform_fee = subtotal * 0.02;
-      const total_amount = subtotal; // Khách hàng trả đúng giá vé niêm yết (Phí gas đã nằm trong giá vé)
+      // platform_fee: (8% Doanh thu) + (Số lượng vé * 10.000đ phí Gas)
+      const totalTickets = items.reduce((sum, item) => sum + item.quantity, 0);
+      const platform_fee = (subtotal * 0.08) + (totalTickets * 10000);
+      const total_amount = subtotal; // Khách hàng trả đúng giá vé niêm yết
 
       // Hạn giữ chỗ = hiện tại + 10 phút
       const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
@@ -371,13 +372,17 @@ const updatePendingOrder = async (req, res) => {
         couponId = coupon.id;
       }
 
-      // D. Cập nhật Order chính
+      // D. Cập nhật Order chính - Tính toán lại platform_fee
+      const totalTickets = order.items.reduce((sum, item) => sum + item.quantity, 0);
+      const newPlatformFee = (ticketSubtotal * 0.08) + (totalTickets * 10000) + (merchSubtotal * 0.08);
+
       return await tx.order.update({
         where: { id },
         data: {
           subtotal: currentSubtotal,
           coupon_id: couponId,
           discount_amount: discountAmount,
+          platform_fee: newPlatformFee,
           total_amount: currentSubtotal - discountAmount,
           merchandise_items: {
             create: newMerchItems
