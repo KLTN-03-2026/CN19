@@ -45,6 +45,8 @@ import MerchandiseDetail from './pages/Organizer/MerchandiseDetail';
 import BlogManagement from './pages/Organizer/BlogManagement';
 import CreateBlog from './pages/Organizer/CreateBlog';
 import ParticipantManagement from './pages/Organizer/ParticipantManagement';
+import Revenue from './pages/Organizer/Revenue';
+import OrderManagement from './pages/Organizer/OrderManagement';
 
 // Admin Pages
 import AdminLayout from './components/layout/AdminLayout';
@@ -179,7 +181,8 @@ const router = createBrowserRouter([
       { path: 'events/:id/edit', element: <EditEvent /> },
       { path: 'create-event', element: <CreateEvent /> },
       { path: 'tickets', element: <TicketManagement /> },
-      { path: 'revenue', element: <div className="p-8 text-2xl font-bold">Doanh thu & Rút tiền (Coming Soon)</div> },
+      { path: 'revenue', element: <Revenue /> },
+      { path: 'orders', element: <OrderManagement /> },
       { path: 'staff', element: <StaffManagement /> },
       { path: 'products', element: <MerchandiseManagement /> },
       { path: 'products/:id', element: <MerchandiseDetail /> },
