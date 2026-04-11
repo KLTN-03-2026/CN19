@@ -9,7 +9,7 @@ const OrganizerOrderController = {
      */
     getOrganizerOrders: async (req, res) => {
         try {
-            const userId = req.user.id;
+            const userId = req.user.userId;
             const { status, is_settled, event_id, search } = req.query;
 
             // 1. Tìm Organizer id
@@ -21,17 +21,25 @@ const OrganizerOrderController = {
                 return res.status(404).json({ error: 'Không tìm thấy thông tin Ban tổ chức.' });
             }
 
-            // 2. Xây dựng bộ lọc
+            // 2. Xây dựng bộ lọc - Cải tiến: Chỉ thêm filter nếu có giá trị thực
             const whereClause = {
                 event: { organizer_id: organizer.id }
             };
 
-            if (status) whereClause.status = status;
-            if (is_settled !== undefined) whereClause.is_settled = (is_settled === 'true');
-            if (event_id) whereClause.event_id = event_id;
+            if (status && status.trim() !== '') {
+                whereClause.status = status;
+            }
+            
+            if (is_settled !== undefined && is_settled !== '') {
+                whereClause.is_settled = (is_settled === 'true');
+            }
+            
+            if (event_id && event_id.trim() !== '') {
+                whereClause.event_id = event_id;
+            }
 
             // Tìm kiếm theo mã đơn hàng hoặc tên khách hàng
-            if (search) {
+            if (search && search.trim() !== '') {
                 whereClause.OR = [
                     { order_number: { contains: search, mode: 'insensitive' } },
                     { customer: { full_name: { contains: search, mode: 'insensitive' } } }
@@ -51,8 +59,10 @@ const OrganizerOrderController = {
 
             res.status(200).json(orders);
         } catch (error) {
-            console.error('Get Organizer Orders Error:', error);
-            res.status(500).json({ error: 'Lỗi khi lấy danh sách đơn hàng.' });
+            console.error('--- GET ORGANIZER ORDERS ERROR ---');
+            console.error('Message:', error.message);
+            console.error('Stack:', error.stack);
+            res.status(500).json({ error: 'Lỗi khi lấy danh sách đơn hàng.', detail: error.message });
         }
     },
 
@@ -62,7 +72,7 @@ const OrganizerOrderController = {
     getOrderDetail: async (req, res) => {
         try {
             const { id } = req.params;
-            const userId = req.user.id;
+            const userId = req.user.userId;
 
             const order = await prisma.order.findUnique({
                 where: { id },

@@ -9,7 +9,7 @@ const RevenueController = {
      */
     getRevenueSummary: async (req, res) => {
         try {
-            const userId = req.user.id;
+            const userId = req.user.userId;
             
             // Tìm Organizer dựa trên userId
             const organizer = await prisma.organizer.findUnique({
@@ -78,7 +78,7 @@ const RevenueController = {
      */
     getTransactionHistory: async (req, res) => {
         try {
-            const userId = req.user.id;
+            const userId = req.user.userId;
             const organizer = await prisma.organizer.findUnique({ where: { user_id: userId } });
             
             const transactions = await prisma.walletTransaction.findMany({
@@ -102,7 +102,7 @@ const RevenueController = {
      */
     requestWithdrawal: async (req, res) => {
         try {
-            const userId = req.user.id;
+            const userId = req.user.userId;
             const { amount } = req.body;
             const withdrawAmount = Number(amount);
 
@@ -173,7 +173,7 @@ const RevenueController = {
      */
     updateBankInfo: async (req, res) => {
         try {
-            const userId = req.user.id;
+            const userId = req.user.userId;
             const { bank_name, account_number, account_holder } = req.body;
 
             await prisma.organizer.update({
