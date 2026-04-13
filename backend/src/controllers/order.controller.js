@@ -41,6 +41,15 @@ const analyzeBotBehavior = async (userId, captchaToken, behaviorData) => {
   }
 };
 
+// Utility lấy IP khách hàng (Xử lý cả Proxy/Nginx)
+const getClientIp = (req) => {
+    const forwarded = req.headers['x-forwarded-for'];
+    if (forwarded) {
+        return forwarded.split(',')[0].trim();
+    }
+    return req.socket.remoteAddress;
+};
+
 // [UC_08] Tạo đơn hàng Mua vé (Primary Market)
 const createPrimaryOrder = async (req, res) => {
   try {
@@ -149,6 +158,7 @@ const createPrimaryOrder = async (req, res) => {
           total_amount,
           payment_method: 'unselected',
           risk_score: aiAnalysis.riskScore,
+          ip_address: getClientIp(req),
           expires_at: expiresAt,
           items: {
             create: orderItemsData
@@ -228,7 +238,8 @@ const createMarketplaceOrder = async (req, res) => {
           seller_receive_amount: seller_receive_amount,
           platform_fee: platform_fee,
           buyer_pay_amount: listing.asking_price,
-          status: 'pending'
+          status: 'pending',
+          ip_address: getClientIp(req)
         }
       });
 
@@ -447,6 +458,7 @@ const createTransferOrder = async (req, res) => {
         total_amount: 10000,
         payment_method: 'unselected',
         expires_at: expiresAt,
+        ip_address: getClientIp(req),
         metadata: {
           ticket_id: ticket.id,
           receiver_email: receiver_email

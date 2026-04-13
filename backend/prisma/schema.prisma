@@ -191,6 +191,7 @@ model Order {
   discount_amount   Decimal?               @default(0)
   order_type        String                 @default("TICKET_PURCHASE") // TICKET_PURCHASE, TICKET_TRANSFER
   metadata          Json?
+  ip_address        String?
   // Trạng thái đối soát tiền cho Organizer
   is_settled        Boolean                @default(false)
   bot_logs          BotDetectionLog[]
@@ -287,6 +288,7 @@ model MarketplaceTransaction {
   buyer_pay_amount      Decimal
   status                String
   nft_transfer_tx_hash  String?
+  ip_address            String?
   buyer                 User               @relation("Buyer", fields: [buyer_id], references: [id])
   listing               MarketplaceListing @relation(fields: [listing_id], references: [id])
   seller                User               @relation("Seller", fields: [seller_id], references: [id])
