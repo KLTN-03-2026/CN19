@@ -18,6 +18,12 @@ const orderService = {
         return response.data;
     },
 
+    // Tạo đơn hàng phí chuyển nhượng (Transfer)
+    createTransferOrder: async (ticket_id, receiver_email) => {
+        const response = await api.post('/orders/transfer', { ticket_id, receiver_email });
+        return response.data;
+    },
+
     // Lấy danh sách đơn hàng của tôi
     getMyOrders: async () => {
         const response = await api.get('/orders/my-orders');

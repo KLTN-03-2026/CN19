@@ -13,7 +13,8 @@ import {
   Calendar,
   MapPin,
   Check,
-  Info
+  Info,
+  ArrowRightLeft
 } from 'lucide-react';
 import orderService from '../../services/order.service';
 import merchandiseService from '../../services/merchandise.service';
@@ -129,8 +130,8 @@ const Checkout = () => {
   useEffect(() => {
     if (order) {
       const calculateTimeLeft = () => {
-        const createdTime = new Date(order.created_at).getTime();
-        const expiryTime = createdTime + 10 * 60 * 1000;
+        if (!order.expires_at) return 0;
+        const expiryTime = new Date(order.expires_at).getTime();
         const diff = Math.floor((expiryTime - Date.now()) / 1000);
         return diff > 0 ? diff : 0;
       };
@@ -252,7 +253,7 @@ const Checkout = () => {
                 <span className="font-medium text-[13px]">{t('common.back')}</span>
               </button>
               <h1 className="text-xl md:text-xl font-black uppercase leading-none ">
-                {t('checkout.title')}
+                {order.order_type === 'TICKET_TRANSFER' ? 'Thanh toán phí chuyển nhượng' : t('checkout.title')}
               </h1>
               <p className="text-gray-400 text-[10px] font-bold uppercase mt-2">
                 {t('checkout.orderNumber')} #{order.order_number}
@@ -262,8 +263,12 @@ const Checkout = () => {
            <div className="flex items-center gap-4 p-2 pr-6 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-[2rem] shadow-sm">
               <CircularTimer seconds={timeLeft} locale={currentLocale} />
               <div>
-                 <p className="text-[9px] font-black text-gray-500 uppercase mb-0.5">{t('checkout.holdTime')}</p>
-                 <p className="text-xs font-bold opacity-70">{t('checkout.holdTimeDesc')}</p>
+                 <p className="text-[9px] font-black text-gray-500 uppercase mb-0.5">
+                    {order.order_type === 'TICKET_TRANSFER' ? 'Thời gian chuyển nhượng' : t('checkout.holdTime')}
+                 </p>
+                 <p className="text-xs font-bold opacity-70">
+                    {order.order_type === 'TICKET_TRANSFER' ? 'Phí dịch vụ chuyển nhượng đang được giữ cho bạn' : t('checkout.holdTimeDesc')}
+                 </p>
               </div>
            </div>
         </div>
@@ -280,7 +285,7 @@ const Checkout = () => {
                    <div className="absolute inset-0 bg-gradient-to-t from-white dark:from-[#111114] via-transparent to-transparent"></div>
                    <div className="absolute bottom-6 left-8">
                       <span className="px-2 py-1 bg-neon-green text-black text-[9px] font-black uppercase rounded mb-2 inline-block">
-                        {t('checkout.officialTicket')}
+                        {order.order_type === 'TICKET_TRANSFER' ? 'Phí giao thức Blockchain' : t('checkout.officialTicket')}
                       </span>
                       <h2 className="text-2xl font-black uppercase tracking-tight leading-none text-gray-900 dark:text-white">
                         {order.event.title}
@@ -326,7 +331,9 @@ const Checkout = () => {
 
                    {/* Tiers List */}
                    <div className="space-y-4 pb-6">
-                      <p className="text-[9px] font-black text-gray-400 uppercase">{t('checkout.ticketDetails')}</p>
+                      <p className="text-[9px] font-black text-gray-400 uppercase">
+                        {order.order_type === 'TICKET_TRANSFER' ? 'Chi tiết chuyển nhượng' : t('checkout.ticketDetails')}
+                      </p>
                       {order.items.map((item, idx) => (
                          <div key={idx} className="flex items-center justify-between">
                             <div className="flex items-center gap-4">
@@ -339,13 +346,25 @@ const Checkout = () => {
                             <p className="font-black text-sm">{formatPrice(item.subtotal, currentLocale)}</p>
                          </div>
                       ))}
+                      {order && order.order_type === 'TICKET_TRANSFER' && (
+                         <div className="flex items-center justify-between py-2 border-t border-gray-100 dark:border-white/5 mt-4">
+                            <div className="flex items-center gap-4">
+                               <ArrowRightLeft className="w-4 h-4 text-neon-green" />
+                               <div>
+                                  <p className="text-sm font-black uppercase tracking-tight">Phí dịch vụ chuyển nhượng</p>
+                                  <p className="text-[10px] text-gray-400 font-bold">Bao gồm phí Gas & Xác thực AI</p>
+                               </div>
+                            </div>
+                            <p className="font-black text-sm">{formatPrice(10000, currentLocale)}</p>
+                         </div>
+                      )}
                    </div>
                 </div>
 
              </div>
 
             {/* Merchandise Section */}
-                {merchandise.length > 0 && (
+                {merchandise.length > 0 && order?.order_type === 'TICKET_PURCHASE' && (
                    <div className="mt-8 bg-white dark:bg-[#111114] border border-gray-200 dark:border-white/10 rounded-[2.5rem] shadow-xl overflow-hidden p-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                       <div className="flex items-center justify-between mb-6">
                          <h3 className="text-sm font-black uppercase flex items-center gap-2">
@@ -423,8 +442,9 @@ const Checkout = () => {
                    </div>
 
                    {/* Coupon Input */}
-                   <div className="pt-4 border-t border-gray-100 dark:border-white/10">
-                      {order.coupon ? (
+                   {order.order_type !== 'TICKET_TRANSFER' && (
+                      <div className="pt-4 border-t border-gray-100 dark:border-white/10">
+                         {order.coupon ? (
                          <div className="flex items-center justify-between p-3 bg-pink-500/10 border border-pink-500/30 rounded-xl">
                             <div className="flex items-center gap-2">
                                <Tag className="w-3 h-3 text-pink-500" />
@@ -467,6 +487,7 @@ const Checkout = () => {
                          </div>
                        )}
                    </div>
+                   )}
 
                    <div className="pt-6 border-t border-gray-100 dark:border-white/10 flex justify-between items-end">
                       <div className="flex flex-col">

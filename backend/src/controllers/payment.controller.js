@@ -2,7 +2,9 @@ const crypto = require('crypto');
 const axios = require('axios');
 const prisma = require('../config/prisma');
 const blockchainService = require('../services/blockchain.service');
+const web3Service = require('../services/web3.service');
 const emailService = require('../services/email.service');
+const { sendEmail } = require('../services/email.service');
 const { format } = require('date-fns');
 
 /**
@@ -63,11 +65,26 @@ const PaymentController = {
                 const orderNumber = vnp_Params['vnp_TxnRef'];
                 const rspCode = vnp_Params['vnp_ResponseCode'];
 
+                const associatedOrder = await prisma.order.findUnique({
+                    where: { order_number: orderNumber },
+                    include: { event: true }
+                });
+
                 if (rspCode === '00') {
                     await processOrderSuccess(orderNumber, vnp_Params['vnp_TransactionNo'], 'VNPAY', vnp_Params);
-                    return res.status(200).json({ message: 'Thanh toán VNPay thành công' });
+                    const updatedOrder = await prisma.order.findUnique({
+                        where: { order_number: orderNumber },
+                        include: { event: true }
+                    });
+                    return res.status(200).json({ 
+                        message: 'Thanh toán VNPay thành công',
+                        order: updatedOrder
+                    });
                 }
-                return res.status(400).json({ error: 'Thanh toán VNPay thất bại' });
+                return res.status(400).json({ 
+                    error: 'Thanh toán VNPay thất bại',
+                    order: associatedOrder
+                });
             } else {
                 return res.status(400).json({ error: 'Chữ ký không hợp lệ' });
             }
@@ -364,21 +381,87 @@ async function processOrderSuccess(orderNumber, transactionId, method, payload) 
             }
         });
 
-        // 3. Tạo bản ghi Ticket
-        for (const item of order.items) {
-            for (let i = 0; i < item.quantity; i++) {
-                const ticket = await tx.ticket.create({
-                    data: {
-                        order_id: order.id,
-                        event_id: order.event_id,
-                        ticket_tier_id: item.ticket_tier_id,
-                        ticket_number: `T-${order.id.slice(0, 8)}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`,
-                        status: 'valid',
-                        current_owner_id: order.customer_id,
-                        original_buyer_id: order.customer_id
-                    }
+        // 3. Tạo bản ghi Ticket (Nếu là mua vé mới)
+        if (order.order_type === 'TICKET_PURCHASE') {
+            for (const item of order.items) {
+                for (let i = 0; i < item.quantity; i++) {
+                    const ticket = await tx.ticket.create({
+                        data: {
+                            order_id: order.id,
+                            event_id: order.event_id,
+                            ticket_tier_id: item.ticket_tier_id,
+                            ticket_number: `T-${order.id.slice(0, 8)}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`,
+                            status: 'valid',
+                            current_owner_id: order.customer_id,
+                            original_buyer_id: order.customer_id
+                        }
+                    });
+                    createdTickets.push(ticket);
+                }
+            }
+        }
+
+        // 4. Nếu là đơn hàng Chuyển nhượng (TICKET_TRANSFER)
+        if (order.order_type === 'TICKET_TRANSFER') {
+            const { ticket_id, receiver_email } = order.metadata || {};
+            if (ticket_id && receiver_email) {
+                const ticket = await tx.ticket.findUnique({
+                    where: { id: ticket_id },
+                    include: { event: true }
                 });
-                createdTickets.push(ticket);
+                const receiver = await tx.user.findUnique({ where: { email: receiver_email } });
+                const sender = order.customer;
+
+                if (ticket && receiver) {
+                    // Thực thi gọi Blockchain
+                    let txHash = '0xTxHashMock' + Date.now();
+                    try {
+                        if (ticket.nft_token_id && ticket.event.smart_contract_address) {
+                            // Sử dụng ví Custodial thật từ Database
+                            const senderWallet = order.customer.wallet_address;
+                            const receiverWallet = receiver.wallet_address;
+                            
+                            if (senderWallet && receiverWallet) {
+                                txHash = await web3Service.transferTicket(
+                                    ticket.event.smart_contract_address, 
+                                    senderWallet, 
+                                    receiverWallet, 
+                                    parseInt(ticket.nft_token_id)
+                                );
+                            }
+                        }
+                    } catch (err) {
+                        console.error('Blockchain transfer error in payment callback:', err);
+                        // Vẫn cho hoàn tất payment trong DB nhưng log lỗi blockchain
+                    }
+
+                    // Lưu bản ghi Transfer
+                    await tx.ticketTransfer.create({
+                        data: {
+                            ticket_id: ticket.id,
+                            from_user_id: sender.id,
+                            to_user_id: receiver.id,
+                            event_id: ticket.event_id,
+                            transfer_method: 'direct',
+                            status: 'completed',
+                            nft_transfer_tx_hash: txHash,
+                            completed_at: new Date()
+                        }
+                    });
+
+                    // Cập nhật Ticket Owner
+                    await tx.ticket.update({
+                        where: { id: ticket.id },
+                        data: {
+                            current_owner_id: receiver.id,
+                            is_transferred: true
+                        }
+                    });
+
+                    // Gửi email thông báo qua EmailService (Không đợi phản hồi)
+                    emailService.sendTransferSuccessEmail(sender, receiver, ticket);
+                    emailService.sendTicketReceivedEmail(receiver, sender, ticket);
+                }
             }
         }
     });

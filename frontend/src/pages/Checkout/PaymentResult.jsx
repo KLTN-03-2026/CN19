@@ -20,6 +20,7 @@ const PaymentResult = () => {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const [status, setStatus] = useState('processing'); // processing, success, failed
+  const [order, setOrder] = useState(null);
   const { verifyVNPayReturn } = useOrder();
 
   useEffect(() => {
@@ -31,7 +32,8 @@ const PaymentResult = () => {
         if (vnpResponseCode) {
           // Chuyển searchParams thành object sạch
           const params = Object.fromEntries(searchParams.entries());
-          await verifyVNPayReturn(params);
+          const res = await verifyVNPayReturn(params);
+          setOrder(res?.order);
           setStatus('success');
           toast.success(t('paymentResult.toastSuccessVNPay'));
         } else if (momoResultCode === '0') {
@@ -44,6 +46,9 @@ const PaymentResult = () => {
         }
       } catch (err) {
         setStatus('failed');
+        if (err.response?.data?.order) {
+          setOrder(err.response.data.order);
+        }
         toast.error(err.response?.data?.error || t('paymentResult.toastErrorVerify'));
       }
     };
@@ -80,11 +85,17 @@ const PaymentResult = () => {
                </div>
                
                <h2 className="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tighter mb-3 leading-none">
-                  {t('paymentResult.successTitlePart1')} <br/><span className="text-neon-green">{t('paymentResult.successTitlePart2')}</span>
-               </h2>
-               <p className="text-gray-500 dark:text-gray-400 font-medium mb-10 max-w-xs mx-auto text-sm leading-relaxed">
-                  {t('paymentResult.successDesc')}
-               </p>
+                   {order?.order_type === 'TICKET_TRANSFER' ? (
+                      <>Chuyển nhượng <br/><span className="text-neon-green">thành công!</span></>
+                   ) : (
+                      <>{t('paymentResult.successTitlePart1')} <br/><span className="text-neon-green">{t('paymentResult.successTitlePart2')}</span></>
+                   )}
+                </h2>
+                <p className="text-gray-500 dark:text-gray-400 font-medium mb-10 max-w-xs mx-auto text-sm leading-relaxed">
+                   {order?.order_type === 'TICKET_TRANSFER' 
+                     ? `Vé NFT đã được chuyển đến ${order?.metadata?.receiver_email || 'người nhận'} thành công.`
+                     : t('paymentResult.successDesc')}
+                </p>
 
                <div className="grid grid-cols-1 gap-4 mb-10">
                   <Link 
@@ -123,11 +134,17 @@ const PaymentResult = () => {
                </div>
                
                <h2 className="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tighter mb-4">
-                  {t('paymentResult.failedTitlePart1')} <span className="text-red-500">{t('paymentResult.failedTitlePart2')}</span>
-               </h2>
-               <p className="text-gray-500 dark:text-gray-400 font-medium mb-10 text-sm">
-                  {t('paymentResult.failedDesc')}
-               </p>
+                   {order?.order_type === 'TICKET_TRANSFER' ? (
+                      <>Chuyển nhượng <span className="text-red-500">bị gián đoạn</span></>
+                   ) : (
+                      <>{t('paymentResult.failedTitlePart1')} <span className="text-red-500">{t('paymentResult.failedTitlePart2')}</span></>
+                   )}
+                </h2>
+                <p className="text-gray-500 dark:text-gray-400 font-medium mb-10 text-sm">
+                   {order?.order_type === 'TICKET_TRANSFER'
+                     ? "Rất tiếc, đã có lỗi xảy ra trong quá trình thanh toán. Yêu cầu chuyển nhượng của bạn vẫn đang được giữ trong 15 phút."
+                     : t('paymentResult.failedDesc')}
+                </p>
 
                <div className="flex flex-col gap-3">
                   <button 
