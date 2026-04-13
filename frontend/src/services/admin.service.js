@@ -129,5 +129,19 @@ export const adminService = {
   deleteCoupon: async (id) => {
     const response = await api.delete(`/admin/coupons/${id}`);
     return response.data;
+  },
+
+  // Quản lý Giao dịch (Transactions)
+  getTransactions: async (params) => {
+    const response = await api.get('/admin/transactions', { params });
+    return response.data;
+  },
+  getTransactionStats: async (params = {}) => {
+    const response = await api.get('/admin/transactions/stats', { params });
+    return response.data;
+  },
+  getTransactionDetail: async (type, id) => {
+    const response = await api.get(`/admin/transactions/${type}/${id}`);
+    return response.data;
   }
 };
