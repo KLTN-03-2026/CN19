@@ -4,16 +4,29 @@ const prisma = require('../config/prisma');
 const getOrganizerTicketStats = async (req, res) => {
   try {
     const userId = req.user.userId;
+    const { event_id } = req.query;
+
     // Tìm Organizer của user này
     const organizer = await prisma.organizer.findUnique({ where: { user_id: userId } });
     if (!organizer) return res.status(403).json({ error: 'Không tìm thấy tài khoản BTC.' });
 
-    // Lấy tất cả sự kiện của organizer
-    const events = await prisma.event.findMany({
-      where: { organizer_id: organizer.id },
-      select: { id: true }
-    });
-    const eventIds = events.map(e => e.id);
+    let eventIds;
+    if (event_id) {
+      // Xác minh sự kiện này thuộc về organizer này
+      const event = await prisma.event.findFirst({
+        where: { id: event_id, organizer_id: organizer.id },
+        select: { id: true }
+      });
+      if (!event) return res.status(404).json({ error: 'Không tìm thấy sự kiện hoặc bạn không có quyền.' });
+      eventIds = [event_id];
+    } else {
+      // Lấy tất cả sự kiện của organizer
+      const events = await prisma.event.findMany({
+        where: { organizer_id: organizer.id },
+        select: { id: true }
+      });
+      eventIds = events.map(e => e.id);
+    }
 
     // 1. Tổng doanh thu (Từ các Order đã hoàn thành của các sự kiện này)
     const totalRevenue = await prisma.order.aggregate({
@@ -21,9 +34,9 @@ const getOrganizerTicketStats = async (req, res) => {
       _sum: { total_amount: true }
     });
 
-    // 2. Tổng vé đã bán (Tickets status là 'valid', 'minted' hoặc 'used')
+    // 2. Tổng vé đã bán (Bao gồm cả vé đang rao bán lại)
     const totalSold = await prisma.ticket.count({
-      where: { event_id: { in: eventIds }, status: { in: ['valid', 'minted', 'used'] } }
+      where: { event_id: { in: eventIds }, status: { in: ['valid', 'minted', 'used', 'reselling'] } }
     });
 
     // 3. Tổng lượt tham gia (Tickets is_used = true)
@@ -31,7 +44,12 @@ const getOrganizerTicketStats = async (req, res) => {
       where: { event_id: { in: eventIds }, is_used: true }
     });
 
-    // 4. Thống kê theo từng loại vé (Tier)
+    // 4. Số vé đang rao bán lại
+    const totalReselling = await prisma.ticket.count({
+      where: { event_id: { in: eventIds }, status: 'reselling' }
+    });
+
+    // 5. Thống kê theo từng loại vé (Tier) và tính Tổng sức chứa
     const tiers = await prisma.ticketTier.findMany({
       where: { event_id: { in: eventIds } },
       select: {
@@ -40,17 +58,33 @@ const getOrganizerTicketStats = async (req, res) => {
         price: true,
         quantity_total: true,
         _count: {
-          select: { tickets: { where: { status: { in: ['valid', 'minted', 'used'] } } } }
+          select: { tickets: { where: { status: { in: ['valid', 'minted', 'used', 'reselling'] } } } }
         }
       }
     });
+
+    const totalCapacity = tiers.reduce((sum, t) => sum + t.quantity_total, 0);
+    const soldRate = totalCapacity > 0 ? (totalSold / totalCapacity) * 100 : 0;
+    const resaleRate = totalSold > 0 ? (totalReselling / totalSold) * 100 : 0;
+
+    // Phân loại nhu cầu thị trường
+    let demandLabel = "Trung bình";
+    if (soldRate > 90 || resaleRate > 15) demandLabel = "Rất cao";
+    else if (soldRate > 70) demandLabel = "Cao";
+    else if (soldRate < 40) demandLabel = "Thấp";
 
     res.status(200).json({
       data: {
         total_revenue: totalRevenue._sum.total_amount || 0,
         total_sold: totalSold,
         total_checkins: totalCheckins,
+        total_reselling: totalReselling,
+        total_capacity: totalCapacity,
         checkin_rate: totalSold > 0 ? ((totalCheckins / totalSold) * 100).toFixed(1) : 0,
+        market_demand: {
+          label: demandLabel,
+          resale_rate: resaleRate.toFixed(1)
+        },
         tiers: tiers.map(t => ({
           ...t,
           sold_count: t._count.tickets,
@@ -68,7 +102,7 @@ const getOrganizerTicketStats = async (req, res) => {
 const getOrganizerTickets = async (req, res) => {
   try {
     const userId = req.user.userId;
-    const { event_id, status, search, page = 1, limit = 10 } = req.query;
+    const { event_id, ticket_tier_id, status, search, page = 1, limit = 10 } = req.query;
 
     const organizer = await prisma.organizer.findUnique({ where: { user_id: userId } });
     if (!organizer) return res.status(403).json({ error: 'Không tìm thấy tài khoản BTC.' });
@@ -79,6 +113,7 @@ const getOrganizerTickets = async (req, res) => {
     };
 
     if (event_id) where.event_id = event_id;
+    if (ticket_tier_id) where.ticket_tier_id = ticket_tier_id;
     if (status) where.status = status;
     if (search) {
       where.OR = [
