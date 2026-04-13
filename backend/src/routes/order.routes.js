@@ -14,7 +14,7 @@ router.get('/:id', orderController.getOrderById);
 // [PATCH] /api/orders/:id
 router.patch('/:id', orderController.updatePendingOrder);
 
-// [POST] /api/orders/marketplace
-router.post('/marketplace', orderController.createMarketplaceOrder);
+// [POST] /api/orders/transfer
+router.post('/transfer', orderController.createTransferOrder);
 
 module.exports = router;

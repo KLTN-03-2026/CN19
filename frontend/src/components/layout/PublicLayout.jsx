@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom';
-import { Shield, Moon, Sun, Globe, User, Ticket, LogOut, ChevronDown, LayoutDashboard, Settings } from 'lucide-react';
+import { Shield, Moon, Sun, Globe, User, Ticket, LogOut, ChevronDown, LayoutDashboard, Settings, History } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
@@ -230,6 +230,14 @@ const PublicLayout = () => {
                       >
                         <Ticket className="w-4 h-4" />
                         <span>{i18n.language.startsWith('vi') ? 'Vé của tôi' : 'My Tickets'}</span>
+                      </Link>
+                      <Link
+                        to="/my-transactions"
+                        onClick={() => setDropdownOpen(false)}
+                        className="flex items-center space-x-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors"
+                      >
+                        <History className="w-4 h-4" />
+                        <span>{i18n.language.startsWith('vi') ? 'Lịch sử giao dịch' : 'Transaction History'}</span>
                       </Link>
                       <div className="border-t border-gray-100 dark:border-dark-border mt-1">
                         <button

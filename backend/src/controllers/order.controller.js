@@ -260,6 +260,9 @@ const getOrderById = async (req, res) => {
         },
         items: {
           include: { ticket_tier: true }
+        },
+        merchandise_items: {
+          include: { merchandise: true }
         }
       }
     });
@@ -408,9 +411,64 @@ const updatePendingOrder = async (req, res) => {
   }
 };
 
+// [UC_xx] Tạo đơn hàng phí chuyển nhượng (Transfer Fee)
+const createTransferOrder = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { ticket_id, receiver_email } = req.body;
+
+    // 1. Kiểm tra vé và quyền sở hữu
+    const ticket = await prisma.ticket.findUnique({
+      where: { id: ticket_id },
+      include: { event: true }
+    });
+
+    if (!ticket || ticket.current_owner_id !== userId) {
+      return res.status(403).json({ error: 'Bạn không sở hữu vé này hoặc vé không tồn tại.' });
+    }
+
+    if (!ticket.event.allow_transfer) {
+      return res.status(400).json({ error: 'Sự kiện này không hỗ trợ chuyển nhượng.' });
+    }
+
+    // 2. Tạo Order với type TRANSFER
+    const order_number = 'TRF' + Date.now();
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 phút để thanh toán phí
+
+    const order = await prisma.order.create({
+      data: {
+        customer_id: userId,
+        event_id: ticket.event_id,
+        order_number: order_number,
+        order_type: 'TICKET_TRANSFER',
+        status: 'pending',
+        subtotal: 10000,
+        platform_fee: 0,
+        total_amount: 10000,
+        payment_method: 'unselected',
+        expires_at: expiresAt,
+        metadata: {
+          ticket_id: ticket.id,
+          receiver_email: receiver_email
+        }
+      }
+    });
+
+    res.status(201).json({ 
+      message: 'Khởi tạo thanh toán phí chuyển nhượng thành công.', 
+      data: order 
+    });
+
+  } catch (error) {
+    console.error('Lỗi khi tạo đơn chuyển nhượng:', error);
+    res.status(500).json({ error: 'Lỗi server khi khởi tạo thanh toán.' });
+  }
+};
+
 module.exports = {
   createPrimaryOrder,
   createMarketplaceOrder,
   getOrderById,
-  updatePendingOrder
+  updatePendingOrder,
+  createTransferOrder
 };

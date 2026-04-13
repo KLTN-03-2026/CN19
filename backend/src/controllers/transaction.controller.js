@@ -10,6 +10,7 @@ const getMyTransactions = async (req, res) => {
       where: { customer_id: userId },
       orderBy: { created_at: 'desc' },
       select: {
+        id: true,
         order_number: true,
         status: true,
         total_amount: true,
@@ -20,6 +21,7 @@ const getMyTransactions = async (req, res) => {
 
     // Gom dữ liệu trả về cho client hiển thị (có thể thêm marketplace sau)
     const formattedData = orders.map(o => ({
+      order_id: o.id,
       transaction_id: o.order_number,
       type: 'PRIMARY_PURCHASE',
       amount: o.total_amount,

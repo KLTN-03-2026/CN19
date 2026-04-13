@@ -11,7 +11,10 @@ import BlogDetail from './pages/Home/BlogDetail';
 import OrganizerPublicProfile from './pages/Home/OrganizerPublicProfile';
 import Profile from './pages/Profile/Profile';
 import MyTickets from './pages/Customer/MyTickets';
+import MyTransactions from './pages/Customer/MyTransactions';
+import CustomerOrderDetail from './pages/Customer/CustomerOrderDetail';
 import ResaleTicket from './pages/Customer/ResaleTicket';
+import TicketTransfer from './pages/Customer/TicketTransfer';
 import Checkout from './pages/Checkout/Checkout';
 import PaymentResult from './pages/Checkout/PaymentResult';
 
@@ -109,10 +112,34 @@ const router = createBrowserRouter([
         ) 
       },
       { 
+        path: 'my-transactions', 
+        element: (
+          <ProtectedRoute>
+            <MyTransactions />
+          </ProtectedRoute>
+        ) 
+      },
+      { 
+        path: 'my-transactions/:id', 
+        element: (
+          <ProtectedRoute>
+            <CustomerOrderDetail />
+          </ProtectedRoute>
+        ) 
+      },
+      { 
         path: 'my-tickets/:id/resale', 
         element: (
           <ProtectedRoute>
             <ResaleTicket />
+          </ProtectedRoute>
+        ) 
+      },
+      { 
+        path: 'my-tickets/:id/transfer', 
+        element: (
+          <ProtectedRoute>
+            <TicketTransfer />
           </ProtectedRoute>
         ) 
       },
