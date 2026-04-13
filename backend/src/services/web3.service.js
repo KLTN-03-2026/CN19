@@ -145,8 +145,8 @@ class Web3Service {
     async transferTicket(contractAddress, fromAddress, toAddress, tokenId) {
         try {
             const eventContract = new ethers.Contract(contractAddress, contractABI, this.signer);
-            // Sử dụng transferFrom để tránh lỗi ambiguous function resolution (giữa safeTransferFrom 3 params và 4 params)
-            const tx = await eventContract.transferFrom(fromAddress, toAddress, tokenId);
+            // Sử dụng forceTransfer (quyền Admin) để chuyển vé giữa các ví custodial
+            const tx = await eventContract.forceTransfer(fromAddress, toAddress, tokenId);
             await tx.wait();
             return tx.hash;
         } catch (error) {

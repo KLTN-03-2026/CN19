@@ -189,7 +189,8 @@ model Order {
   created_at        DateTime               @default(now())
   coupon_id         String?
   discount_amount   Decimal?               @default(0)
-  
+  order_type        String                 @default("TICKET_PURCHASE") // TICKET_PURCHASE, TICKET_TRANSFER
+  metadata          Json?
   // Trạng thái đối soát tiền cho Organizer
   is_settled        Boolean                @default(false)
   bot_logs          BotDetectionLog[]
