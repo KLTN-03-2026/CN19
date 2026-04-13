@@ -74,7 +74,13 @@ const getTicketDetail = async (req, res) => {
       return res.status(404).json({ error: 'Không tìm thấy vé hoặc bạn không sở hữu vé này.' });
     }
 
-    res.status(200).json({ data: ticket });
+    res.status(200).json({ 
+      data: {
+        ...ticket,
+        is_current_owner: ticket.current_owner_id === userId,
+        is_original_buyer: ticket.original_buyer_id === userId
+      } 
+    });
   } catch (error) {
     console.error('Lỗi lấy chi tiết vé:', error);
     res.status(500).json({ error: 'Lỗi server.' });

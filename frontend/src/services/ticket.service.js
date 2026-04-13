@@ -2,8 +2,8 @@ import api from './api';
 
 export const ticketService = {
     // Lấy thống kê vé dành cho Ban tổ chức
-    getOrganizerStats: async () => {
-        const res = await api.get('/organizer/tickets/stats');
+    getOrganizerStats: async (params = {}) => {
+        const res = await api.get('/organizer/tickets/stats', { params });
         return res.data;
     },
 

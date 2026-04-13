@@ -23,7 +23,8 @@ import {
     Send,
     FileText,
     Shield,
-    Grid
+    Grid,
+    Info
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { ticketService } from '../../services/ticket.service';
@@ -39,37 +40,11 @@ const MyTickets = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedTicket, setSelectedTicket] = useState(null);
     const [showQrModal, setShowQrModal] = useState(false);
-    const [showTransferModal, setShowTransferModal] = useState(false);
-    const [receiverEmail, setReceiverEmail] = useState('');
-    const [receiverInfo, setReceiverInfo] = useState(null);
-    const [isCheckingEmail, setIsCheckingEmail] = useState(false);
-    const [isTransferring, setIsTransferring] = useState(false);
     const [qrCodeData, setQrCodeData] = useState(null);
     const [qrLoading, setQrLoading] = useState(false);
     const [countdown, setCountdown] = useState(0);
 
-    useEffect(() => {
-        const timeoutId = setTimeout(() => {
-            if (receiverEmail && receiverEmail.includes('@')) {
-                checkReceiver(receiverEmail);
-            } else {
-                setReceiverInfo(null);
-            }
-        }, 500); // 500ms debounce
-        return () => clearTimeout(timeoutId);
-    }, [receiverEmail]);
 
-    const checkReceiver = async (email) => {
-        try {
-            setIsCheckingEmail(true);
-            const res = await userService.findByEmail(email);
-            setReceiverInfo(res.data);
-        } catch (error) {
-            setReceiverInfo(null);
-        } finally {
-            setIsCheckingEmail(false);
-        }
-    };
 
     useEffect(() => {
         fetchTickets();
@@ -102,30 +77,7 @@ const MyTickets = () => {
         generateQr(ticket.id);
     };
 
-    const handleOpenTransfer = (ticket) => {
-        setSelectedTicket(ticket);
-        setReceiverEmail('');
-        setShowTransferModal(true);
-    };
 
-    const handleTransfer = async () => {
-        if (!receiverEmail) {
-            toast.error('Vui lòng nhập email người nhận.');
-            return;
-        }
-        
-        try {
-            setIsTransferring(true);
-            const res = await ticketService.transferTicket(selectedTicket.id, receiverEmail);
-            toast.success(res.message || 'Chuyển nhượng vé thành công!');
-            setShowTransferModal(false);
-            fetchTickets(); // Refresh list to reflect ownership change
-        } catch (error) {
-            toast.error(error.response?.data?.error || 'Lỗi khi chuyển nhượng vé.');
-        } finally {
-            setIsTransferring(false);
-        }
-    };
 
     const generateQr = async (ticketId) => {
         try {
@@ -227,14 +179,13 @@ const MyTickets = () => {
 
         return (
             <div className={containerClass}>
-                <button 
-                    disabled={!ticket.event.allow_transfer || ticket.is_on_marketplace}
-                    className={`${buttonBaseClass} bg-neon-green/10 text-neon-green hover:bg-neon-green hover:text-black disabled:opacity-20 transition-all duration-500`}
-                    onClick={() => handleOpenTransfer(ticket)}
+                <Link 
+                    to={(!ticket.event.allow_transfer || ticket.is_on_marketplace) ? '#' : `/my-tickets/${ticket.id}/transfer`}
+                    className={`${buttonBaseClass} bg-neon-green/10 text-neon-green hover:bg-neon-green hover:text-black disabled:opacity-20 transition-all duration-500 border border-neon-green/10 ${(!ticket.event.allow_transfer || ticket.is_on_marketplace) ? 'pointer-events-none opacity-20' : ''}`}
                 >
                     <Send className="w-3.5 h-3.5" />
                     {!ticket.is_on_marketplace ? 'Chuyển' : 'Đã khóa'}
-                </button>
+                </Link>
                 <Link 
                     to={(!ticket.event.allow_resale || ticket.is_on_marketplace) ? '#' : `/my-tickets/${ticket.id}/resale`}
                     className={`${buttonBaseClass} bg-neon-green/5 text-neon-green/60 hover:bg-neon-green hover:text-black disabled:opacity-20 transition-all duration-500 border border-neon-green/10 ${(!ticket.event.allow_resale || ticket.is_on_marketplace) ? 'pointer-events-none opacity-20' : ''}`}
@@ -247,16 +198,16 @@ const MyTickets = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-dark-bg transition-colors duration-500 flex flex-col pt-24 pb-20 px-4 sm:px-8 relative overflow-hidden">
-            <div className="max-w-[1400px] mx-auto space-y-10 relative z-10 w-full">
+        <div className="min-h-screen bg-gray-50 dark:bg-dark-bg transition-colors duration-500 flex flex-col pt-10 pb-20 px-4 sm:px-8 relative overflow-hidden">
+            <div className="max-w-[1400px] mx-auto space-y-8 relative z-8 w-full">
                 {/* Header Section */}
                 <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
                     <div className="space-y-4">
-                        <div className="inline-flex items-center gap-2 text-neon-green font-black uppercase tracking-[0.2em] text-[10px] bg-neon-green/5 px-4 py-2 rounded-full border border-neon-green/20">
+                        <div className="inline-flex items-center gap-2 text-neon-green font-black uppercase text-[10px] bg-neon-green/5 px-4 py-2 rounded-full border border-neon-green/20">
                             <History className="w-3.5 h-3.5" />
                             <span>Vault / Tài sản số</span>
                         </div>
-                        <h1 className="text-6xl font-black text-gray-900 dark:text-white uppercase tracking-tighter leading-none">Vé của tôi</h1>
+                        <h1 className="text-3xl font-black text-gray-900 dark:text-white uppercase leading-none">Vé của tôi</h1>
                         <p className="text-sm text-gray-500 dark:text-gray-400 font-medium tracking-wide">Quản lý toàn bộ lịch sử vé NFT của bạn: <span className="text-neon-green font-black">{tickets.length} lượt sở hữu</span>.</p>
                     </div>
 
@@ -557,7 +508,7 @@ const MyTickets = () => {
                             {/* Explorer Links */}
                             <div className="w-full space-y-4 pt-8">
                                 <button
-                                    onClick={() => window.open(`https://mumbai.polygonscan.com/tx/${selectedTicket.nft_mint_tx_hash}`, '_blank')}
+                                    onClick={() => window.open(`https://amoy.polygonscan.com/tx/${selectedTicket.nft_mint_tx_hash}`, '_blank')}
                                     className="w-full flex items-center justify-between p-7 bg-white/[0.01] rounded-3xl hover:bg-white/[0.03] transition-all text-gray-500 group border border-white/5"
                                 >
                                     <div className="flex items-center gap-4">
@@ -579,113 +530,7 @@ const MyTickets = () => {
                 </div>
             )}
 
-            {/* Transfer Modal */}
-            {showTransferModal && selectedTicket && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-300">
-                    <div className="bg-dark-card w-full max-w-lg rounded-[2.5rem] border border-white/10 overflow-hidden shadow-[0_0_80px_rgba(0,0,0,0.8)] relative">
-                        {/* Header */}
-                        <div className="px-10 py-8 border-b border-white/5 flex items-center justify-between">
-                            <div className="flex items-center gap-4">
-                                <ArrowRightLeft className="w-5 h-5 text-neon-green" />
-                                <h3 className="text-xl font-black text-white uppercase tracking-tighter">Chuyển nhượng vé</h3>
-                            </div>
-                            <button onClick={() => setShowTransferModal(false)} className="p-2 hover:bg-white/5 rounded-full text-gray-500 transition-all">
-                                <XCircle className="w-6 h-6" />
-                            </button>
-                        </div>
 
-                        {/* Body */}
-                        <div className="p-10 space-y-8">
-                            <div className="bg-white/5 rounded-3xl p-6 border border-white/5 flex items-center gap-5">
-                                <img src={selectedTicket.event.poster_url} className="w-16 h-20 object-cover rounded-xl" alt="" />
-                                <div>
-                                    <p className="text-[10px] font-black text-neon-green uppercase tracking-widest mb-1">{selectedTicket.category_name}</p>
-                                    <p className="text-base font-bold text-white leading-tight mb-1">{selectedTicket.event.title}</p>
-                                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Token ID: #{selectedTicket.nft_token_id || 'N/A'}</p>
-                                </div>
-                            </div>
-
-                            <div className="space-y-4">
-                                <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] px-2 block">Email người nhận</label>
-                                <div className="relative">
-                                    <Send className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                    <input 
-                                        type="email"
-                                        placeholder="Nhập email tài khoản BASTICKET..."
-                                        value={receiverEmail}
-                                        onChange={(e) => setReceiverEmail(e.target.value)}
-                                        className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-14 pr-6 text-sm text-white focus:outline-none focus:border-neon-green focus:ring-1 focus:ring-neon-green transition-all placeholder:text-gray-600"
-                                    />
-                                    {isCheckingEmail && (
-                                        <Loader2 className="absolute right-6 top-1/2 -translate-y-1/2 w-4 h-4 text-neon-green animate-spin" />
-                                    )}
-                                </div>
-
-                                {/* Receiver Info Card */}
-                                {receiverInfo ? (
-                                    <div className="mx-2 p-4 bg-neon-green/5 border border-neon-green/20 rounded-2xl flex items-center gap-4 animate-in slide-in-from-top-2 duration-300">
-                                        <img 
-                                            src={receiverInfo.avatar_url || 'https://via.placeholder.com/100'} 
-                                            className="w-11 h-11 rounded-full border-2 border-neon-green/30 object-cover shadow-[0_0_15px_rgba(82,196,45,0.2)]"
-                                            alt=""
-                                        />
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-[9px] font-black text-neon-green uppercase tracking-widest flex items-center gap-1.5">
-                                                <Shield className="w-2.5 h-2.5" />
-                                                Người nhận xác thực
-                                            </p>
-                                            <p className="text-sm font-black text-white truncate uppercase tracking-tight">{receiverInfo.full_name}</p>
-                                            <p className="text-[10px] text-gray-500 font-bold truncate">{receiverInfo.email}</p>
-                                        </div>
-                                        <div className="w-8 h-8 bg-neon-green rounded-full flex items-center justify-center shadow-lg shadow-neon-green/20">
-                                            <CheckCircle2 className="w-5 h-5 text-black" />
-                                        </div>
-                                    </div>
-                                ) : receiverEmail && !isCheckingEmail && receiverEmail.includes('@') ? (
-                                    <div className="mx-2 p-4 bg-red-500/5 border border-red-500/20 rounded-2xl flex items-center gap-3 animate-in fade-in duration-300">
-                                        <AlertCircle className="w-5 h-5 text-red-500" />
-                                        <p className="text-[10px] text-red-500 font-black uppercase tracking-widest">
-                                            Không tìm thấy tài khoản người dùng này
-                                        </p>
-                                    </div>
-                                ) : (
-                                    <p className="text-[10px] text-gray-500 font-bold italic px-4 uppercase tracking-widest opacity-60">
-                                        * Vui lòng nhập email chính xác để định danh người nhận.
-                                    </p>
-                                )}
-                            </div>
-
-                            <div className="p-6 bg-red-500/5 border border-red-500/10 rounded-2xl flex gap-4">
-                                <AlertCircle className="w-5 h-5 text-red-500 shrink-0" />
-                                <p className="text-[10px] text-red-200/60 font-black leading-relaxed uppercase tracking-widest">
-                                    Hành động này không thể hoàn tác. Vé sẽ được chuyển quyền sở hữu vĩnh viễn trên Blockchain sau khi xác nhận.
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* Footer */}
-                        <div className="px-10 py-8 bg-black/40 border-t border-white/5">
-                            <button 
-                                onClick={handleTransfer}
-                                disabled={isTransferring || !receiverInfo}
-                                className="w-full bg-neon-green hover:bg-neon-hover disabled:opacity-20 text-black font-black uppercase tracking-[0.2em] py-5 rounded-2xl text-xs flex items-center justify-center gap-3 transition-all shadow-xl shadow-neon-green/20 active:scale-95 border-none"
-                            >
-                                {isTransferring ? (
-                                    <>
-                                        <Loader2 className="w-4 h-4 animate-spin" />
-                                        Giao thức đang thực thi...
-                                    </>
-                                ) : (
-                                    <>
-                                        <ArrowRightLeft className="w-4 h-4" />
-                                        Xác nhận chuyển nhượng
-                                    </>
-                                )}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };
