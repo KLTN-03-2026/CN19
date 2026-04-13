@@ -14,7 +14,7 @@ export default {
     },
   },
   networks: {
-    polygonAmoy: {
+    amoy: {
       url: process.env.AMOY_RPC_URL || "https://rpc-amoy.polygon.technology/",
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
     }

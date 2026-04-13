@@ -74,6 +74,17 @@ contract BASTicketNFT is ERC721URIStorage, ERC2981, Ownable {
     }
     
     /**
+     * @dev Chuyển nhượng bắt buộc (Dùng cho custodial wallet qua Admin/Platform)
+     * Chỉ Owner của contract mới được gọi.
+     */
+    function forceTransfer(address from, address to, uint256 tokenId) external onlyOwner {
+        require(_ownerOf(tokenId) == from, "From address is not the owner of the ticket");
+        require(!isLocked[tokenId], "Ticket is locked for marketplace listing");
+        
+        _safeTransfer(from, to, tokenId);
+    }
+
+    /**
      * @dev Thu hồi/Hủy vé (khi hệ thống refund hoàn tiền)
      */
     function burn(uint256 tokenId) external onlyOwner {
