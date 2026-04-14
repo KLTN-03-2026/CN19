@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { auth, googleProvider } from '../../config/firebase';
 import { signInWithPopup } from 'firebase/auth';
 import { Turnstile } from '@marsidev/react-turnstile';
+import useBotBehavior from '../../hooks/useBotBehavior';
 
 const Register = () => {
   const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm();
@@ -29,6 +30,7 @@ const Register = () => {
   const otpInputs = useRef([]);
   const navigate = useNavigate();
   const { t } = useTranslation();
+  const { getBehaviorData } = useBotBehavior();
 
   const emailVal = watch("email", "");
   const passVal = watch("password", "");
@@ -42,7 +44,13 @@ const Register = () => {
   const onSubmitStep1 = async (data) => {
     try {
       setIsLoading(true);
-      await authService.sendRegisterOtp(data);
+      const behaviorData = getBehaviorData();
+      
+      await authService.sendRegisterOtp({
+        ...data,
+        turnstileToken,
+        behaviorData
+      });
       toast.success(t('org.otp_sent') || 'Đã gửi mã OTP đến email của bạn!');
       setStep(2);
       setCountdown(59);

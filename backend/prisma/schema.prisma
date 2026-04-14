@@ -313,16 +313,20 @@ model TicketTransfer {
 
 model BotDetectionLog {
   id                 String   @id @default(uuid())
-  user_id            String
-  order_id           String
-  click_speed_ms     Int
-  form_fill_duration Int
+  user_id            String?
+  event_type         String?
+  order_id           String?
+  click_speed_ms     Int      @default(0)
+  form_fill_duration Int      @default(0)
   behavior_metrics   Json?
   risk_score         Decimal
   decision           String
+  ip_address         String?
+  user_agent         String?
+  detection_details  Json?
   created_at         DateTime @default(now())
-  order              Order    @relation(fields: [order_id], references: [id])
-  user               User     @relation(fields: [user_id], references: [id])
+  order              Order?   @relation(fields: [order_id], references: [id])
+  user               User?    @relation(fields: [user_id], references: [id])
 }
 
 model ScanHistory {
@@ -347,14 +351,23 @@ model RefundRequest {
 }
 
 model EscrowPayout {
-  id              String  @id @default(uuid())
+  id              String    @id @default(uuid())
   event_id        String
   total_revenue   Decimal
   net_payout      Decimal
-  status          String  @default("pending")
+  platform_fee    Decimal   @default(0)
+  status          String    @default("pending") // pending, processing, settled, rejected
   payout_trans_id String?
-  event           Event   @relation(fields: [event_id], references: [id])
+  admin_notes     String?
+  evidence_url    String?
+  bank_info       Json?     // Lưu thông tin ngân hàng lúc yêu cầu
+  requested_at    DateTime?
+  processed_at    DateTime?
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
+  event           Event     @relation(fields: [event_id], references: [id])
 }
+
 
 model DynamicQRToken {
   id         String   @id @default(uuid())

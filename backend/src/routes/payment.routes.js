@@ -2,9 +2,10 @@ const express = require('express');
 const router = express.Router();
 const paymentController = require('../controllers/payment.controller');
 const { authenticate } = require('../middlewares/auth.middleware');
+const { strictLimiter } = require('../middlewares/security.middleware');
 
 // [POST] /api/payments/create-url - Tạo URL thanh toán (VNPay hoặc MoMo)
-router.post('/create-url', authenticate, paymentController.createPaymentUrl);
+router.post('/create-url', authenticate, strictLimiter, paymentController.createPaymentUrl);
 
 // [GET] /api/payments/vnpay-return - Redirect sau khi thanh toán VNPay
 router.get('/vnpay-return', paymentController.vnpayReturn);

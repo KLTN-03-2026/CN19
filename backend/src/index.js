@@ -1,6 +1,8 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const { globalLimiter } = require('./middlewares/security.middleware');
 
 // --- Import Routes ---
 // 1. Auth & Users
@@ -42,6 +44,8 @@ const adminSystemRoutes = require('./routes/admin-system.routes');
 const adminMerchandiseRoutes = require('./routes/admin-merchandise.routes');
 const adminBlogRoutes = require('./routes/admin-blog.routes');
 const adminCouponRoutes = require('./routes/admin-coupon.routes');
+const adminTransactionRoutes = require('./routes/admin-transaction.routes');
+
 
 // 6. Staff
 const scannerRoutes = require('./routes/scanner.routes');
@@ -52,7 +56,14 @@ const aiRoutes = require('./routes/ai.routes');
 const metadataRoutes = require('./routes/metadata.routes');
 const utilsRoutes = require('./routes/utils.routes');
 
+const settlementRoutes = require('./routes/settlement.routes');
+
 const app = express();
+
+// --- Security Middlewares ---
+app.use(helmet()); // Thiết lập các header bảo mật cơ bản
+app.set('trust proxy', 1); // Tin tưởng proxy để lấy IP thật (Rate limit)
+app.use(globalLimiter); // Giới hạn chung toàn hệ thống
 
 // --- Middlewares ---
 app.use(cors());
@@ -95,6 +106,8 @@ app.use('/api/admin', adminSystemRoutes);  // points inside to /config, /fraud-a
 app.use('/api/admin/merchandise', adminMerchandiseRoutes);
 app.use('/api/admin/blogs', adminBlogRoutes);
 app.use('/api/admin/coupons', adminCouponRoutes);
+app.use('/api/admin/transactions', adminTransactionRoutes);
+
 
 // Staff
 app.use('/api/staff', scannerRoutes);
@@ -104,6 +117,7 @@ app.use('/api/kyc', kycRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/metadata', metadataRoutes);
 app.use('/api/utils', utilsRoutes);
+app.use('/api/settlements', settlementRoutes);
 
 // Test Route
 app.get('/', (req, res) => {

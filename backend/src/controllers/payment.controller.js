@@ -6,6 +6,7 @@ const web3Service = require('../services/web3.service');
 const emailService = require('../services/email.service');
 const { sendEmail } = require('../services/email.service');
 const { format } = require('date-fns');
+const botService = require('../services/bot.service');
 
 /**
  * Controller xử lý thanh toán VNPay và MoMo
@@ -14,7 +15,34 @@ const PaymentController = {
     // [POST] /api/payments/create-url
     createPaymentUrl: async (req, res) => {
         try {
-            const { ma_don_hang, phuong_thuc } = req.body;
+            const { ma_don_hang, phuong_thuc, behaviorData, captchaToken, puzzleData } = req.body;
+
+            // 1. Phân tích Anti-Bot lần cuối trước khi thanh toán (Puzzle Slider & AI)
+            const aiAnalysis = await botService.analyzeBotBehavior(req, captchaToken, behaviorData, puzzleData);
+            
+            // Theo dõi lịch sử Bot Detection (Optional order_id)
+            prisma.botDetectionLog.create({
+                data: {
+                    user_id: req.user.userId,
+                    event_type: 'PAYMENT',
+                    click_speed_ms: behaviorData?.click_speed_ms || 0,
+                    form_fill_duration: behaviorData?.form_fill_duration || 0,
+                    behavior_metrics: behaviorData?.behavior_metrics || {},
+                    risk_score: aiAnalysis.riskScore,
+                    decision: aiAnalysis.isBot ? 'BLOCK' : 'ALLOW',
+                    ip_address: botService.getClientIp(req),
+                    user_agent: req.headers['user-agent'],
+                    detection_details: aiAnalysis.details
+                }
+            }).catch(err => console.error('Log error:', err));
+
+            if (aiAnalysis.isBot) {
+                return res.status(403).json({ 
+                    error: 'Hệ thống phát hiện hành vi thanh toán bất thường. Vui lòng thử lại hoặc giải đúng Puzzle Captcha.',
+                    is_bot: true 
+                });
+            }
+
             const order = await prisma.order.findUnique({
                 where: { order_number: ma_don_hang },
                 include: { event: { select: { title: true } } }

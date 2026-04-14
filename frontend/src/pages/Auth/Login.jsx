@@ -9,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { auth, googleProvider } from '../../config/firebase';
 import { signInWithPopup } from 'firebase/auth';
 import { Turnstile } from '@marsidev/react-turnstile';
+import useBotBehavior from '../../hooks/useBotBehavior';
 
 const Login = () => {
   const { register, handleSubmit, watch } = useForm();
@@ -18,6 +19,7 @@ const Login = () => {
   const navigate = useNavigate();
   const setAuth = useAuthStore(state => state.login);
   const { t } = useTranslation();
+  const { getBehaviorData } = useBotBehavior();
 
   const emailVal = watch("email", "");
   const passVal = watch("password", "");
@@ -26,7 +28,13 @@ const Login = () => {
   const onSubmit = async (data) => {
     try {
       setIsLoading(true);
-      const res = await authService.login(data);
+      const behaviorData = getBehaviorData();
+      
+      const res = await authService.login({
+        ...data,
+        turnstileToken,
+        behaviorData
+      });
       setAuth(res.user, res.token);
       toast.success('Đăng nhập thành công!');
       

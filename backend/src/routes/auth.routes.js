@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/auth.controller');
+const { strictLimiter } = require('../middlewares/security.middleware');
 
 // [POST] /api/auth/send-register-otp
 router.post('/send-register-otp', authController.sendRegisterOtp);
@@ -9,10 +10,10 @@ router.post('/send-register-otp', authController.sendRegisterOtp);
 router.post('/verify-register-otp', authController.verifyRegisterOtp);
 
 // [POST] /api/auth/login
-router.post('/login', authController.login);
+router.post('/login', strictLimiter, authController.login);
 
 // [POST] /api/auth/google
-router.post('/google', authController.googleLogin);
+router.post('/google', strictLimiter, authController.googleLogin);
 
 // [POST] /api/auth/send-organizer-otp
 router.post('/send-organizer-otp', authController.sendOrganizerOtp);

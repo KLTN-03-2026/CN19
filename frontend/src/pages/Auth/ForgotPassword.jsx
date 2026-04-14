@@ -4,12 +4,16 @@ import { Mail, ArrowLeft, Shield, Loader2, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { authService } from '../../services/auth.service';
 import toast from 'react-hot-toast';
+import { Turnstile } from '@marsidev/react-turnstile';
+import useBotBehavior from '../../hooks/useBotBehavior';
 
 const ForgotPassword = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState(null);
+  const { getBehaviorData } = useBotBehavior();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -17,7 +21,12 @@ const ForgotPassword = () => {
 
     try {
       setLoading(true);
-      await authService.forgotPassword(email);
+      const behaviorData = getBehaviorData();
+      await authService.forgotPassword({ 
+        email, 
+        turnstileToken, 
+        behaviorData 
+      });
       toast.success(t('auth.forgot_otp_sent') || 'OTP đã được gửi tới email của bạn!');
       // Chuyển sang trang Reset Password và truyền email qua state
       navigate('/reset-password', { state: { email } });
@@ -67,10 +76,17 @@ const ForgotPassword = () => {
               />
             </div>
           </div>
+          
+          <div className="w-full mt-2 mb-1 overflow-hidden rounded-xl">
+            <Turnstile 
+              siteKey="1x00000000000000000000AA"
+              onSuccess={(token) => setTurnstileToken(token)}
+            />
+          </div>
 
           <button
             type="submit"
-            disabled={loading || !email}
+            disabled={loading || !email || !turnstileToken}
             className="w-full py-4 bg-neon-green hover:bg-neon-hover text-black font-black uppercase text-xs  rounded-xl shadow-[0_0_20px_rgba(82,196,45,0.3)] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
           >
             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : t('profile.forgot.send_btn')}

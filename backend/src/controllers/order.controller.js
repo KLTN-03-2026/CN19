@@ -1,54 +1,10 @@
 const prisma = require('../config/prisma');
 const axios = require('axios');
 const orderService = require('../services/order.service');
+const botService = require('../services/bot.service');
+const utilsController = require('./utils.controller');
 
-// [AI Module] Chấm điểm rủi ro hành vi kết hợp reCAPTCHA v3
-const analyzeBotBehavior = async (userId, captchaToken, behaviorData) => {
-  try {
-    let recaptchaScore = 0.5; // Mặc định trung lập nếu lỗi
-    
-    // 1. Xác thực với Google reCAPTCHA API
-    if (captchaToken) {
-      const response = await axios.post(
-        `https://www.google.com/recaptcha/api/siteverify?secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${captchaToken}`
-      );
-      if (response.data.success) {
-        recaptchaScore = response.data.score; // 1.0 là người, 0.0 là bot
-      }
-    }
-
-    // 2. Phân tích dữ liệu hành vi gửi từ client
-    // Ví dụ: bot thường điền form < 2 giây hoặc click speed cực nhanh
-    const { form_fill_duration, click_speed_ms, behavior_metrics } = behaviorData || {};
-    
-    let behaviorRisk = 0;
-    if (form_fill_duration < 3) behaviorRisk += 0.4; // Quá nhanh
-    if (click_speed_ms > 0 && click_speed_ms < 100) behaviorRisk += 0.3; // Click quá nhanh
-    if (behavior_metrics && !behavior_metrics.mouseDistance) behaviorRisk += 0.2; // Không di chuyển chuột
-
-    // 3. Tính toán tổng điểm rủi ro (0.0 -> 1.0)
-    // Càng cao càng nguy hiểm. reCAPTCHA chiếm 60% trọng số, hành vi chiếm 40%
-    const finalRiskScore = ( (1 - recaptchaScore) * 0.6 ) + ( Math.min(behaviorRisk, 1) * 0.4 );
-
-    return {
-      isBot: finalRiskScore > 0.7, // Ngưỡng chặn
-      riskScore: finalRiskScore,
-      recaptchaScore
-    };
-  } catch (error) {
-    console.error('AI Bot Analysis Error:', error);
-    return { isBot: false, riskScore: 0.5, recaptchaScore: 0.5 };
-  }
-};
-
-// Utility lấy IP khách hàng (Xử lý cả Proxy/Nginx)
-const getClientIp = (req) => {
-    const forwarded = req.headers['x-forwarded-for'];
-    if (forwarded) {
-        return forwarded.split(',')[0].trim();
-    }
-    return req.socket.remoteAddress;
-};
+// logic previously here moved to bot.service.js
 
 // [UC_08] Tạo đơn hàng Mua vé (Primary Market)
 const createPrimaryOrder = async (req, res) => {
@@ -59,22 +15,25 @@ const createPrimaryOrder = async (req, res) => {
     // Tự động giải phóng các đơn hàng quá hạn trước khi kiểm tra tồn kho
     await orderService.releaseExpiredOrders();
 
-    // 1. [Tạm ẩn] Phân tích AI rủi ro Bot
-    // const aiAnalysis = await analyzeBotBehavior(userId, captchaToken, behaviorData);
+    // 1. Phân tích AI rủi ro Bot
+    const aiAnalysis = await botService.analyzeBotBehavior(req, captchaToken, behaviorData, req.body.puzzleData);
 
-    // [Tạm ẩn] Lưu Log vào DB
-    /*
-    await prisma.botDetectionLog.create({
+    // Lưu Log vào DB (không chặn transaction chính nếu log lỗi)
+    prisma.botDetectionLog.create({
       data: {
         user_id: userId,
-        order__id: 'pending_' + Date.now(),
+        order_id: null, 
+        event_type: 'PRIMARY_ORDER',
         click_speed_ms: behaviorData?.click_speed_ms || 0,
         form_fill_duration: behaviorData?.form_fill_duration || 0,
         behavior_metrics: behaviorData?.behavior_metrics || {},
         risk_score: aiAnalysis.riskScore,
-        decision: aiAnalysis.isBot ? 'BLOCK' : 'ALLOW'
+        decision: aiAnalysis.isBot ? 'BLOCK' : 'ALLOW',
+        ip_address: botService.getClientIp(req),
+        user_agent: req.headers['user-agent'],
+        detection_details: aiAnalysis.details
       }
-    });
+    }).catch(err => console.error('Bot log error:', err));
 
     if (aiAnalysis.isBot) {
       return res.status(403).json({ 
@@ -82,9 +41,6 @@ const createPrimaryOrder = async (req, res) => {
         isBot: true 
       });
     }
-    */
-
-    const aiAnalysis = { riskScore: 0 }; // Mặc định an toàn
 
     // Lấy sự kiện kiểm tra hợp lệ
     const event = await prisma.event.findUnique({ 
@@ -158,7 +114,7 @@ const createPrimaryOrder = async (req, res) => {
           total_amount,
           payment_method: 'unselected',
           risk_score: aiAnalysis.riskScore,
-          ip_address: getClientIp(req),
+          ip_address: botService.getClientIp(req),
           expires_at: expiresAt,
           items: {
             create: orderItemsData
@@ -184,9 +140,18 @@ const createPrimaryOrder = async (req, res) => {
 const createMarketplaceOrder = async (req, res) => {
   try {
     const userId = req.user.userId;
-    const { listing_id } = req.body;
+    const { listing_id, behaviorData, captchaToken, puzzleData } = req.body;
 
-    // 1. Tìm listing
+    // 1. Phân tích AI rủi ro Bot
+    const aiAnalysis = await botService.analyzeBotBehavior(req, captchaToken, behaviorData, puzzleData);
+    if (aiAnalysis.isBot) {
+      return res.status(403).json({ 
+        error: 'Phat hien hanh vi tu dong khong an toan. Vui long thu lai cham hon.',
+        isBot: true 
+      });
+    }
+
+    // 2. Tìm listing
     const listing = await prisma.marketplaceListing.findUnique({
       where: { id: listing_id },
       include: { 
@@ -458,7 +423,7 @@ const createTransferOrder = async (req, res) => {
         total_amount: 10000,
         payment_method: 'unselected',
         expires_at: expiresAt,
-        ip_address: getClientIp(req),
+        ip_address: botService.getClientIp(req),
         metadata: {
           ticket_id: ticket.id,
           receiver_email: receiver_email

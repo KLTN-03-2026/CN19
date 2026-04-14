@@ -24,6 +24,8 @@ import { Plus, Minus, Tag, ShoppingBag, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useBehaviorTracker } from '../../hooks/useBehaviorTracker';
+import PuzzleCaptcha from '../../components/common/PuzzleCaptcha';
 
 // --- Price Formatter Helper ---
 const formatPrice = (price, locale = 'vi-VN') => {
@@ -98,6 +100,11 @@ const Checkout = () => {
   const [isUpdatingOrder, setIsUpdatingOrder] = useState(false);
   const [isVoucherModalOpen, setIsVoucherModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  
+  // Anti-Bot States
+  const { getBehaviorData } = useBehaviorTracker();
+  const [isCaptchaOpen, setIsCaptchaOpen] = useState(false);
+  const [puzzleData, setPuzzleData] = useState(null);
 
   const { data, isLoading: isOrderLoading, error, refetch } = useQuery({
     queryKey: ['order', orderId],
@@ -154,19 +161,40 @@ const Checkout = () => {
 
   const handlePayment = async () => {
     if (timeLeft <= 0 || !order) return;
+    
+    // Nếu chưa có captcha, mở nó lên trước
+    if (!puzzleData) {
+      setIsCaptchaOpen(true);
+      return;
+    }
+
     try {
+      const behaviorData = getBehaviorData();
+      
       const res = await createPaymentUrl({
         ma_don_hang: order.order_number,
-        phuong_thuc: paymentMethod
+        phuong_thuc: paymentMethod,
+        behaviorData, // Gửi dữ liệu hành vi AI
+        puzzleData    // Gửi dữ liệu xác minh Puzzle Captcha
       });
+
       if (res?.payment_url) {
         window.location.href = res.payment_url;
       } else {
         toast.error("Không thể tạo liên kết thanh toán");
+        setPuzzleData(null); // Reset captcha để làm lại nếu lỗi
       }
     } catch (err) {
       toast.error(err.response?.data?.error || "Có lỗi xảy ra khi thanh toán");
+      setPuzzleData(null);
     }
+  };
+
+  const onCaptchaSuccess = (data) => {
+    setPuzzleData(data);
+    setIsCaptchaOpen(false);
+    toast.success("Xác minh thành công!");
+    // Tự động thanh toán ngay sau khi captcha thành công (tùy chọn UI)
   };
 
   const syncOrder = async (merchItems, code) => {
@@ -685,7 +713,6 @@ const Checkout = () => {
               exit={{ scale: 0.9, opacity: 0, y: 30 }}
               className="relative w-full max-w-2xl bg-white dark:bg-[#0a0a0c] border border-white/5 rounded-[3rem] shadow-2xl overflow-hidden flex flex-col md:flex-row max-h-[90vh]"
             >
-              {/* Close Button Mobile */}
               <button 
                 onClick={() => setSelectedProduct(null)}
                 className="absolute top-6 right-6 z-10 w-12 h-12 rounded-full bg-black/50 backdrop-blur-md text-white flex items-center justify-center hover:bg-neon-green hover:text-black transition-all md:hidden"
@@ -693,7 +720,6 @@ const Checkout = () => {
                 <X className="w-6 h-6" />
               </button>
 
-              {/* Product Image */}
               <div className="w-full md:w-1/2 h-64 md:h-auto overflow-hidden bg-black/10">
                 <img 
                   src={selectedProduct.image_url || 'https://via.placeholder.com/400'} 
@@ -702,7 +728,6 @@ const Checkout = () => {
                 />
               </div>
 
-              {/* Product Info */}
               <div className="flex-1 p-8 md:p-12 flex flex-col justify-between overflow-y-auto">
                  <div>
                     <div className="flex items-center justify-between mb-2">
@@ -731,15 +756,14 @@ const Checkout = () => {
                        <span className="text-xs font-black text-neon-green px-3 py-1 bg-neon-green/10 rounded-full">{selectedProduct.stock}</span>
                     </div>
 
-                    {/* Quantity Selector inside Modal */}
-                    <div className="ml-20 flex items-center justify-between bg-gray-50 dark:bg-white/5 p-4 rounded-3xl border border-gray-100 dark:border-white/5">
+                    <div className="flex items-center justify-center bg-gray-50 dark:bg-white/5 p-4 rounded-3xl border border-gray-100 dark:border-white/5">
                         <button 
                            onClick={() => handleMerchCount(selectedProduct.id, -1, selectedProduct.stock)}
                            className="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
                         >
                            <Minus className="w-4 h-4" />
                         </button>
-                        <span className="w-8 text-center text-l font-black">{selectedMerch[selectedProduct.id] || 0}</span>
+                        <span className="w-12 text-center text-xl font-black">{selectedMerch[selectedProduct.id] || 0}</span>
                         <button 
                             onClick={() => handleMerchCount(selectedProduct.id, 1, selectedProduct.stock)}
                             className="w-8 h-8 flex items-center justify-center rounded-xl bg-neon-green text-black hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black transition-all shadow-md"
@@ -753,6 +777,13 @@ const Checkout = () => {
           </div>
         )}
       </AnimatePresence>
+
+      <PuzzleCaptcha 
+        isOpen={isCaptchaOpen}
+        onClose={() => setIsCaptchaOpen(false)}
+        onSuccess={onCaptchaSuccess}
+        imageUrl={order?.event?.image_url}
+      />
     </div>
   );
 };

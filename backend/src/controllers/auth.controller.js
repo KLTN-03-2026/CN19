@@ -1,6 +1,7 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const prisma = require('../config/prisma');
+const botService = require('../services/bot.service');
 
 const sendEmail = require('../utils/sendEmail');
 
@@ -10,8 +11,33 @@ global.otpCache = global.otpCache || new Map();
 // [UC_01_A] Gửi OTP Đăng ký (Thay thế Register cũ)
 const sendRegisterOtp = async (req, res) => {
   try {
-    const { email, phone_number, full_name, password } = req.body;
+    const { email, phone_number, full_name, password, behaviorData, turnstileToken } = req.body;
     
+    // 0. Anti-Bot Verification
+    const aiAnalysis = await botService.analyzeBotBehavior(req, turnstileToken, behaviorData);
+    
+    // Log Bot Detection
+    prisma.botDetectionLog.create({
+      data: {
+        user_id: null, 
+        event_type: 'REGISTER_OTP',
+        click_speed_ms: behaviorData?.click_speed_ms || 0,
+        form_fill_duration: behaviorData?.form_fill_duration || 0,
+        behavior_metrics: behaviorData?.behavior_metrics || {},
+        risk_score: aiAnalysis.riskScore,
+        decision: aiAnalysis.isBot ? 'BLOCK' : 'ALLOW',
+        ip_address: botService.getClientIp(req),
+        user_agent: req.headers['user-agent'],
+        detection_details: aiAnalysis.details
+      }
+    }).catch(err => console.error('Log error:', err));
+
+    if (aiAnalysis.isBot) {
+      return res.status(403).json({ 
+        error: 'Phát hiện hành vi tự động bất thường. Vui lòng thử lại chậm hơn hoặc hoàn thành captcha.',
+        isBot: true 
+      });
+    }
     // 1. Kiểm tra tồn tại
     const existing = await prisma.user.findFirst({
       where: { OR: [{ email }, { phone_number }] }
@@ -120,7 +146,34 @@ const verifyRegisterOtp = async (req, res) => {
 // [UC_02] Đăng nhập
 const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, behaviorData, turnstileToken } = req.body;
+    // 0. Anti-Bot Verification
+    const aiAnalysis = await botService.analyzeBotBehavior(req, turnstileToken, behaviorData);
+    
+    // Tìm user_id để log (nếu có)
+    const tmpUser = await prisma.user.findFirst({ where: { OR: [{ email: email }, { phone_number: email }] } });
+    
+    // Log Bot Detection cho mọi lượt đăng nhập
+    prisma.botDetectionLog.create({
+      data: {
+        user_id: tmpUser ? tmpUser.id : null,
+        event_type: 'LOGIN',
+        click_speed_ms: behaviorData?.click_speed_ms || 0,
+        form_fill_duration: behaviorData?.form_fill_duration || 0,
+        behavior_metrics: behaviorData?.behavior_metrics || {},
+        risk_score: aiAnalysis.riskScore,
+        decision: aiAnalysis.isBot ? 'BLOCK' : 'ALLOW',
+        ip_address: botService.getClientIp(req),
+        user_agent: req.headers['user-agent'],
+        detection_details: aiAnalysis.details
+      }
+    }).catch((logErr) => {
+      console.error('[LOGIN DEBUG] Failed to save bot log to DB:', logErr.message);
+    });
+
+    if (aiAnalysis.isBot) {
+       return res.status(403).json({ error: 'Hành vi đăng nhập bất thường bị chặn.', isBot: true });
+    }
 
     // 1. Tìm user theo Email hoặc SĐT
     const user = await prisma.user.findFirst({
@@ -193,8 +246,31 @@ const login = async (req, res) => {
 // [UC_03_A] Gửi OTP Đăng ký Ban Tổ chức (Hỗ trợ cả User mới lẫn Customer nâng cấp)
 const sendOrganizerOtp = async (req, res) => {
   try {
-    const { phone_number, full_name, password, organization_name, address, existing_user_id, business_license, description, latitude, longitude } = req.body;
+    const { phone_number, full_name, password, organization_name, address, existing_user_id, business_license, description, latitude, longitude, behaviorData, turnstileToken } = req.body;
     const email = req.body.email?.trim();
+
+    // 0. Anti-Bot Verification
+    const aiAnalysis = await botService.analyzeBotBehavior(req, turnstileToken, behaviorData);
+    
+    // Log Bot Detection
+    prisma.botDetectionLog.create({
+      data: {
+        user_id: existing_user_id || null,
+        event_type: 'ORGANIZER_SIGNUP_OTP',
+        click_speed_ms: behaviorData?.click_speed_ms || 0,
+        form_fill_duration: behaviorData?.form_fill_duration || 0,
+        behavior_metrics: behaviorData?.behavior_metrics || {},
+        risk_score: aiAnalysis.riskScore,
+        decision: aiAnalysis.isBot ? 'BLOCK' : 'ALLOW',
+        ip_address: botService.getClientIp(req),
+        user_agent: req.headers['user-agent'],
+        detection_details: aiAnalysis.details
+      }
+    }).catch(() => {});
+
+    if (aiAnalysis.isBot) {
+       return res.status(403).json({ error: 'Yêu cầu đăng ký từ chối vì lý do bảo mật Bot.', isBot: true });
+    }
 
     // Nếu là Customer đã đăng nhập nâng cấp thì kiểm tra tồn tại qua existing_user_id
     // Nếu là User mới hoàn toàn thì kiểm tra Email/SĐT
@@ -458,9 +534,33 @@ const googleLogin = async (req, res) => {
 // [UC_08_A] Quên mật khẩu - Gửi mã OTP xác nhận
 const forgotPassword = async (req, res) => {
   try {
-    const { email } = req.body;
-    const user = await prisma.user.findUnique({ where: { email } });
+    const { email, behaviorData, turnstileToken } = req.body;
 
+    // 0. Anti-Bot Verification
+    const aiAnalysis = await botService.analyzeBotBehavior(req, turnstileToken, behaviorData);
+    
+    // Log Bot Detection
+    const tmpUser = await prisma.user.findUnique({ where: { email } });
+    prisma.botDetectionLog.create({
+      data: {
+        user_id: tmpUser ? tmpUser.id : null,
+        event_type: 'FORGOT_PASSWORD',
+        click_speed_ms: behaviorData?.click_speed_ms || 0,
+        form_fill_duration: behaviorData?.form_fill_duration || 0,
+        behavior_metrics: behaviorData?.behavior_metrics || {},
+        risk_score: aiAnalysis.riskScore,
+        decision: aiAnalysis.isBot ? 'BLOCK' : 'ALLOW',
+        ip_address: botService.getClientIp(req),
+        user_agent: req.headers['user-agent'],
+        detection_details: aiAnalysis.details
+      }
+    }).catch(() => {});
+
+    if (aiAnalysis.isBot) {
+       return res.status(403).json({ error: 'Yêu cầu bị từ chối do nghi ngờ hành vi tự động.', isBot: true });
+    }
+
+    const user = tmpUser;
     if (!user) {
       return res.status(404).json({ error: 'Email không tồn tại trong hệ thống.' });
     }
