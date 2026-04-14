@@ -51,6 +51,7 @@ import ParticipantManagement from './pages/Organizer/ParticipantManagement';
 import Revenue from './pages/Organizer/Revenue';
 import OrderManagement from './pages/Organizer/OrderManagement';
 import OrderDetail from './pages/Organizer/OrderDetail';
+import OrganizerSettlement from './pages/Organizer/OrganizerSettlement';
 
 // Admin Pages
 import AdminLayout from './components/layout/AdminLayout';
@@ -70,6 +71,7 @@ import CreateCoupon from './pages/Admin/CreateCoupon';
 import CouponDetail from './pages/Admin/CouponDetail';
 import TransactionManagement from './pages/Admin/TransactionManagement';
 import TransactionDetail from './pages/Admin/TransactionDetail';
+import AdminSettlementManagement from './pages/Admin/AdminSettlementManagement';
 
 
 // Component Bảo vệ Route theo Role
@@ -195,6 +197,7 @@ const router = createBrowserRouter([
       { path: 'fraud', element: <div className="text-2xl font-black">Cảnh báo Gian lận (Coming Soon)</div> },
       { path: 'transactions', element: <TransactionManagement /> },
       { path: 'transactions/:type/:id', element: <TransactionDetail /> },
+      { path: 'settlements', element: <AdminSettlementManagement /> },
       { path: 'settings', element: <div className="text-2xl font-black">Cấu hình Hệ thống (Coming Soon)</div> },
       { path: '', element: <Navigate to="dashboard" replace /> }
     ]
@@ -213,6 +216,7 @@ const router = createBrowserRouter([
       { path: 'events/:id/edit', element: <EditEvent /> },
       { path: 'create-event', element: <CreateEvent /> },
       { path: 'tickets', element: <TicketManagement /> },
+      { path: 'settlements', element: <OrganizerSettlement /> },
       { path: 'revenue', element: <Revenue /> },
       { path: 'orders', element: <OrderManagement /> },
       { path: 'orders/:id', element: <OrderDetail /> },

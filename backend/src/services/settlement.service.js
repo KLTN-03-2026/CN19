@@ -70,7 +70,7 @@ const SettlementService = {
                         data: { balance: { increment: eventRevenue } }
                     });
 
-                    // Ghi lại lịch sử giao dịch
+                    // Ghi lại lịch sử giao dịch ví
                     await tx.walletTransaction.create({
                         data: {
                             organizer_id: event.organizer_id,
@@ -78,6 +78,20 @@ const SettlementService = {
                             type: 'REVENUE',
                             description: `Doanh thu từ sự kiện: ${event.title}`,
                             status: 'completed'
+                        }
+                    });
+
+                    // TẠO BẢN GHI ĐỐI SOÁT (EscrowPayout) để đồng bộ với UI mới
+                    await tx.escrowPayout.create({
+                        data: {
+                            event_id: event.id,
+                            total_revenue: unsettledOrders.reduce((sum, o) => sum + Number(o.total_amount), 0),
+                            platform_fee: unsettledOrders.reduce((sum, o) => sum + Number(o.platform_fee), 0),
+                            net_payout: eventRevenue,
+                            status: 'settled',
+                            processed_at: new Date(),
+                            admin_notes: 'Đối soát tự động (Hệ thống)',
+                            payout_trans_id: 'AUTO-' + Date.now()
                         }
                     });
 

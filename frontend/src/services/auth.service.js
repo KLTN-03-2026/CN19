@@ -25,8 +25,10 @@ export const authService = {
     const response = await api.post('/auth/google', data);
     return response.data;
   },
-  forgotPassword: async (email) => {
-    const response = await api.post('/auth/forgot-password', { email });
+  forgotPassword: async (dataOrEmail) => {
+    // Nếu truyền object thì gửi object, nếu truyền string thì bọc lại
+    const payload = typeof dataOrEmail === 'string' ? { email: dataOrEmail } : dataOrEmail;
+    const response = await api.post('/auth/forgot-password', payload);
     return response.data;
   },
   resetPassword: async (data) => {

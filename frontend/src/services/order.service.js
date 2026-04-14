@@ -3,17 +3,18 @@ import api from './api';
 const orderService = {
     // Tạo đơn hàng mua vé (Sơ cấp)
     createPrimaryOrder: async (orderData) => {
-        // orderData: { event_id, items, behaviorData, captchaToken }
+        // orderData: { event_id, items, behaviorData, captchaToken, puzzleData }
         const response = await api.post('/orders', orderData);
         return response.data;
     },
 
     // Tạo đơn hàng mua vé Marketplace (Thứ cấp)
-    createMarketplaceOrder: async (listing_id, behaviorData, captchaToken) => {
+    createMarketplaceOrder: async (listing_id, behaviorData, captchaToken, puzzleData) => {
         const response = await api.post('/orders/marketplace', { 
             listing_id, 
             behaviorData, 
-            captchaToken 
+            captchaToken,
+            puzzleData
         });
         return response.data;
     },
@@ -44,8 +45,9 @@ const orderService = {
     },
 
     // Tạo liên kết thanh toán
-    createPaymentUrl: async (ma_don_hang, phuong_thuc) => {
-        const response = await api.post('/payments/create-url', { ma_don_hang, phuong_thuc });
+    createPaymentUrl: async (params) => {
+        // params: { ma_don_hang, phuong_thuc, behaviorData, puzzleData }
+        const response = await api.post('/payments/create-url', params);
         return response.data;
     },
 

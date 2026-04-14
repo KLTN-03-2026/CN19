@@ -10,8 +10,8 @@ export const orderKeys = {
 
 export const useOrder = () => {
     const createPaymentUrlMutation = useMutation({
-        mutationFn: ({ ma_don_hang, phuong_thuc }) => 
-            orderService.createPaymentUrl(ma_don_hang, phuong_thuc),
+        mutationFn: (params) => 
+            orderService.createPaymentUrl(params),
     });
 
     const verifyVNPayReturnMutation = useMutation({
