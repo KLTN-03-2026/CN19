@@ -29,7 +29,13 @@ const getEvents = async (req, res) => {
         where: whereClause,
         include: {
           organizer: { select: { organization_name: true } },
-          category: { select: { name: true } }
+          category: { select: { name: true } },
+          ticket_tiers: {
+            select: {
+              quantity_total: true,
+              quantity_available: true
+            }
+          }
         },
         orderBy: { event_date: 'desc' }
       }),
@@ -38,14 +44,27 @@ const getEvents = async (req, res) => {
         where: { 
           OR: [
             { status: 'pending' },
-            { status: 'draft' } // Đếm cả bản nháp cần fix
+            { status: 'draft' }
           ]
         } 
       })
     ]);
 
+    // Format events to include aggregated counts
+    const formattedEvents = events.map(event => {
+      const totalTickets = event.ticket_tiers.reduce((sum, tier) => sum + tier.quantity_total, 0);
+      const availableTickets = event.ticket_tiers.reduce((sum, tier) => sum + tier.quantity_available, 0);
+      const soldTickets = totalTickets - availableTickets;
+
+      return {
+        ...event,
+        total_tickets: totalTickets,
+        sold_tickets: soldTickets
+      };
+    });
+
     res.status(200).json({ 
-      data: events,
+      data: formattedEvents,
       meta: {
         total: totalCount,
         pending: pendingCount
@@ -159,14 +178,70 @@ const getEventById = async (req, res) => {
       where: { id },
       include: {
         organizer: { 
-          select: { id: true, user_id: true, organization_name: true, kyc_status: true, user: { select: { email: true, phone_number: true } } } 
+          select: { 
+            id: true, 
+            user_id: true, 
+            organization_name: true, 
+            kyc_status: true,
+            balance: true,
+            bank_name: true,
+            account_number: true,
+            account_holder: true,
+            user: { select: { email: true, phone_number: true, wallet_address: true } } 
+          } 
         },
-        category: { select: { name: true } },
-        ticket_tiers: true,
+        category: { select: { id: true, name: true } },
+        ticket_tiers: {
+          include: {
+            _count: { select: { tickets: true } },
+            order_items: {
+              take: 50,
+              orderBy: { order: { created_at: 'desc' } },
+              include: {
+                order: {
+                  select: {
+                    id: true,
+                    order_number: true,
+                    status: true,
+                    total_amount: true,
+                    created_at: true,
+                    payment_method: true,
+                    customer: { select: { id: true, full_name: true, email: true, phone_number: true } }
+                  }
+                }
+              }
+            },
+            tickets: {
+              take: 50,
+              orderBy: { ticket_number: 'asc' },
+              include: {
+                current_owner: { select: { id: true, full_name: true, email: true, phone_number: true } },
+                original_buyer: { select: { id: true, full_name: true, email: true } }
+              }
+            }
+          }
+        },
+        merchandise: {
+          orderBy: { created_at: 'desc' },
+          include: {
+            _count: { select: { order_items: true } }
+          }
+        },
+        blogs: {
+          take: 50,
+          orderBy: { created_at: 'desc' },
+          include: {
+            author: { select: { full_name: true, email: true, avatar_url: true } }
+          }
+        },
+        emergency_requests: {
+          orderBy: { created_at: 'desc' }
+        },
         _count: {
           select: {
-            orders: { where: { status: 'completed' } },
-            tickets: true
+            orders: { where: { status: { in: ['paid', 'success', 'completed'] } } },
+            tickets: true,
+            marketplace_listings: true
           }
         }
       }
@@ -176,8 +251,147 @@ const getEventById = async (req, res) => {
       return res.status(404).json({ error: 'Không tìm thấy sự kiện.' });
     }
 
-    res.status(200).json(event);
+    // Lấy danh sách đơn hàng (Tăng giới hạn để hỗ trợ lọc/phân trang ở frontend)
+    const recentOrders = await prisma.order.findMany({
+      where: { event_id: id },
+      take: 500,
+      orderBy: { created_at: 'desc' },
+      include: {
+        customer: { select: { full_name: true, email: true } },
+        _count: { select: { items: true, merchandise_items: true } }
+      }
+    });
+
+    // Lấy log thao tác admin liên quan đến sự kiện này
+    const adminLogs = await prisma.adminActionLog.findMany({
+      where: { target_id: id },
+      orderBy: { created_at: 'desc' },
+      include: {
+        admin: { select: { full_name: true, email: true, role: true } }
+      }
+    });
+
+    // 1. Lấy toàn bộ đơn hàng thành công (Primary & Transfer)
+    const successfulOrders = await prisma.order.findMany({
+      where: { 
+        event_id: id,
+        status: { in: ['paid', 'success', 'completed'] }
+      },
+      include: {
+        items: true,
+        merchandise_items: true
+      }
+    });
+
+    // 2. Tính toán doanh thu và phí sơ cấp
+    let primaryTicketRevenue = 0;
+    let primaryMerchRevenue = 0;
+    let totalTicketsSoldCount = 0;
+    let primaryTicketPlatformFee = 0;
+    let primaryMerchPlatformFee = 0;
+    let transferFeeTotal = 0;
+
+    successfulOrders.forEach(order => {
+      if (order.order_type === 'TICKET_PURCHASE') {
+        const orderTicketSubtotal = order.items.reduce((sum, item) => sum + Number(item.subtotal), 0);
+        const orderTicketCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
+        const orderMerchSubtotal = order.merchandise_items.reduce((sum, item) => sum + Number(item.subtotal), 0);
+
+        primaryTicketRevenue += orderTicketSubtotal;
+        primaryMerchRevenue += orderMerchSubtotal;
+        totalTicketsSoldCount += orderTicketCount;
+
+        // Rule: Vé (8% + 10k/vé) + Sản phẩm (8%)
+        primaryTicketPlatformFee += (orderTicketSubtotal * 0.08) + (orderTicketCount * 10000);
+        primaryMerchPlatformFee += (orderMerchSubtotal * 0.08);
+      } else if (order.order_type === 'TICKET_TRANSFER') {
+        // Rule: Phí gas 10,000đ mỗi lần chuyển
+        transferFeeTotal += 10000;
+      }
+    });
+
+    // 3. Tính toán Chợ (Marketplace) - Resale Volume & Royalties
+    const marketplaceTransactions = await prisma.marketplaceTransaction.findMany({
+      where: { 
+        ticket: { event_id: id },
+        status: 'completed'
+      }
+    });
+
+    let resaleVolume = 0;
+    let resaleCount = marketplaceTransactions.length;
+    let secondaryPlatformFee = 0;
+    let resaleRoyalties = 0;
+
+    marketplaceTransactions.forEach(tx => {
+      const askingPrice = Number(tx.buyer_pay_amount); // Giả định buyer_pay_amount là giá niêm yết
+      resaleVolume += askingPrice;
+      // Rule: 10,000đ + 3% phí giao dịch
+      secondaryPlatformFee += 10000 + (askingPrice * 0.03);
+      // Rule: Phí bản quyền tối đa 3% cho Organizer
+      resaleRoyalties += askingPrice * (Number(event.royalty_fee_percent || 3.0) / 100);
+    });
+
+    // 4. Tổng hợp chỉ số
+    const totalPlatformProfit = primaryTicketPlatformFee + primaryMerchPlatformFee + transferFeeTotal + secondaryPlatformFee;
+    const totalOrganizerNet = (primaryTicketRevenue - primaryTicketPlatformFee) + 
+                              (primaryMerchRevenue - primaryMerchPlatformFee) + 
+                              resaleRoyalties;
+
+    const result = {
+      ...event,
+      recent_orders: recentOrders,
+      admin_logs: adminLogs,
+      financials: {
+        total_revenue: primaryTicketRevenue + primaryMerchRevenue + transferFeeTotal + resaleVolume, // Tổng doanh thu hợp nhất
+        platform_fees: totalPlatformProfit,
+        net_revenue: totalOrganizerNet,
+        breakdown: {
+          ticket_revenue_gross: primaryTicketRevenue,
+          merch_revenue_gross: primaryMerchRevenue,
+          resale_volume: resaleVolume,
+          resale_royalties: resaleRoyalties,
+          primary_platform_fees: primaryTicketPlatformFee + primaryMerchPlatformFee,
+          secondary_platform_fees: secondaryPlatformFee,
+          transfer_fees: transferFeeTotal
+        }
+      },
+      statistics: {
+        timeline: [...Array(7)].map((_, i) => {
+          const d = new Date();
+          d.setDate(d.getDate() - (6 - i));
+          const dateStr = d.toISOString().split('T')[0];
+          
+          const dayOrders = successfulOrders.filter(o => o.created_at.toISOString().split('T')[0] === dateStr);
+          const daySecondary = marketplaceTransactions.filter(t => t.created_at.toISOString().split('T')[0] === dateStr);
+
+          const tRev = dayOrders.filter(o => o.order_type === 'TICKET_PURCHASE').reduce((sum, o) => sum + o.items.reduce((s, i) => s + Number(i.subtotal), 0), 0);
+          const mRev = dayOrders.filter(o => o.order_type === 'TICKET_PURCHASE').reduce((sum, o) => sum + o.merchandise_items.reduce((s, i) => s + Number(i.subtotal), 0), 0);
+          const rVol = daySecondary.reduce((sum, t) => sum + Number(t.buyer_pay_amount), 0);
+
+          return {
+            date: dateStr.split('-').reverse().slice(0, 2).join('/'),
+            revenue: tRev + mRev + rVol,
+            tickets: tRev,
+            merch: mRev,
+            resale: rVol
+          };
+        }),
+        tier_distribution: event.ticket_tiers.map(tier => ({
+          name: tier.tier_name,
+          value: tier._count.tickets
+        })),
+        revenue_mix: [
+          { name: 'Vé sơ cấp', value: primaryTicketRevenue },
+          { name: 'Sản phẩm', value: primaryMerchRevenue },
+          { name: 'Giao dịch Resale', value: resaleVolume }
+        ].filter(d => d.value > 0)
+      }
+    };
+
+    res.status(200).json(result);
   } catch (error) {
+    console.error('Get Event Detail Error:', error);
     res.status(500).json({ error: 'Lỗi server.' });
   }
 };
