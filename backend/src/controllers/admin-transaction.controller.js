@@ -49,7 +49,7 @@ const getTransactions = async (req, res) => {
       prisma.order.findMany({
         where: orderWhere,
         include: { 
-          customer: { select: { email: true, full_name: true } }, 
+          customer: { select: { email: true, full_name: true, avatar_url: true } }, 
           event: { select: { title: true } } 
         },
         orderBy: { created_at: 'desc' }
@@ -57,7 +57,7 @@ const getTransactions = async (req, res) => {
       prisma.marketplaceTransaction.findMany({
         where: marketplaceWhere,
         include: { 
-          buyer: { select: { email: true, full_name: true } }, 
+          buyer: { select: { email: true, full_name: true, avatar_url: true } }, 
           listing: { include: { event: { select: { title: true } } } } 
         }
       })
@@ -69,6 +69,7 @@ const getTransactions = async (req, res) => {
       transaction_id: o.order_number,
       customer: o.customer.full_name || o.customer.email,
       email: o.customer.email,
+      customer_avatar: o.customer.avatar_url,
       amount: Number(o.total_amount),
       revenue: Number(o.total_amount), 
       status: o.status,
@@ -82,6 +83,7 @@ const getTransactions = async (req, res) => {
       transaction_id: `MT-${m.id.slice(0, 8)}`,
       customer: m.buyer.full_name || m.buyer.email,
       email: m.buyer.email,
+      customer_avatar: m.buyer.avatar_url,
       amount: Number(m.buyer_pay_amount),
       revenue: Number(m.platform_fee), 
       status: m.status,
