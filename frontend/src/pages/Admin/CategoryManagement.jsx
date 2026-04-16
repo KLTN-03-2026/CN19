@@ -18,7 +18,9 @@ import {
   Filter,
   Clock,
   ArrowUpDown,
-  ChevronRight
+  ChevronRight,
+  LayoutGrid,
+  List
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { adminService } from '../../services/admin.service';
@@ -42,6 +44,7 @@ const CategoryManagement = () => {
   const [isCategoryActive, setIsCategoryActive] = useState(true);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedDetailCategory, setSelectedDetailCategory] = useState(null);
+  const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
 
   useEffect(() => {
     fetchCategories();
@@ -224,153 +227,163 @@ const CategoryManagement = () => {
   };
 
   return (
-    <div className="p-1">
+    <div className="space-y-4 animate-in fade-in duration-500 max-w-[1600px] mx-auto">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-black uppercase text-gray-900 dark:text-white flex items-center space-x-3">
-            <div className="p-2 bg-neon-green/10 rounded-lg">
+          <h1 className="text-2xl font-black uppercase text-gray-900 dark:text-white flex items-center space-x-3">
+            <div className="p-2 bg-neon-green/10 rounded-xl">
               <Tags className="w-6 h-6 text-neon-green" />
             </div>
-            <span>Quản lý Danh mục Sự kiện</span>
+            <span>Quản lý Danh mục</span>
           </h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1 font-[10px] italic">
-            Quản lý các loại hình sự kiện trong hệ thống ({categories.length} danh mục)
+          <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm">
+            Phân loại và điều phối các kiểu hình sự kiện ({categories.length} loại hình).
           </p>
         </div>
 
         <button 
           onClick={() => handleOpenModal()}
-          className="flex items-center justify-center space-x-2 bg-neon-green hover:bg-neon-green/90 text-black font-bold py-3 px-6 rounded-xl transition-all shadow-lg shadow-neon-green/20"
+          className="flex items-center justify-center space-x-2 bg-neon-green hover:bg-neon-hover text-black font-black py-2.5 px-6 rounded-xl transition-all shadow-lg shadow-neon-green/10 uppercase text-xs"
         >
-          <Plus className="w-5 h-5" />
-          <span>Thêm Danh mục</span>
+          <Plus className="w-4 h-4" />
+          <span>Thêm Mới</span>
         </button>
       </div>
 
-      {/* Filter Bar */}
-      <div className="bg-white dark:bg-[#111114] p-4 rounded-2xl border border-gray-100 dark:border-white/5 mb-6 flex flex-col md:flex-row gap-4 items-center">
-        <div className="relative flex-1 w-full">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+      {/* Filter Bar - Modern & Compact */}
+      <div className="bg-white dark:bg-[#111114] p-3 rounded-2xl border border-gray-200 dark:border-white/5 flex flex-wrap items-center gap-3 shadow-sm">
+        <div className="relative flex-1 min-w-[280px]">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
           <input 
             type="text"
             placeholder="Tìm theo tên danh mục..."
-            className="w-full bg-gray-50 dark:bg-white/10 border border-gray-200 dark:border-white/20 rounded-xl py-3 pl-11 pr-4 text-sm focus:outline-none focus:border-neon-green transition-all dark:text-white text-gray-900"
+            className="w-full bg-gray-50 dark:bg-white/10 border border-gray-200 dark:border-white/10 rounded-xl py-2.5 pl-11 pr-4 text-sm focus:outline-none focus:border-neon-green/50 transition-all dark:text-white text-gray-900"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
         
-        <div className="flex items-center gap-3 w-full md:w-auto">
+        <div className="flex items-center gap-2">
           {/* Status Filter */}
-          <div className="relative w-full md:w-44">
-            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
-            <select 
-              className="w-full font-medium bg-gray-50 dark:bg-[#1a1a1e] border border-gray-200 dark:border-white/20 rounded-xl py-3 pl-9 pr-10 text-xs font-bold appearance-none focus:outline-none focus:border-neon-green transition-all dark:text-white text-gray-900 cursor-pointer"
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-            >
-              <option value="all" className="dark:bg-[#111114] font-medium">Tất cả trạng thái</option>
-              <option value="active" className="dark:bg-[#111114] font-medium">Đang hoạt động</option>
-              <option value="hidden" className="dark:bg-[#111114] font-medium">Đã ẩn</option>
-            </select>
-            <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 rotate-90 pointer-events-none" />
-          </div>
+          <select 
+            className="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 rounded-xl px-4 py-2.5 text-xs font-bold focus:outline-none focus:border-neon-green/50 cursor-pointer"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="all">Tất cả Trạng thái</option>
+            <option value="active">Hoạt động</option>
+            <option value="hidden">Đã ẩn</option>
+          </select>
  
           {/* Date Sort */}
-          <div className="relative w-full md:w-44">
-            <ArrowUpDown className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
-            <select 
-              className="w-full font-medium bg-gray-50 dark:bg-[#1a1a1e] border border-gray-200 dark:border-white/20 rounded-xl py-3 pl-9 pr-10 text-xs font-bold appearance-none focus:outline-none focus:border-neon-green transition-all dark:text-white text-gray-900 cursor-pointer"
-              value={dateSort}
-              onChange={(e) => setDateSort(e.target.value)}
+          <select 
+            className="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 rounded-xl px-4 py-2.5 text-xs font-bold focus:outline-none focus:border-neon-green/50 cursor-pointer"
+            value={dateSort}
+            onChange={(e) => setDateSort(e.target.value)}
+          >
+            <option value="newest">Mới nhất</option>
+            <option value="oldest">Cũ nhất</option>
+          </select>
+
+          {/* View Toggle */}
+          <div className="flex items-center bg-gray-50 dark:bg-white/5 p-1 rounded-xl border border-gray-200 dark:border-white/10">
+            <button 
+              onClick={() => setViewMode('list')}
+              className={`p-1.5 rounded-lg transition-all ${viewMode === 'list' ? 'bg-white dark:bg-white/10 text-neon-green shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+              title="Danh sách"
             >
-              <option value="newest" className="dark:bg-[#111114] font-medium">Mới nhất trước</option>
-              <option value="oldest" className="dark:bg-[#111114] font-medium">Cũ nhất trước</option>
-            </select>
-            <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 rotate-90 pointer-events-none" />
+              <List className="w-4 h-4" />
+            </button>
+            <button 
+              onClick={() => setViewMode('grid')}
+              className={`p-1.5 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-white dark:bg-white/10 text-neon-green shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+              title="Lưới"
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </button>
           </div>
         </div>
       </div>
 
       {/* Content */}
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-20">
-          <Loader2 className="w-10 h-10 text-neon-green animate-spin mb-4" />
-          <p className="text-gray-500 dark:text-gray-400 anime-pulse">Đang tải danh mục...</p>
+        <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-200 dark:border-white/5 p-20 flex flex-col items-center justify-center">
+          <Loader2 className="w-8 h-8 text-neon-green animate-spin mb-4" />
+          <p className="text-gray-500 uppercase text-[10px] font-black tracking-widest">Đang tải dữ liệu...</p>
         </div>
-      ) : (
-        <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 overflow-hidden shadow-sm">
+      ) : viewMode === 'list' ? (
+        <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-200 dark:border-white/5 overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-gray-50/50 dark:bg-white/5 border-b border-gray-100 dark:border-white/5">
-                  <th className="px-6 py-4 text-[10px] font-black uppercase text-gray-400 tracking-wider">Tên Danh mục</th>
-                  <th className="px-6 py-4 text-[10px] font-black uppercase text-gray-400 tracking-wider text-center">Số lượng</th>
-                  <th className="px-6 py-4 text-[10px] font-black uppercase text-gray-400 tracking-wider text-center">Trạng thái</th>
-                  <th className="px-6 py-4 text-[10px] font-black uppercase text-gray-400 tracking-wider text-center">Ngày tạo</th>
-                  <th className="px-6 py-4 text-[10px] font-black uppercase text-gray-400 tracking-wider text-right">Thao tác</th>
+                <tr className="bg-gray-50 dark:bg-white/5 border-b border-gray-200 dark:border-white/5">
+                  <th className="px-6 py-4 text-xs font-black uppercase text-gray-500">Danh mục</th>
+                  <th className="px-6 py-4 text-xs font-black uppercase text-gray-500 text-center">Số lượng sự kiện</th>
+                  <th className="px-6 py-4 text-xs font-black uppercase text-gray-500 text-center">Trạng thái</th>
+                  <th className="px-6 py-4 text-xs font-black uppercase text-gray-500 text-center">Ngày khởi tạo</th>
+                  <th className="px-6 py-4 text-xs font-black uppercase text-gray-500 text-right">Thao tác</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-white/5">
                 {filteredCategories.length > 0 ? filteredCategories.map((c) => (
-                  <tr key={c.id} className="hover:bg-gray-50/50 dark:hover:bg-white/5 transition-colors group">
+                  <tr key={c.id} className="hover:bg-gray-50 dark:hover:bg-white/[0.01] transition-all group">
                     <td className="px-6 py-4">
                       <div className="flex items-center space-x-3">
-                        <div className="w-12 h-12 rounded-xl bg-gray-100 dark:bg-white/5 flex items-center justify-center group-hover:bg-neon-green/10 transition-all overflow-hidden border border-gray-100 dark:border-white/10">
+                        <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-white/5 flex items-center justify-center group-hover:bg-neon-green/10 transition-all overflow-hidden border border-gray-200 dark:border-white/10 group-hover:border-neon-green/20">
                           {c.image_url ? (
                             <img src={c.image_url} alt={c.name} className="w-full h-full object-cover" />
                           ) : (
                             <Calendar className="w-5 h-5 text-gray-400 group-hover:text-neon-green" />
                           )}
                         </div>
-                        <span className="font-bold text-gray-900 dark:text-white">{c.name}</span>
+                        <span className="text-sm font-bold text-gray-900 dark:text-white uppercase">{c.name}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <span className="px-3 py-1 bg-blue-500/10 text-blue-500 rounded-full text-xs font-black">
+                      <span className="px-3 py-1 bg-blue-500/10 text-blue-500 rounded-full text-[10px] font-black uppercase border border-blue-500/10">
                         {c._count.events} Sự kiện
                       </span>
                     </td>
                     <td className="px-6 py-4 text-center">
                       <button
                         onClick={(e) => {
-                          e.stopPropagation();
-                          toggleStatus(c);
+                           e.stopPropagation();
+                           toggleStatus(c);
                         }}
-                        className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase transition-all hover:scale-105 active:scale-95 ${
-                          c.is_active 
-                          ? 'bg-green-500/10 text-green-500' 
-                          : 'bg-red-500/10 text-red-500'
+                        className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase transition-all shadow-sm ${
+                           c.is_active 
+                           ? 'bg-green-500/10 text-green-500 border border-green-500/10 hover:bg-green-500/20' 
+                           : 'bg-red-500/10 text-red-500 border border-red-500/10 hover:bg-red-500/20'
                         }`}
                       >
-                        {c.is_active ? 'Đang hoạt động' : 'Đã ẩn'}
+                        {c.is_active ? 'Hoạt động' : 'Đã ẩn'}
                       </button>
                     </td>
                     <td className="px-6 py-4 text-center">
-                      <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                      <span className="text-xs font-bold text-gray-400">
                         {new Date(c.created_at).toLocaleDateString('vi-VN')}
                       </span>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center justify-end space-x-2">
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end space-x-1.5">
                         <button 
                           onClick={() => handleOpenDetail(c)}
-                          className="p-2 text-gray-400 hover:text-neon-green hover:bg-neon-green/10 rounded-lg transition-all"
-                          title="Xem chi tiết"
+                          className="p-2 bg-gray-50 dark:bg-white/5 text-gray-400 hover:text-neon-green hover:bg-neon-green/10 rounded-lg border border-transparent dark:border-white/5 transition-all shadow-sm"
+                          title="Chi tiết"
                         >
                           <Eye className="w-4 h-4" />
                         </button>
                         <button 
                           onClick={() => handleOpenModal(c)}
-                          className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-500/10 rounded-lg transition-all"
+                          className="p-2 bg-gray-50 dark:bg-white/5 text-gray-400 hover:text-blue-500 hover:bg-blue-500/10 rounded-lg border border-transparent dark:border-white/5 transition-all shadow-sm"
                           title="Chỉnh sửa"
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
                         <button 
                           onClick={() => handleDelete(c.id)}
-                          className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
+                          className="p-2 bg-gray-50 dark:bg-white/5 text-gray-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg border border-transparent dark:border-white/5 shadow-sm transition-all"
                           title="Xóa"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -380,17 +393,75 @@ const CategoryManagement = () => {
                   </tr>
                 )) : (
                   <tr>
-                    <td colSpan="4" className="px-6 py-20 text-center">
-                      <div className="flex flex-col items-center">
-                        <AlertCircle className="w-12 h-12 text-gray-300 dark:text-gray-700 mb-4" />
-                        <p className="text-gray-500">Không tìm thấy danh mục nào phù hợp</p>
-                      </div>
+                    <td colSpan="5" className="px-6 py-20 text-center opacity-50 italic text-sm">
+                      Không có danh mục nào.
                     </td>
                   </tr>
                 )}
               </tbody>
             </table>
           </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {filteredCategories.length > 0 ? filteredCategories.map((c) => (
+            <div key={c.id} className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-200 dark:border-white/5 overflow-hidden hover:border-neon-green/30 transition-all group flex flex-col h-full shadow-sm">
+              <div className="relative aspect-video overflow-hidden bg-gray-100 dark:bg-white/5">
+                {c.image_url ? (
+                  <img src={c.image_url} alt={c.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-gray-300 dark:text-gray-700">
+                    <Tags className="w-12 h-12" />
+                  </div>
+                )}
+                <div className="absolute top-3 right-3 flex space-x-2">
+                  <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase backdrop-blur-md ${
+                    c.is_active ? 'bg-green-500/80 text-white' : 'bg-red-500/80 text-white'
+                  }`}>
+                    {c.is_active ? 'Hoạt động' : 'Đã ẩn'}
+                  </span>
+                </div>
+              </div>
+              <div className="p-5 flex-1 flex flex-col">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-bold text-gray-900 dark:text-white uppercase truncate flex-1 mr-2">{c.name}</h3>
+                  <span className="text-[10px] font-black text-blue-500 bg-blue-500/10 px-2 py-0.5 rounded-full whitespace-nowrap">
+                    {c._count.events} Sự kiện
+                  </span>
+                </div>
+                <div className="mt-auto pt-4 flex items-center justify-between border-t border-gray-100 dark:border-white/5">
+                   <span className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">Ngày tạo: {new Date(c.created_at).toLocaleDateString('vi-VN')}</span>
+                   <div className="flex items-center space-x-1">
+                      <button 
+                        onClick={() => handleOpenDetail(c)}
+                        className="p-2 text-gray-400 hover:text-neon-green hover:bg-neon-green/10 rounded-lg transition-all"
+                        title="Chi tiết"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                      <button 
+                        onClick={() => handleOpenModal(c)}
+                        className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-500/10 rounded-lg transition-all"
+                        title="Chỉnh sửa"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button 
+                         onClick={() => handleDelete(c.id)}
+                         className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
+                         title="Xóa"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                   </div>
+                </div>
+              </div>
+            </div>
+          )) : (
+            <div className="col-span-full py-20 text-center opacity-50 italic text-sm">
+              Không có danh mục nào.
+            </div>
+          )}
         </div>
       )}
 
@@ -410,7 +481,7 @@ const CategoryManagement = () => {
             <form onSubmit={handleSubmit} className="space-y-5">
               {/* Ảnh bìa */}
               <div>
-                <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-3 ml-1">
+                <label className="block text-xs font-black text-gray-400 uppercase mb-3 ml-1">
                   Ảnh bìa danh mục
                 </label>
                 <div 
@@ -434,7 +505,7 @@ const CategoryManagement = () => {
                   ) : (
                     <div className="flex flex-col items-center justify-center h-full text-gray-400">
                       <ImageIcon className="w-10 h-10 mb-2" />
-                      <span className="text-xs font-bold uppercase tracking-tighter">Nhấn để tải ảnh</span>
+                      <span className="text-xs font-bold uppercase">Nhấn để tải ảnh</span>
                     </div>
                   )}
                   <input 
@@ -448,7 +519,7 @@ const CategoryManagement = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-3 ml-1">
+                <label className="block text-xs font-black text-gray-400 uppercase mb-3 ml-1">
                   Tên Danh mục
                 </label>
                 <input 
@@ -551,7 +622,7 @@ const CategoryManagement = () => {
             <div className="p-8">
               <div className="grid grid-cols-2 gap-6">
                 <div className="space-y-1">
-                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                  <span className="text-[10px] font-black text-gray-400 uppercase flex items-center gap-2">
                     <Calendar className="w-3 h-3" /> Ngày tạo
                   </span>
                   <p className="text-sm font-bold text-gray-900 dark:text-white">
@@ -561,7 +632,7 @@ const CategoryManagement = () => {
                   </p>
                 </div>
                 <div className="space-y-1">
-                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                  <span className="text-[10px] font-black text-gray-400 uppercase flex items-center gap-2">
                     <Clock className="w-3 h-3" /> Cập nhật cuối
                   </span>
                   <p className="text-sm font-bold text-gray-900 dark:text-white">
@@ -571,7 +642,7 @@ const CategoryManagement = () => {
                   </p>
                 </div>
                 <div className="space-y-1">
-                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                  <span className="text-[10px] font-black text-gray-400 uppercase flex items-center gap-2">
                     <Tags className="w-3 h-3" /> Quy mô
                   </span>
                   <p className="text-sm font-bold text-gray-900 dark:text-white">
@@ -579,7 +650,7 @@ const CategoryManagement = () => {
                   </p>
                 </div>
                 <div className="space-y-1">
-                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                  <span className="text-[10px] font-black text-gray-400 uppercase flex items-center gap-2">
                     <AlertCircle className="w-3 h-3" /> ID Danh mục
                   </span>
                   <p className="text-xs font-mono text-gray-500 break-all">
