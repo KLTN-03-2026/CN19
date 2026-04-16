@@ -64,6 +64,10 @@ export const adminService = {
     const response = await api.put(`/admin/events/${id}/force-cancel`, data);
     return response.data;
   },
+  toggleFeaturedEvent: async (id) => {
+    const response = await api.patch(`/admin/events/${id}/toggle-featured`);
+    return response.data;
+  },
 
   // Quản lý Sản phẩm (Merchandise)
   getMerchandise: async (params) => {

@@ -28,7 +28,11 @@ const sendRegisterOtp = async (req, res) => {
         decision: aiAnalysis.isBot ? 'BLOCK' : 'ALLOW',
         ip_address: botService.getClientIp(req),
         user_agent: req.headers['user-agent'],
-        detection_details: aiAnalysis.details
+        detection_details: {
+          details: aiAnalysis.details,
+          recaptchaScore: aiAnalysis.recaptchaScore,
+          aiRiskScore: aiAnalysis.aiRiskScore
+        }
       }
     }).catch(err => console.error('Log error:', err));
 
@@ -165,7 +169,11 @@ const login = async (req, res) => {
         decision: aiAnalysis.isBot ? 'BLOCK' : 'ALLOW',
         ip_address: botService.getClientIp(req),
         user_agent: req.headers['user-agent'],
-        detection_details: aiAnalysis.details
+        detection_details: {
+          details: aiAnalysis.details,
+          recaptchaScore: aiAnalysis.recaptchaScore,
+          aiRiskScore: aiAnalysis.aiRiskScore
+        }
       }
     }).catch((logErr) => {
       console.error('[LOGIN DEBUG] Failed to save bot log to DB:', logErr.message);
@@ -233,6 +241,7 @@ const login = async (req, res) => {
         full_name: user.full_name,
         avatar_url: user.avatar_url,
         date_of_birth: user.date_of_birth,
+        permissions: user.permissions || [],
         organizer_profile: user.organizer_profile
       }
     });
@@ -264,7 +273,11 @@ const sendOrganizerOtp = async (req, res) => {
         decision: aiAnalysis.isBot ? 'BLOCK' : 'ALLOW',
         ip_address: botService.getClientIp(req),
         user_agent: req.headers['user-agent'],
-        detection_details: aiAnalysis.details
+        detection_details: {
+          details: aiAnalysis.details,
+          recaptchaScore: aiAnalysis.recaptchaScore,
+          aiRiskScore: aiAnalysis.aiRiskScore
+        }
       }
     }).catch(() => {});
 
@@ -273,12 +286,23 @@ const sendOrganizerOtp = async (req, res) => {
     }
 
     // Nếu là Customer đã đăng nhập nâng cấp thì kiểm tra tồn tại qua existing_user_id
-    // Nếu là User mới hoàn toàn thì kiểm tra Email/SĐT
-    if (!existing_user_id) {
+    if (existing_user_id) {
+      const user = await prisma.user.findUnique({ where: { id: existing_user_id } });
+      if (user?.role === 'admin') {
+        return res.status(400).json({ error: 'Tài khoản Admin không cần đăng ký Ban tổ chức.' });
+      }
+      if (user?.role === 'organizer') {
+        return res.status(400).json({ error: 'Tài khoản này đã là Ban tổ chức rồi.' });
+      }
+    } else {
+      // Nếu là User mới hoàn toàn thì kiểm tra Email/SĐT
       const existing = await prisma.user.findFirst({
         where: { OR: [{ email }, { phone_number }] }
       });
-      if (existing) return res.status(400).json({ error: 'Email hoặc SĐT đã tồn tại.' });
+      if (existing) {
+        if (existing.role === 'admin') return res.status(400).json({ error: 'Email này thuộc về quản trị viên, không thể đăng ký thêm.' });
+        return res.status(400).json({ error: 'Email hoặc SĐT đã tồn tại.' });
+      }
     }
 
     // Kiểm tra đã có OTP pending cho email này chưa (tránh spam)
@@ -521,6 +545,7 @@ const googleLogin = async (req, res) => {
         avatar_url: user.avatar_url,
         date_of_birth: user.date_of_birth,
         wallet_address: user.wallet_address,
+        permissions: user.permissions || [],
         organizer_profile: user.organizer_profile
       }
     });
@@ -552,7 +577,11 @@ const forgotPassword = async (req, res) => {
         decision: aiAnalysis.isBot ? 'BLOCK' : 'ALLOW',
         ip_address: botService.getClientIp(req),
         user_agent: req.headers['user-agent'],
-        detection_details: aiAnalysis.details
+        detection_details: {
+          details: aiAnalysis.details,
+          recaptchaScore: aiAnalysis.recaptchaScore,
+          aiRiskScore: aiAnalysis.aiRiskScore
+        }
       }
     }).catch(() => {});
 

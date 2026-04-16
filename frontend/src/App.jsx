@@ -72,16 +72,32 @@ import CouponDetail from './pages/Admin/CouponDetail';
 import TransactionManagement from './pages/Admin/TransactionManagement';
 import TransactionDetail from './pages/Admin/TransactionDetail';
 import AdminSettlementManagement from './pages/Admin/AdminSettlementManagement';
+import FraudAlerts from './pages/Admin/FraudAlerts';
 
 
 // Component Bảo vệ Route theo Role
 // @ts-ignore
 import { useAuthStore } from './store/useAuthStore';
 
-const ProtectedRoute = ({ children, allowedRoles }) => {
+const ProtectedRoute = ({ children, allowedRoles, requiredPermission }) => {
   const { isAuthenticated, user } = useAuthStore();
+  
   if (!isAuthenticated) return <Navigate to="/login" replace />;
-  if (allowedRoles && !allowedRoles.includes(user?.role)) return <Navigate to="/" replace />;
+  
+  // 1. Kiểm tra Role
+  if (allowedRoles && !allowedRoles.includes(user?.role)) {
+    return <Navigate to="/" replace />;
+  }
+
+  // 2. Kiểm tra Quyền hạn (dành riêng cho Admin)
+  // Nếu có permission quy định, và user có danh sách permissions (không phải super admin trống), 
+  // thì phải có permission đó trong mảng mới cho qua.
+  if (requiredPermission && user?.role === 'admin' && user?.permissions?.length > 0) {
+    if (!user.permissions.includes(requiredPermission)) {
+      return <Navigate to="/admin/dashboard" replace />;
+    }
+  }
+
   return children;
 };
 
@@ -178,34 +194,37 @@ const router = createBrowserRouter([
       </ProtectedRoute>
     ),
     children: [
-      { path: 'dashboard', element: <Dashboard /> },
-      { path: 'users', element: <UserManagement /> },
-      { path: 'users/:id', element: <UserDetail /> },
-      { path: 'events', element: <EventManagement /> },
-      { path: 'events/:id', element: <AdminEventDetail /> },
-      { path: 'categories', element: <CategoryManagement /> },
-      { path: 'categories/:id', element: <CategoryDetail /> },
-      { path: 'products', element: <ProductManagement /> },
-      { path: 'products/:id', element: <ProductDetail /> },
-      { path: 'blog', element: <AdminBlogManagement /> },
-      { path: 'blog/create', element: <AdminCreateBlog /> },
-      { path: 'coupons', element: <CouponManagement /> },
-      { path: 'coupons/create', element: <CreateCoupon /> },
-      { path: 'coupons/edit/:id', element: <CreateCoupon /> },
-      { path: 'coupons/:id', element: <CouponDetail /> },
-      { path: 'refunds', element: <div className="text-2xl font-black">Yêu cầu Hoàn tiền (Coming Soon)</div> },
-      { path: 'fraud', element: <div className="text-2xl font-black">Cảnh báo Gian lận (Coming Soon)</div> },
-      { path: 'transactions', element: <TransactionManagement /> },
-      { path: 'transactions/:type/:id', element: <TransactionDetail /> },
-      { path: 'settlements', element: <AdminSettlementManagement /> },
-      { path: 'settings', element: <div className="text-2xl font-black">Cấu hình Hệ thống (Coming Soon)</div> },
+      { path: 'dashboard', element: <ProtectedRoute requiredPermission="dashboard"><Dashboard /></ProtectedRoute> },
+      { path: 'users', element: <ProtectedRoute requiredPermission="users"><UserManagement /></ProtectedRoute> },
+      { path: 'admins', element: <ProtectedRoute requiredPermission="admins"><UserManagement /></ProtectedRoute> }, 
+      { path: 'users/:id', element: <ProtectedRoute requiredPermission="users"><UserDetail /></ProtectedRoute> },
+      { path: 'events', element: <ProtectedRoute requiredPermission="events"><EventManagement /></ProtectedRoute> },
+      { path: 'events/:id', element: <ProtectedRoute requiredPermission="events"><AdminEventDetail /></ProtectedRoute> },
+      { path: 'categories', element: <ProtectedRoute requiredPermission="categories"><CategoryManagement /></ProtectedRoute> },
+      { path: 'categories/:id', element: <ProtectedRoute requiredPermission="categories"><CategoryDetail /></ProtectedRoute> },
+      { path: 'products', element: <ProtectedRoute requiredPermission="merchandise"><ProductManagement /></ProtectedRoute> },
+      { path: 'products/:id', element: <ProtectedRoute requiredPermission="merchandise"><ProductDetail /></ProtectedRoute> },
+      { path: 'blog', element: <ProtectedRoute requiredPermission="blogs"><AdminBlogManagement /></ProtectedRoute> },
+      { path: 'blog/create', element: <ProtectedRoute requiredPermission="blogs"><AdminCreateBlog /></ProtectedRoute> },
+      { path: 'coupons', element: <ProtectedRoute requiredPermission="coupons"><CouponManagement /></ProtectedRoute> },
+      { path: 'coupons/create', element: <ProtectedRoute requiredPermission="coupons"><CreateCoupon /></ProtectedRoute> },
+      { path: 'coupons/edit/:id', element: <ProtectedRoute requiredPermission="coupons"><CreateCoupon /></ProtectedRoute> },
+      { path: 'coupons/:id', element: <ProtectedRoute requiredPermission="coupons"><CouponDetail /></ProtectedRoute> },
+      { path: 'refunds', element: <ProtectedRoute requiredPermission="refunds"><div className="text-2xl font-black">Yêu cầu Hoàn tiền (Coming Soon)</div></ProtectedRoute> },
+      { path: 'fraud', element: <ProtectedRoute requiredPermission="fraud"><FraudAlerts /></ProtectedRoute> },
+      { path: 'transactions', element: <ProtectedRoute requiredPermission="transactions"><TransactionManagement /></ProtectedRoute> },
+      { path: 'transactions/:type/:id', element: <ProtectedRoute requiredPermission="transactions"><TransactionDetail /></ProtectedRoute> },
+      { path: 'settlements', element: <ProtectedRoute requiredPermission="settlements"><AdminSettlementManagement /></ProtectedRoute> },
+      { path: 'settings', element: <ProtectedRoute requiredPermission="system"><div className="text-2xl font-black">Cấu hình Hệ thống (Coming Soon)</div></ProtectedRoute> },
+      { path: 'support', element: <ProtectedRoute requiredPermission="support"><div className="text-2xl font-black">Hỗ trợ & Khiếu nại (Coming Soon)</div></ProtectedRoute> },
+      { path: 'reports', element: <ProtectedRoute requiredPermission="dashboard"><div className="text-2xl font-black">Thống kê & Báo cáo (Coming Soon)</div></ProtectedRoute> },
       { path: '', element: <Navigate to="dashboard" replace /> }
     ]
   },
   {
     path: '/organizer',
     element: (
-      <ProtectedRoute allowedRoles={['organizer']}>
+      <ProtectedRoute allowedRoles={['organizer', 'admin']}>
         <OrganizerLayout />
       </ProtectedRoute>
     ),

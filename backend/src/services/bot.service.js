@@ -64,9 +64,9 @@ const analyzeBotBehavior = async (req, captchaToken, behaviorData, puzzleData) =
     } catch (aiErr) {
       console.warn('AI Service unavailable, falling back to basic rules.');
       const { form_fill_duration, click_speed_ms, behavior_metrics } = behaviorData || {};
-      if (form_fill_duration < 2000) aiDetails.push('Manual Rule: Form filled too fast (<2s)');
-      if (click_speed_ms > 0 && click_speed_ms < 100) aiDetails.push('Manual Rule: Click speed too fast');
-      if (behavior_metrics && !behavior_metrics.mouseDistance) aiDetails.push('Manual Rule: No mouse movement');
+      if (form_fill_duration < 2000) aiDetails.push('Quy tắc Tĩnh: Tốc độ hoàn thành biểu mẫu quá nhanh mức sinh học (<2s).');
+      if (click_speed_ms > 0 && click_speed_ms < 100) aiDetails.push('Quy tắc Tĩnh: Chạm/Click chuột nhanh bất thường, nghi ngờ công cụ tự động.');
+      if (behavior_metrics && !behavior_metrics.mouseDistance) aiDetails.push('Quy tắc Tĩnh: Không ghi nhận được vệt di chuyển chuột.');
       
       // Basic score calculation if AI is down
       if (form_fill_duration < 2000) aiRiskScore += 0.5;
