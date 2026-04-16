@@ -143,5 +143,15 @@ export const adminService = {
   getTransactionDetail: async (type, id) => {
     const response = await api.get(`/admin/transactions/${type}/${id}`);
     return response.data;
+  },
+  
+  // Quản lý Gian lận (Fraud Alerts)
+  getFraudAlerts: async () => {
+    const response = await api.get('/admin/fraud-alerts');
+    return response.data;
+  },
+  processFraudAlert: async (id, action) => {
+    const response = await api.put(`/admin/fraud-alerts/${id}/process`, { action });
+    return response.data;
   }
 };

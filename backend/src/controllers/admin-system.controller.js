@@ -49,11 +49,47 @@ const getFraudAlerts = async (req, res) => {
   try {
     const alerts = await prisma.botDetectionLog.findMany({
       orderBy: { created_at: 'desc' },
-      include: { user: { select: { email: true } }, order: { select: { order_number: true } } }
+      include: { 
+        user: { 
+          select: { 
+            id: true,
+            email: true, 
+            full_name: true,
+            status: true,
+            avatar_url: true
+          } 
+        }, 
+        order: { select: { order_number: true } } 
+      }
     });
-    res.status(200).json({ data: alerts });
+
+    // Tính toán thống kê nhanh cho Dashboard
+    const totalBlocks = await prisma.botDetectionLog.count({ where: { decision: 'BLOCK' } });
+    const highRiskAlerts = await prisma.botDetectionLog.count({
+      where: { risk_score: { gt: 0.7 } }
+    });
+    
+    // Tỉ lệ chặn gần đây (trong 24h qua)
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const recentBlocks = await prisma.botDetectionLog.count({
+      where: { 
+        decision: 'BLOCK',
+        created_at: { gte: yesterday }
+      }
+    });
+
+    res.status(200).json({ 
+      data: alerts,
+      stats: {
+        total_blocks: totalBlocks,
+        high_risk_count: highRiskAlerts,
+        recent_blocks_24h: recentBlocks
+      }
+    });
   } catch (error) {
-    res.status(500).json({ error: 'Lỗi server.' });
+    console.error('Fraud Alerts Error:', error);
+    res.status(500).json({ error: 'Lỗi server khi lấy dữ liệu gian lận.' });
   }
 };
 

@@ -67,6 +67,12 @@ const UserManagement = () => {
   };
 
   const handleToggleStatus = async (userId, currentStatus) => {
+    const targetUser = users.find((user) => user.id === userId);
+    if (targetUser?.role === 'admin') {
+      toast.error('Không thể khóa tài khoản admin.');
+      return;
+    }
+
     const newStatus = currentStatus === 'active' ? 'banned' : 'active';
     const confirmMsg = currentStatus === 'active' 
       ? 'Bạn có chắc chắn muốn KHÓA tài khoản này?' 
@@ -268,11 +274,20 @@ const UserManagement = () => {
                   <tr key={u.id} className="hover:bg-white/[0.02] transition-colors group">
                     <td className="px-6 py-4">
                       <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-white/10 flex items-center justify-center font-bold text-neon-green border border-gray-200 dark:border-white/5">
-                          {u.email.charAt(0).toUpperCase()}
-                        </div>
+                        {u.avatar_url ? (
+                          <img
+                            src={u.avatar_url}
+                            alt={u.full_name || u.email}
+                            className="w-10 h-10 rounded-full object-cover border border-gray-200 dark:border-white/10"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-gray-100 dark:bg-white/10 flex items-center justify-center font-bold text-neon-green border border-gray-200 dark:border-white/5">
+                            {(u.full_name || u.email).charAt(0).toUpperCase()}
+                          </div>
+                        )}
                         <div className="flex-1 min-w-0">
-                          <div className="text-sm font-bold text-gray-900 dark:text-white mb-0.5 truncate">{u.email}</div>
+                          <div className="text-sm font-bold text-gray-900 dark:text-white mb-0.5 truncate">{u.full_name || u.email}</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{u.email}</div>
                           <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center space-x-2">
                              <Phone className="w-3 h-3" />
                              <span>{u.phone_number || 'N/A'}</span>
@@ -351,12 +366,15 @@ const UserManagement = () => {
                         </button>
                         <button 
                            onClick={() => handleToggleStatus(u.id, u.status)}
+                           disabled={u.role === 'admin'}
                            className={`p-2 rounded-lg transition-all border ${
-                             u.status === 'active' 
+                             u.role === 'admin'
+                               ? 'bg-gray-100 dark:bg-white/5 text-gray-400 border-gray-200 dark:border-white/10 cursor-not-allowed opacity-60'
+                               : u.status === 'active' 
                                ? 'bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500/20' 
                                : 'bg-green-500/10 text-green-500 border-green-500/20 hover:bg-green-500/20'
                            }`}
-                           title={u.status === 'active' ? 'Khóa tài khoản' : 'Mở khóa'}
+                           title={u.role === 'admin' ? 'Tài khoản admin không thể khóa' : u.status === 'active' ? 'Khóa tài khoản' : 'Mở khóa'}
                         >
                           {u.status === 'active' ? <Ban className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
                         </button>

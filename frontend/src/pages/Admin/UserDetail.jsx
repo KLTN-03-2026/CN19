@@ -39,6 +39,7 @@ const UserDetail = () => {
   const [activeTab, setActiveTab] = useState('general');
   const [eventSearch, setEventSearch] = useState('');
   const [eventStatusFilter, setEventStatusFilter] = useState('');
+  const [orderStatusFilter, setOrderStatusFilter] = useState('');
   const [selectedEvent, setSelectedEvent] = useState(null);
 
   useEffect(() => {
@@ -59,6 +60,11 @@ const UserDetail = () => {
   };
 
   const handleToggleStatus = async () => {
+    if (user.role === 'admin') {
+      toast.error('Không thể khóa tài khoản admin.');
+      return;
+    }
+
     const newStatus = user.status === 'active' ? 'banned' : 'active';
     if (window.confirm(`Bạn có chắc chắn muốn ${newStatus === 'banned' ? 'KHÓA' : 'MỞ KHÓA'} tài khoản này?`)) {
       try {
@@ -79,6 +85,33 @@ const UserDetail = () => {
   );
 
   if (!user) return null;
+
+  const ownedTickets = user.owned_tickets || [];
+  const orders = user.orders || [];
+  const botLogs = user.bot_logs || [];
+
+  const translateOrderStatus = (status) => {
+    switch ((status || '').toLowerCase()) {
+      case 'cancelled':
+        return 'Đã hủy';
+      case 'paid':
+        return 'Đã thanh toán';
+      case 'unselected':
+        return 'Chưa chọn';
+      case 'completed':
+        return 'Hoàn tất';
+      case 'pending':
+        return 'Chờ xử lý';
+      case 'failed':
+        return 'Thất bại';
+      default:
+        return status || 'Chưa cập nhật';
+    }
+  };
+
+  const filteredOrders = orderStatusFilter
+    ? orders.filter((order) => (order.status || '').toLowerCase() === orderStatusFilter.toLowerCase())
+    : orders;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -112,14 +145,17 @@ const UserDetail = () => {
         <div className="flex items-center space-x-3">
           <button 
             onClick={handleToggleStatus}
+            disabled={user.role === 'admin'}
             className={`flex items-center space-x-2 px-6 py-3 rounded-2xl font-bold text-sm transition-all shadow-lg ${
-              user.status === 'active' 
+              user.role === 'admin'
+                ? 'bg-gray-100 dark:bg-white/5 text-gray-400 border border-gray-200 dark:border-white/10 cursor-not-allowed shadow-none'
+                : user.status === 'active' 
                 ? 'bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500 hover:text-white shadow-red-500/10' 
                 : 'bg-green-500/10 text-green-500 border border-green-500/20 hover:bg-green-500 hover:text-white shadow-green-500/10'
             }`}
           >
             {user.status === 'active' ? <Ban className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
-            <span>{user.status === 'active' ? 'Khóa tài khoản' : 'Mở khóa'}</span>
+            <span>{user.role === 'admin' ? 'Tài khoản admin được bảo vệ' : user.status === 'active' ? 'Khóa tài khoản' : 'Mở khóa'}</span>
           </button>
         </div>
       </div>
@@ -130,8 +166,12 @@ const UserDetail = () => {
           <div className="bg-white dark:bg-[#111114] border border-gray-200 dark:border-white/5 rounded-[32px] overflow-hidden shadow-sm dark:shadow-2xl">
             <div className="h-24 bg-gradient-to-r from-neon-green/20 to-blue-500/20 relative">
               <div className="absolute -bottom-10 left-8">
-                <div className="w-20 h-20 rounded-[24px] bg-white dark:bg-[#1a1a1e] border-4 border-white dark:border-[#111114] flex items-center justify-center font-black text-3xl text-neon-green shadow-xl">
-                  {user.email.charAt(0).toUpperCase()}
+                <div className="w-20 h-20 rounded-[24px] bg-white dark:bg-[#1a1a1e] border-4 border-white dark:border-[#111114] flex items-center justify-center font-black text-3xl text-neon-green shadow-xl overflow-hidden">
+                  {user.avatar_url ? (
+                    <img src={user.avatar_url} alt={user.full_name || user.email} className="w-full h-full object-cover" />
+                  ) : (
+                    <span>{(user.full_name || user.email).charAt(0).toUpperCase()}</span>
+                  )}
                 </div>
               </div>
             </div>
@@ -145,11 +185,11 @@ const UserDetail = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-4 bg-gray-50 dark:bg-white/5 rounded-2xl border border-gray-100 dark:border-white/5 text-center">
                   <div className="text-[10px] uppercase font-black text-gray-400 mb-1">Vé đang có</div>
-                  <div className="text-xl font-black text-neon-green">{user.owned_tickets?.length || 0}</div>
+                  <div className="text-xl font-black text-neon-green">{ownedTickets.length}</div>
                 </div>
                 <div className="p-4 bg-gray-50 dark:bg-white/5 rounded-2xl border border-gray-100 dark:border-white/5 text-center">
                   <div className="text-[10px] uppercase font-black text-gray-400 mb-1">Đơn hàng</div>
-                  <div className="text-xl font-black text-blue-500">{user.orders?.length || 0}</div>
+                  <div className="text-xl font-black text-blue-500">{orders.length}</div>
                 </div>
               </div>
 
@@ -210,6 +250,7 @@ const UserDetail = () => {
                 { id: 'general', label: 'Thông tin chung', icon: User },
                 { id: 'tickets', label: 'Kho vé NFT', icon: Ticket },
                 { id: 'orders', label: 'Lịch sử mua', icon: ShoppingBag },
+                { id: 'bot_history', label: 'Lịch sử chống bot', icon: ShieldAlert },
                 { id: 'activity', label: 'Hoạt động', icon: ArrowRightLeft }
               ];
 
@@ -258,6 +299,12 @@ const UserDetail = () => {
                     </div>
                   </div>
                   <div className="space-y-2">
+                    <label className="text-[10px] uppercase font-black text-gray-400 tracking-widest">Ngày sinh</label>
+                    <div className="text-sm font-bold dark:text-white p-4 bg-gray-50 dark:bg-white/5 rounded-2xl border border-gray-100 dark:border-white/5">
+                      {user.date_of_birth ? new Date(user.date_of_birth).toLocaleDateString('vi-VN') : 'Chưa cập nhật'}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
                     <label className="text-[10px] uppercase font-black text-gray-400 tracking-widest">Phân quyền đặc biệt</label>
                     <div className="flex flex-wrap gap-2 pt-2">
                       {user.permissions?.length > 0 ? (
@@ -281,8 +328,8 @@ const UserDetail = () => {
                        <div className="flex items-center space-x-4 mb-4">
                           <div className="w-12 h-12 rounded-xl bg-neon-green/20 flex items-center justify-center">
                              <Building2 className="w-6 h-6 text-neon-green" />
-                          </div>
-                          <div>
+                            </div>
+                            <div className="min-w-0">
                              <div className="text-lg font-black dark:text-white">{user.organizer_profile.organization_name}</div>
                              <div className={`text-[10px] font-black uppercase ${
                                user.organizer_profile.kyc_status === 'approved' ? 'text-neon-green' : 'text-yellow-500'
@@ -385,19 +432,84 @@ const UserDetail = () => {
 
             {activeTab === 'tickets' && (
               <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                {user.owned_tickets?.length > 0 ? (
+                {ownedTickets.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {user.owned_tickets.map(t => (
-                      <div key={t.id} className="p-4 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-2xl flex items-center space-x-4">
-                        <div className="w-16 h-16 rounded-xl bg-white dark:bg-white/10 flex-shrink-0 flex items-center justify-center border border-gray-200 dark:border-white/5">
-                           <Ticket className="w-8 h-8 text-neon-green opacity-40" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm font-black text-gray-900 dark:text-white truncate mb-1">{t.event.title}</div>
-                          <div className="text-[10px] text-gray-500 flex items-center space-x-2">
-                             <span className="bg-neon-green/10 text-neon-green px-1.5 py-0.5 rounded uppercase font-black">{t.ticket_tier.tier_name}</span>
-                             <span className="font-mono">{t.ticket_number}</span>
+                    {ownedTickets.map(t => (
+                      <div key={t.id} className="p-4 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-2xl space-y-4">
+                        <div className="flex items-center space-x-4">
+                          <div className="w-16 h-16 rounded-xl bg-white dark:bg-white/10 flex-shrink-0 flex items-center justify-center border border-gray-200 dark:border-white/5 overflow-hidden">
+                            {t.event?.image_url ? (
+                              <img src={t.event.image_url} alt={t.event.title} className="w-full h-full object-cover" />
+                            ) : (
+                              <Ticket className="w-8 h-8 text-neon-green opacity-40" />
+                            )}
                           </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-black text-gray-900 dark:text-white truncate mb-1">{t.event.title}</div>
+                            <div className="text-[10px] text-gray-500 flex items-center space-x-2 flex-wrap">
+                              <span className="bg-neon-green/10 text-neon-green px-1.5 py-0.5 rounded uppercase font-black">{t.ticket_tier.tier_name}</span>
+                              {t.ticket_tier.section_name && (
+                                <span className="bg-blue-500/10 text-blue-500 px-1.5 py-0.5 rounded uppercase font-black">{t.ticket_tier.section_name}</span>
+                              )}
+                              <span className="font-mono">{t.ticket_number}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                          <div className="p-3 rounded-xl bg-white dark:bg-black/20 border border-gray-100 dark:border-white/5">
+                            <div className="text-[10px] uppercase font-black text-gray-400 mb-1">Thời gian sự kiện</div>
+                            <div className="font-bold text-gray-900 dark:text-white">
+                              {t.event?.event_date ? new Date(t.event.event_date).toLocaleDateString('vi-VN') : 'Chưa cập nhật'}
+                            </div>
+                          </div>
+                          <div className="p-3 rounded-xl bg-white dark:bg-black/20 border border-gray-100 dark:border-white/5">
+                            <div className="text-[10px] uppercase font-black text-gray-400 mb-1">Giá vé</div>
+                            <div className="font-bold text-gray-900 dark:text-white">
+                              {t.ticket_tier?.price ? `${parseFloat(t.ticket_tier.price).toLocaleString()}đ` : 'Chưa cập nhật'}
+                            </div>
+                          </div>
+                          <div className="p-3 rounded-xl bg-white dark:bg-black/20 border border-gray-100 dark:border-white/5 sm:col-span-2">
+                            <div className="text-[10px] uppercase font-black text-gray-400 mb-1">Địa điểm</div>
+                            <div className="font-bold text-gray-900 dark:text-white truncate">
+                              {t.event?.location_address || 'Chưa cập nhật địa điểm'}
+                            </div>
+                          </div>
+                          <div className="p-3 rounded-xl bg-white dark:bg-black/20 border border-gray-100 dark:border-white/5">
+                            <div className="text-[10px] uppercase font-black text-gray-400 mb-1">Đơn hàng</div>
+                            <div className="font-mono font-bold text-gray-900 dark:text-white">
+                              {t.order?.order_number || 'Chưa có mã đơn'}
+                            </div>
+                          </div>
+                          <div className="p-3 rounded-xl bg-white dark:bg-black/20 border border-gray-100 dark:border-white/5">
+                            <div className="text-[10px] uppercase font-black text-gray-400 mb-1">NFT Token ID</div>
+                            <div className="font-mono font-bold text-gray-900 dark:text-white truncate">
+                              {t.nft_token_id || 'Chưa mint'}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap gap-2">
+                          <span className="px-2 py-1 rounded-full text-[10px] font-black uppercase bg-gray-900/5 text-gray-700 dark:bg-white/10 dark:text-gray-200 border border-gray-200 dark:border-white/10">
+                            Status: {t.status}
+                          </span>
+                          <span className={`px-2 py-1 rounded-full text-[10px] font-black uppercase border ${
+                            t.is_used
+                              ? 'bg-red-500/10 text-red-500 border-red-500/20'
+                              : 'bg-green-500/10 text-green-500 border-green-500/20'
+                          }`}>
+                            {t.is_used ? 'Đã sử dụng' : 'Chưa sử dụng'}
+                          </span>
+                          {t.is_on_marketplace && (
+                            <span className="px-2 py-1 rounded-full text-[10px] font-black uppercase bg-yellow-500/10 text-yellow-600 border border-yellow-500/20">
+                              Đang trên marketplace
+                            </span>
+                          )}
+                          {t.is_transferred && (
+                            <span className="px-2 py-1 rounded-full text-[10px] font-black uppercase bg-blue-500/10 text-blue-500 border border-blue-500/20">
+                              Đã chuyển nhượng
+                            </span>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -413,32 +525,160 @@ const UserDetail = () => {
 
             {activeTab === 'orders' && (
               <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                {user.orders?.length > 0 ? (
-                  user.orders.map(o => (
-                    <div key={o.id} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-2xl group hover:border-blue-500/30 transition-all">
-                       <div className="flex items-center space-x-4">
-                          <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
-                             <ShoppingBag className="w-6 h-6" />
+                <div className="flex justify-end">
+                  <select
+                    value={orderStatusFilter}
+                    onChange={(e) => setOrderStatusFilter(e.target.value)}
+                    className="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:border-neon-green"
+                  >
+                    <option value="">Tất cả trạng thái</option>
+                    <option value="paid">Đã thanh toán</option>
+                    <option value="cancelled">Đã hủy</option>
+                    <option value="unselected">Chưa chọn</option>
+                    <option value="completed">Hoàn tất</option>
+                    <option value="pending">Chờ xử lý</option>
+                    <option value="failed">Thất bại</option>
+                  </select>
+                </div>
+                {filteredOrders.length > 0 ? (
+                  filteredOrders.map(o => (
+                    <div key={o.id} className="p-4 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-2xl group hover:border-blue-500/30 transition-all space-y-4">
+                       <div className="flex items-center justify-between gap-4">
+                          <div className="flex items-center space-x-4 min-w-0">
+                            <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
+                               <ShoppingBag className="w-6 h-6" />
                           </div>
-                          <div>
+                          <div className="min-w-0">
                              <div className="text-sm font-bold text-gray-900 dark:text-white">Đơn hàng #{o.order_number}</div>
-                             <div className="text-xs text-gray-500">{new Date(o.created_at).toLocaleString('vi-VN')}</div>
+                               <div className="text-xs text-gray-500">{new Date(o.created_at).toLocaleString('vi-VN')}</div>
+                               <div className="text-xs text-gray-500 truncate mt-1">{o.event?.title || 'Chưa gắn sự kiện'}</div>
                           </div>
                        </div>
-                       <div className="text-right">
-                          <div className="text-sm font-black dark:text-white">{parseFloat(o.total_amount).toLocaleString()}đ</div>
-                          <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded ${
-                            o.status === 'completed' ? 'bg-neon-green/10 text-neon-green' : 'bg-yellow-500/10 text-yellow-500'
-                          }`}>
-                            {o.status}
-                          </span>
-                       </div>
+                       <div className="flex items-center space-x-3">
+                          <button
+                            onClick={() => navigate(`/admin/transactions/ORDER/${o.id}`)}
+                            className="p-2 rounded-xl border border-gray-200 dark:border-white/10 text-gray-500 dark:text-gray-400 hover:text-neon-green hover:border-neon-green/30 hover:bg-neon-green/5 transition-all"
+                            title="Xem chi tiết giao dịch"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <div className="text-right">
+                            <div className="text-sm font-black dark:text-white">{parseFloat(o.total_amount).toLocaleString()}đ</div>
+                            <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded ${
+                              ['completed', 'paid'].includes((o.status || '').toLowerCase())
+                                ? 'bg-neon-green/10 text-neon-green'
+                                : (o.status || '').toLowerCase() === 'cancelled'
+                                  ? 'bg-red-500/10 text-red-500'
+                                  : 'bg-yellow-500/10 text-yellow-500'
+                            }`}>
+                              {translateOrderStatus(o.status)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                          <div className="p-3 rounded-xl bg-white dark:bg-black/20 border border-gray-100 dark:border-white/5">
+                            <div className="text-[10px] uppercase font-black text-gray-400 mb-1">Sự kiện</div>
+                            <div className="font-bold text-gray-900 dark:text-white truncate">{o.event?.title || 'Chưa cập nhật'}</div>
+                          </div>
+                          <div className="p-3 rounded-xl bg-white dark:bg-black/20 border border-gray-100 dark:border-white/5">
+                            <div className="text-[10px] uppercase font-black text-gray-400 mb-1">Thời gian</div>
+                            <div className="font-bold text-gray-900 dark:text-white">
+                              {o.event?.event_date ? new Date(o.event.event_date).toLocaleDateString('vi-VN') : 'Chưa cập nhật'}
+                            </div>
+                          </div>
+                          <div className="p-3 rounded-xl bg-white dark:bg-black/20 border border-gray-100 dark:border-white/5">
+                            <div className="text-[10px] uppercase font-black text-gray-400 mb-1">Thanh toán</div>
+                            <div className="font-bold text-gray-900 dark:text-white uppercase">{o.payment_method || 'Chưa cập nhật'}</div>
+                          </div>
+                          <div className="p-3 rounded-xl bg-white dark:bg-black/20 border border-gray-100 dark:border-white/5">
+                            <div className="text-[10px] uppercase font-black text-gray-400 mb-1">Số lượng vé</div>
+                            <div className="font-bold text-gray-900 dark:text-white">
+                              {o.items?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 0}
+                            </div>
+                          </div>
+                          <div className="p-3 rounded-xl bg-white dark:bg-black/20 border border-gray-100 dark:border-white/5 lg:col-span-2">
+                            <div className="text-[10px] uppercase font-black text-gray-400 mb-1">Hạng vé</div>
+                            <div className="font-bold text-gray-900 dark:text-white">
+                              {o.items?.length
+                                ? o.items.map((item) => {
+                                    const tier = item.ticket_tier?.tier_name || 'Hạng chưa rõ';
+                                    const section = item.ticket_tier?.section_name ? ` / ${item.ticket_tier.section_name}` : '';
+                                    return `${tier}${section} x${item.quantity}`;
+                                  }).join(', ')
+                                : 'Chưa có chi tiết vé'}
+                            </div>
+                          </div>
+                          <div className="p-3 rounded-xl bg-white dark:bg-black/20 border border-gray-100 dark:border-white/5 lg:col-span-2">
+                            <div className="text-[10px] uppercase font-black text-gray-400 mb-1">Địa điểm</div>
+                            <div className="font-bold text-gray-900 dark:text-white truncate">
+                              {o.event?.location_address || 'Chưa cập nhật địa điểm'}
+                            </div>
+                          </div>
+                        </div>
                     </div>
                   ))
                 ) : (
                   <div className="flex flex-col items-center justify-center py-20 opacity-30 text-center">
                     <ShoppingBag className="w-16 h-16 mb-4" />
                     <p className="text-sm font-bold uppercase tracking-widest">Chưa có giao dịch mua vé</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'bot_history' && (
+              <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                {botLogs.length > 0 ? (
+                  botLogs.map((log) => (
+                    <div key={log.id} className="p-4 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-2xl space-y-4">
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="min-w-0">
+                          <div className="text-sm font-bold text-gray-900 dark:text-white">
+                            {log.event_type || 'Sự kiện chống bot'}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {new Date(log.created_at).toLocaleString('vi-VN')}
+                          </div>
+                          <div className="text-xs text-gray-500 truncate mt-1">
+                            {log.order?.order_number ? `Đơn hàng: ${log.order.order_number}` : (log.ip_address || 'Không có IP')}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className={`text-xs font-black uppercase px-2 py-1 rounded-full inline-flex ${
+                            log.decision === 'BLOCK'
+                              ? 'bg-red-500/10 text-red-500 border border-red-500/20'
+                              : 'bg-green-500/10 text-green-500 border border-green-500/20'
+                          }`}>
+                            {log.decision === 'BLOCK' ? 'Đã chặn' : 'Cho phép'}
+                          </div>
+                          <div className="text-sm font-black text-gray-900 dark:text-white mt-2">
+                            Risk: {Number(log.risk_score || 0).toFixed(2)}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                        <div className="p-3 rounded-xl bg-white dark:bg-black/20 border border-gray-100 dark:border-white/5">
+                          <div className="text-[10px] uppercase font-black text-gray-400 mb-1">Tốc độ click</div>
+                          <div className="font-bold text-gray-900 dark:text-white">{log.click_speed_ms || 0} ms</div>
+                        </div>
+                        <div className="p-3 rounded-xl bg-white dark:bg-black/20 border border-gray-100 dark:border-white/5">
+                          <div className="text-[10px] uppercase font-black text-gray-400 mb-1">Điền form</div>
+                          <div className="font-bold text-gray-900 dark:text-white">{log.form_fill_duration || 0} ms</div>
+                        </div>
+                        <div className="p-3 rounded-xl bg-white dark:bg-black/20 border border-gray-100 dark:border-white/5 lg:col-span-2">
+                          <div className="text-[10px] uppercase font-black text-gray-400 mb-1">Nguồn truy cập</div>
+                          <div className="font-bold text-gray-900 dark:text-white truncate">{log.ip_address || 'Không có IP'}</div>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-20 opacity-30 text-center">
+                    <ShieldAlert className="w-16 h-16 mb-4" />
+                    <p className="text-sm font-bold uppercase tracking-widest">Chưa có lịch sử chống bot</p>
                   </div>
                 )}
               </div>

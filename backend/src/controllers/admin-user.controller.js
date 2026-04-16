@@ -40,7 +40,9 @@ const getUsers = async (req, res) => {
         select: {
           id: true,
           email: true,
+          full_name: true,
           phone_number: true,
+          avatar_url: true,
           role: true,
           status: true,
           created_at: true,
@@ -160,6 +162,8 @@ const getUserById = async (req, res) => {
       include: {
         organizer_profile: {
           include: {
+            wallet_transactions: { orderBy: { created_at: 'desc' } },
+            withdrawal_requests: { orderBy: { created_at: 'desc' } },
             events: {
               select: { 
                 id: true, 
@@ -175,30 +179,150 @@ const getUserById = async (req, res) => {
                 category: { select: { name: true } }
               },
               orderBy: { event_date: 'desc' }
+            },
+            merchandise: {
+              include: {
+                event: { select: { title: true } },
+                order_items: {
+                  include: {
+                    order: { select: { status: true } }
+                  }
+                }
+              },
+              orderBy: { created_at: 'desc' }
             }
           }
+        },
+        authored_blogs: {
+          include: {
+            event: { select: { title: true } }
+          },
+          orderBy: { created_at: 'desc' }
         },
         orders: {
           include: {
             event: {
-              select: { id: true, title: true, event_date: true, image_url: true }
+              select: {
+                id: true,
+                title: true,
+                event_date: true,
+                event_time: true,
+                image_url: true,
+                location_address: true
+              }
+            },
+            items: {
+              include: {
+                ticket_tier: {
+                  select: {
+                    tier_name: true,
+                    section_name: true
+                  }
+                }
+              }
+            },
+            merchandise_items: {
+              include: {
+                merchandise: {
+                  select: {
+                    name: true,
+                    image_url: true
+                  }
+                }
+              }
             }
           },
-          orderBy: { created_at: 'desc' },
-          take: 10 // Chỉ lấy 10 đơn gần nhất để tránh overload, có thể mở rộng sau
+          orderBy: { created_at: 'desc' }
+          // take: 10 // Chỉ lấy 10 đơn gần nhất để tránh overload, có thể mở rộng sau
+        },
+        bot_logs: {
+          include: {
+            order: {
+              select: {
+                id: true,
+                order_number: true
+              }
+            }
+          },
+          orderBy: { created_at: 'desc' }
+          // take: 20
         },
         owned_tickets: {
           include: {
-            event: { select: { title: true, image_url: true } },
-            ticket_tier: { select: { tier_name: true, price: true } }
-          },
-          where: { status: 'active' } // Chỉ lấy vé đang có hiệu lực
+            event: {
+              select: {
+                id: true,
+                title: true,
+                event_date: true,
+                event_time: true,
+                location_address: true,
+                image_url: true
+              }
+            },
+            ticket_tier: {
+              select: {
+                tier_name: true,
+                section_name: true,
+                price: true
+              }
+            },
+            order: {
+              select: {
+                id: true,
+                order_number: true
+              }
+            }
+          }
         },
         listings: {
           include: {
-            event: { select: { title: true } },
             ticket: { select: { ticket_number: true } }
           }
+        },
+        buyer_transactions: {
+          include: {
+            ticket: { include: { event: { select: { title: true } } } },
+            listing: {
+               include: {
+                 event: { select: { title: true } }
+               }
+            },
+            seller: { select: { full_name: true, email: true } }
+          },
+          orderBy: { status: 'desc' }
+        },
+        comments: {
+          include: {
+            blog: { select: { title: true } }
+          },
+          orderBy: { created_at: 'desc' }
+        },
+        likes: {
+          include: {
+            blog: { select: { title: true } }
+          },
+          orderBy: { created_at: 'desc' }
+        },
+        transfers_sent: {
+          include: {
+            ticket: { include: { event: { select: { title: true } } } },
+            receiver: { select: { full_name: true, email: true } }
+          },
+          orderBy: { requested_at: 'desc' }
+        },
+        transfers_received: {
+          include: {
+            ticket: { include: { event: { select: { title: true } } } },
+            sender: { select: { full_name: true, email: true } }
+          },
+          orderBy: { requested_at: 'desc' }
+        },
+        seller_transactions: {
+          include: {
+            ticket: { include: { event: { select: { title: true } } } },
+            buyer: { select: { full_name: true, email: true } }
+          },
+          orderBy: { status: 'desc' }
         }
       }
     });
@@ -224,12 +348,102 @@ const getUserById = async (req, res) => {
                       location_address: true, description: true, category: { select: { name: true } }
                     },
                     orderBy: { event_date: 'desc' }
+                  },
+                  merchandise: {
+                    include: {
+                      event: { select: { title: true } },
+                      order_items: {
+                        include: {
+                          order: { select: { status: true } }
+                        }
+                      }
+                    },
+                    orderBy: { created_at: 'desc' }
                   }
                 }
               },
-              orders: { include: { event: { select: { id: true, title: true, event_date: true, image_url: true } } }, orderBy: { created_at: 'desc' }, take: 10 },
-              owned_tickets: { include: { event: { select: { title: true, image_url: true } }, ticket_tier: { select: { tier_name: true, price: true } } }, where: { status: 'active' } },
-              listings: { include: { event: { select: { title: true } }, ticket: { select: { ticket_number: true } } } }
+              authored_blogs: {
+                include: {
+                  event: { select: { title: true } }
+                },
+                orderBy: { created_at: 'desc' }
+              },
+              orders: {
+                include: {
+                  event: {
+                    select: {
+                      id: true,
+                      title: true,
+                      event_date: true,
+                      event_time: true,
+                      image_url: true,
+                      location_address: true
+                    }
+                  },
+                  items: {
+                    include: {
+                      ticket_tier: {
+                        select: {
+                          tier_name: true,
+                          section_name: true
+                        }
+                      }
+                    }
+                  }
+                },
+                orderBy: { created_at: 'desc' }
+                // take: 10
+              },
+              bot_logs: {
+                include: {
+                  order: {
+                    select: {
+                      id: true,
+                      order_number: true
+                    }
+                  }
+                },
+                orderBy: { created_at: 'desc' }
+                // take: 20
+              },
+              owned_tickets: {
+                include: {
+                  event: {
+                    select: {
+                      id: true,
+                      title: true,
+                      event_date: true,
+                      event_time: true,
+                      location_address: true,
+                      image_url: true
+                    }
+                  },
+                  ticket_tier: {
+                    select: {
+                      tier_name: true,
+                      section_name: true,
+                      price: true
+                    }
+                  },
+                  order: {
+                    select: {
+                      id: true,
+                      order_number: true
+                    }
+                  }
+                }
+              },
+              listings: { include: { event: { select: { title: true } }, ticket: { select: { ticket_number: true } } } },
+              buyer_transactions: {
+                include: {
+                  ticket: { select: { ticket_number: true } },
+                  listing: {
+                    include: {
+                      event: { select: { title: true } }
+                    }
+                  }
+                }
+              }
            }
         });
       }
@@ -244,6 +458,22 @@ const getUserById = async (req, res) => {
     delete sensitiveData.wallet_private_key;
     delete sensitiveData.password_hash;
 
+    // Tính toán số lượng đã bán cho sản phẩm
+    if (sensitiveData.organizer_profile?.merchandise) {
+      sensitiveData.organizer_profile.merchandise = sensitiveData.organizer_profile.merchandise.map(m => {
+        const sold_count = (m.order_items || [])
+          .filter(oi => {
+            const status = (oi.order?.status || '').toLowerCase();
+            return status !== '' && status !== 'cancelled' && status !== 'failed';
+          })
+          .reduce((sum, oi) => sum + (oi.quantity || 0), 0);
+        
+        // Loại bỏ order_items thô để giảm size response
+        const { order_items, ...rest } = m;
+        return { ...rest, sold_count };
+      });
+    }
+
     res.status(200).json(sensitiveData);
   } catch (error) {
     console.error('Error fetching user detail:', error);
@@ -257,6 +487,19 @@ const toggleUserStatus = async (req, res) => {
     const { id } = req.params;
     const { status, reason } = req.body; // status: 'active' | 'banned'
 
+    const existingUser = await prisma.user.findUnique({
+      where: { id },
+      select: { id: true, role: true, status: true }
+    });
+
+    if (!existingUser) {
+      return res.status(404).json({ error: 'Không tìm thấy người dùng.' });
+    }
+
+    if (existingUser.role === 'admin' && status === 'banned') {
+      return res.status(403).json({ error: 'Không thể khóa tài khoản quản trị viên.' });
+    }
+
     const user = await prisma.user.update({
       where: { id },
       data: { status }
@@ -269,7 +512,7 @@ const toggleUserStatus = async (req, res) => {
         action_type: status === 'banned' ? 'ban_user' : 'unban_user',
         target_id: id,
         new_value: status,
-        old_value: user.status
+        old_value: existingUser.status
       }
     });
 
