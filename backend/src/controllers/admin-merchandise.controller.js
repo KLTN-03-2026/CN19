@@ -59,7 +59,7 @@ const getProductById = async (req, res) => {
                 status: true,
                 created_at: true,
                 customer: {
-                    select: { id: true, full_name: true, email: true }
+                    select: { id: true, full_name: true, email: true, avatar_url: true }
                 }
               }
             }
@@ -76,16 +76,55 @@ const getProductById = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Sản phẩm không tồn tại.' });
     }
 
-    // Thống kê sơ bộ
-    const totalSold = product.order_items.reduce((sum, item) => sum + item.quantity, 0);
-    const totalRevenue = product.order_items.reduce((sum, item) => sum + Number(item.subtotal), 0);
+    // Thống kê sơ bộ (Chỉ tính các giao dịch thành công)
+    const successStatuses = ['paid', 'success', 'completed'];
+    const successfulItems = product.order_items.filter(item => 
+      successStatuses.includes(item.order.status)
+    );
+
+    const totalSold = successfulItems.reduce((sum, item) => sum + item.quantity, 0);
+    const totalRevenue = successfulItems.reduce((sum, item) => sum + Number(item.subtotal), 0);
+    const netRevenue = totalRevenue * 0.92; // 92% to Organizer
+    const systemRevenue = totalRevenue * 0.08; // 8% platform fee
+
+    // Tính toán timeline 30 ngày gần nhất
+    const timeline = [];
+    const today = new Date();
+    for (let i = 29; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(today.getDate() - i);
+      const dateStr = date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
+      
+      // Lọc các order_item trong ngày này (Chỉ tính giao dịch thành công cho biểu đồ)
+      const dailySales = successfulItems.filter(item => {
+        const itemDate = new Date(item.order.created_at);
+        return itemDate.getDate() === date.getDate() && 
+               itemDate.getMonth() === date.getMonth() && 
+               itemDate.getFullYear() === date.getFullYear();
+      });
+
+      const dailyRevenue = dailySales.reduce((sum, item) => sum + Number(item.subtotal), 0);
+      const dailyQuantity = dailySales.reduce((sum, item) => sum + item.quantity, 0);
+
+      timeline.push({
+        date: dateStr,
+        fullDate: date.toISOString().split('T')[0], // Useful for precise matching if needed
+        revenue: dailyRevenue,
+        sales: dailyQuantity
+      });
+    }
 
     res.json({
       success: true,
       data: {
         ...product,
         totalSold,
-        totalRevenue
+        totalRevenue,
+        netRevenue,
+        systemCommission: systemRevenue,
+        statistics: {
+          timeline
+        }
       }
     });
   } catch (error) {
