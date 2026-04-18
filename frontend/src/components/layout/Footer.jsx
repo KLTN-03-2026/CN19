@@ -12,9 +12,11 @@ import {
   Phone
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useAuthStore } from '../../store/useAuthStore';
 
 const Footer = () => {
     const { t } = useTranslation();
+    const { isAuthenticated, user } = useAuthStore();
     const navigate = useNavigate();
     const [email, setEmail] = React.useState('');
 
@@ -92,7 +94,13 @@ const Footer = () => {
                             { key: 'events', label: 'Sự kiện', path: '/events' },
                             { key: 'marketplace', label: 'Chợ vé (Marketplace)', path: '/marketplace' },
                             { key: 'blog', label: 'Blog', path: '/blog' },
-                            { key: 'organizer', label: 'Dành cho Ban tổ chức', path: '/organizer-register' }
+                            { 
+                                key: 'organizer', 
+                                label: 'Dành cho Ban tổ chức', 
+                                path: (isAuthenticated && (user?.role === 'organizer' || user?.role === 'admin')) 
+                                    ? '/organizer/dashboard' 
+                                    : '/organizer-register' 
+                            }
                         ].map((item) => (
                             <li key={item.key}>
                                 <Link to={item.path} className="text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-neon-green dark:hover:text-neon-green transition-colors">

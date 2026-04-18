@@ -20,6 +20,10 @@ const getProfile = async (req, res) => {
         address: true,
         full_name: true,
         date_of_birth: true,
+        balance: true,
+        bank_name: true,
+        account_number: true,
+        account_holder: true,
         created_at: true,
         organizer_profile: true // Lấy thêm info BTC nếu có
       }
@@ -40,7 +44,10 @@ const getProfile = async (req, res) => {
 const updateProfile = async (req, res) => {
   try {
     const userId = req.user.userId;
-    const { full_name, phone_number, avatar_url, address, date_of_birth } = req.body;
+    const { 
+      full_name, phone_number, avatar_url, address, date_of_birth,
+      bank_name, account_number, account_holder 
+    } = req.body;
 
     // Kiểm tra số điện thoại có bị trùng không
     if (phone_number) {
@@ -59,7 +66,10 @@ const updateProfile = async (req, res) => {
         phone_number,
         avatar_url,
         address,
-        date_of_birth: date_of_birth ? new Date(date_of_birth) : undefined
+        date_of_birth: date_of_birth ? new Date(date_of_birth) : undefined,
+        bank_name,
+        account_number,
+        account_holder
       },
       select: {
         id: true,
@@ -68,7 +78,11 @@ const updateProfile = async (req, res) => {
         phone_number: true,
         address: true,
         date_of_birth: true,
-        avatar_url: true
+        avatar_url: true,
+        balance: true,
+        bank_name: true,
+        account_number: true,
+        account_holder: true
       }
     });
 
