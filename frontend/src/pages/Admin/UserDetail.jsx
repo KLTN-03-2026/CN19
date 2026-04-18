@@ -86,6 +86,7 @@ const UserDetail = () => {
   const [eventStatusFilter, setEventStatusFilter] = useState('');
   const [ticketStatusFilter, setTicketStatusFilter] = useState('');
   const [botEventTypeFilter, setBotEventTypeFilter] = useState('');
+  const [ticketOwnershipFilter, setTicketOwnershipFilter] = useState('');
   const [orderStatusFilter, setOrderStatusFilter] = useState('');
   const [orderTypeFilter, setOrderTypeFilter] = useState('');
   const [orderSearch, setOrderSearch] = useState('');
@@ -126,7 +127,16 @@ const UserDetail = () => {
       setLoading(true);
       const data = await adminService.getUserById(id);
       setUser(data);
-      setOwnedTickets(data.owned_tickets || []);
+      
+      // Merge owned and original tickets to show full history
+      const ticketMap = new Map();
+      (data.owned_tickets || []).forEach(t => ticketMap.set(t.id, { ...t, isCurrentOwner: true }));
+      (data.original_tickets || []).forEach(t => {
+        if (!ticketMap.has(t.id)) {
+          ticketMap.set(t.id, { ...t, isCurrentOwner: false });
+        }
+      });
+      setOwnedTickets(Array.from(ticketMap.values()).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)));
     } catch (error) {
       toast.error('Lỗi khi tải thông tin người dùng');
       navigate('/admin/users');
@@ -269,7 +279,18 @@ const UserDetail = () => {
   });
 
   // --- Ticket filter ---
+  const getTicketOwnership = (t) => {
+    if (!t.isCurrentOwner) return 'transferred_out';
+    if (t.original_buyer_id === user.id) return 'primary';
+    if (t.is_transferred) return 'transfer';
+    return 'resale';
+  };
+
   const filteredTickets = ownedTickets.filter(t => {
+    // 1. Ownership filter
+    if (ticketOwnershipFilter && getTicketOwnership(t) !== ticketOwnershipFilter) return false;
+
+    // 2. Status filter
     if (!ticketStatusFilter) return true;
     
     // Check if the event has passed
@@ -369,10 +390,10 @@ const UserDetail = () => {
                 <p className="text-gray-500 text-xs font-semibold">{user.email}</p>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="p-3 bg-gray-50 dark:bg-white/5 rounded-xl border border-gray-100 dark:border-white/5 text-center transition-all hover:border-neon-green/30">
                   <div className="text-[11px] uppercase font-bold text-gray-400 mb-0.5 whitespace-nowrap">Vé đang có</div>
-                  <div className="text-lg font-black text-neon-green leading-none">{ownedTickets.length}</div>
+                  <div className="text-lg font-black text-neon-green leading-none">{ownedTickets.filter(t => t.isCurrentOwner).length}</div>
                 </div>
                 <div className="p-3 bg-gray-50 dark:bg-white/5 rounded-xl border border-gray-100 dark:border-white/5 text-center transition-all hover:border-blue-500/30">
                   <div className="text-[11px] uppercase font-bold text-gray-400 mb-0.5 whitespace-nowrap">Giao dịch thành công</div>
@@ -655,7 +676,7 @@ const UserDetail = () => {
                   <h4 className="text-[11px] font-bold uppercase text-gray-400 mb-4">Thông tin thanh toán & Quyết toán</h4>
                   <div className="bg-orange-500/5 border border-orange-500/10 rounded-2xl p-4 relative overflow-hidden">
                     <CreditCard className="absolute -right-6 -bottom-6 w-24 h-24 text-orange-500/10" />
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative z-10">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 md:gap-8 relative z-10">
                       <div className="space-y-2">
                         <label className="text-[10px] uppercase font-bold text-orange-500/60">Ngân hàng thụ hưởng</label>
                         <div className="text-xs mt-2 font-black dark:text-white flex items-center gap-2.5">
@@ -664,13 +685,13 @@ const UserDetail = () => {
                       </div>
                       <div className="space-y-2">
                         <label className="text-[10px] uppercase font-bold text-orange-500/60">Số tài khoản</label>
-                        <div className="text-xs font-mono font-black dark:text-white bg-white/5 p-2.5 rounded-lg border border-white/5">
+                        <div className="text-xs font-mono font-black dark:text-white bg-white/5 p-2.5 rounded-lg border border-white/5 line-clamp-1">
                           {user.account_number || '•••• •••• ••••'}
                         </div>
                       </div>
-                      <div className="space-y-2">
+                      <div className="sm:col-span-2 md:col-span-1 space-y-2">
                         <label className="text-[10px] uppercase font-bold text-orange-500/60">Tên chủ tài khoản</label>
-                        <div className="text-xs mt-2 font-black dark:text-white">
+                        <div className="text-xs mt-2 font-black dark:text-white uppercase">
                           {user.account_holder || 'Chưa cập nhật'}
                         </div>
                       </div>
@@ -748,7 +769,7 @@ const UserDetail = () => {
 
                   return filtered.length > 0 ? (
                     <div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4">
                         {paginatedEvents.map(ev => (
                           <div 
                             key={ev.id} 
@@ -882,7 +903,7 @@ const UserDetail = () => {
 
                   return filtered.length > 0 ? (
                     <div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
                         {paginated.map(m => (
                           <div key={m.id} className="group bg-white dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-2xl overflow-hidden hover:border-neon-green/30 transition-all flex flex-col">
                              <div className="relative h-32 w-full bg-gray-100 dark:bg-white/10 overflow-hidden">
@@ -962,14 +983,28 @@ const UserDetail = () => {
 
             {activeTab === 'tickets' && (
               <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                <div className="flex justify-end mb-2">
+                <div className="flex flex-col sm:flex-row justify-end items-center gap-2 mb-2">
+                  <select
+                    value={ticketOwnershipFilter}
+                    onChange={(e) => {
+                      setTicketOwnershipFilter(e.target.value);
+                      setTicketPage(1);
+                    }}
+                    className="w-full sm:w-auto bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:border-neon-green"
+                  >
+                    <option value="">Tất cả hình thức sở hữu</option>
+                    <option value="primary">Mua gốc</option>
+                    <option value="transfer">Chuyển nhượng</option>
+                    <option value="resale">Mua lại từ Chợ</option>
+                    <option value="transferred_out">Đã chuyển đi / Bán</option>
+                  </select>
                   <select
                     value={ticketStatusFilter}
                     onChange={(e) => {
                       setTicketStatusFilter(e.target.value);
                       setTicketPage(1);
                     }}
-                    className="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:border-neon-green"
+                    className="w-full sm:w-auto bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:border-neon-green"
                   >
                     <option value="">Tất cả trạng thái vé</option>
                     <option value="unused">Chưa sử dụng</option>
@@ -1024,23 +1059,36 @@ const UserDetail = () => {
                             </div>
                           </div>
 
-                          <div className="flex flex-wrap gap-1.5">
-                            <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase bg-gray-900/5 text-gray-600 dark:bg-white/10 dark:text-gray-300 border border-gray-200 dark:border-white/10">
-                              {t.status}
-                            </span>
-                            {t.is_used ? (
-                              <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase border bg-red-500/10 text-red-500 border-red-500/20">
-                                Đã dùng
-                              </span>
-                            ) : (t.event && t.event.event_date && new Date(t.event.event_date) < new Date()) ? (
-                              <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase border bg-gray-500/10 text-gray-500 border-gray-500/20">
-                                Đã hết hạn
-                              </span>
-                            ) : (
-                              <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase border bg-green-500/10 text-green-500 border-green-500/20">
-                                Chưa dùng
-                              </span>
-                            )}
+                          <div className="flex flex-wrap gap-1.5 pt-1">
+                             <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase bg-gray-900/5 text-gray-600 dark:bg-white/10 dark:text-gray-300 border border-gray-200 dark:border-white/10">
+                               {t.status}
+                             </span>
+
+                             {(() => {
+                               const ownType = getTicketOwnership(t);
+                               if (ownType === 'transferred_out') return <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase bg-red-500/10 text-red-500 border border-red-500/20">Đã chuyển đi</span>;
+                               if (ownType === 'primary') return <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase bg-green-500/10 text-green-500 border border-green-500/20">Mua gốc</span>;
+                               if (ownType === 'transfer') return <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase bg-purple-500/10 text-purple-500 border border-purple-500/20">Chuyển nhượng</span>;
+                               return <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase bg-blue-500/10 text-blue-500 border border-blue-500/20">Mua từ chợ</span>;
+                             })()}
+
+                             {!t.isCurrentOwner ? (
+                               <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase border bg-gray-900/10 text-gray-500 dark:bg-white/5 border-gray-200 dark:border-white/10">
+                                 Không còn sở hữu
+                               </span>
+                             ) : t.is_used ? (
+                               <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase border bg-red-500/10 text-red-500 border-red-500/20">
+                                 Đã dùng
+                               </span>
+                             ) : (t.event && t.event.event_date && new Date(t.event.event_date) < new Date()) ? (
+                               <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase border bg-gray-500/10 text-gray-500 border-gray-500/20">
+                                 Đã hết hạn
+                               </span>
+                             ) : (
+                               <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase border bg-green-500/10 text-green-500 border-green-500/20">
+                                 Chưa dùng
+                               </span>
+                             )}
                           </div>
                         </div>
                       ))}
@@ -1591,10 +1639,10 @@ const UserDetail = () => {
 
                   return filtered.length > 0 ? (
                     <div>
-                      <div className="grid grid-cols-1 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
                         {paginated.map(b => (
-                          <div key={b.id} className="group bg-white dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-2xl overflow-hidden hover:border-blue-500/30 transition-all flex h-28">
-                             <div className="w-40 bg-gray-100 dark:bg-white/10 overflow-hidden shrink-0">
+                          <div key={b.id} className="group bg-white dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-2xl overflow-hidden hover:border-blue-500/30 transition-all flex flex-col sm:flex-row h-auto sm:h-28">
+                             <div className="w-full sm:w-40 h-32 sm:h-full bg-gray-100 dark:bg-white/10 overflow-hidden shrink-0">
                                 {b.image_url ? (
                                   <img src={b.image_url} alt={b.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
                                 ) : (
@@ -1658,9 +1706,9 @@ const UserDetail = () => {
         </div>
 
         {/* Global Activity Insights Charts */}
-        <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
           {/* Distribution Chart */}
-          <div className="p-6 bg-white dark:bg-[#111114] border border-gray-100 dark:border-white/5 rounded-[32px] shadow-sm flex flex-col">
+          <div className="p-4 sm:p-6 bg-white dark:bg-[#111114] border border-gray-100 dark:border-white/5 rounded-[32px] shadow-sm flex flex-col">
             <div className="mb-6">
               <h3 className="text-[11px] font-black uppercase text-gray-400 mb-1">Cấu trúc hành vi</h3>
               <p className="text-sm font-bold text-gray-900 dark:text-white">Phân bổ tương tác</p>
@@ -1672,7 +1720,7 @@ const UserDetail = () => {
                     data={[
                       { name: 'Tương tác xã hội', value: (user.comments?.length || 0) + (user.likes?.length || 0) },
                       { name: 'Quản trị vé & NFT', value: (user.transfers_sent?.length || 0) + (user.transfers_received?.length || 0) + (user.organizer_profile?.events?.length || 0) },
-                      { name: 'Giao dịch tài chính', value: (user.orders?.length || 0) + (user.buyer_transactions?.length || 0) + (user.organizer_profile?.wallet_transactions?.length || 0) },
+                      { name: 'Giao dịch tài chính', value: (user.orders?.length || 0) + (user.buyer_transactions?.length || 0) + (user.wallet_transactions?.length || 0) },
                       { name: 'Bảo mật & Hệ thống', value: (user.bot_logs?.length || 0) }
                     ].filter(d => d.value > 0)}
                     cx="50%"
@@ -1738,8 +1786,8 @@ const UserDetail = () => {
                     ...(user.transfers_received || []).map(t => ({ ...t, date: t.requested_at })),
                     ...(user.buyer_transactions || []).map(t => ({ ...t, date: t.created_at })),
                     ...(user.seller_transactions || []).map(t => ({ ...t, date: t.created_at })),
-                    ...(user.organizer_profile?.wallet_transactions || []).map(t => ({ ...t, date: t.created_at })),
-                    ...(user.organizer_profile?.withdrawal_requests || []).map(w => ({ ...w, date: w.created_at })),
+                    ...(user.wallet_transactions || []).map(t => ({ ...t, date: t.created_at })),
+                    ...(user.withdrawal_requests || []).map(w => ({ ...w, date: w.created_at })),
                     ...(user.bot_logs || []).filter(log => log.is_bot_detected).map(log => ({ ...log, date: log.created_at }))
                   ];
 
@@ -1805,8 +1853,8 @@ const UserDetail = () => {
                         const d = new Date(); d.setDate(d.getDate() - (6 - i));
                         return d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
                       });
-                      const walletTrans = user.organizer_profile?.wallet_transactions || [];
-                      const withdrawals = user.organizer_profile?.withdrawal_requests || [];
+                      const walletTrans = user.wallet_transactions || [];
+                      const withdrawals = user.withdrawal_requests || [];
 
                       return last7Days.map(dateStr => {
                         const revenue = walletTrans
@@ -1839,7 +1887,7 @@ const UserDetail = () => {
                         <p className="text-lg font-black text-blue-500">
                            {(() => {
                               const last7 = new Date(); last7.setDate(last7.getDate() - 7);
-                              const walletTrans = (user.organizer_profile?.wallet_transactions || []).filter(t => Number(t.amount) > 0 && new Date(t.created_at) >= last7);
+                              const walletTrans = (user.wallet_transactions || []).filter(t => Number(t.amount) > 0 && new Date(t.created_at) >= last7);
                               return walletTrans.reduce((sum, t) => sum + Number(t.amount), 0).toLocaleString();
                            })()}
                            <span className="text-[10px] ml-1 uppercase">Vnđ</span>
@@ -1879,8 +1927,8 @@ const UserDetail = () => {
                     const financialMoves = [
                       ...(user.orders || []).filter(o => (o.status || '').toLowerCase() !== 'cancelled').map(o => ({ date: o.created_at, amount: o.total_amount })),
                       ...(user.buyer_transactions || []).filter(t => (t.status || '').toLowerCase() !== 'cancelled').map(t => ({ date: t.created_at, amount: t.buyer_pay_amount })),
-                      ...(user.organizer_profile?.wallet_transactions || []).map(t => ({ date: t.created_at, amount: Math.abs(t.amount) })),
-                      ...(user.organizer_profile?.withdrawal_requests || []).filter(w => (w.status || '').toLowerCase() !== 'cancelled').map(w => ({ date: w.created_at, amount: w.amount }))
+                      ...(user.wallet_transactions || []).map(t => ({ date: t.created_at, amount: Math.abs(t.amount) })),
+                      ...(user.withdrawal_requests || []).filter(w => (w.status || '').toLowerCase() !== 'cancelled').map(w => ({ date: w.created_at, amount: w.amount }))
                     ];
   
                     return last7Days.map(dateStr => {

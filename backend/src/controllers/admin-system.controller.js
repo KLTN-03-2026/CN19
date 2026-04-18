@@ -101,12 +101,19 @@ const processFraudAlert = async (req, res) => {
     const alert = await prisma.botDetectionLog.findUnique({ where: { id } });
     if (!alert) return res.status(404).json({ error: 'Log không tồn tại' });
 
-    if (action === 'ban_user') {
+    if (action === 'ban_user' && alert.user_id) {
       await prisma.user.update({
         where: { id: alert.user_id },
         data: { status: 'banned' }
       });
       // Thu hồi Token / Logout logic
+    } else if (action === 'safe') {
+      await prisma.botDetectionLog.update({
+        where: { id },
+        data: { 
+          decision: 'SAFE'
+        }
+      });
     }
 
     res.status(200).json({ message: `Đã xử lý cảnh báo rủi ro: ${action}` });

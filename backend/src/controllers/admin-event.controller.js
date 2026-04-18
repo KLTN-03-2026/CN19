@@ -35,6 +35,17 @@ const getEvents = async (req, res) => {
               quantity_total: true,
               quantity_available: true
             }
+          },
+          _count: {
+            select: { 
+              tickets: {
+                where: {
+                  order: {
+                    status: { in: ['paid', 'success', 'completed'] }
+                  }
+                }
+              }
+            }
           }
         },
         orderBy: { event_date: 'desc' }
@@ -50,18 +61,31 @@ const getEvents = async (req, res) => {
       })
     ]);
 
-    // Format events to include aggregated counts
-    const formattedEvents = events.map(event => {
+    // Format events to include aggregated counts by summing OrderItem quantities for successful orders
+    const formattedEvents = await Promise.all(events.map(async event => {
       const totalTickets = event.ticket_tiers.reduce((sum, tier) => sum + tier.quantity_total, 0);
-      const availableTickets = event.ticket_tiers.reduce((sum, tier) => sum + tier.quantity_available, 0);
-      const soldTickets = totalTickets - availableTickets;
+      
+      // Lấy tổng số lượng từ OrderItems thay vì đếm số bản ghi Ticket (đề phòng orphan data)
+      const aggregates = await prisma.orderItem.aggregate({
+        where: {
+          order: {
+            event_id: event.id,
+            status: { in: ['paid', 'success', 'completed'] }
+          }
+        },
+        _sum: {
+          quantity: true
+        }
+      });
+
+      const soldTickets = aggregates._sum.quantity || 0;
 
       return {
         ...event,
         total_tickets: totalTickets,
         sold_tickets: soldTickets
       };
-    });
+    }));
 
     res.status(200).json({ 
       data: formattedEvents,
@@ -71,6 +95,7 @@ const getEvents = async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('Get Events Error:', error);
     res.status(500).json({ error: 'Lỗi server.' });
   }
 };
@@ -183,17 +208,33 @@ const getEventById = async (req, res) => {
             user_id: true, 
             organization_name: true, 
             kyc_status: true,
-            balance: true,
-            bank_name: true,
-            account_number: true,
-            account_holder: true,
-            user: { select: { email: true, phone_number: true, wallet_address: true } } 
+            user: { 
+              select: { 
+                email: true, 
+                phone_number: true, 
+                wallet_address: true,
+                balance: true,
+                bank_name: true,
+                account_number: true,
+                account_holder: true
+              } 
+            } 
           } 
         },
         category: { select: { id: true, name: true } },
         ticket_tiers: {
           include: {
-            _count: { select: { tickets: true } },
+            _count: { 
+              select: { 
+                tickets: {
+                  where: {
+                    order: {
+                      status: { in: ['paid', 'success', 'completed'] }
+                    }
+                  }
+                } 
+              } 
+            },
             order_items: {
               take: 50,
               orderBy: { order: { created_at: 'desc' } },
@@ -240,7 +281,13 @@ const getEventById = async (req, res) => {
         _count: {
           select: {
             orders: { where: { status: { in: ['paid', 'success', 'completed'] } } },
-            tickets: true,
+            tickets: {
+              where: {
+                order: {
+                  status: { in: ['paid', 'success', 'completed'] }
+                }
+              }
+            },
             marketplace_listings: true
           }
         }
@@ -252,13 +299,34 @@ const getEventById = async (req, res) => {
     }
 
     // Lấy danh sách đơn hàng (Tăng giới hạn để hỗ trợ lọc/phân trang ở frontend)
-    const recentOrders = await prisma.order.findMany({
+    const recentOrdersRaw = await prisma.order.findMany({
       where: { event_id: id },
       take: 500,
       orderBy: { created_at: 'desc' },
       include: {
         customer: { select: { full_name: true, email: true } },
-        _count: { select: { items: true, merchandise_items: true } }
+        items: { select: { quantity: true } },
+        merchandise_items: { select: { quantity: true } }
+      }
+    });
+
+    const recentOrders = recentOrdersRaw.map(order => ({
+      ...order,
+      total_ticket_quantity: (order.items || []).reduce((sum, i) => sum + (i.quantity || 0), 0),
+      total_merch_quantity: (order.merchandise_items || []).reduce((sum, i) => sum + (i.quantity || 0), 0)
+    }));
+
+    // 0. Tính toán tổng số vé đã bán cho từng hạng vé bằng cách cộng dồn OrderItem.quantity
+    const tierSoldAggregates = await prisma.orderItem.groupBy({
+      by: ['ticket_tier_id'],
+      where: {
+        order: {
+          event_id: id,
+          status: { in: ['paid', 'success', 'completed'] }
+        }
+      },
+      _sum: {
+        quantity: true
       }
     });
 
@@ -293,9 +361,9 @@ const getEventById = async (req, res) => {
 
     successfulOrders.forEach(order => {
       if (order.order_type === 'TICKET_PURCHASE') {
-        const orderTicketSubtotal = order.items.reduce((sum, item) => sum + Number(item.subtotal), 0);
-        const orderTicketCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
-        const orderMerchSubtotal = order.merchandise_items.reduce((sum, item) => sum + Number(item.subtotal), 0);
+        const orderTicketSubtotal = (order.items || []).reduce((sum, item) => sum + Number(item.subtotal || 0), 0);
+        const orderTicketCount = (order.items || []).reduce((sum, item) => sum + (item.quantity || 0), 0);
+        const orderMerchSubtotal = (order.merchandise_items || []).reduce((sum, item) => sum + Number(item.subtotal || 0), 0);
 
         primaryTicketRevenue += orderTicketSubtotal;
         primaryMerchRevenue += orderMerchSubtotal;
@@ -333,26 +401,41 @@ const getEventById = async (req, res) => {
     });
 
     // 4. Tổng hợp chỉ số
-    const totalPlatformProfit = primaryTicketPlatformFee + primaryMerchPlatformFee + transferFeeTotal + secondaryPlatformFee;
-    const totalOrganizerNet = (primaryTicketRevenue - primaryTicketPlatformFee) + 
-                              (primaryMerchRevenue - primaryMerchPlatformFee) + 
-                              resaleRoyalties;
+    const system_commission = primaryTicketPlatformFee + primaryMerchPlatformFee + transferFeeTotal + secondaryPlatformFee;
+    const net_revenue = (primaryTicketRevenue - primaryTicketPlatformFee) + 
+                        (primaryMerchRevenue - primaryMerchPlatformFee) + 
+                        resaleRoyalties;
 
     const result = {
       ...event,
+      ticket_tiers: event.ticket_tiers.map(tier => {
+        const tierAgg = tierSoldAggregates.find(a => a.ticket_tier_id === tier.id);
+        const soldCount = tierAgg?._sum?.quantity || 0;
+        return {
+          ...tier,
+          _count: {
+            ...tier._count,
+            tickets: soldCount // Override with accurate sum
+          }
+        };
+      }),
+      _count: {
+        ...event._count,
+        tickets: totalTicketsSoldCount // Use the accurately calculated sum from successful orders
+      },
       recent_orders: recentOrders,
       admin_logs: adminLogs,
       financials: {
         total_revenue: primaryTicketRevenue + primaryMerchRevenue + transferFeeTotal + resaleVolume, // Tổng doanh thu hợp nhất
-        platform_fees: totalPlatformProfit,
-        net_revenue: totalOrganizerNet,
+        system_commission,
+        net_revenue,
         breakdown: {
           ticket_revenue_gross: primaryTicketRevenue,
           merch_revenue_gross: primaryMerchRevenue,
           resale_volume: resaleVolume,
           resale_royalties: resaleRoyalties,
-          primary_platform_fees: primaryTicketPlatformFee + primaryMerchPlatformFee,
-          secondary_platform_fees: secondaryPlatformFee,
+          primary_platform_commission: primaryTicketPlatformFee + primaryMerchPlatformFee,
+          secondary_platform_commission: secondaryPlatformFee,
           transfer_fees: transferFeeTotal
         }
       },
@@ -362,12 +445,12 @@ const getEventById = async (req, res) => {
           d.setDate(d.getDate() - (6 - i));
           const dateStr = d.toISOString().split('T')[0];
           
-          const dayOrders = successfulOrders.filter(o => o.created_at.toISOString().split('T')[0] === dateStr);
-          const daySecondary = marketplaceTransactions.filter(t => t.created_at.toISOString().split('T')[0] === dateStr);
+          const dayOrders = successfulOrders.filter(o => o.created_at && o.created_at.toISOString().split('T')[0] === dateStr);
+          const daySecondary = marketplaceTransactions.filter(t => t.created_at && t.created_at.toISOString().split('T')[0] === dateStr);
 
-          const tRev = dayOrders.filter(o => o.order_type === 'TICKET_PURCHASE').reduce((sum, o) => sum + o.items.reduce((s, i) => s + Number(i.subtotal), 0), 0);
-          const mRev = dayOrders.filter(o => o.order_type === 'TICKET_PURCHASE').reduce((sum, o) => sum + o.merchandise_items.reduce((s, i) => s + Number(i.subtotal), 0), 0);
-          const rVol = daySecondary.reduce((sum, t) => sum + Number(t.buyer_pay_amount), 0);
+          const tRev = dayOrders.filter(o => o.order_type === 'TICKET_PURCHASE').reduce((sum, o) => sum + (o.items || []).reduce((s, i) => s + Number(i.subtotal || 0), 0), 0);
+          const mRev = dayOrders.filter(o => o.order_type === 'TICKET_PURCHASE').reduce((sum, o) => sum + (o.merchandise_items || []).reduce((s, i) => s + Number(i.subtotal || 0), 0), 0);
+          const rVol = daySecondary.reduce((sum, t) => sum + Number(t.buyer_pay_amount || 0), 0);
 
           return {
             date: dateStr.split('-').reverse().slice(0, 2).join('/'),

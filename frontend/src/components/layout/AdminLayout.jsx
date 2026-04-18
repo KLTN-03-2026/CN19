@@ -49,6 +49,28 @@ const AdminLayout = () => {
     }
   }, [isDark]);
 
+  // Tự động đóng sidebar trên mobile khi resize hoặc mount
+  React.useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 1024) {
+        setIsSidebarOpen(false);
+      } else {
+        setIsSidebarOpen(true);
+      }
+    };
+
+    handleResize(); // Chạy khi mount
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Đóng sidebar khi chuyển route trên mobile
+  React.useEffect(() => {
+    if (window.innerWidth < 1024) {
+      setIsSidebarOpen(false);
+    }
+  }, [location.pathname]);
+
   const handleLogout = () => {
     logout();
     toast.success('Đã đăng xuất khỏi trang quản trị');
@@ -56,31 +78,45 @@ const AdminLayout = () => {
   };
 
   const menuItems = [
-    { path: '/admin/dashboard', icon: BarChart3, label: 'Dashboard' },
-    { path: '/admin/users', icon: Users, label: 'Người dùng' },
-    { path: '/admin/events', icon: Calendar, label: 'Sự kiện' },
-    { path: '/admin/categories', icon: Tags, label: 'Danh mục sự kiện' },
-    { path: '/admin/refunds', icon: RotateCcw, label: 'Yêu cầu hoàn tiền' },
-    { path: '/admin/fraud', icon: ShieldAlert, label: 'Cảnh báo gian lận' },
-    { path: '/admin/transactions', icon: History, label: 'Quản lý giao dịch' },
-    { path: '/admin/settlements', icon: CreditCard, label: 'Quyết toán sự kiện' },
-
-    { path: '/admin/products', icon: Package, label: 'Quản lý sản phẩm' },
-    { path: '/admin/blog', icon: FileText, label: 'Quản lý blog' },
-    { path: '/admin/coupons', icon: Tag, label: 'Mã giảm giá' },
-    { path: '/admin/support', icon: LifeBuoy, label: 'Hỗ trợ & Khiếu nại' },
-    { path: '/admin/reports', icon: FileDown, label: 'Thống kê & Báo cáo' },
-    { path: '/admin/settings', icon: Settings, label: 'Cấu hình hệ thống' },
+    { path: '/admin/dashboard', icon: BarChart3, label: 'Dashboard', permission: 'dashboard' },
+    { path: '/admin/users', icon: Users, label: 'Người dùng', permission: 'users' },
+    { path: '/admin/events', icon: Calendar, label: 'Sự kiện', permission: 'events' },
+    { path: '/admin/categories', icon: Tags, label: 'Danh mục sự kiện', permission: 'categories' },
+    { path: '/admin/refunds', icon: RotateCcw, label: 'Yêu cầu hoàn tiền', permission: 'refunds' },
+    { path: '/admin/fraud', icon: ShieldAlert, label: 'Cảnh báo gian lận', permission: 'fraud' },
+    { path: '/admin/transactions', icon: History, label: 'Quản lý giao dịch', permission: 'transactions' },
+    { path: '/admin/settlements', icon: CreditCard, label: 'Quyết toán sự kiện', permission: 'settlements' },
+    { path: '/admin/products', icon: Package, label: 'Quản lý sản phẩm', permission: 'merchandise' },
+    { path: '/admin/blog', icon: FileText, label: 'Quản lý blog', permission: 'blogs' },
+    { path: '/admin/coupons', icon: Tag, label: 'Mã giảm giá', permission: 'coupons' },
+    { path: '/admin/support', icon: LifeBuoy, label: 'Hỗ trợ & Khiếu nại', permission: 'support' },
+    { path: '/admin/settings', icon: Settings, label: 'Cấu hình hệ thống', permission: 'system' },
   ];
+
+  // Lọc menu dựa trên quyền của user
+  const filteredMenuItems = menuItems.filter(item => {
+    // Nếu không có quyền nào (tài khoản cũ hoặc super admin), mặc định cho xem hết hoặc xử lý riêng
+    if (!user?.permissions || user.permissions.length === 0) return true;
+    return user.permissions.includes(item.permission);
+  });
 
   return (
     <div className="h-screen bg-white dark:bg-[#0a0a0c] text-gray-900 dark:text-white flex overflow-hidden transition-colors duration-300">
       <ScrollToTop />
+      
+      {/* Backdrop for mobile */}
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[48] lg:hidden transition-opacity duration-300"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
       <aside 
         className={`${
-          isSidebarOpen ? 'w-64' : 'w-20'
-        } bg-gray-50 dark:bg-[#111114] border-r border-gray-200 dark:border-white/5 transition-all duration-300 flex flex-col z-50 fixed h-full lg:sticky lg:top-0 lg:h-screen`}
+          isSidebarOpen ? 'translate-x-0 w-64' : '-translate-x-full lg:translate-x-0 w-64 lg:w-20'
+        } bg-gray-50 dark:bg-[#111114] border-r border-gray-200 dark:border-white/5 transition-all duration-300 flex flex-col z-[50] fixed h-full lg:sticky lg:top-0 lg:h-screen`}
       >
         <div className="pt-6 pr-6 pl-6 pb-4 flex items-center justify-between">
           <div className={`flex items-center space-x-3 ${!isSidebarOpen && 'hidden'}`}>
@@ -95,7 +131,7 @@ const AdminLayout = () => {
         </div>
 
         <nav className="flex-1 mt-3 px-3 space-y-1 overflow-y-auto no-scrollbar">
-          {menuItems.map((item) => {
+          {filteredMenuItems.map((item) => {
             const isActive = location.pathname === item.path;
             const Icon = item.icon;
             return (
@@ -130,25 +166,34 @@ const AdminLayout = () => {
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Header */}
-        <header className="h-16 bg-white/80 dark:bg-[#111114]/50 backdrop-blur-md border-b border-gray-200 dark:border-white/5 px-8 flex items-center justify-between sticky top-0 z-[45]">
-          <div className="flex items-center flex-1 max-w-md relative">
-            <Search className="absolute left-3 w-4 h-4 text-gray-400" />
-            <input 
-              type="text" 
-              placeholder="Tìm kiếm nhanh..." 
-              className="w-full bg-gray-100 dark:bg-white/10 border border-gray-200 dark:border-white/20 rounded-full py-2 pl-10 pr-4 text-sm focus:outline-none focus:border-neon-green transition-all dark:text-white text-gray-900"
-            />
+        <header className="h-16 bg-white/80 dark:bg-[#111114]/50 backdrop-blur-md border-b border-gray-200 dark:border-white/5 px-4 md:px-8 flex items-center justify-between sticky top-0 z-[45]">
+          <div className="flex items-center gap-3 md:gap-4 flex-1">
+            <button 
+              onClick={() => setIsSidebarOpen(true)}
+              className={`p-2 bg-gray-100 dark:bg-white/5 rounded-xl text-gray-500 hover:text-neon-green transition-all border border-gray-200 dark:border-white/5 lg:hidden ${isSidebarOpen ? 'hidden' : 'block'}`}
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+            
+            <div className="flex items-center flex-1 max-w-md relative">
+              <Search className="absolute left-3 w-4 h-4 text-gray-400" />
+              <input 
+                type="text" 
+                placeholder="Tìm nhanh..." 
+                className="w-full bg-gray-100 dark:bg-white/10 border border-gray-200 dark:border-white/20 rounded-full py-2 pl-10 pr-4 text-sm focus:outline-none focus:border-neon-green transition-all dark:text-white text-gray-900"
+              />
+            </div>
           </div>
 
           <div className="flex items-center space-x-3">
             {/* Back to Home Button */}
             <Link 
               to="/" 
-              className="flex items-center space-x-2 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 px-4 py-2 rounded-xl text-sm font-bold transition-all border border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-400 hover:text-neon-green dark:hover:text-neon-green"
-              title="Quay về trang chủ khách hàng"
+              className="flex items-center space-x-2 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 px-3 md:px-4 py-2 rounded-xl text-sm font-bold transition-all border border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-400 hover:text-neon-green dark:hover:text-neon-green"
+              title="Quay về trang chủ"
             >
               <Home className="w-4 h-4" />
-              <span className="hidden md:inline">Trang chủ</span>
+              <span className="hidden xl:inline">Trang chủ</span>
             </Link>
 
             <div className="h-6 w-px bg-gray-200 dark:bg-white/10 mx-1"></div>
@@ -181,8 +226,10 @@ const AdminLayout = () => {
         </header>
 
         {/* Content Area */}
-        <div className="p-6 md:p-8 lg:p-10 flex-1 overflow-y-auto text-[14px] leading-relaxed text-gray-700 dark:text-zinc-300">
-          <Outlet />
+        <div className="p-4 sm:p-6 md:p-8 lg:p-10 flex-1 overflow-y-auto text-[14px] leading-relaxed text-gray-700 dark:text-zinc-300">
+          <div className="max-w-screen-2xl mx-auto w-full">
+            <Outlet />
+          </div>
         </div>
       </main>
     </div>

@@ -300,6 +300,33 @@ const getUserById = async (req, res) => {
             }
           }
         },
+        original_tickets: {
+          include: {
+            event: {
+              select: {
+                id: true,
+                title: true,
+                event_date: true,
+                event_time: true,
+                location_address: true,
+                image_url: true
+              }
+            },
+            ticket_tier: {
+              select: {
+                tier_name: true,
+                section_name: true,
+                price: true
+              }
+            },
+            order: {
+              select: {
+                id: true,
+                order_number: true
+              }
+            }
+          }
+        },
         listings: {
           include: {
             ticket: { select: { ticket_number: true } }
@@ -349,6 +376,12 @@ const getUserById = async (req, res) => {
             buyer: { select: { full_name: true, email: true } }
           },
           orderBy: { status: 'desc' }
+        },
+        wallet_transactions: {
+          orderBy: { created_at: 'desc' }
+        },
+        withdrawal_requests: {
+          orderBy: { created_at: 'desc' }
         }
       }
     });
@@ -459,6 +492,33 @@ const getUserById = async (req, res) => {
                   }
                 }
               },
+              original_tickets: {
+                include: {
+                  event: {
+                    select: {
+                      id: true,
+                      title: true,
+                      event_date: true,
+                      event_time: true,
+                      location_address: true,
+                      image_url: true
+                    }
+                  },
+                  ticket_tier: {
+                    select: {
+                      tier_name: true,
+                      section_name: true,
+                      price: true
+                    }
+                  },
+                  order: {
+                    select: {
+                      id: true,
+                      order_number: true
+                    }
+                  }
+                }
+              },
               listings: { include: { event: { select: { title: true } }, ticket: { select: { ticket_number: true } } } },
               buyer_transactions: {
                 include: {
@@ -469,6 +529,12 @@ const getUserById = async (req, res) => {
                     }
                   }
                 }
+              },
+              wallet_transactions: {
+                orderBy: { created_at: 'desc' }
+              },
+              withdrawal_requests: {
+                orderBy: { created_at: 'desc' }
               }
            }
         });

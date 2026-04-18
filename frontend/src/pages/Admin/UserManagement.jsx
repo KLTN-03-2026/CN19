@@ -108,15 +108,15 @@ const UserManagement = () => {
 
   const getRoleBadge = (role) => {
     switch (role) {
-      case 'admin': return <span className="px-2 py-0.5 bg-red-500/10 text-red-500 text-[10px] font-bold rounded-full uppercase border border-red-500/20">Admin</span>;
-      case 'organizer': return <span className="px-2 py-0.5 bg-neon-green/10 text-neon-green text-[10px] font-bold rounded-full uppercase border border-neon-green/20">Organizer</span>;
-      case 'staff': return <span className="px-2 py-0.5 bg-blue-500/10 text-blue-500 text-[10px] font-bold rounded-full uppercase border border-blue-500/20">Staff</span>;
-      default: return <span className="px-2 py-0.5 bg-gray-500/10 text-gray-400 text-[10px] font-bold rounded-full uppercase border border-white/5">Customer</span>;
+      case 'admin': return <span className="px-2 py-0.5 bg-red-500/10 text-red-500 text-[10px] font-bold rounded-full border border-red-500/20 whitespace-nowrap">Quản trị viên</span>;
+      case 'organizer': return <span className="px-2 py-0.5 bg-neon-green/10 text-neon-green text-[10px] font-bold rounded-full border border-neon-green/20 whitespace-nowrap">Ban tổ chức</span>;
+      case 'staff': return <span className="px-2 py-0.5 bg-blue-500/10 text-blue-500 text-[10px] font-bold rounded-full border border-blue-500/20 whitespace-nowrap">Nhân viên</span>;
+      default: return <span className="px-2 py-0.5 bg-gray-500/10 text-gray-400 text-[10px] font-bold rounded-full border border-white/5 whitespace-nowrap">Khách hàng</span>;
     }
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
+    <div className="space-y-4 animate-in fade-in duration-500">
       {/* Header & Stats */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -127,55 +127,55 @@ const UserManagement = () => {
           <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Xem, tìm kiếm và quản lý quyền hạn của toàn bộ thành viên.</p>
         </div>
         
-        <div className="flex items-center space-x-3">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full md:w-auto">
           <button 
             onClick={() => setFilters({ role: '', status: '', keyword: '', kyc_status: '', from: '', to: '' })}
-            className={`p-4 rounded-2xl border flex items-center space-x-4 transition-all ${
+            className={`p-3 rounded-2xl border flex items-center space-x-4 transition-all ${
               !filters.kyc_status && !filters.from && !filters.to
                 ? 'bg-neon-green/10 border-neon-green/30 text-neon-green' 
                 : 'bg-white dark:bg-white/5 border-gray-200 dark:border-white/5 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/10'
             }`}
           >
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
               !filters.kyc_status ? 'bg-neon-green/20' : 'bg-gray-100 dark:bg-white/5'
             }`}>
               <Users className="w-5 h-5" />
             </div>
             <div className="text-left">
-              <div className="text-xs uppercase font-bold tracking-wider opacity-60">Tất cả</div>
+              <div className="text-[10px] uppercase font-bold opacity-60 line-clamp-1">Tất cả</div>
               <div className="text-xl font-black">{stats.total}</div>
             </div>
           </button>
 
           <button 
             onClick={() => setFilters({ ...filters, role: '', status: '', kyc_status: 'pending' })}
-            className={`p-4 rounded-2xl border flex items-center space-x-4 transition-all ${
+            className={`p-3 rounded-2xl border flex items-center space-x-4 transition-all ${
               filters.kyc_status === 'pending' 
                 ? 'bg-yellow-500/10 border-yellow-500/30 text-yellow-500' 
                 : 'bg-white dark:bg-white/5 border-gray-200 dark:border-white/5 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/10'
             }`}
           >
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
               filters.kyc_status === 'pending' ? 'bg-yellow-500/20' : 'bg-gray-100 dark:bg-white/5'
             }`}>
               <FileSearch className="w-5 h-5" />
             </div>
             <div className="text-left">
-              <div className="text-xs uppercase font-bold tracking-wider opacity-60">Chờ duyệt</div>
+              <div className="text-[10px] uppercase font-bold opacity-60 line-clamp-1">Chờ duyệt</div>
               <div className="text-xl font-black">{stats.pending}</div>
             </div>
           </button>
 
           <button 
             onClick={() => setShowCreateModal(true)}
-            className="p-4 rounded-2xl bg-neon-green text-black hover:bg-neon-green/90 transition-all flex items-center space-x-3 shadow-lg shadow-neon-green/20 group"
+            className="p-3 rounded-2xl bg-neon-green text-black hover:bg-neon-green/90 transition-all flex items-center space-x-4 shadow-lg shadow-neon-green/20 group overflow-hidden"
           >
-            <div className="w-10 h-10 rounded-xl bg-black/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+            <div className="w-10 h-10 rounded-xl bg-black/10 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
               <Users className="w-5 h-5 text-black" />
             </div>
             <div className="text-left">
-              <div className="text-[10px] uppercase font-black tracking-widest opacity-60">Thao tác</div>
-              <div className="text-sm font-bold">Thêm Người dùng</div>
+              <div className="text-[10px] uppercase font-black opacity-60 line-clamp-1">Thao tác</div>
+              <div className="text-sm font-bold whitespace-nowrap">Thêm User</div>
             </div>
           </button>
         </div>
@@ -183,7 +183,7 @@ const UserManagement = () => {
 
       <div className="bg-white dark:bg-[#111114] border border-gray-200 dark:border-white/5 rounded-2xl overflow-hidden shadow-sm dark:shadow-2xl transition-all">
         <div className="bg-white dark:bg-[#111114] p-4 border-b border-gray-200 dark:border-white/5 flex flex-wrap items-center gap-4 shadow-sm transition-all">
-          <form onSubmit={handleSearch} className="relative flex-1 min-w-[300px]">
+          <form onSubmit={handleSearch} className="relative flex-1 min-w-full md:min-w-[300px]">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input 
               type="text"
@@ -249,13 +249,13 @@ const UserManagement = () => {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-gray-50 dark:bg-white/5 text-gray-500 dark:text-gray-400 text-xs uppercase font-black tracking-widest border-b border-gray-200 dark:border-white/5">
-                <th className="px-6 py-4">Người dùng</th>
-                <th className="px-6 py-4">Vai trò</th>
-                <th className="px-6 py-4">Trạng thái</th>
-                <th className="px-6 py-4">Hồ sơ BTC</th>
-                <th className="px-6 py-4">Ngày tham gia</th>
-                <th className="px-6 py-4 text-right">Thao tác</th>
+              <tr className="bg-gray-50 dark:bg-white/5 text-gray-500 dark:text-gray-400 text-xs uppercase font-black border-b border-gray-200 dark:border-white/5">
+                <th className="px-4 py-4">Người dùng</th>
+                <th className="px-4 py-4 whitespace-nowrap">Vai trò</th>
+                <th className="px-4 py-4 whitespace-nowrap">Trạng thái</th>
+                <th className="px-4 py-4 hidden sm:table-cell">Hồ sơ BTC</th>
+                <th className="px-4 py-4 text-center hidden lg:table-cell">Ngày tham gia</th>
+                <th className="px-4 py-4 text-right">Thao tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-white/5">
@@ -272,7 +272,7 @@ const UserManagement = () => {
               ) : (
                 users.map((u) => (
                   <tr key={u.id} className="hover:bg-white/[0.02] transition-colors group">
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-3">
                       <div className="flex items-center space-x-3">
                         {u.avatar_url ? (
                           <img
@@ -301,28 +301,28 @@ const UserManagement = () => {
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4">{getRoleBadge(u.role)}</td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-3">{getRoleBadge(u.role)}</td>
+                    <td className="px-4 py-3 whitespace-nowrap">
                       {u.status === 'active' ? (
                         <div className="flex items-center text-green-500 text-xs font-bold space-x-1.5">
                           <CheckCircle2 className="w-4 h-4" />
-                          <span>Active</span>
+                          <span>Đang hoạt động</span>
                         </div>
                       ) : (
                         <div className="flex items-center text-red-500 text-xs font-bold space-x-1.5">
                           <Ban className="w-4 h-4" />
-                          <span>Banned</span>
+                          <span>Đã khóa</span>
                         </div>
                       )}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-3 hidden sm:table-cell">
                       {u.organizer_profile ? (
-                        <div className="flex flex-col space-y-1">
-                          <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">{u.organizer_profile.organization_name}</span>
+                        <div className="flex flex-col space-y-1 max-w-[150px]">
+                          <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 truncate" title={u.organizer_profile.organization_name}>{u.organizer_profile.organization_name}</span>
                           {u.organizer_profile.kyc_status === 'pending' ? (
                             <div className="flex items-center space-x-2">
                               <span className="text-[10px] bg-yellow-500/10 text-yellow-500 px-1.5 py-0.5 rounded-full uppercase font-black">Chờ duyệt</span>
-                              <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <div className="flex space-x-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
                                 <button 
                                   onClick={() => handleApproveOrganizer(u.organizer_profile.id, 'approve')}
                                   className="p-1 bg-green-500/20 hover:bg-green-500/40 text-green-500 rounded" title="Duyệt"
@@ -339,9 +339,9 @@ const UserManagement = () => {
                             </div>
                           ) : (
                              <span className={`text-[10px] px-1.5 py-0.5 rounded-full uppercase font-black ${
-                               u.organizer_profile.kyc_status === 'approved' ? 'bg-neon-green/10 text-neon-green' : 'bg-red-500/10 text-red-500'
+                                u.organizer_profile.kyc_status === 'approved' ? 'bg-neon-green/10 text-neon-green' : 'bg-red-500/10 text-red-500'
                              }`}>
-                               {u.organizer_profile.kyc_status}
+                               {u.organizer_profile.kyc_status === 'approved' ? 'ĐÃ DUYỆT' : 'BỊ TỪ CHỐI'}
                              </span>
                           )}
                         </div>
@@ -349,13 +349,13 @@ const UserManagement = () => {
                         <span className="text-gray-600 text-[10px] italic">Chưa đăng ký BTC</span>
                       )}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-3 hidden lg:table-cell">
                       <div className="text-xs text-gray-400 flex items-center space-x-2">
                          <Clock className="w-3.5 h-3.5 text-gray-600" />
                          <span>{new Date(u.created_at).toLocaleString('vi-VN')}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-4 py-3 text-right">
                       <div className="flex items-center justify-end space-x-2">
                         <button 
                            onClick={() => navigate(`/admin/users/${u.id}`)}

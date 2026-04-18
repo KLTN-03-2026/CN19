@@ -195,153 +195,167 @@ const TransactionManagement = () => {
   };
 
   return (
-    <div className="space-y-4 animate-in fade-in duration-500 max-w-[1600px] mx-auto">
+    <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-[1600px] mx-auto pb-10 px-4">
       {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-gray-900 dark:text-white flex items-center space-x-3 uppercase tracking-tight">
-            <div className="p-2 bg-neon-green/10 rounded-xl">
-              <History className="w-6 h-6 text-neon-green" />
+          <h1 className="text-xl md:text-2xl font-black text-gray-900 dark:text-white flex items-center space-x-3 uppercase tracking-tight">
+            <div className="p-2.5 bg-neon-green/10 rounded-xl border border-neon-green/10">
+              <History className="w-5 h-5 md:w-6 md:h-6 text-neon-green" />
             </div>
             <span>Quản lý Giao dịch</span>
           </h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm font-medium">Theo dõi và điều phối dòng tiền hệ thống.</p>
+          <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 mt-1 uppercase font-bold opacity-70 tracking-tight">Theo dõi và điều phối dòng tiền hệ thống BASTICKET.</p>
         </div>
         
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 ml-auto sm:ml-0">
           <button 
             onClick={handleExportExcel}
-            className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 px-4 py-2 rounded-xl text-xs font-bold hover:bg-gray-100 dark:hover:bg-white/10 transition-all flex items-center text-gray-600 dark:text-gray-400"
+            className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-100 dark:hover:bg-white/10 transition-all flex items-center text-gray-600 dark:text-gray-400 shadow-sm active:scale-95"
           >
             <Download className="w-4 h-4 mr-2" />
             Báo cáo
           </button>
           <button 
             onClick={fetchTransactions}
-            className="bg-neon-green text-black px-4 py-2 rounded-xl text-xs font-black shadow-lg shadow-neon-green/10 hover:bg-neon-hover transition-all flex items-center uppercase"
+            className="p-2.5 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl hover:bg-gray-50 dark:hover:bg-white/10 transition-all text-gray-500 hover:text-neon-green shadow-sm active:scale-95"
+            title="Làm mới dữ liệu"
           >
-            Làm mới
+             <Activity className="w-5 h-5" />
           </button>
         </div>
       </div>
 
       {/* Stats Cards - Standardized Density */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-4 bg-white dark:bg-[#111114] rounded-2xl border border-gray-200 dark:border-white/5 flex items-center space-x-4">
-           <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="p-5 bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 flex items-center space-x-4 shadow-sm relative overflow-hidden group">
+           <div className="absolute top-0 right-0 w-16 h-16 bg-blue-500/5 blur-2xl -mr-4 -mt-4"></div>
+           <div className="w-11 h-11 rounded-xl bg-blue-500/10 flex items-center justify-center border border-blue-500/10 relative z-10">
               <DollarSign className="w-5 h-5 text-blue-500" />
            </div>
-           <div>
-              <div className="text-[10px] uppercase font-bold text-gray-400">Doanh thu</div>
-              <div className="text-lg font-black dark:text-white leading-none mt-0.5">{formatCurrency(stats.totalRevenue)}</div>
+           <div className="relative z-10">
+              <div className="text-[10px] uppercase font-black text-gray-400 tracking-widest">Doanh thu</div>
+              <div className="text-xl font-black dark:text-white leading-none mt-1 tracking-tighter">{formatCurrency(stats.totalRevenue)}</div>
            </div>
         </div>
 
-        <div className="p-4 bg-white dark:bg-[#111114] rounded-2xl border border-gray-200 dark:border-white/5 flex items-center space-x-4">
-           <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
+        <div className="p-5 bg-white dark:bg-[#111114] rounded-2xl border grid-cols-1 border-gray-100 dark:border-white/5 flex items-center space-x-4 shadow-sm relative overflow-hidden group">
+           <div className="absolute top-0 right-0 w-16 h-16 bg-purple-500/5 blur-2xl -mr-4 -mt-4"></div>
+           <div className="w-11 h-11 rounded-xl bg-purple-500/10 flex items-center justify-center border border-purple-500/10 relative z-10">
               <Activity className="w-5 h-5 text-purple-500" />
            </div>
-           <div>
-              <div className="text-[10px] uppercase font-bold text-gray-400">Giao dịch</div>
-              <div className="text-lg font-black dark:text-white leading-none mt-0.5">{totalCount.toLocaleString()}</div>
+           <div className="relative z-10">
+              <div className="text-[10px] uppercase font-black text-gray-400 tracking-widest">Giao dịch</div>
+              <div className="text-xl font-black dark:text-white leading-none mt-1 tracking-tighter">{totalCount.toLocaleString()}</div>
            </div>
         </div>
 
-        <div className="p-4 bg-white dark:bg-[#111114] rounded-2xl border border-gray-200 dark:border-white/5 flex items-center space-x-4">
-           <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center">
+        <div className="p-5 bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 flex items-center space-x-4 shadow-sm relative overflow-hidden group">
+           <div className="absolute top-0 right-0 w-16 h-16 bg-green-500/5 blur-2xl -mr-4 -mt-4"></div>
+           <div className="w-11 h-11 rounded-xl bg-green-500/10 flex items-center justify-center border border-green-500/10 relative z-10">
               <CheckCircle2 className="w-5 h-5 text-green-500" />
            </div>
-           <div>
-              <div className="text-[10px] uppercase font-bold text-gray-400">Thành công</div>
-              <div className="text-lg font-black dark:text-white leading-none mt-0.5">{stats.successfulOrders.toLocaleString()}</div>
+           <div className="relative z-10">
+              <div className="text-[10px] uppercase font-black text-gray-400 tracking-widest">Thành công</div>
+              <div className="text-xl font-black dark:text-white leading-none mt-1 tracking-tighter">{stats.successfulOrders.toLocaleString()}</div>
            </div>
         </div>
 
-        <div className="p-4 bg-white dark:bg-[#111114] rounded-2xl border border-gray-200 dark:border-white/5 flex items-center space-x-4">
-           <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center">
+        <div className="p-5 bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 flex items-center space-x-4 shadow-sm relative overflow-hidden group">
+           <div className="absolute top-0 right-0 w-16 h-16 bg-red-500/5 blur-2xl -mr-4 -mt-4"></div>
+           <div className="w-11 h-11 rounded-xl bg-red-500/10 flex items-center justify-center border border-red-500/10 relative z-10">
               <XCircle className="w-5 h-5 text-red-500" />
            </div>
-           <div>
-              <div className="text-[10px] uppercase font-bold text-gray-400">Thất bại</div>
-              <div className="text-lg font-black dark:text-white leading-none mt-0.5">{stats.failedOrders.toLocaleString()}</div>
+           <div className="relative z-10">
+              <div className="text-[10px] uppercase font-black text-gray-400 tracking-widest">Thất bại</div>
+              <div className="text-xl font-black dark:text-white leading-none mt-1 tracking-tighter">{stats.failedOrders.toLocaleString()}</div>
            </div>
         </div>
       </div>
 
-      {/* Filter Bar - Modern & Compact */}
-      <div className="bg-white dark:bg-[#111114] p-3 rounded-2xl border border-gray-200 dark:border-white/5 flex flex-wrap items-center gap-3 shadow-sm">
-        <div className="relative flex-1 min-w-[280px]">
-           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-           <input 
-              type="text"
-              placeholder="Tìm ID, Email, Khách hàng..."
-              className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl py-2.5 pl-11 pr-4 text-sm focus:outline-none focus:border-neon-green/50 transition-all text-gray-900 dark:text-white"
-              value={filters.keyword}
-              onChange={(e) => setFilters({...filters, keyword: e.target.value, page: 1})}
-           />
+      {/* Filter Bar - Modern & Compact Grid */}
+      <div className="bg-white dark:bg-[#111114] p-4 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 md:gap-4">
+            <div className="relative lg:col-span-4">
+               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+               <input 
+                  type="text"
+                  placeholder="ID, Email, Khách hàng..."
+                  className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl py-2 pl-11 pr-4 text-sm focus:outline-none focus:border-neon-green/50 transition-all text-gray-900 dark:text-white font-medium"
+                  value={filters.keyword}
+                  onChange={(e) => setFilters({...filters, keyword: e.target.value, page: 1})}
+               />
+            </div>
+
+            <div className="lg:col-span-2">
+              <select 
+                className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 rounded-xl px-4 py-2 text-xs font-black uppercase tracking-tighter focus:outline-none focus:border-neon-green/50 appearance-none cursor-pointer"
+                value={filters.type}
+                onChange={(e) => setFilters({...filters, type: e.target.value, page: 1})}
+              >
+                <option value="">Loại giao dịch</option>
+                <option value="TICKET_PURCHASE">Mua vé</option>
+                <option value="MARKETPLACE">Chợ (Resale)</option>
+                <option value="TICKET_TRANSFER">Chuyển nhượng</option>
+              </select>
+            </div>
+
+            <div className="lg:col-span-2">
+              <select 
+                className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 rounded-xl px-4 py-2 text-xs font-black uppercase tracking-tighter focus:outline-none focus:border-neon-green/50 appearance-none cursor-pointer"
+                value={filters.status}
+                onChange={(e) => setFilters({...filters, status: e.target.value, page: 1})}
+              >
+                <option value="">Trạng thái</option>
+                <option value="paid">Thành công</option>
+                <option value="cancelled">Đã hủy</option>
+              </select>
+            </div>
+
+            <div className="lg:col-span-3">
+              <div className="flex items-center space-x-2 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-3 py-1 transition-all h-full">
+                 <div className="flex flex-col flex-1">
+                    <span className="text-[8px] font-black uppercase text-gray-400 tracking-widest mb-0.5">Từ ngày</span>
+                    <input type="date" className="bg-transparent text-[10px] font-bold text-gray-700 dark:text-white focus:outline-none uppercase tracking-tighter" value={filters.from} onChange={(e) => setFilters({...filters, from: e.target.value, page: 1})} />
+                 </div>
+                 <div className="w-px h-4 bg-gray-200 dark:border-white/10 mx-1"></div>
+                 <div className="flex flex-col flex-1">
+                    <span className="text-[8px] font-black uppercase text-gray-400 tracking-widest mb-0.5">Đến ngày</span>
+                    <input type="date" className="bg-transparent text-[10px] font-bold text-gray-700 dark:text-white focus:outline-none uppercase tracking-tighter" value={filters.to} onChange={(e) => setFilters({...filters, to: e.target.value, page: 1})} />
+                 </div>
+              </div>
+            </div>
+
+            <div className="lg:col-span-1">
+              <button 
+                onClick={handleResetFilters}
+                className="w-full flex items-center justify-center p-2 bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all group shadow-sm"
+                title="Xóa tất cả bộ lọc"
+              >
+                 <RotateCcw className="w-4 h-4 group-hover:rotate-[-180deg] transition-transform duration-500" />
+              </button>
+            </div>
         </div>
-
-        <select 
-          className="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-neon-green/50 font-bold"
-          value={filters.type}
-          onChange={(e) => setFilters({...filters, type: e.target.value, page: 1})}
-        >
-          <option value="">Loại giao dịch</option>
-          <option value="TICKET_PURCHASE">Sơ cấp (Mua vé)</option>
-          <option value="MARKETPLACE">Thứ cấp (Chợ)</option>
-          <option value="TICKET_TRANSFER">Chuyển nhượng</option>
-        </select>
-
-        <select 
-          className="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-neon-green/50 max-w-[180px]"
-          value={filters.status}
-          onChange={(e) => setFilters({...filters, status: e.target.value, page: 1})}
-        >
-          <option value="">Trạng thái</option>
-          <option value="paid">Đã thanh toán</option>
-          <option value="cancelled">Thất bại</option>
-        </select>
-
-        <div className="flex items-center space-x-2 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-3 py-1.5 transition-all">
-           <div className="flex flex-col">
-              <span className="text-[10px] font-bold uppercase text-gray-400 ml-1">Từ</span>
-              <input type="date" className="bg-transparent text-xs text-gray-700 dark:text-white focus:outline-none h-4" value={filters.from} onChange={(e) => setFilters({...filters, from: e.target.value, page: 1})} />
-           </div>
-           <div className="w-px h-4 bg-gray-200 dark:bg-white/10 mx-1"></div>
-           <div className="flex flex-col">
-              <span className="text-[10px] font-bold uppercase text-gray-400 ml-1">Đến</span>
-              <input type="date" className="bg-transparent text-xs text-gray-700 dark:text-white focus:outline-none h-4" value={filters.to} onChange={(e) => setFilters({...filters, to: e.target.value, page: 1})} />
-           </div>
-        </div>
-
-        <button 
-          onClick={handleResetFilters}
-          className="flex items-center justify-center space-x-2 p-3 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all font-bold text-sm px-6 group"
-          title="Xóa tất cả bộ lọc"
-        >
-           <RotateCcw className="w-4 h-4 group-hover:rotate-[-180deg] transition-transform duration-500" />
-           <span>Xóa lọc</span>
-        </button>
       </div>
 
       {/* Main Table - High Density */}
-      <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-200 dark:border-white/5 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
+      <div className="bg-white dark:bg-[#111114] rounded-2xl md:rounded-3xl border border-gray-100 dark:border-white/5 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto custom-scrollbar">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-gray-50 dark:bg-white/5 text-gray-500 dark:text-gray-400 text-xs uppercase font-black border-b border-gray-200 dark:border-white/5">
-                <th className="px-6 py-4">Mã Giao dịch</th>
-                <th className="px-6 py-4">Khách hàng</th>
-                <th className="px-6 py-4">Loại hình</th>
-                <th className="px-6 py-4">Số tiền</th>
+              <tr className="bg-gray-50/50 dark:bg-white/5 text-gray-400 text-[10px] uppercase font-black tracking-widest border-b border-gray-100 dark:border-white/5">
+                <th className="px-6 py-4">Giao dịch</th>
+                <th className="px-6 py-4">Đối tượng</th>
+                <th className="px-6 py-4 hidden lg:table-cell text-center">Loại hình</th>
+                <th className="px-6 py-4 text-right">Số tiền</th>
                 <th className="px-6 py-4 text-center">Trạng thái</th>
-                <th className="px-6 py-4">Thời gian</th>
-                <th className="px-6 py-4 text-right">Hành động</th>
+                <th className="px-6 py-4 hidden md:table-cell text-right">Thời gian</th>
+                <th className="px-6 py-4 text-right w-[80px]"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-white/5">
               {isLoading ? (
-                [...Array(5)].map((_, i) => (
+                [...Array(6)].map((_, i) => (
                   <tr key={i} className="animate-pulse">
                     <td colSpan="7" className="px-6 py-6 h-16 opacity-40">
                        <div className="h-4 bg-gray-100 dark:bg-white/5 rounded-full w-full"></div>
@@ -350,36 +364,38 @@ const TransactionManagement = () => {
                 ))
               ) : transactions.length === 0 ? (
                 <tr>
-                   <td colSpan="7" className="px-6 py-20 text-center opacity-50 italic text-sm">
-                      Không tìm thấy dữ liệu giao dịch.
+                   <td colSpan="7" className="px-6 py-20 text-center">
+                      <History className="w-16 h-16 text-gray-100 dark:text-white/5 mx-auto mb-4" />
+                      <h4 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-tighter">Không có dữ liệu</h4>
+                      <p className="text-xs font-bold text-gray-400 mt-1 uppercase tracking-widest opacity-50">Lịch sử giao dịch hiện đang trống</p>
                    </td>
                 </tr>
               ) : (
                 transactions.map((tx) => (
-                  <tr key={tx.id} className="hover:bg-gray-50 dark:hover:bg-white/[0.01] transition-all group">
+                  <tr key={tx.id} className="hover:bg-gray-50/50 dark:hover:bg-white/[0.015] transition-all group">
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
-                        <span className="text-sm font-bold text-gray-900 dark:text-white truncate max-w-[120px]">{tx.transaction_id}</span>
-                        <span className="text-[11px] text-gray-400 font-medium truncate max-w-[150px]">{tx.description}</span>
+                        <span className="text-sm font-black text-gray-900 dark:text-white truncate max-w-[120px] uppercase tracking-tighter">{tx.transaction_id}</span>
+                        <span className="text-[10px] text-gray-500 font-bold truncate max-w-[150px] mt-1 uppercase opacity-70 tracking-tight">{tx.description}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center space-x-3">
-                        <div className="w-9 h-9 rounded-2xl bg-neon-green/10 flex items-center justify-center font-bold text-neon-green text-[10px] flex-shrink-0 border border-neon-green/10 overflow-hidden">
+                        <div className="w-9 h-9 rounded-2xl bg-neon-green/10 flex items-center justify-center font-black text-neon-green text-[10px] flex-shrink-0 border border-neon-green/10 overflow-hidden shadow-sm uppercase">
                           {tx.customer_avatar ? (
                             <img src={tx.customer_avatar} alt="" className="w-full h-full object-cover" />
                           ) : (
-                            tx.customer.charAt(0).toUpperCase()
+                            tx.customer.charAt(0)
                           )}
                         </div>
                         <div className="flex flex-col min-w-0">
-                          <span className="text-sm font-bold text-gray-900 dark:text-white leading-tight truncate">{tx.customer}</span>
-                          <span className="text-[11px] text-gray-400 truncate">{tx.email}</span>
+                          <span className="text-sm font-bold text-gray-900 dark:text-white leading-tight truncate uppercase tracking-tight">{tx.customer}</span>
+                          <span className="text-[10px] text-gray-500 truncate lowercase font-medium mt-0.5">{tx.email}</span>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">{getTypeBadge(tx.type)}</td>
-                    <td className="px-6 py-4 text-sm font-black text-gray-900 dark:text-white uppercase whitespace-nowrap">
+                    <td className="px-6 py-4 hidden lg:table-cell text-center">{getTypeBadge(tx.type)}</td>
+                    <td className="px-6 py-4 text-sm font-black text-gray-900 dark:text-white uppercase whitespace-nowrap text-right tracking-tighter">
                       {formatCurrency(tx.amount)}
                     </td>
                     <td className="px-6 py-4 text-center">
@@ -387,19 +403,20 @@ const TransactionManagement = () => {
                         {getStatusBadge(tx.status)}
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-[11px] text-gray-400 font-medium whitespace-nowrap">
-                      {new Date(tx.created_at).toLocaleString('vi-VN')}
+                    <td className="px-6 py-4 hidden md:table-cell text-right">
+                       <div className="flex flex-col">
+                          <span className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-tighter">{format(new Date(tx.created_at), 'HH:mm')}</span>
+                          <span className="text-[10px] text-gray-500 font-bold uppercase tracking-tight mt-0.5">{format(new Date(tx.created_at), 'dd MMM yyyy', { locale: vi })}</span>
+                       </div>
                     </td>
                     <td className="px-6 py-4 text-right">
-                       <div className="flex items-center justify-end space-x-2">
-                          <button 
-                            onClick={() => navigate(`/admin/transactions/${tx.type === 'MARKETPLACE' ? 'MARKETPLACE' : 'ORDER'}/${tx.id}`)}
-                            className="p-2 bg-gray-100 dark:bg-white/5 text-gray-500 rounded-lg hover:text-neon-green hover:bg-neon-green/10 transition-all border border-transparent dark:border-white/5 shadow-sm"
-                            title="Xem chi tiết"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-                       </div>
+                       <button 
+                         onClick={() => navigate(`/admin/transactions/${tx.type === 'MARKETPLACE' ? 'MARKETPLACE' : 'ORDER'}/${tx.id}`)}
+                         className="p-2.5 hover:bg-gray-100 dark:hover:bg-white/10 text-gray-400 hover:text-neon-green rounded-xl transition-all active:scale-95 group-hover:bg-gray-100 dark:group-hover:bg-white/5"
+                         title="Xem chi tiết"
+                       >
+                         <Eye className="w-5 h-5" />
+                       </button>
                     </td>
                   </tr>
                 ))
@@ -409,23 +426,23 @@ const TransactionManagement = () => {
         </div>
 
         {/* Footer */}
-        <div className="p-4 bg-gray-50/50 dark:bg-white/[0.01] border-t border-gray-200 dark:border-white/5 flex items-center justify-between text-xs text-gray-500">
-           <span>Hiển thị {transactions.length} / {totalCount} giao dịch</span>
+        <div className="px-6 py-4 bg-gray-50/50 dark:bg-white/[0.015] border-t border-gray-100 dark:border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
+           <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Hiển thị {transactions.length} / {totalCount} giao dịch</span>
            <div className="flex items-center space-x-2">
               <button 
                 disabled={filters.page <= 1}
                 onClick={() => setFilters({ ...filters, page: filters.page - 1 })}
-                className="px-4 py-1.5 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg disabled:opacity-30 hover:bg-gray-50 dark:hover:bg-white/10 transition-all font-bold"
+                className="px-4 py-2 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl disabled:opacity-30 hover:bg-gray-50 dark:hover:bg-white/10 transition-all font-black text-[10px] uppercase tracking-widest shadow-sm"
               >
                 Trước
               </button>
-              <div className="px-3 py-1.5 bg-neon-green/10 text-neon-green rounded-lg font-black text-[10px] border border-neon-green/20">
+              <div className="px-4 py-2 bg-neon-green/10 text-neon-green rounded-xl font-black text-[10px] border border-neon-green/20 tracking-widest">
                 {filters.page} / {totalPages || 1}
               </div>
               <button 
                 disabled={filters.page >= totalPages}
                 onClick={() => setFilters({ ...filters, page: filters.page + 1 })}
-                className="px-4 py-1.5 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg disabled:opacity-30 hover:bg-gray-50 dark:hover:bg-white/10 transition-all font-bold"
+                className="px-4 py-2 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl disabled:opacity-30 hover:bg-gray-50 dark:hover:bg-white/10 transition-all font-black text-[10px] uppercase tracking-widest shadow-sm"
               >
                 Sau
               </button>
@@ -435,5 +452,8 @@ const TransactionManagement = () => {
     </div>
   );
 };
+
+export default TransactionManagement;
+
 
 export default TransactionManagement;

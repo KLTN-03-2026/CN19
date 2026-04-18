@@ -17,6 +17,7 @@ import {
   Info,
   Package,
   TrendingUp,
+  ShieldCheck,
   User,
   Zap,
   CalendarDays,
@@ -148,18 +149,18 @@ const EventDetail = () => {
   return (
     <div className="space-y-4 animate-in fade-in duration-500 max-w-[1600px] mx-auto">
       {/* Header - Modern & Compact */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div className="flex items-center space-x-3">
           <button 
             onClick={() => navigate('/admin/events')}
-            className="p-2 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl hover:bg-gray-50 dark:hover:bg-white/10 transition-all text-gray-400 group"
+            className="p-2 sm:p-2.5 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl hover:bg-gray-50 dark:hover:bg-white/10 transition-all text-gray-400 group"
           >
             <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
           </button>
-          <div>
-            <div className="flex items-center space-x-2">
-              <h1 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tight">Chi tiết Sự kiện</h1>
-              <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase border ${
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-lg sm:text-xl font-black text-gray-900 dark:text-white uppercase tracking-tight truncate">Chi tiết Sự kiện</h1>
+              <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase border shrink-0 ${
                 event.status === 'active' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 
                 event.status === 'pending' ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' :
                 'bg-gray-500/10 text-gray-500 border-white/5'
@@ -170,7 +171,7 @@ const EventDetail = () => {
                  'BẢN NHÁP'}
               </span>
             </div>
-            <p className="text-[11px] text-gray-500 font-bold font-mono opacity-60 flex items-center mt-0.5">
+            <p className="text-[10px] sm:text-[11px] text-gray-500 font-bold font-mono opacity-60 flex items-center mt-0.5 truncate">
                ID: {event.id}
             </p>
           </div>
@@ -196,7 +197,7 @@ const EventDetail = () => {
             </>
           )}
           <button 
-            onClick={() => window.open(`/event/${event.id}`, '_blank')}
+            onClick={() => window.open(`${window.location.origin}/events/${event.id}`, '_blank')}
             className="p-2 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-gray-400 hover:text-neon-green transition-all"
             title="Xem trang công khai"
           >
@@ -248,19 +249,33 @@ const EventDetail = () => {
                </div>
 
                <div className="grid grid-cols-2 gap-3">
-                  <div className="p-4 bg-gray-50 dark:bg-white/5 rounded-2xl border border-gray-100 dark:border-white/5 text-center">
+                  <div className="p-4 bg-gray-50 dark:bg-white/5 rounded-2xl border border-gray-100 dark:border-white/5 text-center transition-all hover:border-neon-green/30">
                      <p className="text-[10px] font-black text-gray-400 uppercase mb-1 flex items-center justify-center">
                         <Ticket className="w-3 h-3 mr-1 text-neon-green" />
                         Đã bán
                      </p>
                      <p className="text-xl font-black text-neon-green">{event._count.tickets}</p>
                   </div>
-                  <div className="p-4 bg-gray-50 dark:bg-white/5 rounded-2xl border border-gray-100 dark:border-white/5 text-center">
+                  <div className="p-4 bg-gray-50 dark:bg-white/5 rounded-2xl border border-gray-100 dark:border-white/5 text-center transition-all hover:border-blue-500/30">
                      <p className="text-[10px] font-black text-gray-400 uppercase mb-1 flex items-center justify-center">
                         <ShoppingBag className="w-3 h-3 mr-1 text-blue-500" />
                         Số lượng Đơn
                      </p>
                      <p className="text-xl font-black text-blue-500">{event._count.orders}</p>
+                  </div>
+                  <div className="p-4 bg-gray-50 dark:bg-white/5 rounded-2xl border border-gray-100 dark:border-white/5 text-center transition-all hover:border-orange-500/30">
+                     <p className="text-[10px] font-black text-gray-400 uppercase mb-1 flex items-center justify-center">
+                        <TrendingUp className="w-3 h-3 mr-1 text-orange-500" />
+                        Thực thu BTC
+                     </p>
+                     <p className="text-base font-black text-orange-500 truncate">{parseFloat(event.financials?.net_revenue || 0).toLocaleString()}đ</p>
+                  </div>
+                  <div className="p-4 bg-gray-50 dark:bg-white/5 rounded-2xl border border-gray-100 dark:border-white/5 text-center transition-all hover:border-purple-500/30">
+                     <p className="text-[10px] font-black text-gray-400 uppercase mb-1 flex items-center justify-center">
+                        <ShieldCheck className="w-3 h-3 mr-1 text-purple-500" />
+                        Hoa hồng HT
+                     </p>
+                     <p className="text-base font-black text-purple-500 truncate">{parseFloat(event.financials?.system_commission || 0).toLocaleString()}đ</p>
                   </div>
                </div>
 
@@ -364,44 +379,17 @@ const EventDetail = () => {
               {activeTab === 'overview' && (
                 <div className="space-y-8 animate-in fade-in duration-300">
                    {/* Financial Stats Grid */}
-                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="p-5 bg-neon-green/10 border border-neon-green/20 rounded-2xl overflow-hidden relative group">
-                         <DollarSign className="absolute -right-2 -bottom-2 w-16 h-16 text-neon-green opacity-10 group-hover:scale-110 transition-transform" />
-                         <p className="text-[10px] font-black text-neon-green uppercase mb-2">Tổng doanh thu (Gross)</p>
-                         <p className="text-2xl font-black text-gray-900 dark:text-white">
-                           {parseFloat(event.financials.total_revenue).toLocaleString()} <span className="text-xs">đ</span>
-                         </p>
-                         <p className="text-[10px] font-bold text-gray-400 mt-1 uppercase italic">Bao gồm vé, sản phẩm & resale</p>
-                      </div>
-                      <div className="p-5 bg-blue-500/10 border border-blue-500/20 rounded-2xl overflow-hidden relative group">
-                         <TrendingUp className="absolute -right-2 -bottom-2 w-16 h-16 text-blue-500 opacity-10 group-hover:scale-110 transition-transform" />
-                         <p className="text-[10px] font-black text-blue-500 uppercase mb-2">Phí Platform thu về</p>
-                         <p className="text-2xl font-black text-gray-900 dark:text-white">
-                           {parseFloat(event.financials.platform_fees).toLocaleString()} <span className="text-xs">đ</span>
-                         </p>
-                         <p className="text-[10px] font-bold text-gray-400 mt-1 uppercase italic">Phí hoa hồng lợi nhuận hệ thống</p>
-                      </div>
-                      <div className="p-5 bg-orange-500/10 border border-orange-500/20 rounded-2xl overflow-hidden relative group">
-                         <Wallet className="absolute -right-2 -bottom-2 w-16 h-16 text-orange-500 opacity-10 group-hover:scale-110 transition-transform" />
-                         <p className="text-[10px] font-black text-orange-500 uppercase mb-2">Thực thu Organizer</p>
-                         <p className="text-2xl font-black text-gray-900 dark:text-white">
-                           {parseFloat(event.financials.net_revenue).toLocaleString()} <span className="text-xs">đ</span>
-                         </p>
-                         <p className="text-[10px] font-bold text-gray-400 mt-1 uppercase italic">Gồm vé, sản phẩm & bản quyền resale</p>
-                      </div>
-                   </div>
-
 
 
                    {/* Date & Time Grid */}
-                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 xl:grid-cols-4 gap-4">
                       {[
                         { label: 'Ngày Bắt đầu', val: format(new Date(event.event_date), 'dd/MM/yyyy', { locale: vi }), icon: Calendar },
                         { label: 'Giờ Diễn', val: event.event_time || '--:--', icon: Clock },
                         { label: 'Ngày Kết thúc', val: event.end_date ? format(new Date(event.end_date), 'dd/MM/yyyy', { locale: vi }) : 'Trong ngày', icon: CalendarDays },
                         { label: 'Giờ Về', val: event.end_time || '--:--', icon: Clock }
                       ].map((item, i) => (
-                        <div key={i} className="p-4 bg-gray-50 dark:bg-white/5 rounded-2xl border border-gray-100 dark:border-white/5">
+                        <div key={i} className="p-4 bg-gray-50 dark:bg-white/5 rounded-2xl border border-gray-100 dark:border-white/5 flex flex-col items-center sm:items-start text-center sm:text-left">
                            <div className="flex items-center space-x-2 text-[9px] font-black text-gray-400 uppercase mb-1.5">
                               <item.icon className="w-3 h-3 text-neon-green opacity-70" />
                               <span>{item.label}</span>
@@ -430,15 +418,15 @@ const EventDetail = () => {
                          <div className="bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 p-6 rounded-3xl space-y-4">
                             <div className="flex justify-between items-center pb-3 border-b border-gray-200 dark:border-white/5">
                                <span className="text-[10px] font-bold text-gray-400 uppercase">Ngân hàng</span>
-                               <span className="text-sm font-black text-gray-800 dark:text-gray-200 uppercase tracking-tight">{event.organizer?.bank_name || 'N/A'}</span>
+                               <span className="text-sm font-black text-gray-800 dark:text-gray-200 uppercase tracking-tight">{event.organizer?.user?.bank_name || 'N/A'}</span>
                             </div>
                             <div className="flex justify-between items-center pb-3 border-b border-gray-200 dark:border-white/5">
                                <span className="text-[10px] font-bold text-gray-400 uppercase">Số tài khoản</span>
-                               <span className="text-sm font-bold text-gray-800 dark:text-gray-200 font-mono tracking-widest">{event.organizer?.account_number || 'N/A'}</span>
+                               <span className="text-sm font-bold text-gray-800 dark:text-gray-200 font-mono tracking-widest">{event.organizer?.user?.account_number || 'N/A'}</span>
                             </div>
                             <div className="flex justify-between items-center">
                                <span className="text-[10px] font-bold text-gray-400 uppercase">Chủ tài khoản</span>
-                               <span className="text-sm font-black text-gray-800 dark:text-gray-200 uppercase">{event.organizer?.account_holder || 'N/A'}</span>
+                               <span className="text-sm font-black text-gray-800 dark:text-gray-200 uppercase">{event.organizer?.user?.account_holder || 'N/A'}</span>
                             </div>
                          </div>
                          <div className="p-4 bg-orange-500/5 border border-orange-500/10 rounded-2xl flex items-center space-x-3">
@@ -457,7 +445,7 @@ const EventDetail = () => {
                                <Layout className="w-4 h-4 text-purple-500" />
                                <span>Sơ đồ Chỗ ngồi</span>
                              </h4>
-                             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                                 {event.seating_charts.map((url, idx) => (
                                    <div key={idx} className="group relative aspect-[4/3] rounded-2xl overflow-hidden border border-gray-100 dark:border-white/5 bg-white dark:bg-white/5 cursor-zoom-in hover:border-purple-500/50 transition-all">
                                       <img src={url} alt={`Sơ đồ ${idx + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
@@ -530,8 +518,8 @@ const EventDetail = () => {
                       <div className="flex space-x-1 p-1 bg-gray-100 dark:bg-white/5 rounded-xl">
                         {[
                           { id: 'overview', label: 'Tổng quan', icon: Info },
-                          { id: 'transactions', label: `Giao dịch (${selectedTier.order_items?.length || 0})`, icon: ShoppingBag },
-                          { id: 'owners', label: `Người sở hữu (${selectedTier.tickets?.length || 0})`, icon: Users }
+                          { id: 'transactions', label: `Giao dịch (${selectedTier._count?.tickets || 0})`, icon: ShoppingBag },
+                          { id: 'owners', label: `Người sở hữu (${selectedTier._count?.tickets || 0})`, icon: Users }
                         ].map(t => (
                           <button
                             key={t.id}
@@ -575,11 +563,11 @@ const EventDetail = () => {
                             </div>
                             <div className="p-3 bg-neon-green/5 rounded-xl border border-neon-green/20 text-center">
                               <p className="text-xs text-neon-green mb-1">Đã bán</p>
-                              <p className="text-xl font-bold text-neon-green">{selectedTier.quantity_total - selectedTier.quantity_available}</p>
+                              <p className="text-xl font-bold text-neon-green">{selectedTier._count?.tickets || 0}</p>
                             </div>
                             <div className="p-3 bg-blue-500/5 rounded-xl border border-blue-500/20 text-center">
                               <p className="text-xs text-blue-500 mb-1">Còn lại</p>
-                              <p className="text-xl font-bold text-blue-500">{selectedTier.quantity_available}</p>
+                              <p className="text-xl font-bold text-blue-500">{selectedTier.quantity_total - (selectedTier._count?.tickets || 0)}</p>
                             </div>
                           </div>
 
@@ -588,17 +576,17 @@ const EventDetail = () => {
                             <div className="flex items-center justify-between text-xs text-gray-500">
                               <span>Tiến độ bán vé</span>
                               <span className="font-bold text-neon-green">
-                                {selectedTier.quantity_total > 0 ? Math.round(((selectedTier.quantity_total - selectedTier.quantity_available) / selectedTier.quantity_total) * 100) : 0}%
+                                {selectedTier.quantity_total > 0 ? Math.round(((selectedTier._count?.tickets || 0) / selectedTier.quantity_total) * 100) : 0}%
                               </span>
                             </div>
                             <div className="h-2 w-full bg-gray-200 dark:bg-white/5 rounded-full overflow-hidden">
                               <div
                                 className="h-full bg-neon-green rounded-full shadow-[0_0_6px_rgba(50,255,100,0.4)] transition-all duration-1000"
-                                style={{ width: `${selectedTier.quantity_total > 0 ? ((selectedTier.quantity_total - selectedTier.quantity_available) / selectedTier.quantity_total) * 100 : 0}%` }}
+                                style={{ width: `${selectedTier.quantity_total > 0 ? ((selectedTier._count?.tickets || 0) / selectedTier.quantity_total) * 100 : 0}%` }}
                               />
                             </div>
                             <p className="text-xs text-gray-400">
-                              Doanh thu ước tính: <span className="font-bold text-orange-400">{(parseFloat(selectedTier.price) * (selectedTier.quantity_total - selectedTier.quantity_available)).toLocaleString()} đ</span>
+                              Doanh thu ước tính: <span className="font-bold text-orange-400">{(parseFloat(selectedTier.price) * (selectedTier._count?.tickets || 0)).toLocaleString()} đ</span>
                             </p>
                           </div>
 
@@ -705,7 +693,7 @@ const EventDetail = () => {
                                       </td>
                                       <td className="px-3 py-2.5 text-center">
                                         <button 
-                                          onClick={() => navigate(`/admin/transactions/${item.order?.id}`)}
+                                          onClick={() => navigate(`/admin/transactions/ORDER/${item.order?.id}`)}
                                           className="p-1 bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-lg text-gray-400 hover:text-neon-green transition-all"
                                           title="Xem chi tiết đơn hàng"
                                         >
@@ -904,13 +892,13 @@ const EventDetail = () => {
                           
                           <div className="mt-5 space-y-2">
                             <div className="flex justify-between text-[10px] font-black uppercase tracking-tight text-gray-500">
-                              <span>Đã phát hành: {tier.quantity_total - tier.quantity_available}/{tier.quantity_total}</span>
-                              <span className="text-blue-500">Tồn kho: {tier.quantity_available}</span>
+                              <span>Đã bán: {tier._count?.tickets || 0}/{tier.quantity_total}</span>
+                              <span className="text-blue-500">Tồn kho: {tier.quantity_total - (tier._count?.tickets || 0)}</span>
                             </div>
                             <div className="h-1.5 w-full bg-gray-200 dark:bg-white/5 rounded-full overflow-hidden">
                               <div 
                                 className="h-full bg-neon-green rounded-full shadow-[0_0_8px_rgba(50,255,100,0.3)] transition-all duration-1000" 
-                                style={{ width: `${((tier.quantity_total - tier.quantity_available) / tier.quantity_total) * 100}%` }}
+                                style={{ width: `${((tier._count?.tickets || 0) / tier.quantity_total) * 100}%` }}
                               />
                             </div>
                           </div>
@@ -978,7 +966,7 @@ const EventDetail = () => {
                                          <td className="px-6 py-4">
                                             <div className="flex flex-col">
                                                <span className="text-xs font-black text-gray-800 dark:text-gray-200 uppercase tracking-tight">#{order.order_number}</span>
-                                               <span className="text-[10px] text-gray-400 font-bold uppercase mt-0.5">{order._count?.items || 0} Vé / {order._count?.merchandise_items || 0} Sản phẩm</span>
+                                               <span className="text-[10px] text-gray-400 font-bold uppercase mt-0.5">{order.total_ticket_quantity || 0} Vé / {order.total_merch_quantity || 0} Sản phẩm</span>
                                             </div>
                                          </td>
                                          <td className="px-6 py-4">
@@ -1008,7 +996,7 @@ const EventDetail = () => {
                                          </td>
                                          <td className="px-6 py-4 text-center">
                                             <button 
-                                              onClick={() => navigate(`/admin/transactions/${order.id}`)}
+                                              onClick={() => navigate(`/admin/transactions/ORDER/${order.id}`)}
                                               className="p-1.5 bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-xl text-gray-400 hover:text-neon-green transition-all"
                                               title="Xem chi tiết đơn hàng"
                                             >

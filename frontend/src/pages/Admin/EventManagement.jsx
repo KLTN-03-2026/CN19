@@ -115,64 +115,64 @@ const EventManagement = () => {
   return (
     <div className="space-y-4 animate-in fade-in duration-500 max-w-[1600px] mx-auto">
       {/* Header & Stats section */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <div>
-          <h1 className="text-2xl font-black text-gray-900 dark:text-white flex items-center space-x-3 uppercase tracking-tight">
+          <h1 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white flex items-center space-x-3 uppercase tracking-tight">
             <div className="p-2 bg-neon-green/10 rounded-xl">
-              <CalendarDays className="w-6 h-6 text-neon-green" />
+              <CalendarDays className="w-5 h-5 sm:w-6 sm:h-6 text-neon-green" />
             </div>
             <span>Quản lý Sự kiện</span>
           </h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1 text-sm font-medium">
+          <p className="text-gray-500 dark:text-gray-400 mt-1 text-xs sm:text-sm font-medium">
             Theo dõi và điều phối hệ thống sự kiện.
           </p>
         </div>
-
+ 
         {/* Stats Cards - Compact but matching UserManagement style */}
-        <div className="flex items-center space-x-3">
+        <div className="grid grid-cols-2 lg:flex items-center gap-3 w-full lg:w-auto">
           <button 
             onClick={() => setFilters({ ...filters, status: '' })}
-            className={`p-3 rounded-2xl border flex items-center space-x-4 transition-all ${
+            className={`p-3 rounded-2xl border flex items-center space-x-3 sm:space-x-4 transition-all w-full lg:min-w-[160px] ${
               !filters.status 
                 ? 'bg-neon-green/10 border-neon-green/30 text-neon-green shadow-sm' 
                 : 'bg-white dark:bg-white/5 border-gray-200 dark:border-white/5 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/10'
             }`}
           >
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
               !filters.status ? 'bg-neon-green/20' : 'bg-gray-100 dark:bg-white/5'
             }`}>
               <Calendar className="w-5 h-5" />
             </div>
             <div className="text-left">
               <div className="text-[10px] uppercase font-bold opacity-60">Tất cả</div>
-              <div className="text-xl font-black">{stats.total}</div>
+              <div className="text-lg sm:text-xl font-black">{stats.total}</div>
             </div>
           </button>
-
+ 
           <button 
             onClick={() => setFilters({ ...filters, status: 'pending' })}
-            className={`p-3 rounded-2xl border flex items-center space-x-4 transition-all ${
+            className={`p-3 rounded-2xl border flex items-center space-x-3 sm:space-x-4 transition-all w-full lg:min-w-[160px] ${
               filters.status === 'pending' 
                 ? 'bg-yellow-500/10 border-yellow-500/30 text-yellow-500 shadow-sm' 
                 : 'bg-white dark:bg-white/5 border-gray-200 dark:border-white/5 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/10'
             }`}
           >
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
               filters.status === 'pending' ? 'bg-yellow-500/20' : 'bg-gray-100 dark:bg-white/5'
             }`}>
               <Clock className="w-5 h-5" />
             </div>
             <div className="text-left">
               <div className="text-[10px] uppercase font-bold opacity-60">Chờ duyệt</div>
-              <div className="text-xl font-black">{stats.pending}</div>
+              <div className="text-lg sm:text-xl font-black">{stats.pending}</div>
             </div>
           </button>
         </div>
       </div>
 
       {/* Filter Bar - Standardized but compact */}
-      <div className="bg-white dark:bg-[#111114] p-3 rounded-2xl border border-gray-200 dark:border-white/5 flex flex-wrap items-center gap-4 shadow-sm">
-        <form onSubmit={handleSearch} className="relative flex-1 min-w-[300px]">
+      <div className="bg-white dark:bg-[#111114] p-3 rounded-2xl border border-gray-200 dark:border-white/5 flex flex-col md:flex-row items-stretch md:items-center gap-3 shadow-sm">
+        <form onSubmit={handleSearch} className="relative flex-1">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input 
             type="text"
@@ -182,64 +182,66 @@ const EventManagement = () => {
             onChange={(e) => setFilters({...filters, keyword: e.target.value})}
           />
         </form>
-
-        <select 
-          className="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-neon-green/50 font-bold"
-          value={filters.status}
-          onChange={(e) => setFilters({...filters, status: e.target.value})}
-        >
-          <option value="">Tất cả Trạng thái</option>
-          <option value="pending">Chờ duyệt</option>
-          <option value="active">Đang hoạt động</option>
-          <option value="cancelled">Đã hủy</option>
-          <option value="draft">Bản nháp</option>
-        </select>
-
-        <div className="flex items-center space-x-2 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-3 py-1 focus-within:border-neon-green/50 transition-all">
-          <div className="flex flex-col">
-            <label className="text-[9px] text-gray-400 dark:text-gray-500 font-bold uppercase ml-1">Từ ngày</label>
-            <input 
-              type="date" 
-              className="bg-transparent text-gray-700 dark:text-gray-300 text-[11px] focus:outline-none transition-colors border-none p-0 h-4"
-              value={filters.from}
-              onChange={(e) => setFilters({...filters, from: e.target.value})}
-            />
-          </div>
-          <div className="h-4 w-px bg-gray-200 dark:bg-white/10 mx-1" />
-          <div className="flex flex-col">
-            <label className="text-[9px] text-gray-400 dark:text-gray-500 font-bold uppercase ml-1">Đến ngày</label>
-            <input 
-              type="date" 
-              className="bg-transparent text-gray-700 dark:text-gray-300 text-[11px] focus:outline-none transition-colors border-none p-0 h-4"
-              value={filters.to}
-              onChange={(e) => setFilters({...filters, to: e.target.value})}
-            />
-          </div>
-        </div>
-
-        <div className="flex items-center bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl p-1">
-          <button 
-            onClick={() => setViewMode('list')}
-            className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-white dark:bg-white/10 text-neon-green shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
-            title="Dạng danh sách"
+ 
+        <div className="flex flex-col sm:flex-row gap-2">
+          <select 
+            className="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-300 rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-neon-green/50 font-bold"
+            value={filters.status}
+            onChange={(e) => setFilters({...filters, status: e.target.value})}
           >
-            <List className="w-4 h-4" />
-          </button>
+            <option value="">Tất cả Trạng thái</option>
+            <option value="pending">Chờ duyệt</option>
+            <option value="active">Đang hoạt động</option>
+            <option value="cancelled">Đã hủy</option>
+            <option value="draft">Bản nháp</option>
+          </select>
+ 
+          <div className="flex items-center space-x-2 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-3 py-1 focus-within:border-neon-green/50 transition-all flex-1">
+            <div className="flex flex-col flex-1">
+              <label className="text-[9px] text-gray-400 dark:text-gray-500 font-bold uppercase ml-1">Từ ngày</label>
+              <input 
+                type="date" 
+                className="bg-transparent text-gray-700 dark:text-gray-300 text-[11px] focus:outline-none transition-colors border-none p-0 h-4"
+                value={filters.from}
+                onChange={(e) => setFilters({...filters, from: e.target.value})}
+              />
+            </div>
+            <div className="h-4 w-px bg-gray-200 dark:bg-white/10 mx-1" />
+            <div className="flex flex-col flex-1">
+              <label className="text-[9px] text-gray-400 dark:text-gray-500 font-bold uppercase ml-1">Đến ngày</label>
+              <input 
+                type="date" 
+                className="bg-transparent text-gray-700 dark:text-gray-300 text-[11px] focus:outline-none transition-colors border-none p-0 h-4"
+                value={filters.to}
+                onChange={(e) => setFilters({...filters, to: e.target.value})}
+              />
+            </div>
+          </div>
+ 
+          <div className="flex items-center bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl p-1 justify-center">
+            <button 
+              onClick={() => setViewMode('list')}
+              className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-white dark:bg-white/10 text-neon-green shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+              title="Dạng danh sách"
+            >
+              <List className="w-4 h-4" />
+            </button>
+            <button 
+              onClick={() => setViewMode('grid')}
+              className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-white dark:bg-white/10 text-neon-green shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+              title="Dạng lưới"
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+          </div>
+          
           <button 
-            onClick={() => setViewMode('grid')}
-            className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-white dark:bg-white/10 text-neon-green shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
-            title="Dạng lưới"
+            onClick={fetchEvents}
+            className="p-2 bg-neon-green text-black rounded-xl hover:bg-neon-hover transition-all font-bold text-xs px-6 shadow-sm shadow-neon-green/20 uppercase"
           >
-            <LayoutGrid className="w-4 h-4" />
+            Lọc
           </button>
         </div>
-        
-        <button 
-          onClick={fetchEvents}
-          className="p-2 bg-neon-green text-black rounded-xl hover:bg-neon-hover transition-all font-bold text-xs px-6 shadow-sm shadow-neon-green/20 uppercase"
-        >
-          Lọc
-        </button>
       </div>
 
       {/* Content Rendering */}
@@ -257,13 +259,13 @@ const EventManagement = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-gray-50 dark:bg-white/5 border-b border-gray-200 dark:border-white/5 text-xs uppercase font-black text-gray-500 dark:text-gray-400">
-                  <th className="px-6 py-4">Sự kiện</th>
-                  <th className="px-6 py-4">Ban tổ chức</th>
-                  <th className="px-6 py-4">Vé đã bán</th>
-                  <th className="px-6 py-4">Thời gian</th>
-                  <th className="px-6 py-4 text-center">Trạng thái</th>
-                  <th className="px-6 py-4 text-right">Thao tác</th>
+                <tr className="bg-gray-50 dark:bg-white/5 border-b border-gray-200 dark:border-white/5 text-[10px] sm:text-xs uppercase font-black text-gray-500 dark:text-gray-400">
+                  <th className="px-4 sm:px-6 py-4">Sự kiện</th>
+                  <th className="px-6 py-4 hidden lg:table-cell">Ban tổ chức</th>
+                  <th className="px-6 py-4 hidden sm:table-cell">Vé đã bán</th>
+                  <th className="px-6 py-4 hidden md:table-cell">Thời gian</th>
+                  <th className="px-4 sm:px-6 py-4 text-center">Trạng thái</th>
+                  <th className="px-4 sm:px-6 py-4 text-right">Thao tác</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-white/5">
@@ -289,7 +291,7 @@ const EventManagement = () => {
                          </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 hidden lg:table-cell">
                       <div className="flex items-center space-x-2">
                          <Building2 className="w-3.5 h-3.5 text-blue-500 opacity-60" />
                          <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 truncate max-w-[150px]">
@@ -297,7 +299,7 @@ const EventManagement = () => {
                          </span>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 hidden sm:table-cell">
                       <div className="flex flex-col">
                         <span className="text-sm font-black text-gray-900 dark:text-white">
                           {event.sold_tickets || 0} <span className="text-gray-400 font-bold">/ {event.total_tickets || 0}</span>
@@ -305,7 +307,7 @@ const EventManagement = () => {
                         <span className="text-[10px] text-gray-400 uppercase font-bold tracking-tighter">Vé hệ thống</span>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-6 py-4 hidden md:table-cell">
                       <div className="flex flex-col">
                         <div className="flex items-center space-x-2 text-xs font-bold text-gray-700 dark:text-gray-300">
                           <Calendar className="w-3.5 h-3.5 text-neon-green opacity-50" />
@@ -322,10 +324,10 @@ const EventManagement = () => {
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-center">
+                    <td className="px-4 sm:px-6 py-4 text-center">
                       {getStatusBadge(event.status)}
                     </td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-4 sm:px-6 py-4 text-right">
                       <div className="flex items-center justify-end space-x-1.5">
                         {(event.status === 'pending') && (
                           <div className="flex space-x-1 p-1 bg-gray-100 dark:bg-white/5 rounded-lg border border-gray-200 dark:border-white/10">

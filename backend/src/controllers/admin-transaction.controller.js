@@ -251,6 +251,11 @@ const getTransactionDetail = async (req, res) => {
                         ticket_tier: { select: { tier_name: true, price: true } }
                     }
                 },
+                merchandise_items: {
+                    include: {
+                        merchandise: { select: { name: true, image_url: true, price: true } }
+                    }
+                },
                 tickets: {
                     select: { id: true, ticket_number: true, nft_token_id: true, status: true, ticket_tier: { select: { tier_name: true } } }
                 },
