@@ -71,7 +71,7 @@ const getUsers = async (req, res) => {
 // [UC_21] Quản lý người dùng: Tạo người dùng mới (Dành cho Admin)
 const createUser = async (req, res) => {
   try {
-    const { email, password, phone_number, full_name, role, permissions } = req.body;
+    const { email, password, phone_number, full_name, role, permissions, organization_name, address_raw, business_license, description } = req.body;
 
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
@@ -83,7 +83,7 @@ const createUser = async (req, res) => {
     // 3. Tạo Ví Web3 Custodial
     const randomWallet = ethers.Wallet.createRandom();
 
-    // 4. Tạo user
+    // 4. Tạo user và organizer profile nếu cần
     const newUser = await prisma.user.create({
       data: {
         email,
@@ -94,40 +94,66 @@ const createUser = async (req, res) => {
         permissions: role === 'admin' ? (permissions || []) : [],
         wallet_address: randomWallet.address,
         wallet_private_key: randomWallet.privateKey,
-        status: 'active'
+        status: 'active',
+        organizer_profile: role === 'organizer' ? {
+          create: {
+            organization_name: organization_name || `Công ty của ${full_name || email}`,
+            address_raw: address_raw || null,
+            business_license: business_license || null,
+            description: description || null,
+            kyc_status: 'pending', // Option 2: Phải eKYC sau
+            is_verified: false
+          }
+        } : undefined
       }
     });
 
     // 5. Gửi Email thông báo tài khoản & Ví mới
     try {
-      const subject = '[BASTICKET] Thông tin tài khoản & Ví Web3 mới';
+      const roleMap = {
+        'admin': 'Quản trị viên',
+        'organizer': 'Ban tổ chức',
+        'staff': 'Nhân viên',
+        'customer': 'Khách hàng'
+      };
+
+      const subject = `[BASTICKET] Thông tin tài khoản ${roleMap[role] || 'Thành viên'} mới`;
       const html = `
-        <div style="font-family: sans-serif; padding: 20px; color: #333; max-width: 600px; border: 1px solid #eee; border-radius: 12px;">
-          <h2 style="color: #52c41a; text-align: center;">Chào mừng bạn đến với BASTICKET!</h2>
-          <p>Tài khoản quản trị và <b>Ví Web3 cá nhân</b> của bạn đã được khởi tạo thành công.</p>
+        <div style="font-family: sans-serif; padding: 20px; color: #333; max-width: 600px; margin: auto; border: 1px solid #eee; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
+          <div style="text-align: center; margin-bottom: 20px;">
+            <h1 style="color: #52c41a; margin: 0; font-size: 24px;">BASTICKET</h1>
+            <p style="color: #999; margin: 5px 0;">Hệ thống quản lý vé sự kiện NFT</p>
+          </div>
+          <h2 style="color: #333; text-align: center;">Chào mừng bạn đến với BASTICKET!</h2>
+          <p>Tài khoản của bạn đã được khởi tạo thành công bởi Quản trị viên hệ thống.</p>
           
-          <div style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <p style="margin: 5px 0;"><b>📧 Email đăng nhập:</b> ${email}</p>
-            <p style="margin: 5px 0;"><b>🔑 Mật khẩu tạm thời:</b> <span style="color: #ff4d4f; font-family: monospace; font-weight: bold;">${password}</span></p>
-            <hr style="border: none; border-top: 1px solid #ddd; margin: 15px 0;"/>
-            <p style="margin: 5px 0;"><b>💎 Địa chỉ Ví Web3:</b></p>
-            <p style="word-break: break-all; font-family: monospace; font-size: 13px; color: #666; background: #fff; padding: 10px; border: 1px solid #eee; border-radius: 4px;">
+          <div style="background: #fdfdfd; padding: 20px; border: 1px solid #f0f0f0; border-radius: 12px; margin: 20px 0;">
+            <p style="margin: 8px 0;"><b>📧 Email đăng nhập:</b> ${email}</p>
+            <p style="margin: 8px 0;"><b>🔑 Mật khẩu tạm thời:</b> <span style="color: #ff4d4f; font-family: monospace; font-weight: bold; background: #fff1f0; padding: 2px 6px; border-radius: 4px;">${password}</span></p>
+            <p style="margin: 8px 0;"><b>👤 Vai trò:</b> <span style="color: #52c41a; font-weight: bold;">${roleMap[role] || role}</span></p>
+            ${role === 'organizer' ? `<p style="margin: 8px 0;"><b>🏢 Tổ chức:</b> ${organization_name}</p>` : ''}
+            
+            <hr style="border: none; border-top: 1px solid #eee; margin: 15px 0;"/>
+            
+            <p style="margin: 5px 0; color: #666; font-size: 13px;"><b>💎 Địa chỉ Ví Web3 cá nhân:</b></p>
+            <p style="word-break: break-all; font-family: monospace; font-size: 12px; color: #52c41a; background: #f6ffed; padding: 12px; border: 1px solid #b7eb8f; border-radius: 8px; margin-top: 5px;">
               ${randomWallet.address}
             </p>
-            <p style="font-size: 11px; color: #999; margin-top: 10px;"><i>* Ví này dùng để quản lý vé NFT và các giao dịch trên hệ thống.</i></p>
+            <p style="font-size: 11px; color: #999; margin-top: 8px;"><i>* Ví này dùng để quản lý vé NFT và thực hiện các giao dịch trên blockchain.</i></p>
           </div>
 
-          <p>Hành động cần làm: <b>Vui lòng đăng nhập và đổi mật khẩu ngay để bảo mật tài khoản.</b></p>
+          <p style="font-size: 14px;">Hành động cần làm: <b>Bạn nên đăng nhập và thay đổi mật khẩu ngay để đảm bảo an toàn.</b></p>
           
           <div style="text-align: center; margin-top: 30px;">
             <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/login" 
-               style="display: inline-block; padding: 12px 30px; background-color: #52c41a; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">
+               style="display: inline-block; padding: 14px 34px; background-color: #52c41a; color: white; text-decoration: none; border-radius: 10px; font-weight: bold; font-size: 16px; box-shadow: 0 4px 14px rgba(82, 196, 26, 0.3);">
               Đăng nhập ngay
             </a>
           </div>
           
-          <p style="margin-top: 30px; font-size: 12px; color: #999; text-align: center; line-height: 1.5;">
-            Trân trọng,<br/>
+          <p style="margin-top: 40px; font-size: 12px; color: #aaa; text-align: center; line-height: 1.6;">
+            Email này được gửi tự động từ hệ thống BASTICKET.<br/>
+            Vui lòng không trả lời email này. Nếu có thắc mắc, hãy liên hệ bộ phận hỗ trợ.<br/>
             <b>Đội ngũ Quản trị BASTICKET</b>
           </p>
         </div>
@@ -160,10 +186,10 @@ const getUserById = async (req, res) => {
     let user = await prisma.user.findUnique({
       where: { id },
       include: {
+        wallet_transactions: { orderBy: { created_at: 'desc' } },
+        withdrawal_requests: { orderBy: { created_at: 'desc' } },
         organizer_profile: {
           include: {
-            wallet_transactions: { orderBy: { created_at: 'desc' } },
-            withdrawal_requests: { orderBy: { created_at: 'desc' } },
             events: {
               select: { 
                 id: true, 
@@ -474,9 +500,47 @@ const getUserById = async (req, res) => {
       });
     }
 
-    res.status(200).json(sensitiveData);
+    // 3. Tính toán số dư chờ quyết toán (Pending Balance)
+    // Bao gồm: Doanh thu từ đơn hàng gốc (Organizer) + Doanh thu từ Marketplace (Seller) chưa settle
+    let pending_balance = 0;
+
+    // A. Doanh thu từ Đơn hàng gốc (Tickets + Merchandise) của BTC
+    if (user.organizer_profile) {
+      const pendingOrders = await prisma.order.aggregate({
+        where: {
+          event: { organizer_id: user.organizer_profile.id },
+          status: 'paid',
+          is_settled: false
+        },
+        _sum: {
+          organizer_revenue: true
+        }
+      });
+      pending_balance += Number(pendingOrders._sum.organizer_revenue || 0);
+    }
+
+    // B. Doanh thu từ việc bán lại trên Marketplace của User (với tư cách Seller)
+    const pendingMarketplace = await prisma.marketplaceTransaction.aggregate({
+      where: {
+        seller_id: user.id,
+        status: 'completed',
+        is_settled: false
+      },
+      _sum: {
+        seller_receive_amount: true
+      }
+    });
+    pending_balance += Number(pendingMarketplace._sum.seller_receive_amount || 0);
+
+    // Ghép vào object user trả về
+    const result = {
+      ...sensitiveData,
+      pending_balance
+    };
+
+    res.status(200).json(result);
   } catch (error) {
-    console.error('Error fetching user detail:', error);
+    console.error('Lỗi khi lấy chi tiết người dùng:', error);
     res.status(500).json({ error: 'Lỗi server khi lấy chi tiết người dùng.' });
   }
 };

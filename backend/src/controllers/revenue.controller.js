@@ -11,20 +11,22 @@ const RevenueController = {
         try {
             const userId = req.user.userId;
             
-            // Tìm Organizer dựa trên userId
-            const organizer = await prisma.organizer.findUnique({
-                where: { user_id: userId },
+            const user = await prisma.user.findUnique({
+                where: { id: userId },
                 include: {
                     wallet_transactions: {
                         orderBy: { created_at: 'desc' },
                         take: 10
-                    }
+                    },
+                    organizer_profile: true
                 }
             });
 
-            if (!organizer) {
+            if (!user || !user.organizer_profile) {
                 return res.status(404).json({ error: 'Không tìm thấy thông tin Ban tổ chức.' });
             }
+
+            const organizer = user.organizer_profile;
 
             // Tính toán doanh thu đang chờ xử lý (Pending)
             // Là các Order đã thanh toán (paid) nhưng chưa được đối soát (is_settled = false)
@@ -47,7 +49,7 @@ const RevenueController = {
             // Tính tổng tiền đã rút thành công
             const withdrawnTransactions = await prisma.walletTransaction.aggregate({
                 where: {
-                    organizer_id: organizer.id,
+                    user_id: user.id,
                     type: 'WITHDRAWAL',
                     status: 'completed'
                 },
@@ -57,15 +59,15 @@ const RevenueController = {
             const totalWithdrawn = withdrawnTransactions._sum.amount || 0;
 
             res.status(200).json({
-                balance: Number(organizer.balance),
+                balance: Number(user.balance),
                 pendingRevenue: Number(pendingRevenue),
                 totalWithdrawn: Number(totalWithdrawn),
                 bankInfo: {
-                    bank_name: organizer.bank_name,
-                    account_number: organizer.account_number,
-                    account_holder: organizer.account_holder
+                    bank_name: user.bank_name,
+                    account_number: user.account_number,
+                    account_holder: user.account_holder
                 },
-                recentTransactions: organizer.wallet_transactions
+                recentTransactions: user.wallet_transactions
             });
         } catch (error) {
             console.error('Get Revenue Summary Error:', error);
@@ -79,15 +81,14 @@ const RevenueController = {
     getTransactionHistory: async (req, res) => {
         try {
             const userId = req.user.userId;
-            const organizer = await prisma.organizer.findUnique({ where: { user_id: userId } });
             
             const transactions = await prisma.walletTransaction.findMany({
-                where: { organizer_id: organizer.id },
+                where: { user_id: userId },
                 orderBy: { created_at: 'desc' }
             });
 
             const withdrawalRequests = await prisma.withdrawalRequest.findMany({
-                where: { organizer_id: organizer.id },
+                where: { user_id: userId },
                 orderBy: { created_at: 'desc' }
             });
 
@@ -106,10 +107,10 @@ const RevenueController = {
             const { amount } = req.body;
             const withdrawAmount = Number(amount);
 
-            const organizer = await prisma.organizer.findUnique({ where: { user_id: userId } });
-
-            // Kiểm tra thông tin ngân hàng
-            if (!organizer.bank_name || !organizer.account_number) {
+            // Kiểm tra thông tin ngân hàng & số dư
+            const user = await prisma.user.findUnique({ where: { id: userId } });
+            
+            if (!user.bank_name || !user.account_number) {
                 return res.status(400).json({ error: 'Vui lòng cập nhật thông tin ngân hàng trước khi rút tiền.' });
             }
 
@@ -122,26 +123,26 @@ const RevenueController = {
             }
 
             // Kiểm tra số dư
-            if (Number(organizer.balance) < withdrawAmount) {
+            if (Number(user.balance) < withdrawAmount) {
                 return res.status(400).json({ error: 'Số dư khả dụng không đủ.' });
             }
 
             // Thực hiện rút tiền trong một Transaction
             const result = await prisma.$transaction(async (tx) => {
-                // 1. Trừ số dư Organizer
-                const updatedOrganizer = await tx.organizer.update({
-                    where: { id: organizer.id },
+                // 1. Trừ số dư User
+                const updatedUser = await tx.user.update({
+                    where: { id: userId },
                     data: { balance: { decrement: withdrawAmount } }
                 });
 
                 // 2. Tạo yêu cầu rút tiền (trạng thái chờ duyệt)
                 const request = await tx.withdrawalRequest.create({
                     data: {
-                        organizer_id: organizer.id,
+                        user_id: userId,
                         amount: withdrawAmount,
-                        bank_name: organizer.bank_name,
-                        account_number: organizer.account_number,
-                        account_holder: organizer.account_holder,
+                        bank_name: user.bank_name,
+                        account_number: user.account_number,
+                        account_holder: user.account_holder,
                         status: 'pending'
                     }
                 });
@@ -150,7 +151,7 @@ const RevenueController = {
                 // Thường giao dịch ví sẽ ghi ngay để trừ tiền tạm giữ
                 await tx.walletTransaction.create({
                     data: {
-                        organizer_id: organizer.id,
+                        user_id: userId,
                         amount: -withdrawAmount,
                         type: 'WITHDRAWAL',
                         description: `Yêu cầu rút tiền: ${withdrawAmount.toLocaleString()}đ`,
@@ -164,7 +165,7 @@ const RevenueController = {
             res.status(200).json({ message: 'Yêu cầu rút tiền đã được gửi thành công.', request: result });
         } catch (error) {
             console.error('Request Withdrawal Error:', error);
-            res.status(500).json({ error: 'Lỗi khi gửi yêu cầu rút tiền.' });
+            res.status(500).json({ error: error.message || 'Lỗi khi gửi yêu cầu rút tiền.' });
         }
     },
 
@@ -176,8 +177,8 @@ const RevenueController = {
             const userId = req.user.userId;
             const { bank_name, account_number, account_holder } = req.body;
 
-            await prisma.organizer.update({
-                where: { user_id: userId },
+            await prisma.user.update({
+                where: { id: userId },
                 data: {
                     bank_name,
                     account_number,

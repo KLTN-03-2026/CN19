@@ -1,5 +1,6 @@
 generator client {
   provider = "prisma-client-js"
+  output   = "./src/generated/client"
 }
 
 datasource db {
@@ -25,6 +26,12 @@ model User {
   latitude              Decimal?
   longitude             Decimal?
   permissions           String[]                 @default([])
+  balance               Decimal                  @default(0)
+  bank_name             String?
+  account_number        String?
+  account_holder        String?
+  wallet_transactions   WalletTransaction[]
+  withdrawal_requests   WithdrawalRequest[]
   admin_logs            AdminActionLog[]
   authored_blogs        Blog[]                   @relation("BlogAuthor")
   bot_logs              BotDetectionLog[]
@@ -46,37 +53,28 @@ model User {
 }
 
 model Organizer {
-  id                String        @id @default(uuid())
-  user_id           String        @unique
-  organization_name String
-  kyc_status        String        @default("pending")
-  kyc_verified_at   DateTime?
-  business_license  String?
-  identity_card     String?
-  is_verified       Boolean       @default(false)
-  description       String?
-  address_raw       String?
-  back_image_url    String?
-  dob_raw           String?
-  face_image_url    String?
-  facematch_score   Float?
-  front_image_url   String?
-  full_name_raw     String?
-  id_number         String?
-  kyc_raw_data      Json?
-  liveness_score    Float?
-  
-  // Tài chính
-  balance           Decimal       @default(0)
-  bank_name         String?
-  account_number    String?
-  account_holder    String?
-
-  events            Event[]
-  merchandise       Merchandise[]
-  wallet_transactions WalletTransaction[]
-  withdrawal_requests WithdrawalRequest[]
-  user              User          @relation(fields: [user_id], references: [id])
+  id                  String              @id @default(uuid())
+  user_id             String              @unique
+  organization_name   String
+  kyc_status          String              @default("pending")
+  kyc_verified_at     DateTime?
+  business_license    String?
+  identity_card       String?
+  is_verified         Boolean             @default(false)
+  description         String?
+  address_raw         String?
+  back_image_url      String?
+  dob_raw             String?
+  face_image_url      String?
+  facematch_score     Float?
+  front_image_url     String?
+  full_name_raw       String?
+  id_number           String?
+  kyc_raw_data        Json?
+  liveness_score      Float?
+  user                User                @relation(fields: [user_id], references: [id])
+  events              Event[]
+  merchandise         Merchandise[]
 }
 
 model EventStaffAssignment {
@@ -189,33 +187,35 @@ model Order {
   created_at        DateTime               @default(now())
   coupon_id         String?
   discount_amount   Decimal?               @default(0)
-  order_type        String                 @default("TICKET_PURCHASE") // TICKET_PURCHASE, TICKET_TRANSFER
-  metadata          Json?
-  ip_address        String?
-  // Trạng thái đối soát tiền cho Organizer
   is_settled        Boolean                @default(false)
+  metadata          Json?
+  order_type        String                 @default("TICKET_PURCHASE")
+  ip_address        String?
+  commission_fee    Decimal?               @default(0)
+  gas_fee           Decimal?               @default(0)
+  organizer_revenue Decimal?               @default(0)
   bot_logs          BotDetectionLog[]
   merchandise_items MerchandiseOrderItem[]
   coupon            Coupon?                @relation(fields: [coupon_id], references: [id])
   customer          User                   @relation(fields: [customer_id], references: [id])
   event             Event                  @relation(fields: [event_id], references: [id])
   items             OrderItem[]
-  tickets           Ticket[]
   payments          Payment[]
+  tickets           Ticket[]
 }
 
 model Payment {
-  id               String   @id @default(uuid())
-  order_id         String
-  method           String
-  transaction_id   String?
-  amount           Decimal
-  status           String   @default("pending")
-  response_data    Json?
-  paid_at          DateTime @default(now())
-  created_at       DateTime @default(now())
-  updated_at       DateTime @updatedAt
-  order            Order    @relation(fields: [order_id], references: [id])
+  id             String   @id @default(uuid())
+  order_id       String
+  method         String
+  transaction_id String?
+  amount         Decimal
+  status         String   @default("pending")
+  response_data  Json?
+  paid_at        DateTime @default(now())
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+  order          Order    @relation(fields: [order_id], references: [id])
 }
 
 model OrderItem {
@@ -287,8 +287,14 @@ model MarketplaceTransaction {
   platform_fee          Decimal
   buyer_pay_amount      Decimal
   status                String
+  is_settled            Boolean            @default(false)
   nft_transfer_tx_hash  String?
   ip_address            String?
+  created_at            DateTime           @default(now())
+  commission_fee        Decimal?           @default(0)
+  gas_fee               Decimal?           @default(0)
+  organizer_royalty     Decimal?           @default(0)
+  resale_profit         Decimal?           @default(0)
   buyer                 User               @relation("Buyer", fields: [buyer_id], references: [id])
   listing               MarketplaceListing @relation(fields: [listing_id], references: [id])
   seller                User               @relation("Seller", fields: [seller_id], references: [id])
@@ -314,17 +320,17 @@ model TicketTransfer {
 model BotDetectionLog {
   id                 String   @id @default(uuid())
   user_id            String?
-  event_type         String?
   order_id           String?
   click_speed_ms     Int      @default(0)
   form_fill_duration Int      @default(0)
   behavior_metrics   Json?
   risk_score         Decimal
   decision           String
+  created_at         DateTime @default(now())
+  detection_details  Json?
   ip_address         String?
   user_agent         String?
-  detection_details  Json?
-  created_at         DateTime @default(now())
+  event_type         String?
   order              Order?   @relation(fields: [order_id], references: [id])
   user               User?    @relation(fields: [user_id], references: [id])
 }
@@ -355,19 +361,18 @@ model EscrowPayout {
   event_id        String
   total_revenue   Decimal
   net_payout      Decimal
-  platform_fee    Decimal   @default(0)
-  status          String    @default("pending") // pending, processing, settled, rejected
+  status          String    @default("pending")
   payout_trans_id String?
   admin_notes     String?
-  evidence_url    String?
-  bank_info       Json?     // Lưu thông tin ngân hàng lúc yêu cầu
-  requested_at    DateTime?
-  processed_at    DateTime?
+  bank_info       Json?
   created_at      DateTime  @default(now())
+  evidence_url    String?
+  platform_fee    Decimal   @default(0)
+  processed_at    DateTime?
+  requested_at    DateTime?
   updated_at      DateTime  @updatedAt
   event           Event     @relation(fields: [event_id], references: [id])
 }
-
 
 model DynamicQRToken {
   id         String   @id @default(uuid())
@@ -492,18 +497,18 @@ model Coupon {
 
 model WalletTransaction {
   id           String   @id @default(uuid())
-  organizer_id String
+  user_id      String?
   amount       Decimal
   type         String   // REVENUE (Cộng tiền vé), WITHDRAWAL (Rút tiền)
   description  String?
   status       String   @default("completed")
   created_at   DateTime @default(now())
-  organizer    Organizer @relation(fields: [organizer_id], references: [id])
+  user         User?    @relation(fields: [user_id], references: [id])
 }
 
 model WithdrawalRequest {
   id              String    @id @default(uuid())
-  organizer_id    String
+  user_id         String?
   amount          Decimal
   bank_name       String
   account_number  String
@@ -512,5 +517,5 @@ model WithdrawalRequest {
   admin_notes     String?
   processed_at    DateTime?
   created_at      DateTime  @default(now())
-  organizer       Organizer @relation(fields: [organizer_id], references: [id])
+  user            User?     @relation(fields: [user_id], references: [id])
 }

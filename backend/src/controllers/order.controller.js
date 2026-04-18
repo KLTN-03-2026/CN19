@@ -31,7 +31,11 @@ const createPrimaryOrder = async (req, res) => {
         decision: aiAnalysis.isBot ? 'BLOCK' : 'ALLOW',
         ip_address: botService.getClientIp(req),
         user_agent: req.headers['user-agent'],
-        detection_details: aiAnalysis.details
+        detection_details: {
+          details: aiAnalysis.details,
+          recaptchaScore: aiAnalysis.recaptchaScore,
+          aiRiskScore: aiAnalysis.aiRiskScore
+        }
       }
     }).catch(err => console.error('Bot log error:', err));
 
@@ -96,7 +100,10 @@ const createPrimaryOrder = async (req, res) => {
 
       // platform_fee: (8% Doanh thu) + (Số lượng vé * 10.000đ phí Gas)
       const totalTickets = items.reduce((sum, item) => sum + item.quantity, 0);
-      const platform_fee = (subtotal * 0.08) + (totalTickets * 10000);
+      const commission_fee = subtotal * 0.08;
+      const gas_fee = totalTickets * 10000;
+      const platform_fee = commission_fee + gas_fee;
+      const organizer_revenue = subtotal - platform_fee;
       const total_amount = subtotal; // Khách hàng trả đúng giá vé niêm yết
 
       // Hạn giữ chỗ = hiện tại + 10 phút
@@ -111,6 +118,9 @@ const createPrimaryOrder = async (req, res) => {
           status: 'pending',
           subtotal,
           platform_fee,
+          commission_fee,
+          gas_fee,
+          organizer_revenue,
           total_amount,
           payment_method: 'unselected',
           risk_score: aiAnalysis.riskScore,
@@ -190,9 +200,39 @@ const createMarketplaceOrder = async (req, res) => {
         }
       });
 
-      // Tạo transaction lưu trữ logic tính phí
-      const platform_fee = (listing.asking_price * listing.platform_fee_percent) / 100;
-      const seller_receive_amount = listing.asking_price - platform_fee;
+      // [Business Rule] Luồng tiền Bán lại (Resale):
+      // 1. Người mua trả: Giá niêm yết + 10,000đ (Gas) + 3% (Phí giao dịch)
+      // 2. Hệ thống thu: 10,000đ + 3% phí giao dịch
+      // 3. BTC nhận: 3% phí bản quyền (Royalty)
+      // 4. Người bán nhận: Giá niêm yết - 3% phí bản quyền
+      const askingPrice = Number(listing.asking_price);
+      const system_fee = 10000 + (askingPrice * 0.03);
+      const royalty_fee = askingPrice * 0.03;
+      const seller_receive_amount = askingPrice - royalty_fee;
+      const total_buyer_pay = askingPrice + system_fee;
+
+      // 5. Tính toán lợi nhuận bán lại (Resale Profit)
+      // Tìm giá vón (cost): Marketplace Tx trước đó gần nhất hoặc Order sơ cấp gốc
+      let acquisitionCost = 0;
+      const lastSuccessTx = await tx.marketplaceTransaction.findFirst({
+        where: { 
+          ticket_id: listing.ticket_id, 
+          status: { in: ['paid', 'success', 'completed'] } 
+        },
+        orderBy: { created_at: 'desc' }
+      });
+
+      if (lastSuccessTx) {
+        acquisitionCost = Number(lastSuccessTx.buyer_pay_amount);
+      } else {
+        const originalOrder = await tx.order.findUnique({
+          where: { id: listing.ticket.order_id },
+          include: { items: { where: { ticket_tier_id: listing.ticket.ticket_tier_id } } }
+        });
+        acquisitionCost = Number(originalOrder?.items[0]?.unit_price || 0);
+      }
+
+      const resale_profit = seller_receive_amount - acquisitionCost;
       
       const mTransaction = await tx.marketplaceTransaction.create({
         data: {
@@ -201,10 +241,14 @@ const createMarketplaceOrder = async (req, res) => {
           seller_id: listing.seller_id,
           buyer_id: userId,
           seller_receive_amount: seller_receive_amount,
-          platform_fee: platform_fee,
-          buyer_pay_amount: listing.asking_price,
+          platform_fee: system_fee,
+          commission_fee: askingPrice * 0.03,
+          gas_fee: 10000,
+          organizer_royalty: royalty_fee,
+          resale_profit: resale_profit,
+          buyer_pay_amount: total_buyer_pay,
           status: 'pending',
-          ip_address: getClientIp(req)
+          ip_address: botService.getClientIp(req)
         }
       });
 
@@ -353,7 +397,10 @@ const updatePendingOrder = async (req, res) => {
 
       // D. Cập nhật Order chính - Tính toán lại platform_fee
       const totalTickets = order.items.reduce((sum, item) => sum + item.quantity, 0);
-      const newPlatformFee = (ticketSubtotal * 0.08) + (totalTickets * 10000) + (merchSubtotal * 0.08);
+      const commission_fee = (ticketSubtotal * 0.08) + (merchSubtotal * 0.08);
+      const gas_fee = totalTickets * 10000;
+      const newPlatformFee = commission_fee + gas_fee;
+      const organizer_revenue = currentSubtotal - newPlatformFee;
 
       return await tx.order.update({
         where: { id },
@@ -362,6 +409,9 @@ const updatePendingOrder = async (req, res) => {
           coupon_id: couponId,
           discount_amount: discountAmount,
           platform_fee: newPlatformFee,
+          commission_fee: commission_fee,
+          gas_fee: gas_fee,
+          organizer_revenue: organizer_revenue,
           total_amount: currentSubtotal - discountAmount,
           merchandise_items: {
             create: newMerchItems
@@ -407,6 +457,19 @@ const createTransferOrder = async (req, res) => {
       return res.status(400).json({ error: 'Sự kiện này không hỗ trợ chuyển nhượng.' });
     }
 
+    // [Business Rule] Mỗi vé chỉ được phép chuyển nhượng tối đa 2 lần
+    const transferCount = await prisma.order.count({
+      where: {
+        metadata: { path: ['ticket_id'], equals: ticket_id },
+        order_type: 'TICKET_TRANSFER',
+        status: { in: ['paid', 'success', 'completed'] }
+      }
+    });
+
+    if (transferCount >= 2) {
+      return res.status(400).json({ error: 'Vé này đã đạt giới hạn chuyển nhượng tối đa (2 lần).' });
+    }
+
     // 2. Tạo Order với type TRANSFER
     const order_number = 'TRF' + Date.now();
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 phút để thanh toán phí
@@ -418,8 +481,11 @@ const createTransferOrder = async (req, res) => {
         order_number: order_number,
         order_type: 'TICKET_TRANSFER',
         status: 'pending',
-        subtotal: 10000,
-        platform_fee: 0,
+        subtotal: 0,
+        gas_fee: 10000,
+        platform_fee: 10000,
+        commission_fee: 0,
+        organizer_revenue: 0,
         total_amount: 10000,
         payment_method: 'unselected',
         expires_at: expiresAt,

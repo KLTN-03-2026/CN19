@@ -109,7 +109,7 @@ const TransactionDetail = () => {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
         <div className="w-12 h-12 border-4 border-neon-green border-t-transparent rounded-full animate-spin"></div>
-        <p className="text-gray-500 font-black animate-pulse uppercase text-xs">Đang tải dữ liệu sâu...</p>
+        <p className="text-gray-500 font-bold animate-pulse text-sm">Đang tải dữ liệu...</p>
       </div>
     );
   }
@@ -120,7 +120,7 @@ const TransactionDetail = () => {
         <XCircle className="w-16 h-16 text-red-500 mx-auto mb-4 opacity-20" />
         <h2 className="text-2xl font-black text-gray-900 dark:text-white">Không tìm thấy giao dịch</h2>
         <p className="text-gray-500 mt-2">Dữ liệu có thể đã bị xóa hoặc ID không chính xác.</p>
-        <button onClick={() => navigate(-1)} className="mt-8 px-6 py-3 bg-neon-green text-black font-black rounded-2xl uppercase text-xs">Quay lại danh sách</button>
+        <button onClick={() => navigate(-1)} className="mt-8 px-6 py-3 bg-neon-green text-black font-black rounded-2xl text-sm">Quay lại danh sách</button>
       </div>
     );
   }
@@ -128,6 +128,56 @@ const TransactionDetail = () => {
   const isMarketplace = type === 'MARKETPLACE';
   const orderType = isMarketplace ? 'Thứ cấp (Chợ)' : (data.order_type === 'TICKET_TRANSFER' ? 'Chuyển nhượng' : 'Sơ cấp (Mua mới)');
   const status = isMarketplace ? data.status : data.status;
+
+  const calculateFinancials = () => {
+    if (!data) return { systemCommission: 0, btcRevenue: 0, resaleProfit: 0 };
+    
+    if (isMarketplace) {
+      // Ưu tiên dùng số liệu đã lưu trong DB nếu có (các đơn hàng mới)
+      if (Number(data.commission_fee) > 0 || Number(data.organizer_royalty) > 0) {
+        return {
+          systemCommission: Number(data.platform_fee || 0),
+          btcRevenue: Number(data.organizer_royalty || 0),
+          resaleProfit: Number(data.resale_profit || 0)
+        };
+      }
+
+      // Fallback cho đơn hàng cũ chưa có cột riêng
+      const platformFee = Number(data.platform_fee || 0);
+      const buyerPay = Number(data.buyer_pay_amount || 0);
+      const royalty = (buyerPay - platformFee) * 0.03;
+      return { 
+        systemCommission: platformFee, 
+        btcRevenue: royalty,
+        resaleProfit: (Number(data.seller_receive_amount || 0) - (buyerPay - platformFee)) // Ước tính cho đơn cũ
+      };
+    } else {
+      // Ưu tiên dùng số liệu đã lưu trong DB (commission_fee, organizer_revenue)
+      if (Number(data.commission_fee) > 0 || Number(data.organizer_revenue) > 0) {
+        return {
+          systemCommission: Number(data.platform_fee || 0),
+          btcRevenue: Number(data.organizer_revenue || 0),
+          resaleProfit: 0
+        };
+      }
+
+      // Fallback cho đơn hàng cũ
+      const ticketPrice = (data.items || []).reduce((sum, item) => sum + Number(item.subtotal || 0), 0);
+      const ticketQty = (data.items || []).reduce((sum, item) => sum + (item.quantity || 0), 0);
+      const merchPrice = (data.merchandise_items || []).reduce((sum, item) => sum + Number(item.subtotal || 0), 0);
+      
+      const commission = (ticketPrice * 0.08) + (ticketQty * 10000) + (merchPrice * 0.08);
+      const totalAmount = Number(data.total_amount || 0);
+      
+      return { 
+        systemCommission: commission, 
+        btcRevenue: totalAmount - commission,
+        resaleProfit: 0
+      };
+    }
+  };
+
+  const { systemCommission, btcRevenue, resaleProfit } = calculateFinancials();
 
   return (
     <div className="space-y-3 pb-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -142,132 +192,164 @@ const TransactionDetail = () => {
                <ArrowLeft className="w-5 h-5" />
              </button>
              <div>
-               <h1 className="text-xl font-black text-gray-900 dark:text-white flex items-center space-x-2 uppercase">
-                 <span>Chi tiết giao dịch</span>
-               </h1>
-               <p className="text-[10px] text-gray-500 font-bold uppercase mt-1 flex items-center">
-                 ID: {id} 
-                 <Copy className="w-3 h-3 ml-2 cursor-pointer hover:text-neon-green" onClick={() => copyToClipboard(id)} />
-               </p>
-             </div>
+                <h1 className="text-2xl font-black text-gray-900 dark:text-white flex items-center space-x-2">
+                  <span>Chi tiết giao dịch</span>
+                </h1>
+                <p className="text-xs text-gray-500 font-medium mt-1 flex items-center">
+                  Mã giao dịch: {id} 
+                  <Copy className="w-3.5 h-3.5 ml-2 cursor-pointer hover:text-neon-green" onClick={() => copyToClipboard(id)} />
+                </p>
+              </div>
           </div>
         </div>
 
          <div className="flex items-center space-x-3">
+            {status?.toLowerCase() === 'paid' || status?.toLowerCase() === 'success' || status?.toLowerCase() === 'completed' ? (
+              <div className="flex items-center space-x-2 text-green-500 bg-green-500/10 px-5 py-2.5 rounded-2xl border border-green-500/20 shadow-[0_0_15px_rgba(34,197,94,0.1)]">
+                <CheckCircle2 className="w-4 h-4" />
+                <span className="text-sm font-black">Giao dịch thành công</span>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-2 text-yellow-500 bg-yellow-500/10 px-5 py-2.5 rounded-2xl border border-yellow-500/20 shadow-[0_0_15px_rgba(234,179,8,0.1)]">
+                <Clock className="w-4 h-4" />
+                <span className="text-sm font-black">
+                  {status?.toLowerCase() === 'pending' ? 'Đang chờ xử lý' : status?.toLowerCase() === 'failed' ? 'Giao dịch thất bại' : status?.toLowerCase() === 'cancelled' ? 'Đã hủy bỏ' : status}
+                </span>
+              </div>
+            )}
+            
             <button 
               onClick={handleExportExcel}
-              className="flex items-center space-x-2 px-5 py-3 bg-neon-green text-black rounded-2xl text-xs font-black uppercase shadow-[0_0_20px_rgba(82,196,45,0.3)] hover:scale-105 transition-all"
+              className="p-2.5 bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-xl text-gray-500 hover:text-neon-green transition-all"
+              title="Xuất Excel"
             >
-              <Download className="w-4 h-4" />
-              <span>Xuất Excel</span>
+              <Download className="w-5 h-5" />
             </button>
          </div>
       </div>
 
       {/* Stats Summary Area */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-         <div className="bg-white dark:bg-[#111114] p-4 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm overflow-hidden relative group">
-           <div className="absolute top-0 right-0 w-24 h-24 bg-neon-green/5 blur-3xl -mr-8 -mt-8"></div>
-           <p className="text-[10px] font-black text-gray-400 uppercase relative z-10">Giá trị giao dịch</p>
-           <h3 className="text-xl font-black text-gray-900 dark:text-white mt-0.5 relative z-10">
-             {formatCurrency(isMarketplace ? data.buyer_pay_amount : data.total_amount)}
-           </h3>
-           <div className="mt-3 flex items-center space-x-2 text-[10px] font-bold text-neon-green uppercase relative z-10">
-             <DollarSign className="w-3 h-3" />
-             <span>Bao gồm tất cả phí</span>
-           </div>
-         </div>
-
-         <div className="bg-white dark:bg-[#111114] p-4 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm overflow-hidden relative group">
-           <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 blur-3xl -mr-8 -mt-8"></div>
-           <p className="text-[10px] font-black text-gray-400 uppercase">Loại hình</p>
-           <h3 className="text-lg font-black text-blue-500 mt-2 uppercase">
-             {orderType}
-           </h3>
-           <div className="mt-2 flex items-center text-[10px] font-bold text-gray-500">
-             {isMarketplace ? 'Thị trường thứ cấp (C2C)' : 'Thị trường sơ cấp (B2C)'}
-           </div>
-         </div>
-
-         <div className="bg-white dark:bg-[#111114] p-4 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm overflow-hidden relative group">
-           <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 blur-3xl -mr-8 -mt-8"></div>
-           <p className="text-[10px] font-black text-gray-400 uppercase">Trạng thái</p>
-           <div className="mt-2">
-              {status?.toLowerCase() === 'paid' || status?.toLowerCase() === 'success' || status?.toLowerCase() === 'completed' ? (
-                <span className="flex items-center space-x-2 text-green-500 bg-green-500/10 px-3 py-1 rounded-lg text-[10px] font-black uppercase border border-green-500/20 w-fit">
-                  <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>Thành công</span>
-                </span>
-              ) : (
-                <span className="flex items-center space-x-2 text-yellow-500 bg-yellow-500/10 px-3 py-1 rounded-lg text-[10px] font-black uppercase border border-yellow-500/20 w-fit">
-                  <Clock className="w-3.5 h-3.5" />
-                  <span>{status?.toLowerCase() === 'pending' ? 'Chờ xử lý' : status?.toLowerCase() === 'failed' ? 'Thất bại' : status?.toLowerCase() === 'cancelled' ? 'Đã hủy' : status}</span>
-                </span>
-              )}
-           </div>
-         </div>
-
-         <div className="bg-white dark:bg-[#111114] p-4 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm overflow-hidden relative group">
-            <p className="text-[10px] font-black text-gray-400 uppercase">Thời gian/IP</p>
-            <h3 className="text-lg font-black text-gray-900 dark:text-white mt-1">
-              {new Date(isMarketplace ? new Date() : data.created_at).toLocaleString('vi-VN')}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          {/* 1. Value */}
+          <div className="bg-white dark:bg-[#111114] p-5 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm overflow-hidden relative group transition-all hover:bg-gray-50 dark:hover:bg-white/[0.02]">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-neon-green/5 blur-3xl -mr-8 -mt-8"></div>
+            <p className="text-xs font-bold text-gray-500 relative z-10">Giá trị giao dịch</p>
+            <h3 className="text-2xl font-black text-gray-900 dark:text-white mt-1 relative z-10">
+              {formatCurrency(isMarketplace ? data.buyer_pay_amount : data.total_amount)}
             </h3>
-            <div className="mt-3 flex flex-col space-y-0.5">
-              <span className="text-xs font-black text-gray-900 dark:text-white uppercase italic">
-                {data.ip_address || 'Không xác định'}
-              </span>
-              <span className="text-[9px] text-gray-500 font-bold uppercase leading-none">
-                  Địa chỉ IP Người mua
-              </span>
-              {data.ip_address && (
-                <button 
-                  onClick={() => copyToClipboard(data.ip_address)} 
-                  className="mt-1.5 text-[10px] text-neon-green font-black uppercase hover:underline w-fit"
-                >
-                  Sao chép IP
-                </button>
-              )}
+            <div className="mt-3 flex items-center space-x-2 text-xs font-semibold text-neon-green relative z-10">
+              <DollarSign className="w-3.5 h-3.5" />
+              <span>Đã bao gồm phí</span>
             </div>
-         </div>
+          </div>
+
+          {/* 2. System Commission */}
+          <div className="bg-white dark:bg-[#111114] p-5 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm overflow-hidden relative group transition-all hover:bg-gray-50 dark:hover:bg-white/[0.02]">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-red-500/5 blur-3xl -mr-8 -mt-8"></div>
+            <p className="text-xs font-bold text-gray-500">
+              Phí hệ thống {isMarketplace ? '(3% + 10k)' : '(8%)'}
+            </p>
+            <h3 className="text-lg font-black text-red-500 mt-2">
+              {formatCurrency(systemCommission)}
+            </h3>
+            <div className="mt-2 flex items-center text-[10px] font-medium text-gray-400 uppercase">
+              {isMarketplace ? 'Phí giao dịch & Gas' : 'Hoa hồng & Phí Gas'}
+            </div>
+          </div>
+
+          {/* 3. BTC Revenue */}
+          <div className="bg-white dark:bg-[#111114] p-5 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm overflow-hidden relative group transition-all hover:bg-gray-50 dark:hover:bg-white/[0.02]">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-neon-green/5 blur-3xl -mr-8 -mt-8"></div>
+            <p className="text-xs font-bold text-gray-500">
+              BTC nhận {isMarketplace ? '(3% bản quyền)' : ''}
+            </p>
+            <h3 className="text-lg font-black text-neon-green mt-2">
+              {formatCurrency(btcRevenue)}
+            </h3>
+            <div className="mt-2 flex items-center text-[10px] font-medium text-gray-400 uppercase">
+              Doanh thu thực tế
+            </div>
+          </div>
+
+          {/* 4. Order Type */}
+          <div className="bg-white dark:bg-[#111114] p-5 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm overflow-hidden relative group transition-all hover:bg-gray-50 dark:hover:bg-white/[0.02]">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 blur-3xl -mr-8 -mt-8"></div>
+            <p className="text-xs font-bold text-gray-500">Loại hình</p>
+            <h3 className="text-lg font-black text-blue-500 mt-2">
+              {orderType}
+            </h3>
+            <div className="mt-2 flex items-center text-xs font-medium text-gray-400">
+              {isMarketplace ? 'Thị trường thứ cấp (C2C)' : 'Thị trường sơ cấp (B2C)'}
+            </div>
+          </div>
+
+          {/* 5. Time & IP / Resale Profit */}
+          {isMarketplace ? (
+            <div className="bg-white dark:bg-[#111114] p-5 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm overflow-hidden relative group transition-all hover:bg-gray-50 dark:hover:bg-white/[0.02]">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-orange-500/5 blur-3xl -mr-8 -mt-8"></div>
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Lợi nhuận người bán</p>
+              <h3 className={`text-lg font-black mt-2 ${resaleProfit >= 0 ? 'text-orange-500' : 'text-gray-400'}`}>
+                {resaleProfit >= 0 ? '+' : ''}{formatCurrency(resaleProfit)}
+              </h3>
+              <div className="mt-2 flex items-center text-[10px] font-semibold text-gray-400">
+                {resaleProfit >= 0 ? 'Có lãi từ việc bán lại' : 'Bán lỗ/hòa vốn'}
+              </div>
+            </div>
+          ) : (
+            <div className="bg-white dark:bg-[#111114] p-5 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm overflow-hidden relative group transition-all hover:bg-gray-50 dark:hover:bg-white/[0.02]">
+               <p className="text-xs font-bold text-gray-500">Thời gian & IP</p>
+               <h3 className="text-sm font-black text-gray-900 dark:text-white mt-1">
+                 {new Date(data.created_at).toLocaleString('vi-VN')}
+               </h3>
+               <div className="mt-3 flex flex-col space-y-1">
+                 <span className="text-xs font-black text-gray-900 dark:text-white border-b border-dashed border-gray-100 dark:border-white/10 pb-1 w-fit">
+                   {data.ip_address || 'N/A'}
+                 </span>
+                 <span className="text-[11px] text-gray-400 font-medium">
+                     IP Người mua
+                 </span>
+               </div>
+            </div>
+          )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Left Column: People and Event */}
         <div className="lg:col-span-1 space-y-4">
            {/* Section: Participants */}
-           <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 p-4 shadow-sm">
-              <h2 className="text-xs font-black text-gray-900 dark:text-white uppercase mb-3 flex items-center">
-                 <User className="w-3.5 h-3.5 mr-2 text-neon-green" />
-                 Đối tượng liên quan
-              </h2>
+            <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 p-5 shadow-sm">
+               <h2 className="text-sm font-black text-gray-900 dark:text-white mb-4 flex items-center">
+                  <User className="w-4 h-4 mr-2 text-neon-green" />
+                  Đối tượng liên quan
+               </h2>
               
               <div className="space-y-3">
                   {/* Primary / Receiver / Buyer */}
-                  <div className="p-3 bg-gray-50 dark:bg-white/[0.03] rounded-xl border border-gray-100 dark:border-white/5">
-                     <p className="text-[9px] font-black text-gray-400 uppercase mb-2">
-                        {isMarketplace ? 'Người mua (Buyer)' : (data.order_type === 'TICKET_TRANSFER' ? 'Người gửi (Sender)' : 'Người mua (Customer)')}
-                     </p>
+                   <div className="p-4 bg-gray-50 dark:bg-white/[0.03] rounded-xl border border-gray-100 dark:border-white/5">
+                      <p className="text-[11px] font-bold text-gray-400 mb-2">
+                         {isMarketplace ? 'Người mua (Buyer)' : (data.order_type === 'TICKET_TRANSFER' ? 'Người gửi (Sender)' : 'Người mua (Customer)')}
+                      </p>
                      <div className="flex items-center space-x-3">
                         <div className="w-8 h-8 rounded-full bg-neon-green/10 flex items-center justify-center font-black text-neon-green text-xs border border-neon-green/20">
                            {isMarketplace ? data.buyer.full_name?.charAt(0) : data.customer.full_name?.charAt(0)}
                         </div>
-                        <div className="flex flex-col">
-                           <span className="text-sm font-black text-gray-900 dark:text-white">
-                              {isMarketplace ? data.buyer.full_name : data.customer.full_name}
-                           </span>
-                           <span className="text-[10px] text-gray-500 font-medium">
-                              {isMarketplace ? data.buyer.email : data.customer.email}
-                           </span>
-                        </div>
+                         <div className="flex flex-col">
+                            <span className="text-base font-black text-gray-900 dark:text-white">
+                               {isMarketplace ? data.buyer.full_name : data.customer.full_name}
+                            </span>
+                            <span className="text-xs text-gray-500 font-medium">
+                               {isMarketplace ? data.buyer.email : data.customer.email}
+                            </span>
+                         </div>
                      </div>
                   </div>
 
-                  {/* Resale Seller or Transfer Receiver */}
-                  {(isMarketplace || data.order_type === 'TICKET_TRANSFER') && (
-                     <div className="p-3 bg-gray-50 dark:bg-white/[0.03] rounded-xl border border-gray-100 dark:border-white/5">
-                       <p className="text-[9px] font-black text-gray-400 uppercase mb-2">
-                          {isMarketplace ? 'Người bán (Seller)' : 'Người nhận (Receiver)'}
-                       </p>
+                   {/* Resale Seller or Transfer Receiver */}
+                   {(isMarketplace || data.order_type === 'TICKET_TRANSFER') && (
+                      <div className="p-4 bg-gray-50 dark:bg-white/[0.03] rounded-xl border border-gray-100 dark:border-white/5">
+                        <p className="text-[11px] font-bold text-gray-400 mb-2">
+                           {isMarketplace ? 'Người bán (Seller)' : 'Người nhận (Receiver)'}
+                        </p>
                        <div className="flex items-center space-x-3">
                          <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center font-black text-blue-500 text-xs border border-blue-500/20">
                             {isMarketplace 
@@ -275,24 +357,24 @@ const TransactionDetail = () => {
                                : (data.receiver?.full_name?.charAt(0) || '?')}
                          </div>
                          <div className="flex flex-col">
-                            <span className="text-sm font-black text-gray-900 dark:text-white">
-                               {(() => {
-                                 if (isMarketplace) return data.seller.full_name;
-                                 
-                                 const receiverEmail = (data.receiver?.email || data.metadata?.receiver_email || '').trim().toLowerCase();
-                                 const organizerObj = data.event?.organizer || data.listing?.event?.organizer;
-                                 const orgEmail = (organizerObj?.user?.email || organizerObj?.email || '').trim().toLowerCase();
-                                 
-                                 if (receiverEmail && orgEmail && receiverEmail === orgEmail) {
-                                   return organizerObj?.organization_name || 'Ban Tổ Chức';
-                                 }
-                                 
-                                 return data.receiver?.full_name || receiverUser?.full_name || data.receiver?.name || receiverUser?.name || data.metadata?.receiver_name || data.metadata?.receiver_full_name || (data.metadata?.receiver_email ? 'Chưa cập nhật tên' : 'Thông tin người nhận');
-                               })()}
-                            </span>
-                            <span className="text-[10px] text-gray-500 font-medium">
-                               {isMarketplace ? data.seller.email : (data.receiver?.email || data.receiver_email || data.metadata?.receiver_email || 'Email ẩn/N/A')}
-                            </span>
+                             <span className="text-base font-black text-gray-900 dark:text-white">
+                                {(() => {
+                                  if (isMarketplace) return data.seller.full_name;
+                                  
+                                  const receiverEmail = (data.receiver?.email || data.metadata?.receiver_email || '').trim().toLowerCase();
+                                  const organizerObj = data.event?.organizer || data.listing?.event?.organizer;
+                                  const orgEmail = (organizerObj?.user?.email || organizerObj?.email || '').trim().toLowerCase();
+                                  
+                                  if (receiverEmail && orgEmail && receiverEmail === orgEmail) {
+                                    return organizerObj?.organization_name || 'Ban Tổ Chức';
+                                  }
+                                  
+                                  return data.receiver?.full_name || receiverUser?.full_name || data.receiver?.name || receiverUser?.name || data.metadata?.receiver_name || data.metadata?.receiver_full_name || (data.metadata?.receiver_email ? 'Chưa cập nhật tên' : 'Thông tin người nhận');
+                                })()}
+                             </span>
+                             <span className="text-xs text-gray-500 font-medium">
+                                {isMarketplace ? data.seller.email : (data.receiver?.email || data.receiver_email || data.metadata?.receiver_email || 'Email ẩn/N/A')}
+                             </span>
                          </div>
                        </div>
                      </div>
@@ -301,34 +383,34 @@ const TransactionDetail = () => {
            </div>
 
            {/* Section: Event Info */}
-           <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 p-4 shadow-sm overflow-hidden relative">
-              <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none text-neon-green">
-                 <Globe className="w-20 h-20" />
-              </div>
-              <h2 className="text-xs font-black text-gray-900 dark:text-white uppercase mb-3 flex items-center">
-                 <MapPin className="w-3.5 h-3.5 mr-2 text-neon-green" />
-                 Sự kiện liên quan
-              </h2>
+            <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 p-5 shadow-sm overflow-hidden relative">
+               <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none text-neon-green">
+                  <Globe className="w-20 h-20" />
+               </div>
+               <h2 className="text-sm font-black text-gray-900 dark:text-white mb-4 flex items-center">
+                  <MapPin className="w-4 h-4 mr-2 text-neon-green" />
+                  Sự kiện liên quan
+               </h2>
               
-              <div className="space-y-2">
+              <div className="space-y-4">
                  <img 
                     src={isMarketplace ? data.listing.event.image_url : data.event.image_url} 
-                    className="w-full h-24 object-cover rounded-xl border border-gray-100 dark:border-white/5"
+                    className="w-full h-32 object-cover rounded-xl border border-gray-100 dark:border-white/5"
                     alt="Event"
                  />
                  <h3 className="text-base font-black text-gray-900 dark:text-white leading-tight">
                     {isMarketplace ? data.listing.event.title : data.event.title}
                  </h3>
-                 <div className="flex flex-col space-y-2">
-                    <div className="flex items-center text-[11px] text-gray-500 font-medium">
-                       <Calendar className="w-3.5 h-3.5 mr-2 text-neon-green" />
-                       {new Date(isMarketplace ? data.listing.event.event_date : data.event.group_date || data.event.event_date).toLocaleDateString('vi-VN')}
-                    </div>
-                    <div className="flex items-center text-[11px] text-gray-500 font-medium line-clamp-1">
-                       <MapPin className="w-3.5 h-3.5 mr-2 text-neon-green shrink-0" />
-                       {isMarketplace ? data.listing.event.location_address : data.event.location_address}
-                    </div>
-                 </div>
+                  <div className="flex flex-col space-y-2">
+                     <div className="flex items-center text-xs text-gray-500 font-medium">
+                        <Calendar className="w-4 h-4 mr-2 text-neon-green" />
+                        {new Date(isMarketplace ? data.listing.event.event_date : data.event.group_date || data.event.event_date).toLocaleDateString('vi-VN')}
+                     </div>
+                     <div className="flex items-center text-xs text-gray-500 font-medium line-clamp-1">
+                        <MapPin className="w-4 h-4 mr-2 text-neon-green shrink-0" />
+                        {isMarketplace ? data.listing.event.location_address : data.event.location_address}
+                     </div>
+                  </div>
               </div>
            </div>
         </div>
@@ -336,11 +418,11 @@ const TransactionDetail = () => {
         {/* Right Column: Transaction Content & Technicals */}
         <div className="lg:col-span-2 space-y-4">
            {/* Section: Items List */}
-           <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 p-4 shadow-sm">
-              <h2 className="text-xs font-black text-gray-900 dark:text-white uppercase mb-4 flex items-center">
-                 <Ticket className="w-4 h-4 mr-3 text-neon-green" />
-                 Nội dung đơn hàng / vé
-              </h2>
+            <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 p-5 shadow-sm">
+               <h2 className="text-sm font-black text-gray-900 dark:text-white mb-5 flex items-center">
+                  <Ticket className="w-5 h-5 mr-3 text-neon-green" />
+                  Nội dung đơn hàng / vé
+               </h2>
 
               <div className="space-y-4">
                   {isMarketplace ? (
@@ -361,25 +443,51 @@ const TransactionDetail = () => {
                         </div>
                      </div>
                   ) : (
-                     /* Multiple items for Order */
-                     data.items?.map((item, idx) => (
-                       <div key={idx} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-white/[0.03] rounded-2xl border border-gray-100 dark:border-white/5 group hover:border-neon-green/30 transition-all">
-                         <div className="flex items-center space-x-4">
-                            <div className="w-10 h-10 rounded-xl bg-neon-green/10 flex items-center justify-center border border-neon-green/20">
-                               <Ticket className="w-5 h-5 text-neon-green" />
+                      /* Multiple items for Order */
+                      <div className="space-y-4">
+                        {/* Tickets List */}
+                        {data.items?.map((item, idx) => (
+                          <div key={`ticket-${idx}`} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-white/[0.03] rounded-2xl border border-gray-100 dark:border-white/5 group hover:border-neon-green/30 transition-all">
+                            <div className="flex items-center space-x-4">
+                               <div className="w-12 h-12 rounded-xl bg-neon-green/10 flex items-center justify-center border border-neon-green/20">
+                                  <Ticket className="w-6 h-6 text-neon-green" />
+                               </div>
+                               <div>
+                                  <p className="text-sm font-black text-gray-900 dark:text-white">{item.ticket_tier.tier_name}</p>
+                                  <p className="text-xs text-gray-500 font-bold mt-1">{formatCurrency(Number(item.unit_price))} / vé</p>
+                               </div>
                             </div>
-                            <div>
-                               <p className="text-sm font-black text-gray-900 dark:text-white uppercase italic">{item.ticket_tier.tier_name}</p>
-                               <p className="text-[10px] text-gray-500 font-bold uppercase mt-0.5">{formatCurrency(Number(item.unit_price))} / vé</p>
+                            <div className="text-right">
+                               <p className="text-base font-black text-gray-900 dark:text-white">{formatCurrency(Number(item.subtotal))}</p>
+                               <p className="text-xs text-neon-green font-bold mt-1">Số lượng: {item.quantity}</p>
                             </div>
-                         </div>
-                         <div className="text-right">
-                            <p className="text-sm font-black text-gray-900 dark:text-white">{formatCurrency(Number(item.subtotal))}</p>
-                            <p className="text-[10px] text-neon-green font-bold uppercase mt-0.5">Số lượng: {item.quantity}</p>
-                         </div>
-                       </div>
-                     ))
-                  )}
+                          </div>
+                        ))}
+
+                        {/* Merchandise Items List */}
+                        {data.merchandise_items?.length > 0 && data.merchandise_items.map((m, idx) => (
+                          <div key={`merch-${idx}`} className="flex items-center justify-between p-4 bg-blue-500/5 dark:bg-blue-500/[0.03] rounded-2xl border border-blue-500/10 group hover:border-blue-500/30 transition-all">
+                            <div className="flex items-center space-x-4">
+                               <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20 overflow-hidden">
+                                  {m.merchandise?.image_url ? (
+                                    <img src={m.merchandise.image_url} className="w-full h-full object-cover" alt="" />
+                                  ) : (
+                                    <Zap className="w-6 h-6 text-blue-500" />
+                                  )}
+                               </div>
+                               <div>
+                                  <p className="text-sm font-black text-gray-900 dark:text-white">{m.merchandise?.name}</p>
+                                  <p className="text-xs text-gray-500 font-bold mt-1">{formatCurrency(Number(m.unit_price))} / sản phẩm</p>
+                               </div>
+                            </div>
+                            <div className="text-right">
+                               <p className="text-base font-black text-gray-900 dark:text-white">{formatCurrency(Number(m.subtotal))}</p>
+                               <p className="text-xs text-blue-500 font-bold mt-1">Số lượng: {m.quantity}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                   )}
               </div>
 
                {/* Financial Breakdown */}
@@ -413,20 +521,20 @@ const TransactionDetail = () => {
                      </span>
                   </div>
 
-                  <div className="flex justify-between items-center pt-4 border-t border-gray-100 dark:border-white/5">
-                     <span className="text-gray-900 dark:text-white font-black uppercase text-[10px]">
-                        {isMarketplace ? 'Tổng người mua thanh toán' : 'Tổng doanh thu hệ thống'}
-                     </span>
-                     <span className="text-xl font-black text-neon-green">
-                        {formatCurrency(data.buyer_pay_amount || data.total_amount)}
-                     </span>
-                  </div>
+                   <div className="flex justify-between items-center pt-5 border-t border-gray-100 dark:border-white/5">
+                      <span className="text-gray-900 dark:text-white font-black text-xs">
+                         {isMarketplace ? 'TỔNG NGƯỜI MUA THANH TOÁN' : 'TỔNG DOANH THU HỆ THỐNG'}
+                      </span>
+                      <span className="text-2xl font-black text-neon-green">
+                         {formatCurrency(data.buyer_pay_amount || data.total_amount)}
+                      </span>
+                   </div>
 
                   {isMarketplace && (
-                    <div className="p-3 bg-gray-50 dark:bg-white/[0.02] rounded-xl border border-gray-100 dark:border-white/5 mt-4">
+                    <div className="p-4 bg-gray-50 dark:bg-white/[0.02] rounded-xl border border-gray-100 dark:border-white/5 mt-4">
                        <div className="flex justify-between items-center">
-                          <span className="text-[10px] font-black text-gray-500 uppercase">Người bán thực nhận</span>
-                          <span className="text-sm font-black text-blue-500">{formatCurrency(data.seller_receive_amount)}</span>
+                          <span className="text-xs font-bold text-gray-500">Người bán thực nhận</span>
+                          <span className="text-base font-black text-blue-500">{formatCurrency(data.seller_receive_amount)}</span>
                        </div>
                     </div>
                   )}
@@ -434,58 +542,58 @@ const TransactionDetail = () => {
            </div>
 
             {/* Section: Technical / Blockchain / Payments */}
-            <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 p-4 shadow-sm">
-               <h2 className="text-xs font-black text-gray-900 dark:text-white uppercase mb-4 flex items-center">
-                  <ShieldCheck className="w-3.5 h-3.5 mr-2 text-neon-green" />
+            <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 p-5 shadow-sm">
+               <h2 className="text-sm font-black text-gray-900 dark:text-white mb-5 flex items-center">
+                  <ShieldCheck className="w-4 h-4 mr-2 text-neon-green" />
                   Dữ liệu Kỹ thuật & Bảo mật
                </h2>
 
                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* Payments */}
-                  <div className="space-y-3">
-                     <p className="text-[10px] font-black text-gray-400 uppercase">Phương thức & Cổng thanh toán</p>
-                     <div className="flex items-center space-x-3 p-4 bg-gray-50 dark:bg-white/[0.02] rounded-2xl border border-gray-100 dark:border-white/5">
-                        <CreditCard className="w-5 h-5 text-neon-green" />
-                        <div>
-                           <p className="text-sm font-black text-gray-900 dark:text-white uppercase italic">
-                             {!isMarketplace && data.payments && data.payments.length > 0 
-                                 ? data.payments[0].method.toUpperCase() 
-                                 : 'Ví BASTICKET'}
-                           </p>
-                           <p className="text-[10px] text-gray-500 font-bold uppercase leading-none">
-                             {(!isMarketplace && data.payments && data.payments.length > 0) 
-                                 ? `Mã tham chiếu: ${data.payments[0].transaction_id || 'N/A'}`
-                                 : 'Giao dịch nội bộ / Blockchain'}
-                           </p>
-                        </div>
-                     </div>
-                  </div>
+                   <div className="space-y-3">
+                      <p className="text-xs font-bold text-gray-400">Phương thức & Cổng thanh toán</p>
+                      <div className="flex items-center space-x-4 p-5 bg-gray-50 dark:bg-white/[0.02] rounded-2xl border border-gray-100 dark:border-white/5">
+                         <CreditCard className="w-6 h-6 text-neon-green" />
+                         <div>
+                            <p className="text-sm font-black text-gray-900 dark:text-white">
+                              {!isMarketplace && data.payments && data.payments.length > 0 
+                                  ? data.payments[0].method.toUpperCase() 
+                                  : 'Ví BASTICKET'}
+                            </p>
+                            <p className="text-xs text-gray-500 font-medium mt-1 leading-none">
+                              {(!isMarketplace && data.payments && data.payments.length > 0) 
+                                  ? `Mã tham chiếu: ${data.payments[0].transaction_id || 'N/A'}`
+                                  : 'Giao dịch nội bộ / Blockchain'}
+                            </p>
+                         </div>
+                      </div>
+                   </div>
 
                   {/* Blockchain */}
                   <div className="space-y-3">
-                     <p className="text-[10px] font-black text-gray-400 uppercase">Xác thực Blockchain (Smart Contract)</p>
+                     <p className="text-xs font-bold text-gray-400">Xác thực Blockchain (Smart Contract)</p>
                      {isMarketplace && data.nft_transfer_tx_hash ? (
                        <a 
                          href={`https://amoy.polygonscan.com/tx/${data.nft_transfer_tx_hash}`} 
                          target="_blank" 
                          rel="noreferrer"
-                         className="flex items-center justify-between p-4 bg-neon-green/10 border border-neon-green/20 rounded-2xl group transition-all"
+                         className="flex items-center justify-between p-5 bg-neon-green/10 border border-neon-green/20 rounded-2xl group transition-all"
                        >
-                          <div className="flex items-center space-x-3">
-                             <Globe className="w-5 h-5 text-neon-green" />
+                          <div className="flex items-center space-x-4">
+                             <Globe className="w-6 h-6 text-neon-green" />
                              <div>
-                                <p className="text-sm font-black text-neon-green uppercase italic">Polygon Amoy</p>
-                                <p className="text-[10px] text-gray-500 font-bold uppercase truncate max-w-[120px]">{data.nft_transfer_tx_hash}</p>
+                                <p className="text-sm font-black text-neon-green">Polygon Amoy</p>
+                                <p className="text-xs text-gray-500 font-medium truncate max-w-[150px] mt-1">{data.nft_transfer_tx_hash}</p>
                              </div>
                           </div>
-                          <ExternalLink className="w-4 h-4 text-neon-green group-hover:scale-125 transition-all" />
+                          <ExternalLink className="w-5 h-5 text-neon-green group-hover:scale-110 transition-all" />
                        </a>
                      ) : (
-                       <div className="flex items-center space-x-3 p-4 bg-gray-50 dark:bg-white/[0.02] rounded-2xl border border-gray-100 dark:border-white/5 opacity-50 italic">
-                          <ShieldCheck className="w-5 h-5 text-gray-400" />
+                       <div className="flex items-center space-x-4 p-5 bg-gray-50 dark:bg-white/[0.02] rounded-2xl border border-gray-100 dark:border-white/5 opacity-50">
+                          <ShieldCheck className="w-6 h-6 text-gray-400" />
                           <div>
-                             <p className="text-sm font-black text-gray-400 uppercase">Xác thực On-chain</p>
-                             <p className="text-[10px] text-gray-500 font-bold uppercase">Dữ liệu đã được nén</p>
+                             <p className="text-sm font-black text-gray-400">Xác thực On-chain</p>
+                             <p className="text-xs text-gray-500 font-medium mt-1">Dữ liệu đã được bảo mật</p>
                           </div>
                        </div>
                      )}
@@ -493,8 +601,8 @@ const TransactionDetail = () => {
               </div>
 
                {/* Advanced JSON Toggle (Mock) */}
-               <div className="mt-6">
-                  <button className="text-[9px] font-black uppercase text-gray-400 hover:text-neon-green transition-all flex items-center">
+               <div className="mt-8">
+                  <button className="text-[11px] font-bold text-gray-400 hover:text-neon-green transition-all flex items-center">
                      <div className="w-1.5 h-1.5 rounded-full bg-neon-green mr-2 animate-pulse"></div>
                      Dữ liệu phản hồi thô (JSON) - Dành cho kỹ thuật
                   </button>
