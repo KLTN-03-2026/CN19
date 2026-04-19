@@ -185,7 +185,7 @@ const Home = () => {
 
       {/* 🔍 Search Results View (Floating/Integrated Section) */}
       {isSearching && (
-        <section className="relative z-20 max-w-[1400px] mx-auto px-4 sm:px-6 md:px-8 pt-6 mb-3 bg-neon-green/[0.03] backdrop-blur-3xl rounded-[4rem] border border-neon-green/10 animate-in fade-in slide-in-from-top-10 duration-700">
+        <section className="relative z-20 max-w-[1450px] mx-auto px-4 sm:px-6 md:px-8 pt-6 mb-3 bg-neon-green/[0.03] backdrop-blur-3xl rounded-[4rem] border border-neon-green/10 animate-in fade-in slide-in-from-top-10 duration-700">
             <div className="flex items-center justify-between mb-6">
                 <div>
                     <h2 className="text-sm md:text-xl font-black text-gray-900 dark:text-white uppercase tracking-tight">
@@ -236,7 +236,7 @@ const Home = () => {
           <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-neon-green/5 rounded-full blur-[120px] -z-4"></div>
           <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-neon-green/10 rounded-full blur-[100px] -z-4"></div>
           
-          <div className="max-w-[1400px] mx-auto px-4 sm:px-6 md:px-8">
+          <div className="max-w-[1450px] mx-auto px-4 sm:px-6 md:px-8">
               <div className="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
                   <div>
                       <h2 className="text-sm md:text-xl font-black text-gray-900 dark:text-white uppercase tracking-tight">
@@ -266,7 +266,7 @@ const Home = () => {
       </section>
 
       {/* 🎸 Category Explorer Icons Bar */}
-      <section className="max-w-[1400px] mx-auto px-4 sm:px-6 md:px-8 py-2 relative z-20">
+      <section className="max-w-[1450px] mx-auto px-4 sm:px-6 md:px-8 py-2 relative z-20 mt-8">
           <div className="flex items-center justify-between mb-8">
               <h2 className="text-sm md:text-xl font-black text-gray-900 dark:text-white uppercase tracking-tight">
                   {t('home.categories.title')}
@@ -280,7 +280,7 @@ const Home = () => {
       </section>
 
       {/* 🕒 Time-Based Events */}
-      <section className="max-w-[1400px] mx-auto px-4 sm:px-6 md:px-8 py-4 bg-gray-50/50 dark:bg-white/[0.01] rounded-[5rem] my-8 border border-gray-100 dark:border-white/5">
+      <section className="max-w-[1500px] mx-auto px-4 sm:px-6 md:px-8 py-4  rounded-[5rem] my-8">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-8 px-6">
               <div>
                   <h2 className="text-sm md:text-xl font-black text-gray-900 dark:text-white uppercase tracking-tight">
@@ -330,7 +330,7 @@ const Home = () => {
       <div ref={resultsRef} className="scroll-mt-4 space-y-4">
           {isAllEventsLoading || isCategoriesLoading ? (
               [...Array(3)].map((_, i) => (
-                  <section key={i} className="max-w-[1400px] mx-auto px-4 sm:px-6 md:px-8 py-2">
+                  <section key={i} className="max-w-[1450px] mx-auto px-4 sm:px-6 md:px-8 py-2">
                       <div className="flex items-center justify-between mb-6">
                           <div className="w-48 h-8 bg-gray-100 dark:bg-white/5 rounded-xl animate-pulse"></div>
                       </div>
@@ -349,7 +349,7 @@ const Home = () => {
                   <section 
                       key={cat.id} 
                       ref={el => categoryRefs.current[cat.id] = el}
-                      className="max-w-[1400px] mx-auto px-4 sm:px-6 md:px-8 py-2 scroll-mt-2"
+                      className="max-w-[1450px] mx-auto px-4 sm:px-6 md:px-8 py-2 scroll-mt-2"
                   >
                       <div className="flex items-center justify-between mb-6">
                           <div className="flex items-center gap-6">
@@ -384,7 +384,7 @@ const Home = () => {
       </div>
 
       {/* 📰 BASTICKET News (Blog) Section */}
-      <section className="max-w-[1400px] mx-auto px-4 sm:px-6 md:px-8 py-4 md:py-4 dark:border-white/5">
+      <section className="max-w-[1450px] mx-auto px-4 sm:px-6 md:px-8 py-4 md:py-4 dark:border-white/5">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
               <div className="animate-in fade-in slide-in-from-left-4 duration-700">
                   <div className="inline-flex items-center gap-2 px-3 py-1 bg-neon-green/10 rounded-full mb-2">
@@ -462,7 +462,7 @@ const Home = () => {
       </section>
 
       {/* 💎 Premium Features */}
-      <section className="max-w-[1400px] mx-auto px-4 sm:px-6 md:px-8 py-10 md:py-16 bg-gray-50/50 dark:bg-white/[0.01] rounded-[3.5rem] md:rounded-[5rem] border border-gray-100 dark:border-white/5 my-8">
+      <section className="max-w-[1450px] mx-auto px-4 sm:px-6 md:px-8 py-10 md:py-16 bg-gray-50/50 dark:bg-white/[0.01] rounded-[3.5rem] md:rounded-[5rem] border border-gray-100 dark:border-white/5 my-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
             <div className="text-center lg:text-left">
                 <h2 className="text-xl md:text-3xl font-black text-gray-900 dark:text-white uppercase tracking-tight mb-10 leading-relaxed">
