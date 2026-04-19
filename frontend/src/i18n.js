@@ -83,9 +83,9 @@ i18n
               search_button: "Search"
             },
             for_you: {
-              title: "Events For",
-              title_highlight: "You",
-              subtitle: "BASTICKET's curated picks tailored to your taste"
+              title: "Featured",
+              title_highlight: "Events",
+              subtitle: "Most prominent and high-priority events on BASTICKET"
             },
             time_filter: {
               title: "Coming",
@@ -95,8 +95,18 @@ i18n
               this_month: "This Month"
             },
             categories: {
-              title: "Explore by Category",
-              view_all: "View All",
+              title: "Explore by category",
+              title_highlight: "Category",
+              view_all: "View All Events",
+              "Âm nhạc": "Music",
+              "Hội thảo": "Workshop",
+              "Sân khấu": "Theater",
+              "Ẩm thực": "Food",
+              "Thể thao": "Sports",
+              "Du lịch": "Travel",
+              "Từ thiện": "Charity",
+              "Lễ hội": "Festival",
+              "Công nghệ": "Technology",
               all: "All", music: "Music", workshop: "Workshop", sports: "Sports", theater: "Theater", festival: "Festival", food: "Food", travel: "Travel", charity: "Charity"
             },
             events: {
@@ -111,7 +121,22 @@ i18n
               instant_title: "Instant Transactions", instant_desc: "Buy, sell, and transfer tickets in just seconds.",
               market_title: "Secure Market", market_desc: "Transparent ticket resale, automatic funds via Smart Contract.",
               smart_title: "Smart Contracts", smart_desc: "Automate processes, extract profits directly to your wallet.",
-              trust_stat: "Trusted Users"
+              trust_stat: "Trusted Users",
+              search_title: "Smart Search", search_desc: "Find your favorite events instantly with our AI-powered search engine."
+            },
+            search: {
+              results_for: "Search results for",
+              results_found: "results found",
+              no_results_title: "No matches found",
+              no_results_desc: "We couldn't find any events matching your search. Try using more general keywords or check your spelling."
+            },
+            blogs: {
+              title: "BASTICKET News",
+              subtitle: "Stay updated with the latest event technology and guide",
+              read_more: "Read more",
+              system_news: "System",
+              organizer_news: "Organizer",
+              view_all:"View all blogs"
             }
           },
           eventDetail: {
@@ -451,9 +476,9 @@ i18n
               search_button: "Tìm kiếm"
             },
             for_you: {
-              title: "Sự kiện cho",
-              title_highlight: "Riêng bạn",
-              subtitle: "Gợi ý từ BASTICKET dựa trên sở thích của bạn"
+              title: "Sự kiện",
+              title_highlight: "Nổi bật",
+              subtitle: "Những trải nghiệm đẳng cấp nhất được BASTICKET chọn lọc"
             },
             time_filter: {
               title: "Sắp",
@@ -463,8 +488,18 @@ i18n
               this_month: "Tháng này"
             },
             categories: {
-              title: "Khám phá theo Thể loại",
-              view_all: "Xem Tất Cả",
+              title: "Khám phá theo danh mục",
+              title_highlight: "Danh mục",
+              view_all: "Xem tất cả sự kiện",
+              "Âm nhạc": "Âm nhạc",
+              "Hội thảo": "Hội thảo",
+              "Sân khấu": "Sân khấu",
+              "Ẩm thực": "Ẩm thực",
+              "Thể thao": "Thể thao",
+              "Du lịch": "Du lịch",
+              "Từ thiện": "Từ thiện",
+              "Lễ hội": "Lễ hội",
+              "Công nghệ": "Công nghệ",
               all: "Tất cả", music: "Âm nhạc", workshop: "Hội thảo", sports: "Thể thao", theater: "Sân khấu", festival: "Lễ hội", food: "Ẩm thực", travel: "Du lịch", charity: "Từ thiện"
             },
             events: {
@@ -480,6 +515,20 @@ i18n
               market_title: "Chợ vé An toàn", market_desc: "Thanh khoản vé minh bạch, tự động nhận tiền qua Smart Contract.",
               smart_title: "Hợp đồng Thông minh", smart_desc: "Tự động hóa quy trình, trích xuất lợi nhuận trực tiếp về ví.",
               trust_stat: "Người dùng tin tưởng"
+            },
+            search: {
+              results_for: "Kết quả tìm kiếm cho",
+              results_found: "kết quả được tìm thấy",
+              no_results_title: "Không tìm thấy kết quả",
+              no_results_desc: "Rất tiếc, chúng tôi không tìm thấy sự kiện nào khớp với từ khóa của bạn. Hãy thử lại với từ khóa khác hoặc kiểm tra lại chính tả nhé!"
+            },
+            blogs: {
+              title: "Bản tin BASTICKET",
+              subtitle: "Cập nhật những tin tức, công nghệ và hướng dẫn mới nhất",
+              read_more: "Xem thêm",
+              system_news: "Hệ thống",
+              organizer_news: "Ban tổ chức",
+              view_all: "Xem tất cả blog"
             }
           },
           eventDetail: {

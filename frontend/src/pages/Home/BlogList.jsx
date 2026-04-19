@@ -182,7 +182,7 @@ const BlogList = () => {
                                 </p>
                                 <div className="flex items-center gap-4">
                                     <div className="w-12 h-12 rounded-full border-2 border-neon-green p-0.5">
-                                        <img src={featuredBlog.author.avatar_url} className="w-full h-full rounded-full object-cover" alt="" />
+                                        <img src={featuredBlog.author?.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg'} className="w-full h-full rounded-full object-cover" alt="" />
                                     </div>
                                     <div>
                                         <div className="text-[10px] font-black text-neon-green uppercase tracking-widest">Đăng bởi</div>
@@ -289,7 +289,7 @@ const BlogList = () => {
                                         <div className="mt-6 flex items-center justify-between pt-4 border-t border-gray-100 dark:border-white/5">
                                             <div className="flex items-center gap-2">
                                                 <div className="w-7 h-7 rounded-full border border-neon-green/30 p-0.5">
-                                                    <img src={blog.author.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg'} className="w-full h-full rounded-full object-cover" alt="" />
+                                                    <img src={blog.author?.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg'} className="w-full h-full rounded-full object-cover" alt="" />
                                                 </div>
                                                 <span className="text-[11px] font-black text-gray-700 dark:text-gray-300 uppercase tracking-widest">
                                                     {blog.author.role === 'organizer' && blog.author.organizer_profile?.organization_name 
@@ -471,7 +471,7 @@ const BlogList = () => {
                                             {event.location_address?.split(',').slice(-1)[0] || 'Việt Nam'}
                                         </div>
                                         <Link 
-                                            to={`/event/${event.id}`}
+                                            to={`/events/${event.id}`}
                                             className="w-full py-4 mt-4 bg-neon-green text-black text-[10px] font-black uppercase tracking-widest rounded-2xl flex items-center justify-center gap-3 hover:bg-white hover:scale-105 active:scale-95 transition-all transform translate-y-8 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 shadow-xl shadow-neon-green/20"
                                         >
                                             <Ticket className="w-4 h-4" /> Đặt Vé Ngay

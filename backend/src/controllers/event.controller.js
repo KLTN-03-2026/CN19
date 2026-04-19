@@ -7,7 +7,7 @@ const getEvents = async (req, res) => {
     // Tự động dọn dẹp các đơn hàng quá hạn để trả lại tồn kho
     await orderService.releaseExpiredOrders();
 
-    const { keyword, category_id, status, startDate, endDate } = req.query;
+    const { keyword, category_id, status, startDate, endDate, is_featured } = req.query;
 
     const whereClause = {
       status: status || 'active', // Mặc định chỉ public những sự kiện đang active
@@ -22,6 +22,10 @@ const getEvents = async (req, res) => {
 
     if (category_id) {
       whereClause.category_id = category_id;
+    }
+
+    if (is_featured !== undefined) {
+      whereClause.is_featured = is_featured === 'true';
     }
 
     if (startDate || endDate) {

@@ -19,7 +19,7 @@ const EventCard = ({ event, className = "", variant = "default" }) => {
     return (
         <Link 
             to={`/events/${event.id}`}
-            className={`group relative overflow-hidden rounded-[2.5rem] bg-gray-100 dark:bg-[#0a0a0b] border border-gray-100 dark:border-white/5 transition-all duration-500 hover:scale-[1.02] hover:border-neon-green/30 hover:shadow-[0_20px_50px_rgba(82,196,45,0.2)] block shrink-0 w-[280px] md:w-[300px] aspect-[4/5] ${className}`}
+            className={`group relative overflow-hidden rounded-[2rem] bg-gray-100 dark:bg-[#0a0a0b] border border-gray-100 dark:border-white/5 transition-all duration-500 hover:scale-[1.02] hover:border-neon-green/30 hover:shadow-[0_20px_50px_rgba(82,196,45,0.2)] block shrink-0 w-[200px] sm:w-[240px] md:w-[260px] lg:w-[250px] xl:w-[255px] aspect-[4/5] ${className}`}
         >
             {/* Poster Background Image */}
             <div className="absolute inset-0 z-0 bg-gray-200 dark:bg-white/5 flex items-center justify-center">
@@ -38,14 +38,14 @@ const EventCard = ({ event, className = "", variant = "default" }) => {
             <div className="absolute inset-0 z-10 p-6 md:p-6 flex flex-col justify-between h-full">
                 <div className="flex justify-between items-start">
                     {/* Date Badge */}
-                    <div className="bg-white/10 backdrop-blur-xl rounded-2xl px-4 py-2 flex flex-col items-center min-w-[60px] border border-white/20 shadow-xl">
-                        <span className="text-xl font-black text-white leading-none">{day}</span>
-                        <span className="text-[11px] font-bold text-neon-green uppercase tracking-tighter mt-1">{month}</span>
+                    <div className="bg-white/10 backdrop-blur-xl rounded-2xl px-3 py-1.5 flex flex-col items-center min-w-[50px] border border-white/20 shadow-xl">
+                        <span className="text-base font-black text-white leading-none">{day}</span>
+                        <span className="text-[10px] font-bold text-neon-green mt-1">{month}</span>
                     </div>
 
                     {/* Category Label */}
-                    <div className="bg-neon-green/20 backdrop-blur-xl px-3 py-1 rounded-full border border-neon-green/30">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-neon-green">
+                    <div className="bg-neon-green/20 backdrop-blur-xl px-2.5 py-1 rounded-full border border-neon-green/30">
+                        <span className="text-[10px] font-black text-neon-green">
                             {event.category?.name || 'Sự kiện'}
                         </span>
                     </div>
@@ -53,20 +53,20 @@ const EventCard = ({ event, className = "", variant = "default" }) => {
 
                 <div className="mt-auto transform translate-y-2 group-hover:translate-y-0 transition-all duration-500">
                     {isFeatured && (
-                        <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-neon-green text-black rounded-full text-[9px] font-black uppercase tracking-widest mb-3 animate-pulse">
+                        <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-neon-green text-black rounded-full text-[10px] font-semibold mb-3 animate-pulse">
                             <Ticket className="w-3 h-3" />
                             Gợi ý cho bạn
                         </div>
                     )}
                     
-                    <h3 className="text-xl md:text-xl font-black text-white leading-tight mb-4 group-hover:text-neon-green transition-colors line-clamp-2 uppercase tracking-tighter">
+                    <h3 className="text-sm md:text-base font-bold text-white leading-tight mb-4 group-hover:text-neon-green transition-colors line-clamp-2 uppercase">
                         {event.title}
                     </h3>
 
                     <div className="flex items-center justify-between pt-4 md:pt-6 border-t border-white/10 mt-auto">
-                        <div className="flex-1">
-                            <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-1">Giá từ</p>
-                            <p className="text-xl md:text-[16px] font-black text-neon-green truncate w-full pr-2 uppercase">
+                        <div className="flex-1 min-w-0">
+                            <p className="text-[10px] font-semibold text-white/40 mb-0.5">Giá từ</p>
+                            <p className="text-sm md:text-base font-bold text-neon-green truncate w-full pr-2">
                                 {event.ticket_tiers && event.ticket_tiers.length > 0 
                                     ? new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(Math.min(...event.ticket_tiers.map(t => parseFloat(t.price) || 0)))
                                     : 'Miễn phí'
