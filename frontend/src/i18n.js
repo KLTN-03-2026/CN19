@@ -246,6 +246,11 @@ i18n
             noUpcomingEvents: "No upcoming events from this organizer",
             noPastEvents: "No past events from this organizer",
             blogTitle: "Experience Journal & Reviews",
+            noContentTitle: "No Posts Yet",
+            contactInfo:"Contact Infomation",
+            noBlogContent: "This organizer has not posted any blogs or community updates yet. Check back soon for future announcements!",
+            viewPost: "Read More",
+            by: "by",
             blogPlaceholder: "Blog is where customers share moments and reviews after attending events. This feature will be launched soon to connect the event-loving community!"
           },
           common: {
@@ -686,6 +691,11 @@ i18n
             noUpcomingEvents: "Chưa có sự kiện sắp tới nào",
             noPastEvents: "Chưa có sự kiện đã qua nào",
             blogTitle: "Nhật ký trải nghiệm & Đánh giá",
+            noContentTitle: "Chưa có bài viết",
+            contactInfo:"Thông tin liên hệ",
+            noBlogContent: "Nhà tổ chức này chưa đăng tải bài viết hoặc cập nhật cộng đồng nào. Hãy quay lại sau nhé!",
+            viewPost: "Xem chi tiết",
+            by: "bởi",
             blogPlaceholder: "Blog là nơi khách hàng chia sẻ khoảnh khắc và đánh giá sau sự kiện. Tính năng sẽ sớm ra mắt!"
           },
           common: {
