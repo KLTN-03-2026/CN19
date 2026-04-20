@@ -160,9 +160,9 @@ const OrganizerPublicProfile = () => {
                   </div>
                   <div className="bg-white dark:bg-[#111114] p-3 text-center">
                     <p className="text-[9px] font-black text-gray-400 mb-0.5">{t('publicOrganizer.status', 'Status')}</p>
-                    <p className={`text-[10px] font-bold ${organizer.user?.status === 'active' ? 'text-neon-green' : 'text-red-500'}`}>
-                      {organizer.user?.status === 'active' ? t('publicOrganizer.activeStatus', 'Active') : 
-                       organizer.user?.status === 'locked' ? t('publicOrganizer.lockedStatus', 'Locked') : 
+                    <p className={`text-[10px] font-bold ${organizer.user?.status?.toLowerCase() === 'active' ? 'text-neon-green' : 'text-red-500'}`}>
+                      {organizer.user?.status?.toLowerCase() === 'active' ? t('publicOrganizer.activeStatus', 'Active') : 
+                       organizer.user?.status?.toLowerCase() === 'locked' ? t('publicOrganizer.lockedStatus', 'Locked') : 
                        t('publicOrganizer.suspendedStatus', 'Suspended')}
                     </p>
                   </div>

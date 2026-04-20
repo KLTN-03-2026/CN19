@@ -212,7 +212,7 @@ const PublicEventDetail = () => {
                  
                  {/* Live Status Badge */}
                  <div className="absolute top-8 left-8">
-                    {event.organizer?.user?.status === 'active' ? (
+                    {event.organizer?.user?.status?.toLowerCase() === 'active' ? (
                       <div className="px-4 py-1.5 bg-neon-green text-black font-black text-[10px] rounded-xl flex items-center gap-2 shadow-[0_0_20px_rgba(82,196,45,0.6)] animate-pulse-slow">
                         <Sparkles className="w-4 h-4" /> {t('eventDetail.onSale', 'ON SALE')}
                       </div>
@@ -312,10 +312,10 @@ const PublicEventDetail = () => {
                      {!isOrganizer ? (
                        <button 
                          onClick={scrollToTickets}
-                         disabled={event.organizer?.user?.status !== 'active'}
+                         disabled={event.organizer?.user?.status?.toLowerCase() !== 'active'}
                          className={`relative z-8 w-full lg:w-auto px-4 xl:px-4 py-4 xl:py-4 bg-neon-green text-black font-black uppercase text-xs xl:text-xs rounded-[1.5rem] lg:rounded-[2rem] hover:bg-white hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 shadow-[0_0_30px_rgba(82,196,45,0.3)] shrink-0 disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed`}
                        >
-                         {event.organizer?.user?.status === 'active' ? (
+                         {event.organizer?.user?.status?.toLowerCase() === 'active' ? (
                            <>
                              {t('eventDetail.buyNow', 'BUY TICKETS NOW')} <ArrowLeft className="w-5 h-5 rotate-180" />
                            </>
@@ -484,7 +484,7 @@ const PublicEventDetail = () => {
                   </div>
                 </div>
 
-                {event.organizer?.user?.status !== 'active' && (
+                {event.organizer?.user?.status?.toLowerCase() !== 'active' && (
                    <div className="mb-4 p-4 bg-red-500/10 border border-red-500/20 rounded-[2rem] flex flex-col items-center text-center gap-3">
                      <div className="w-10 h-10 bg-red-500/20 rounded-full flex items-center justify-center">
                        <X className="w-4 h-4 text-red-500" />
@@ -498,7 +498,7 @@ const PublicEventDetail = () => {
                    </div>
                  )}
 
-                 {isOrganizer && event.organizer?.user?.status === 'active' && (
+                 {isOrganizer && event.organizer?.user?.status?.toLowerCase() === 'active' && (
                    <div className="mb-4 p-3 bg-neon-green/5 border border-neon-green/20 rounded-[2rem] flex flex-col items-center text-center gap-3">
                      <div className="w-10 h-10 bg-neon-green/10 rounded-full flex items-center justify-center">
                        <ShieldCheck className="w-4 h-4 text-neon-green" />
@@ -560,7 +560,7 @@ const PublicEventDetail = () => {
                                   {isSoldOut ? t('eventDetail.soldOut', 'SOLD OUT') : `${t('eventDetail.remaining', 'LEFT:')} ${tier.quantity_available}`}
                                 </span>
                                 
-                                {!isSoldOut && !isOrganizer && event.organizer?.user?.status === 'active' && (
+                                {!isSoldOut && !isOrganizer && event.organizer?.user?.status?.toLowerCase() === 'active' && (
                                   <div className="flex items-center gap-1 bg-gray-100 dark:bg-black/50 p-1.5 rounded-2xl border border-gray-200 dark:border-white/10 backdrop-blur-md">
                                     <button 
                                       onClick={() => handleTicketChange(tier.id, -1, tier.quantity_available)}
