@@ -159,8 +159,12 @@ const OrganizerPublicProfile = () => {
                     <p className="text-base font-bold text-gray-900 dark:text-white">{organizer.events?.length || 0}</p>
                   </div>
                   <div className="bg-white dark:bg-[#111114] p-3 text-center">
-                    <p className="text-[9px] font-black text-gray-400 uppercase mb-0.5">{t('publicOrganizer.status', 'Status')}</p>
-                    <p className="text-[10px] font-bold text-neon-green ">{t('publicOrganizer.activeStatus', 'Active')}</p>
+                    <p className="text-[9px] font-black text-gray-400 mb-0.5">{t('publicOrganizer.status', 'Status')}</p>
+                    <p className={`text-[10px] font-bold ${organizer.user?.status === 'active' ? 'text-neon-green' : 'text-red-500'}`}>
+                      {organizer.user?.status === 'active' ? t('publicOrganizer.activeStatus', 'Active') : 
+                       organizer.user?.status === 'locked' ? t('publicOrganizer.lockedStatus', 'Locked') : 
+                       t('publicOrganizer.suspendedStatus', 'Suspended')}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -296,11 +300,11 @@ const EventCard = ({ event, t, isPast = false }) => (
           alt={event.title}
         />
         <div className="absolute top-3 left-3 flex flex-col gap-1.5">
-           <span className="px-2 py-0.5 bg-neon-green text-black text-[8px] font-black rounded shadow-sm">
+           <span className="px-2 py-0.5 bg-neon-green text-black text-[9px] font-black rounded uppercase shadow-sm">
              {event.category?.name}
            </span>
            {isPast && (
-             <span className="px-2 py-0.5 bg-black/60 text-white text-[8px] font-black rounded backdrop-blur-sm border border-white/20">
+             <span className="px-2 py-0.5 bg-black/60 text-white text-[9px] font-black rounded backdrop-blur-sm border border-white/20">
                {t('common.ended', 'Ended')}
              </span>
            )}
@@ -336,11 +340,11 @@ const BlogCard = ({ blog, t }) => (
         className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
         alt={blog.title}
       />
-      <div className="absolute top-4 left-4">
+      {/* <div className="absolute top-4 left-4">
         <span className="px-2 py-0.5 bg-black/60 text-white text-[9px] font-black rounded backdrop-blur-sm border border-white/20">
           {blog.category || 'Announcement'}
         </span>
-      </div>
+      </div> */}
     </div>
     <div className="p-5 flex-1 flex flex-col">
       <div className="flex items-center gap-2 mb-3">

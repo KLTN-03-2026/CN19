@@ -59,7 +59,7 @@ const PublicEventDetail = () => {
     return (
       <div className="min-h-screen pt-32 pb-20 flex flex-col items-center justify-center bg-gray-50 dark:bg-[#0a0a0c] transition-colors duration-500">
         <div className="w-16 h-16 border-4 border-neon-green/20 border-t-neon-green rounded-full animate-spin"></div>
-        <p className="mt-4 text-gray-500 font-bold tracking-widest uppercase text-sm">{t('eventDetail.loading', 'Đang tải siêu phẩm...')}</p>
+        <p className="mt-4 text-gray-500 font-bold tracking-widest uppercase text-sm">{t('eventDetail.loading', 'Loading masterpiece...')}</p>
       </div>
     );
   }
@@ -67,8 +67,8 @@ const PublicEventDetail = () => {
   if (error || !data?.data) {
     return (
       <div className="min-h-screen pt-32 pb-20 flex flex-col items-center justify-center bg-gray-50 dark:bg-[#0a0a0c] transition-colors duration-500">
-        <h2 className="text-4xl font-black text-gray-900 dark:text-white uppercase mb-4">{t('eventDetail.notFound', 'Không tìm thấy sự kiện')}</h2>
-        <button onClick={() => navigate(-1)} className="px-6 py-3 bg-neon-green text-black font-black uppercase text-xs tracking-widest rounded-xl hover:scale-105 transition-transform">{t('eventDetail.back', 'Quay lại')}</button>
+        <h2 className="text-4xl font-black text-gray-900 dark:text-white uppercase mb-4">{t('eventDetail.notFound', 'Event not found')}</h2>
+        <button onClick={() => navigate(-1)} className="px-6 py-3 bg-neon-green text-black font-black uppercase text-xs tracking-widest rounded-xl hover:scale-105 transition-transform">{t('eventDetail.back', 'Back')}</button>
       </div>
     );
   }
@@ -110,7 +110,7 @@ const PublicEventDetail = () => {
   // Xử lý tạo đơn hàng với AI Protection
   const handleCheckout = async () => {
     if (!isAuthenticated) {
-      toast.error(t('eventDetail.loginToBuy', 'Vui lòng đăng nhập hệ thống để mua vé.'));
+      toast.error(t('eventDetail.loginToBuy', 'Please login to buy tickets.'));
       navigate('/login');
       return;
     }
@@ -118,7 +118,7 @@ const PublicEventDetail = () => {
     if (totalSelectedTickets === 0 || isSubmitting) return;
 
     setIsSubmitting(true);
-    let toastId = toast.loading(t('eventDetail.processing', 'Đang xử lý đơn hàng...'));
+    let toastId = toast.loading(t('eventDetail.processing', 'Processing order...'));
 
     try {
       // 1. Phân tích Hành vi (AI Behavior Analysis)
@@ -146,7 +146,7 @@ const PublicEventDetail = () => {
       // 4. Bắn API tạo Đơn hàng (Backend chạy check AI)
       const res = await orderService.createPrimaryOrder(orderData);
       
-      toast.success(res.message || t('eventDetail.orderSuccess', 'Đã giữ chỗ thành công!'), { id: toastId });
+      toast.success(res.message || t('eventDetail.orderSuccess', 'Booking successful!'), { id: toastId });
       
       // Thành công => Điều hướng sang trang chọn phương thức thanh toán
       navigate(`/checkout/${res.data.id}`);
@@ -154,7 +154,7 @@ const PublicEventDetail = () => {
     } catch (error) {
       console.error("Checkout Error:", error);
       // Nếu Backend phát hiện Bot (HTTP 403), show lỗi màu đỏ gắt lên
-      const errorMsg = error.response?.data?.error || t('eventDetail.orderFailed', 'Lỗi hệ thống. Vui lòng thử lại.');
+      const errorMsg = error.response?.data?.error || t('eventDetail.orderFailed', 'System error. Please try again.');
       toast.error(errorMsg, { id: toastId, duration: 5000, icon: '🛡️' });
     } finally {
       setIsSubmitting(false);
@@ -191,7 +191,7 @@ const PublicEventDetail = () => {
               <div className="w-8 h-8 rounded-full border border-gray-200 dark:border-gray-800 flex items-center justify-center group-hover:border-gray-400 dark:group-hover:border-white transition-colors bg-white/50 dark:bg-[#0a0a0c]/50 backdrop-blur-md">
                 <ArrowLeft className="w-4 h-4" />
               </div>
-              {t('eventDetail.back', 'Quay lại')}
+              {t('eventDetail.back', 'Back')}
             </button>
           </div>
 
@@ -212,9 +212,15 @@ const PublicEventDetail = () => {
                  
                  {/* Live Status Badge */}
                  <div className="absolute top-8 left-8">
-                    <div className="px-4 py-1.5 bg-neon-green text-black font-black text-[10px] rounded-xl flex items-center gap-2 shadow-[0_0_20px_rgba(82,196,45,0.6)] animate-pulse-slow">
-                      <Sparkles className="w-4 h-4" /> {t('eventDetail.onSale', 'Đang mở bán')}
-                    </div>
+                    {event.organizer?.user?.status === 'active' ? (
+                      <div className="px-4 py-1.5 bg-neon-green text-black font-black text-[10px] rounded-xl flex items-center gap-2 shadow-[0_0_20px_rgba(82,196,45,0.6)] animate-pulse-slow">
+                        <Sparkles className="w-4 h-4" /> {t('eventDetail.onSale', 'ON SALE')}
+                      </div>
+                    ) : (
+                      <div className="px-4 py-1.5 bg-red-500 text-white font-black text-[10px] rounded-xl flex items-center gap-2 shadow-[0_0_20px_rgba(239,68,68,0.4)]">
+                        <X className="w-4 h-4" /> {t('eventDetail.salesSuspended', 'SALES SUSPENDED')}
+                      </div>
+                    )}
                  </div>
                </div>
             </div>
@@ -226,7 +232,7 @@ const PublicEventDetail = () => {
                  <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-white/5 rounded-2xl border border-gray-200 dark:border-white/10 backdrop-blur-md">
                     <Tag className="w-4 h-4 text-neon-green" />
                     <span className="text-[9px] sm:text-[10px] font-black uppercase text-gray-500 dark:text-gray-300">
-                      {event.category?.name || t('eventDetail.musicEvent', 'Sự kiện âm nhạc')}
+                      {event.category?.name || t('eventDetail.musicEvent', 'Music Event')}
                     </span>
                  </div>
                </div>
@@ -243,9 +249,9 @@ const PublicEventDetail = () => {
                         <Calendar className="w-5 h-5 text-neon-green" />
                      </div>
                      <div className="pt-0.5">
-                        <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold mb-1 flex items-center gap-1.5">{t('eventDetail.time', 'Thời gian')}</p>
+                        <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold mb-1 flex items-center gap-1.5">{t('eventDetail.time', 'Time')}</p>
                         <p className="font-bold text-gray-900 dark:text-white text-[14px]">{formattedDate}</p>
-                        <p className="text-[12px] text-neon-green font-medium mt-0.5 ">{event.event_time || t('eventDetail.pendingUpdate', 'Đang cập nhật')}</p>
+                        <p className="text-[12px] text-neon-green font-medium mt-0.5 ">{event.event_time || t('eventDetail.pendingUpdate', 'Pending update')}</p>
                      </div>
                   </div>
 
@@ -254,13 +260,13 @@ const PublicEventDetail = () => {
                         <MapPin className="w-5 h-5 text-neon-green" />
                      </div>
                      <div className="pt-0.5 overflow-hidden">
-                        <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold mb-1 flex items-center gap-1.5">{t('eventDetail.location', 'Địa điểm')}</p>
-                        <p className="font-bold text-gray-900 dark:text-white text-[14px] truncate">{event.location_address || t('eventDetail.pendingUpdate', 'Đang chờ cập nhật')}</p>
+                        <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold mb-1 flex items-center gap-1.5">{t('eventDetail.location', 'Location')}</p>
+                        <p className="font-bold text-gray-900 dark:text-white text-[14px] truncate">{event.location_address || t('eventDetail.pendingUpdate', 'Pending update')}</p>
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
                            {event.latitude && event.longitude ? (
-                              <button onClick={() => document.getElementById('map-section')?.scrollIntoView({ behavior: 'smooth' })} className="text-[11px] font-bold text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mt-0.5 inline-flex items-center gap-1 uppercase transition-colors"><ChevronRight className="w-3 h-3" /> {t('eventDetail.map', 'Bản đồ')}</button>
+                              <button onClick={() => document.getElementById('map-section')?.scrollIntoView({ behavior: 'smooth' })} className="text-[11px] font-bold text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mt-0.5 inline-flex items-center gap-1 uppercase transition-colors"><ChevronRight className="w-3 h-3" /> {t('eventDetail.map', 'Map')}</button>
                            ) : (
-                              <a href={`https://maps.google.com/?q=${event.location_address}`} target="_blank" rel="noreferrer" className="text-[11px] font-bold text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mt-0.5 inline-flex items-center gap-1 uppercase  transition-colors"><ChevronRight className="w-3 h-3" /> {t('eventDetail.map', 'Bản đồ')}</a>
+                              <a href={`https://maps.google.com/?q=${event.location_address}`} target="_blank" rel="noreferrer" className="text-[11px] font-bold text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mt-0.5 inline-flex items-center gap-1 uppercase  transition-colors"><ChevronRight className="w-3 h-3" /> {t('eventDetail.map', 'Map')}</a>
                            )}
                         </div>
                      </div>
@@ -285,7 +291,7 @@ const PublicEventDetail = () => {
                     )}
                   </div>
                   <div>
-                    <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">{t('eventDetail.organizer', 'Ban tổ chức')}</p>
+                    <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">{t('eventDetail.organizer', 'Organizer')}</p>
                     <p className="font-black text-[15px] text-gray-900 dark:text-white tracking-tight group-hover:text-neon-green transition-colors">{event.organizer?.organization_name}</p>
                   </div>
                </Link>
@@ -298,21 +304,28 @@ const PublicEventDetail = () => {
                      <div className="absolute top-1/2 left-1/4 -translate-y-1/2 w-32 h-32 bg-neon-green/20 rounded-full blur-[50px] pointer-events-none group-hover:bg-neon-green/30 transition-colors"></div>
                      
                      <div className="relative z-10 py-5 lg:py-0 w-full lg:w-auto text-center lg:text-left">
-                        <p className="text-[13px] font-bold text-gray-400 mb-1">{t('eventDetail.lowestPriceFrom', 'Vé rẻ nhất chỉ từ')}</p>
+                        <p className="text-[13px] font-bold text-gray-400 mb-1">{t('eventDetail.lowestPriceFrom', 'Cheapest from')}</p>
                         <p className="text-xl xl:text-xl font-black text-neon-green tracking-tighter filter drop-shadow-[0_0_10px_rgba(82,196,45,0.4)]">
-                           {lowestPrice === 0 ? t('eventDetail.free', 'MIỄN PHÍ') : formatPrice(lowestPrice)}
+                           {lowestPrice === 0 ? t('eventDetail.free', 'FREE') : formatPrice(lowestPrice)}
                         </p>
                      </div>
                      {!isOrganizer ? (
                        <button 
                          onClick={scrollToTickets}
-                         className="relative z-8 w-full lg:w-auto px-4 xl:px-4 py-4 xl:py-4 bg-neon-green text-black font-black uppercase text-xs xl:text-xs  rounded-[1.5rem] lg:rounded-[2rem] hover:bg-white hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 shadow-[0_0_30px_rgba(82,196,45,0.3)] shrink-0"
+                         disabled={event.organizer?.user?.status !== 'active'}
+                         className={`relative z-8 w-full lg:w-auto px-4 xl:px-4 py-4 xl:py-4 bg-neon-green text-black font-black uppercase text-xs xl:text-xs rounded-[1.5rem] lg:rounded-[2rem] hover:bg-white hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 shadow-[0_0_30px_rgba(82,196,45,0.3)] shrink-0 disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed`}
                        >
-                         {t('eventDetail.buyNow', 'CHỌN VÉ NGAY')} <ArrowLeft className="w-5 h-5 rotate-180" />
+                         {event.organizer?.user?.status === 'active' ? (
+                           <>
+                             {t('eventDetail.buyNow', 'BUY TICKETS NOW')} <ArrowLeft className="w-5 h-5 rotate-180" />
+                           </>
+                         ) : (
+                           t('eventDetail.salesSuspended', 'SALES SUSPENDED')
+                         )}
                        </button>
                      ) : (
                        <div className="relative z-8 px-6 py-4 bg-neon-green/10 text-neon-green font-bold uppercase text-[10px] rounded-2xl border border-neon-green/30 flex items-center gap-2">
-                          <ShieldCheck className="w-4 h-4" /> Bạn là chủ sở hữu
+                          <ShieldCheck className="w-4 h-4" /> {t('eventDetail.you_are_owner', 'You are the owner')}
                        </div>
                      )}
                   </div>
@@ -342,7 +355,7 @@ const PublicEventDetail = () => {
              <div className="bg-white dark:bg-[#111114] rounded-[2.5rem] p-4 md:p-6 border border-gray-200 dark:border-white/5 shadow-xl dark:shadow-2xl relative overflow-hidden transition-colors">
                 <div className="absolute top-0 left-12 w-32 h-1 bg-gradient-to-r from-neon-green to-transparent"></div>
                 <h3 className="text-sm md:text-lg font-black text-gray-900 dark:text-white uppercase tracking-tighter mb-3 flex items-center gap-3">
-                   {t('eventDetail.introduction', 'Giới thiệu sự kiện')}
+                   {t('eventDetail.introduction', 'Event Introduction')}
                 </h3>
                 {/* Rich text container */}
                 <div 
@@ -353,7 +366,7 @@ const PublicEventDetail = () => {
                              prose-li:text-gray-600 dark:prose-li:text-gray-300 prose-li:leading-[1.8]
                              prose-strong:text-gray-900 dark:prose-strong:text-white prose-strong:font-black
                              prose-img:rounded-[2rem] prose-img:border prose-img:border-gray-200 dark:prose-img:border-white/10 prose-img:shadow-xl dark:prose-img:shadow-2xl"
-                  dangerouslySetInnerHTML={{ __html: event.description || `<p>${t('eventDetail.infoUpdating', 'Thông tin đang được cập nhật...')}</p>` }}
+                  dangerouslySetInnerHTML={{ __html: event.description || `<p>${t('eventDetail.infoUpdating', 'Information is being updated...')}</p>` }}
                 />
              </div>
              
@@ -362,7 +375,7 @@ const PublicEventDetail = () => {
                 <div className="bg-white dark:bg-[#111114] rounded-[2.5rem] p-4 md:p-6 border border-gray-200 dark:border-white/5 shadow-xl dark:shadow-2xl relative overflow-hidden transition-colors mt-4">
                    <div className="absolute top-0 left-12 w-32 h-1 bg-gradient-to-r from-neon-green to-transparent"></div>
                    <h3 className="text-sm md:text-lg font-black text-gray-900 dark:text-white uppercase mb-3 flex items-center gap-3">
-                       {t('eventDetail.introductionVideo', 'Video Giới Thiệu')}
+                       {t('eventDetail.introductionVideo', 'Introduction Video')}
                    </h3>
                    <div className="w-full aspect-video rounded-[2rem] overflow-hidden border border-gray-200 dark:border-white/10 shadow-sm relative group bg-black">
                       <video 
@@ -380,7 +393,7 @@ const PublicEventDetail = () => {
                 <div className="bg-white dark:bg-[#111114] rounded-[2.5rem] p-4 md:p-6 border border-gray-200 dark:border-white/5 shadow-xl dark:shadow-2xl relative overflow-hidden transition-colors mt-4">
                    <div className="absolute top-0 left-12 w-32 h-1 bg-gradient-to-r from-neon-green to-transparent"></div>
                    <h3 className="text-sm md:text-lg font-black text-gray-900 dark:text-white uppercase mb-4 flex items-center gap-3">
-                     {t('eventDetail.viewSeatingChart', 'Sơ đồ khu vực và hình ảnh')}
+                     {t('eventDetail.viewSeatingChart', 'Seating Chart & Images')}
                    </h3>
                    {/* Grid Layout for Seating Charts (Logical redesign) */}
                    <div className={`grid gap-5 ${event.seating_charts.length === 1 ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'}`}>
@@ -397,7 +410,7 @@ const PublicEventDetail = () => {
                             />
                             {/* Decorative Overlay */}
                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                               <p className="text-white font-black text-xs">{t('eventDetail.viewDetail', 'Xem chi tiết')}</p>
+                               <p className="text-white font-black text-xs">{t('eventDetail.viewDetail', 'View detail')}</p>
                             </div>
                          </div>
                       ))}
@@ -407,12 +420,12 @@ const PublicEventDetail = () => {
 
              {/* 📍 EMBEDDED MAP BLOCK */}
              {event.latitude && event.longitude && (
-                <div id="map-section" className="bg-white dark:bg-[#111114] rounded-[2.5rem] p- md:p-6 border border-gray-200 dark:border-white/5 shadow-xl dark:shadow-2xl relative overflow-hidden transition-colors mt-8">
+                <div id="map-section" className="bg-white dark:bg-[#111114] rounded-[2.5rem] p-4 md:p-6 border border-gray-200 dark:border-white/5 shadow-xl dark:shadow-2xl relative overflow-hidden transition-colors mt-8">
                    <div className="absolute top-0 left-12 w-32 h-1 bg-gradient-to-r from-neon-green to-transparent"></div>
-                   <h3 className="text-sm md:text-lg font-black text-gray-900 dark:text-white uppercase mb- flex items-center gap-3">
-                       {t('eventDetail.locationMap', 'Bản đồ địa điểm')}
+                   <h3 className="text-sm md:text-lg font-black text-gray-900 dark:text-white uppercase mb-1. flex items-center gap-3">
+                       {t('eventDetail.locationMap', 'Location Map')}
                    </h3>
-                   <p className="mb-5 text-sm md:text-base text-gray-600 dark:text-gray-400 font-medium flex items-start gap-2">
+                   <p className="mb-5 text-xs md:text-base text-gray-600 dark:text-gray-400 font-medium flex items-start gap-2">
                      <Map className="w-5 h-5 shrink-0 mt-0.5" />
                      {event.location_address}
                    </p>
@@ -434,20 +447,20 @@ const PublicEventDetail = () => {
              <div className="bg-orange-50 dark:bg-[#151210] border border-orange-200 dark:border-[#ff6b00]/20 rounded-[2.5rem] p-4 lg:p-6 relative overflow-hidden group transition-colors mt-8 lg:mt-8">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-orange-100 dark:bg-[#ff6b00]/5 rounded-full blur-[80px] group-hover:bg-orange-200 dark:group-hover:bg-[#ff6b00]/10 transition-colors"></div>
                 <h4 className="text-orange-600 dark:text-[#ff6b00] font-black uppercase text-xs mb-6 flex items-center gap-2">
-                   {t('eventDetail.importantNote', 'Lưu ý quan trọng')}
+                   {t('eventDetail.importantNote', 'Important Note')}
                 </h4>
-                <ul className="text-gray-600 dark:text-gray-400 text-sm space-y-3 font-medium leading-relaxed max-w-2xl relative z-10 list-none pl-0">
+                <ul className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm space-y-3 font-medium leading-relaxed max-w-2xl relative z-10 list-none pl-0">
                   <li className="flex items-start gap-3">
                     <CheckCircle2 className="w-5 h-5 text-orange-400 dark:text-[#ff6b00]/60 shrink-0 mt-0.5" />
-                    {t('eventDetail.note1', 'Vui lòng kiểm tra kỹ hạng vé và thời gian trước khi thanh toán.')}
+                    {t('eventDetail.note1', 'Please double-check ticket tier and time before checkout.')}
                   </li>
                   <li className="flex items-start gap-3">
                     <CheckCircle2 className="w-5 h-5 text-orange-400 dark:text-[#ff6b00]/60 shrink-0 mt-0.5" />
-                    {t('eventDetail.note2', 'Vé đã mua không được hoàn trả dưới mọi hình thức trừ khi sự kiện bị hủy từ BTC.')}
+                    {t('eventDetail.note2', 'Purchased tickets are non-refundable unless canceled by the Organizer.')}
                   </li>
                   <li className="flex items-start gap-3">
                     <CheckCircle2 className="w-5 h-5 text-orange-400 dark:text-[#ff6b00]/60 shrink-0 mt-0.5" />
-                    {t('eventDetail.note3', 'Sự kiện sử dụng vé kỹ thuật số dưới dạng NFT sinh thái cao & Mã QR động bảo mật.')}
+                    {t('eventDetail.note3', 'The event uses digital tickets as eco-friendly NFTs & Dynamic QR codes.')}
                   </li>
                 </ul>
              </div>
@@ -464,26 +477,40 @@ const PublicEventDetail = () => {
              <div className="bg-white dark:bg-[#111114] rounded-[2.5rem] p-6 border border-gray-200 dark:border-white/5 shadow-xl dark:shadow-2xl relative transition-colors">
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-sm sm:text-lg font-black text-gray-900 dark:text-white uppercase flex items-center gap-3">
-                    <Ticket className="w-5 h-5 text-neon-green" /> {t('eventDetail.buyTicket', 'Mua vé')}
+                    <Ticket className="w-5 h-5 text-neon-green" /> {t('eventDetail.buyTicket', 'Buy Tickets')}
                   </h3>
                   <div className="px-3 py-1 rounded-full bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-[11px] font-bold text-gray-500 dark:text-gray-400">
-                    {event.ticket_tiers?.length || 0} {t('eventDetail.ticketCategories', 'hạng vé')}
+                    {event.ticket_tiers?.length || 0} {t('eventDetail.ticketCategories', 'categories')}
                   </div>
                 </div>
 
-                {isOrganizer && (
-                  <div className="mb-4 p-3 bg-neon-green/5 border border-neon-green/20 rounded-[2rem] flex flex-col items-center text-center gap-3">
-                    <div className="w-10 h-10 bg-neon-green/10 rounded-full flex items-center justify-center">
-                      <ShieldCheck className="w-4 h-4 text-neon-green" />
-                    </div>
-                    <div>
-                      <h4 className="font-black text-neon-green uppercase text-xs mb-1">Chế độ xem trước</h4>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
-                        Bạn là Ban Tổ Chức của sự kiện này. Hệ thống không cho phép bạn tự đặt vé của chính mình.
-                      </p>
-                    </div>
-                  </div>
-                )}
+                {event.organizer?.user?.status !== 'active' && (
+                   <div className="mb-4 p-4 bg-red-500/10 border border-red-500/20 rounded-[2rem] flex flex-col items-center text-center gap-3">
+                     <div className="w-10 h-10 bg-red-500/20 rounded-full flex items-center justify-center">
+                       <X className="w-4 h-4 text-red-500" />
+                     </div>
+                     <div>
+                       <h4 className="font-black text-red-500 uppercase text-xs mb-1">{t('eventDetail.salesSuspended', 'SALES SUSPENDED')}</h4>
+                       <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed font-bold">
+                         {t('eventDetail.organizerLockedWarning', "Ticket booking is temporarily suspended because the Organizer's account is currently under review or locked.")}
+                       </p>
+                     </div>
+                   </div>
+                 )}
+
+                 {isOrganizer && event.organizer?.user?.status === 'active' && (
+                   <div className="mb-4 p-3 bg-neon-green/5 border border-neon-green/20 rounded-[2rem] flex flex-col items-center text-center gap-3">
+                     <div className="w-10 h-10 bg-neon-green/10 rounded-full flex items-center justify-center">
+                       <ShieldCheck className="w-4 h-4 text-neon-green" />
+                     </div>
+                     <div>
+                       <h4 className="font-black text-neon-green uppercase text-xs mb-1">{t('eventDetail.preview_mode', 'Preview Mode')}</h4>
+                       <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                         {t('eventDetail.organizer_preview_desc', 'You are the organizer of this event. The system does not allow you to book your own tickets.')}
+                       </p>
+                     </div>
+                   </div>
+                 )}
 
                 <div className="space-y-2">
                   {event.ticket_tiers && event.ticket_tiers.length > 0 ? (
@@ -521,19 +548,19 @@ const PublicEventDetail = () => {
                             {/* Bottom part: Price & Action */}
                             <div className="pt-2 flex items-end justify-between">
                               <div>
-                                <div className="text-[12px] font-black text-gray-400 dark:text-gray-500 mb-1">{t('eventDetail.unitPrice', 'Đơn giá')}</div>
+                                <div className="text-[12px] font-black text-gray-400 dark:text-gray-500 mb-1">{t('eventDetail.unitPrice', 'Price')}</div>
                                 <div className="text-lg font-black text-neon-green drop-shadow-sm">
-                                  {parseFloat(tier.price) === 0 ? t('eventDetail.free', 'MIỄN PHÍ') : formatPrice(tier.price)}
+                                  {parseFloat(tier.price) === 0 ? t('eventDetail.free', 'FREE') : formatPrice(tier.price)}
                                 </div>
                               </div>
                               
                               {/* Action Quantity Selection */}
                               <div className="flex flex-col items-end gap-2">
                                 <span className={`text-[9px] font-black px-2.5 py-1.5 rounded-lg ${isSoldOut ? 'bg-red-500/20 text-red-600 dark:text-red-400' : 'bg-gray-200 dark:bg-white/10 text-gray-600 dark:text-white/50 backdrop-blur-md'}`}>
-                                  {isSoldOut ? t('eventDetail.soldOut', 'HẾT VÉ') : `${t('eventDetail.remaining', 'CÒN')} ${tier.quantity_available}`}
+                                  {isSoldOut ? t('eventDetail.soldOut', 'SOLD OUT') : `${t('eventDetail.remaining', 'LEFT:')} ${tier.quantity_available}`}
                                 </span>
                                 
-                                {!isSoldOut && !isOrganizer && (
+                                {!isSoldOut && !isOrganizer && event.organizer?.user?.status === 'active' && (
                                   <div className="flex items-center gap-1 bg-gray-100 dark:bg-black/50 p-1.5 rounded-2xl border border-gray-200 dark:border-white/10 backdrop-blur-md">
                                     <button 
                                       onClick={() => handleTicketChange(tier.id, -1, tier.quantity_available)}
@@ -562,7 +589,7 @@ const PublicEventDetail = () => {
                   ) : (
                     <div className="py- text-center border-2 border-dashed border-gray-200 dark:border-white/10 rounded-[2.5rem] bg-gray-50 dark:bg-white/5">
                       <Ticket className="w-12 h-12 text-gray-300 dark:text-white/20 mx-auto mb-4" />
-                      <p className="text-gray-400 dark:text-gray-400 font-bold uppercase tracking-widest text-sm">{t('eventDetail.noTickets', 'Sự kiện chưa có vé')}</p>
+                      <p className="text-gray-400 dark:text-gray-400 font-bold uppercase tracking-widest text-sm">{t('eventDetail.noTickets', 'No tickets available yet')}</p>
                     </div>
                    )}
                 </div>
@@ -577,17 +604,17 @@ const PublicEventDetail = () => {
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
             <div className="space-y-2">
               <div className="inline-flex items-center gap-3 px-4 py-1.5 bg-neon-green/10 border border-neon-green/20 rounded-full">
-                <span className="text-[9px] font-black text-neon-green">{t('home.for_you.badge', 'KHÁM PHÁ THÊM')}</span>
+                <span className="text-[9px] font-black text-neon-green">{t('eventDetail.explore_more', 'EXPLORE MORE')}</span>
               </div>
               <h2 className="text-sm md:text-xl font-black text-gray-900 dark:text-white uppercase tracking-tighter leading-none">
-                {t('eventDetail.recommendedTitle', 'Sự kiện bạn có thể')} <span className="text-neon-green">{t('eventDetail.recommendedHighlight', 'THÍCH')}</span>
+                {t('eventDetail.recommendedTitle', 'Events you might')} <span className="text-neon-green">{t('eventDetail.recommendedHighlight', 'LIKE')}</span>
               </h2>
               <p className="text-gray-500 dark:text-gray-400 font-medium text-xs md:text-sm max-w-xl">
-                {t('eventDetail.recommendedDesc', 'Dựa trên sở thích và những sự kiện nổi bật nhất đang diễn ra.')}
+                {t('eventDetail.recommendedDesc', 'Based on your interests and most prominent trending events.')}
               </p>
             </div>
             <Link to="/events" className="group flex items-center gap-4 text- font-bold text-gray-400 hover:text-neon-green transition-all whitespace-nowrap">
-              {t('home.events.view_all', 'Tất cả sự kiện')} 
+              {t('home.events.view_all', 'View all events')} 
             </Link>
           </div>
 
@@ -620,13 +647,14 @@ const PublicEventDetail = () => {
             {!isOrganizer ? (
               <button 
                   onClick={scrollToTickets}
-                  className="px-8 py-3.5 bg-neon-green text-black font-black uppercase text-xs tracking-[0.2em] rounded-[1.5rem] hover:bg-black dark:hover:bg-white hover:text-white dark:hover:text-black transition-colors shadow-lg shadow-neon-green/20"
+                  disabled={event.organizer?.user?.status !== 'active'}
+                  className={`px-8 py-3.5 bg-neon-green text-black font-black uppercase text-xs tracking-[0.2em] rounded-[1.5rem] hover:bg-black dark:hover:bg-white hover:text-white dark:hover:text-black transition-colors shadow-lg shadow-neon-green/20 disabled:opacity-50 disabled:grayscale`}
               >
-                {t('eventDetail.buyTicket', 'MUA VÉ')}
+                {event.organizer?.user?.status === 'active' ? t('eventDetail.buyTicket', 'BUY TICKETS') : t('eventDetail.salesSuspended', 'SALES SUSPENDED')}
               </button>
             ) : (
               <div className="px-6 py-3 bg-neon-green text-black font-black uppercase text-[10px] tracking-widest rounded-xl shadow-[0_0_20px_rgba(82,196,45,0.4)]">
-                Bạn là chủ sở hữu
+                {t('eventDetail.you_are_owner', 'You are the owner')}
               </div>
             )}
          </div>
@@ -647,20 +675,22 @@ const PublicEventDetail = () => {
                   </div>
                 </div>
                 <div>
-                  <div className="text-[10px] font-black uppercase text-gray-400 mb-1">{t('eventDetail.subtotal', 'Tổng Tạm Tính')}</div>
+                  <div className="text-[10px] font-black uppercase text-gray-400 mb-1">{t('eventDetail.subtotal', 'Subtotal')}</div>
                   <div className="text-xl md:text-xl font-black text-white tracking-tighter truncate max-w-[200px] md:max-w-none">
-                    {totalPrice === 0 ? t('eventDetail.free', 'MIỄN PHÍ') : formatPrice(totalPrice)}
+                    {totalPrice === 0 ? t('eventDetail.free', 'FREE') : formatPrice(totalPrice)}
                   </div>
                 </div>
               </div>
 
               <button 
                 onClick={handleCheckout}
-                disabled={totalSelectedTickets === 0 || isSubmitting}
-                className={`w-full sm:w-auto px-10 py-5 bg-neon-green hover:bg-white hover:scale-105 active:scale-95 text-black font-black uppercase text-sm rounded-[2rem] transition-all flex items-center justify-center gap-3 shadow-[0_10px_40px_rgba(82,196,45,0.4)] disabled:opacity-50 disabled:pointer-events-none ${isSubmitting ? 'animate-pulse' : ''}`}
+                disabled={totalSelectedTickets === 0 || isSubmitting || event.organizer?.user?.status !== 'active'}
+                className={`w-full sm:w-auto px-10 py-5 bg-neon-green hover:bg-white hover:scale-105 active:scale-95 text-black font-black uppercase text-sm rounded-[2rem] transition-all flex items-center justify-center gap-3 shadow-[0_10px_40px_rgba(82,196,45,0.4)] disabled:opacity-50 disabled:pointer-events-none disabled:grayscale ${isSubmitting ? 'animate-pulse' : ''}`}
               >
-                {isSubmitting ? t('eventDetail.processingText', 'ĐANG CHỐT VÉ...') : t('eventDetail.checkoutNow', 'Thanh toán ngay')} 
-                {!isSubmitting && <ChevronRight className="w-5 h-5" />}
+                {isSubmitting ? t('eventDetail.processingText', 'PROCESSING...') : 
+                  event.organizer?.user?.status === 'active' ? t('eventDetail.checkoutNow', 'Checkout Now') : 
+                  t('eventDetail.salesSuspended', 'Sales Suspended')} 
+                {!isSubmitting && event.organizer?.user?.status === 'active' && <ChevronRight className="w-5 h-5" />}
               </button>
               
            </div>
@@ -677,10 +707,10 @@ const PublicEventDetail = () => {
               <div className="p-4 sm:p-6 border-b border-white/10 flex items-center justify-between bg-black/50 backdrop-blur-md absolute top-0 inset-x-0 z-20">
                  <div>
                     <h3 className="text-lg font-black text-white uppercase tracking-wider flex items-center gap-2">
-                       <ImageIcon className="w-5 h-5 text-neon-green" /> {t('eventDetail.viewSeatingChart', 'Sơ đồ khu vực')}
+                       <ImageIcon className="w-5 h-5 text-neon-green" /> {t('eventDetail.viewSeatingChart', 'Seating Chart')}
                     </h3>
                     <p className="text-xs text-neon-green mt-1 font-bold tracking-widest uppercase">
-                      {t('eventDetail.image', 'Ảnh')} {currentSeatingIndex + 1} / {event.seating_charts.length}
+                      {t('eventDetail.image', 'Image')} {currentSeatingIndex + 1} / {event.seating_charts.length}
                     </p>
                  </div>
                  <button 
