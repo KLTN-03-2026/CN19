@@ -147,11 +147,11 @@ const EventReviews = ({ eventId, eventEndTime }) => {
     };
 
     return (
-        <div className="mt-12 space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
+        <div className="mt-8 space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
             {/* Header reviews */}
             <div className="flex items-center gap-4 border-b border-gray-100 dark:border-white/5 pb-4">
                 <div className="w-1.5 h-8 bg-neon-green rounded-full shadow-[0_0_15px_rgba(82,196,45,0.6)]"></div>
-                <h3 className="text-xl font-black text-gray-900 dark:text-white uppercase">
+                <h3 className="text-sm sm:text-lg font-black text-gray-900 dark:text-white uppercase">
                     {isEventEnded ? 'Cảm nhận cộng đồng' : 'Thảo luận & Giao lưu'} ({reviews.length})
                 </h3>
             </div>
