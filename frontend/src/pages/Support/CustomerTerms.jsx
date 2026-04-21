@@ -13,15 +13,15 @@ const CustomerTerms = () => {
         <div className="min-h-screen bg-white dark:bg-[#0a0a0c] transition-colors duration-500 font-sans selection:bg-neon-green/30">
             
             {/* 🧭 NAVIGATION & TITLE AREA (Strict Profile Header Style) */}
-            <header className="max-w-[1400px] mx-auto px-4 sm:px-6 pt-8 pb-4">
+            <header className="max-w-[1400px] mx-auto px-4 sm:px-6 pt-8 pb-6">
                 <div className="inline-flex items-center gap-2 px-3 py-1 bg-gray-50 dark:bg-white/5 rounded-full mb-4">
                     <Shield className="w-3.5 h-3.5 text-neon-green" />
-                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none">
+                    <span className="text-[10px] font-bold text-gray-400 leading-none">
                         {t(`${k}.badge`)}
                     </span>
                 </div>
                 
-                <h1 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white uppercase leading-tight mb-2">
+                <h1 className="text-xl md:text-3xl font-black text-gray-900 dark:text-white uppercase leading-tight mb-1">
                     {t(`${k}.title`)} <span className="text-neon-green">{t(`${k}.titleHighlight`)}</span>
                 </h1>
                 
@@ -31,28 +31,13 @@ const CustomerTerms = () => {
             </header>
 
             {/* 📜 MAIN LAYOUT (Strict Flex Col/Row Gap-6) */}
-            <main className="max-w-[1400px] mx-auto px-4 sm:px-6 pb-20">
-                
-                {/* Mobile Quick Nav Bar */}
-                <div className="lg:hidden sticky top-[72px] z-30 -mx-4 px-4 py-3 bg-white/80 dark:bg-[#0a0a0c]/80 backdrop-blur-xl border-b border-gray-100 dark:border-white/5 overflow-x-auto no-scrollbar flex items-center gap-2 mb-6">
-                    {Array.isArray(navItems) && navItems.map((label, i) => (
-                        <a 
-                            key={i} 
-                            href={`#s${i+1}`}
-                            className="whitespace-nowrap px-4 py-2 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-xl text-[11px] font-bold text-gray-400 hover:text-neon-green transition-colors"
-                        >
-                            {label}
-                        </a>
-                    ))}
-                </div>
-
+            <main className="max-w-[1400px] mx-auto px-4 sm:px-6 pb-6">
                 <div className="flex flex-col lg:flex-row gap-6">
                     
                     {/* SIDEBAR: STICKY NAVIGATION (Strict 350px Width) */}
                     <aside className="w-full lg:w-[350px] shrink-0 space-y-6">
                         <div className="bg-white dark:bg-[#111114] rounded-3xl border border-gray-100 dark:border-white/5 p-6 shadow-sm sticky top-24">
-                            <nav className="space-y-1 mb-8">
-                                <p className="text-[9px] font-black text-gray-400 uppercase mb-4 ml-2">Mục lục</p>
+                            <nav className="space-y-1 mb-4">
                                 {Array.isArray(navItems) && navItems.map((label, i) => {
                                     const Icon = navIcons[i] || FileText;
                                     return (
@@ -61,14 +46,13 @@ const CustomerTerms = () => {
                                             href={`#s${i+1}`}
                                             className="flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold text-gray-500 dark:text-gray-400 hover:text-neon-green hover:bg-gray-50 dark:hover:bg-white/5 transition-all group"
                                         >
-                                            <Icon className="w-4 h-4 group-hover:scale-110 transition-transform" />
                                             {label}
                                         </a>
                                     );
                                 })}
                             </nav>
 
-                            <div className="pt-6 border-t border-gray-50 dark:border-white/5">
+                            <div className="pt-4 border-t border-gray-50 dark:border-white/5">
                                 <p className="text-[9px] font-black text-gray-400 uppercase mb-3 ml-2">{t(`${k}.orgLink`)}</p>
                                 <Link to="/organizer-terms" className="flex items-center justify-between px-4 py-4 bg-gray-50 dark:bg-white/5 rounded-2xl text-[11px] font-black text-neon-green group">
                                     {t(`${k}.orgLinkSub`)}
@@ -216,19 +200,19 @@ const CustomerTerms = () => {
             </main>
 
             {/* 🚩 FOOTER CTA AREA (Strict p-12 rounded-3xl) */}
-            <section className="max-w-[1400px] mx-auto px-4 sm:px-6 mb-20 text-center">
-                <div className="bg-white dark:bg-[#111114] rounded-3xl border border-gray-100 dark:border-white/5 p-12 shadow-sm">
-                    <h2 className="text-2xl font-black text-gray-900 dark:text-white uppercase mb-2 tracking-tight">
+            <section className="max-w-[1400px] mx-auto px-4 sm:px-6 mb-10 text-center">
+                <div className="bg-white dark:bg-[#111114] rounded-3xl border border-gray-100 dark:border-white/5 p-10 shadow-sm">
+                    <h2 className="text-sm sm:text-xl font-black text-gray-900 dark:text-white uppercase mb-1 tracking-tight">
                         {t('support.ctaTitle')}
                     </h2>
                     <p className="text-xs sm:text-sm text-gray-500 font-medium max-w-lg mx-auto mb-10 leading-relaxed">
                         {t('support.ctaDesc')}
                     </p>
                     <div className="flex flex-col sm:flex-row justify-center gap-4">
-                        <a href="mailto:basticket.noreply@gmail.com" className="px-8 py-4 bg-neon-green text-black rounded-2xl font-black uppercase text-[11px] tracking-widest hover:scale-105 transition-transform">
+                        <a href="mailto:basticket.noreply@gmail.com" className="px-6 py-4 bg-neon-green text-black rounded-2xl font-black uppercase text-[11px] hover:scale-105 transition-transform">
                             {t('support.ctaEmail')}
                         </a>
-                        <Link to="/faq" className="px-8 py-4 bg-gray-900 dark:bg-black text-white rounded-2xl font-black uppercase text-[11px] tracking-widest hover:scale-105 transition-transform">
+                        <Link to="/faq" className="px-6 py-4 bg-gray-900 dark:bg-black text-white rounded-2xl font-black uppercase text-[11px] hover:scale-105 transition-transform">
                             {t('support.ctaFaq')}
                         </Link>
                     </div>

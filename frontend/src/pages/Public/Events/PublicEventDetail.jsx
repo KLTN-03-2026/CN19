@@ -2,14 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Calendar, MapPin, Share2, Heart, ArrowLeft, Ticket, ShieldCheck, Tag, Sparkles, Clock, Map, CheckCircle2, ShoppingCart, Plus, Minus, ChevronRight, X, ChevronLeft, Image as ImageIcon, Video } from 'lucide-react';
-import eventService from '../../services/event.service';
-import orderService from '../../services/order.service';
+import eventService from '../../../services/event.service';
+import orderService from '../../../services/order.service';
 import { useTranslation } from 'react-i18next';
-import EventReviews from '../../components/Explore/EventReviews';
-import EventCard from '../../components/Home/EventCard';
-import useBotBehavior from '../../hooks/useBotBehavior';
+import EventReviews from '../../../components/events/EventReviews';
+import EventCard from '../../../components/events/EventCard';
+import useBotBehavior from '../../../hooks/useBotBehavior';
 import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
-import { useAuthStore } from '../../store/useAuthStore';
+import { useAuthStore } from '../../../store/useAuthStore';
 import toast from 'react-hot-toast';
 
 // Utility format price

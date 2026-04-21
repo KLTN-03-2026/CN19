@@ -51,12 +51,12 @@ const EventReviews = ({ eventId, eventEndTime }) => {
         mutationFn: blogService.createReview,
         onSuccess: () => {
             queryClient.invalidateQueries(['event-reviews', eventId]);
-            toast.success('Cảm ơn bạn đã chia sẻ cảm nhận!');
+            toast.success(t('reviews.thankYou', 'Thank you for sharing your experience!'));
             setIsModalOpen(false);
             setNewReview({ title: '', content: '', image_url: '' });
         },
         onError: (err) => {
-            toast.error(err.response?.data?.error || 'Lỗi khi đăng bài.');
+            toast.error(err.response?.data?.error || t('reviews.errorPosting', 'Failed to post discussion.'));
         }
     });
 
@@ -74,7 +74,7 @@ const EventReviews = ({ eventId, eventEndTime }) => {
         onSuccess: () => {
             queryClient.invalidateQueries(['event-reviews', eventId]);
             setCommentText('');
-            toast.success('Đã nhận bình luận của bạn!');
+            toast.success(t('reviews.commentReceived', 'Comment received!'));
         }
     });
 
@@ -83,7 +83,7 @@ const EventReviews = ({ eventId, eventEndTime }) => {
         mutationFn: blogService.deleteReview,
         onSuccess: () => {
             queryClient.invalidateQueries(['event-reviews', eventId]);
-            toast.success('Đã xóa thảo luận.');
+            toast.success(t('reviews.discussionDeleted', 'Discussion deleted.'));
         }
     });
 
@@ -91,7 +91,7 @@ const EventReviews = ({ eventId, eventEndTime }) => {
         mutationFn: blogService.deleteComment,
         onSuccess: () => {
             queryClient.invalidateQueries(['event-reviews', eventId]);
-            toast.success('Đã xóa phản hồi.');
+            toast.success(t('reviews.replyDeleted', 'Reply deleted.'));
         }
     });
 
@@ -100,7 +100,7 @@ const EventReviews = ({ eventId, eventEndTime }) => {
         onSuccess: () => {
             queryClient.invalidateQueries(['event-reviews', eventId]);
             setEditingReviewId(null);
-            toast.success('Đã cập nhật thảo luận.');
+            toast.success(t('reviews.discussionUpdated', 'Discussion updated.'));
         }
     });
 
@@ -109,7 +109,7 @@ const EventReviews = ({ eventId, eventEndTime }) => {
         onSuccess: () => {
             queryClient.invalidateQueries(['event-reviews', eventId]);
             setEditingCommentId(null);
-            toast.success('Đã cập nhật phản hồi.');
+            toast.success(t('reviews.replyUpdated', 'Reply updated.'));
         }
     });
 
@@ -117,31 +117,31 @@ const EventReviews = ({ eventId, eventEndTime }) => {
         e.preventDefault();
         let finalTitle = newReview.title;
         if (!isEventEnded && !finalTitle) {
-            finalTitle = "Thảo luận của " + (user?.full_name || 'Thành viên');
+            finalTitle = t('reviews.discussionBy', 'Discussion by ') + (user?.full_name || 'Member');
         }
-        if (!finalTitle || !newReview.content) return toast.error('Vui lòng điền đủ nội dung.');
+        if (!finalTitle || !newReview.content) return toast.error(t('reviews.fillContent', 'Please fill in content.'));
         createReviewMutation.mutate({ ...newReview, title: finalTitle, event_id: eventId });
     };
 
     const handleLike = (blogId) => {
-        if (!isAuthenticated) return toast.error('Vui lòng đăng nhập để tương tác.');
+        if (!isAuthenticated) return toast.error(t('reviews.loginToInteract', 'Please login to interact.'));
         toggleLikeMutation.mutate(blogId);
     };
 
     const handleComment = (blogId) => {
-        if (!isAuthenticated) return toast.error('Vui lòng đăng nhập để bình luận.');
+        if (!isAuthenticated) return toast.error(t('reviews.loginToComment', 'Please login to comment.'));
         if (!commentText.trim()) return;
         addCommentMutation.mutate({ blogId, content: commentText });
     };
 
     const handleDeleteReview = (id) => {
-        if(window.confirm('Bạn có chắc chắn muốn xóa bài này?')) {
+        if(window.confirm(t('reviews.confirmDeleteReview', 'Are you sure you want to delete this discussion?'))) {
             deleteReviewMutation.mutate(id);
         }
     };
 
     const handleDeleteComment = (id) => {
-        if(window.confirm('Bạn có chắc chắn muốn xóa phản hồi này?')) {
+        if(window.confirm(t('reviews.confirmDeleteComment', 'Are you sure you want to delete this reply?'))) {
             deleteCommentMutation.mutate(id);
         }
     };
@@ -152,7 +152,7 @@ const EventReviews = ({ eventId, eventEndTime }) => {
             <div className="flex items-center gap-4 border-b border-gray-100 dark:border-white/5 pb-4">
                 <div className="w-1.5 h-8 bg-neon-green rounded-full shadow-[0_0_15px_rgba(82,196,45,0.6)]"></div>
                 <h3 className="text-sm sm:text-lg font-black text-gray-900 dark:text-white uppercase">
-                    {isEventEnded ? 'Cảm nhận cộng đồng' : 'Thảo luận & Giao lưu'} ({reviews.length})
+                    {isEventEnded ? t('reviews.communityVibe', 'Community Vibes') : t('reviews.discussionHub', 'Discussion & Networking')} ({reviews.length})
                 </h3>
             </div>
 
@@ -164,7 +164,7 @@ const EventReviews = ({ eventId, eventEndTime }) => {
                         <div className={isEventEnded ? "block mb-2" : "hidden"}>
                             <input 
                                 type="text"
-                                placeholder="Tiêu đề cảm nhận của bạn..."
+                                placeholder={t('reviews.titlePlaceholder', 'Review title...')}
                                 className="w-full bg-gray-50 dark:bg-black/50 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2 text-sm focus:ring-1 focus:ring-neon-green outline-none text-gray-900 dark:text-white font-bold transition-all"
                                 value={newReview.title}
                                 onChange={(e) => setNewReview({...newReview, title: e.target.value})}
@@ -175,7 +175,7 @@ const EventReviews = ({ eventId, eventEndTime }) => {
                             <textarea 
                                 required
                                 rows={isEventEnded ? 2 : 1}
-                                placeholder={isEventEnded ? "Viết chi tiết cảm nhận của bạn về sự kiện này..." : "Nhập bình luận, tìm vé, rủ rê đi chung..."}
+                                placeholder={isEventEnded ? t('reviews.reviewPlaceholder', 'Write your review in detail...') : t('reviews.discussionPlaceholder', 'Comment, find tickets, invite others...')}
                                 className={`w-full bg-transparent outline-none text-gray-900 dark:text-white text-sm resize-none px-4 pt-3 ${isEventEnded ? 'pb-10' : 'pb-3 pr-12'} ${!isEventEnded && newReview.content.length === 0 ? 'overflow-hidden' : ''}`}
                                 value={newReview.content}
                                 onChange={(e) => {
@@ -204,7 +204,7 @@ const EventReviews = ({ eventId, eventEndTime }) => {
                                         <ImageIcon className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within/img:text-neon-green" />
                                         <input 
                                             type="url"
-                                            placeholder="Gắn link ảnh lịch sự..."
+                                            placeholder={t('reviews.imageLinkPlaceholder', 'Paste a polite image link...')}
                                             className="w-full bg-transparent border-none focus:ring-0 text-[11px] pl-8 pr-2 py-1 outline-none text-gray-700 dark:text-gray-300"
                                             value={newReview.image_url}
                                             onChange={(e) => setNewReview({...newReview, image_url: e.target.value})}
@@ -232,7 +232,7 @@ const EventReviews = ({ eventId, eventEndTime }) => {
                 </div>
             ) : (
                 <div className="bg-gray-50 dark:bg-white/5 rounded-2xl p-4 text-center border py-6 border-dashed border-gray-200 dark:border-white/10 mb-8">
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Vui lòng đăng nhập để tham gia thảo luận.</p>
+                    <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('reviews.loginToDiscuss', 'Please login to join the discussion.')}</p>
                 </div>
             )}
 
@@ -240,7 +240,7 @@ const EventReviews = ({ eventId, eventEndTime }) => {
             {isLoading ? (
                 <div className="flex flex-col items-center py-10 gap-4">
                     <Loader2 className="w-6 h-6 text-neon-green animate-spin" />
-                    <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">Đang tải...</p>
+                    <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">{t('reviews.loading', 'Loading...')}</p>
                 </div>
             ) : reviews.length > 0 ? (
                 <div className="flex flex-col space-y-6">
@@ -260,18 +260,18 @@ const EventReviews = ({ eventId, eventEndTime }) => {
                                         {rev.is_organizer && (
                                             <div className="flex items-center text-[10px] text-black font-bold bg-neon-green px-1.5 py-0.5 rounded shadow-sm shadow-neon-green/10">
                                                 <CheckCircle2 className="w-3 h-3 mr-1" />
-                                                Ban tổ chức
+                                                {t('reviews.organizer', 'Organizer')}
                                             </div>
                                         )}
                                         {!rev.is_organizer && (
                                             rev.has_ticket ? (
                                                 <div className="flex items-center text-[10px] text-blue-500 font-bold bg-blue-500/10 px-1.5 py-0.5 rounded">
                                                     <CheckCircle2 className="w-3 h-3 mr-1" />
-                                                    {isEventEnded ? 'Đã tham gia' : 'Có vé'}
+                                                    {isEventEnded ? t('reviews.alreadyJoined', 'Joined') : t('reviews.hasTicket', 'Has Ticket')}
                                                 </div>
                                             ) : (
                                                 <div className="flex items-center text-[10px] text-gray-500 font-bold bg-gray-200 dark:bg-white/10 px-1.5 py-0.5 rounded">
-                                                    {isEventEnded ? 'Quan tâm' : 'Đang hóng hớt'}
+                                                    {isEventEnded ? t('reviews.interested', 'Interested') : t('reviews.watching', 'Watching')}
                                                 </div>
                                             )
                                         )}
@@ -296,8 +296,8 @@ const EventReviews = ({ eventId, eventEndTime }) => {
                                                 }}
                                             />
                                             <div className="flex items-center gap-2">
-                                                <button onClick={() => updateReviewMutation.mutate({ id: rev.id, data: { title: rev.title, content: editingReviewContent, image_url: rev.image_url } })} className="text-xs bg-neon-green text-black px-3 py-1 rounded-full font-bold">Lưu</button>
-                                                <button onClick={() => setEditingReviewId(null)} className="text-xs bg-gray-200 dark:bg-white/10 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-full font-bold">Hủy</button>
+                                                <button onClick={() => updateReviewMutation.mutate({ id: rev.id, data: { title: rev.title, content: editingReviewContent, image_url: rev.image_url } })} className="text-xs bg-neon-green text-black px-3 py-1 rounded-full font-bold">{t('reviews.save', 'Save')}</button>
+                                                <button onClick={() => setEditingReviewId(null)} className="text-xs bg-gray-200 dark:bg-white/10 text-gray-700 dark:text-gray-300 px-3 py-1 rounded-full font-bold">{t('reviews.cancel', 'Cancel')}</button>
                                             </div>
                                         </div>
                                     ) : (
@@ -330,10 +330,10 @@ const EventReviews = ({ eventId, eventEndTime }) => {
                                             {activeMenuId === rev.id && (
                                                 <div className="absolute left-full top-0 ml-1 bg-white dark:bg-[#1a1a1d] border border-gray-200 dark:border-white/10 rounded-xl shadow-lg w-36 py-1.5 z-20 animate-in fade-in zoom-in-95">
                                                     <button onClick={() => {setEditingReviewId(rev.id); setEditingReviewContent(rev.content); setActiveMenuId(null);}} className="w-full text-left px-4 py-2 flex items-center text-xs font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
-                                                        Chỉnh sửa
+                                                        {t('reviews.edit', 'Edit')}
                                                     </button>
                                                     <button onClick={() => {handleDeleteReview(rev.id); setActiveMenuId(null);}} className="w-full text-left px-4 py-2 flex items-center text-xs font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors">
-                                                        Xóa bình luận
+                                                        {t('reviews.deleteReview', 'Delete Discussion')}
                                                     </button>
                                                 </div>
                                             )}
@@ -350,14 +350,14 @@ const EventReviews = ({ eventId, eventEndTime }) => {
                                         onClick={() => handleLike(rev.id)}
                                         className={`text-[12px] font-bold transition-colors ${rev.is_liked ? 'text-red-500' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white hover:underline'}`}
                                     >
-                                        Thích {rev._count?.likes > 0 && `(${rev._count.likes})`}
+                                        {t('reviews.like', 'Like')} {rev._count?.likes > 0 && `(${rev._count.likes})`}
                                     </button>
 
                                     <button 
                                         onClick={() => setActiveCommentBlog(activeCommentBlog === rev.id ? null : rev.id)}
                                         className="text-[12px] font-bold text-gray-500 hover:text-gray-900 dark:hover:text-white hover:underline transition-colors"
                                     >
-                                        Phản hồi {rev._count?.comments > 0 && `(${rev._count.comments})`}
+                                        {t('reviews.reply', 'Reply')} {rev._count?.comments > 0 && `(${rev._count.comments})`}
                                     </button>
                                 </div>
 
@@ -374,18 +374,18 @@ const EventReviews = ({ eventId, eventEndTime }) => {
                                                                 <span className="font-bold text-gray-900 dark:text-white leading-none">{cmt.user?.full_name}</span>
                                                                 {cmt.is_organizer && (
                                                                     <div className="flex items-center text-[9px] text-black font-bold bg-neon-green px-1.5 py-0.5 rounded shadow-sm shadow-neon-green/10">
-                                                                        Ban tổ chức
+                                                                        {t('reviews.organizer', 'Organizer')}
                                                                     </div>
                                                                 )}
                                                                 {!cmt.is_organizer && (
                                                                     cmt.has_ticket ? (
                                                                         <div className="flex items-center text-[9px] text-blue-500 font-bold bg-blue-500/10 px-1.5 py-0.5 rounded">
                                                                             <CheckCircle2 className="w-2.5 h-2.5 mr-0.5" />
-                                                                            {isEventEnded ? 'Đã tham gia' : 'Có vé'}
+                                                                            {isEventEnded ? t('reviews.alreadyJoined', 'Joined') : t('reviews.hasTicket', 'Has Ticket')}
                                                                         </div>
                                                                     ) : (
                                                                         <div className="flex items-center text-[9px] text-gray-500 font-bold bg-gray-200 dark:bg-white/10 px-1.5 py-0.5 rounded">
-                                                                            {isEventEnded ? 'Quan tâm' : 'Đang hóng hớt'}
+                                                                            {isEventEnded ? t('reviews.interested', 'Interested') : t('reviews.watching', 'Watching')}
                                                                         </div>
                                                                     )
                                                                 )}
@@ -409,8 +409,8 @@ const EventReviews = ({ eventId, eventEndTime }) => {
                                                                         }}
                                                                     />
                                                                     <div className="flex items-center gap-2">
-                                                                        <button onClick={() => updateCommentMutation.mutate({ id: cmt.id, content: editingCommentContent })} className="text-[10px] bg-neon-green text-black px-2 py-0.5 rounded-full font-bold">Lưu</button>
-                                                                        <button onClick={() => setEditingCommentId(null)} className="text-[10px] bg-gray-200 dark:bg-white/10 text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded-full font-bold">Hủy</button>
+                                                                        <button onClick={() => updateCommentMutation.mutate({ id: cmt.id, content: editingCommentContent })} className="text-[10px] bg-neon-green text-black px-2 py-0.5 rounded-full font-bold">{t('reviews.save', 'Save')}</button>
+                                                                        <button onClick={() => setEditingCommentId(null)} className="text-[10px] bg-gray-200 dark:bg-white/10 text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded-full font-bold">{t('reviews.cancel', 'Cancel')}</button>
                                                                     </div>
                                                                 </div>
                                                             ) : (
@@ -432,10 +432,10 @@ const EventReviews = ({ eventId, eventEndTime }) => {
                                                                 {activeMenuId === cmt.id && (
                                                                     <div className="absolute left-full top-0 ml-1 bg-white dark:bg-[#1a1a1d] border border-gray-200 dark:border-white/10 rounded-xl shadow-lg w-36 py-1.5 z-20 animate-in fade-in zoom-in-95">
                                                                         <button onClick={() => {setEditingCommentId(cmt.id); setEditingCommentContent(cmt.content); setActiveMenuId(null);}} className="w-full text-left px-4 py-2 flex items-center text-xs font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
-                                                                            Chỉnh sửa
+                                                                            {t('reviews.edit', 'Edit')}
                                                                         </button>
                                                                         <button onClick={() => {handleDeleteComment(cmt.id); setActiveMenuId(null);}} className="w-full text-left px-4 py-2 flex items-center text-xs font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors">
-                                                                            Xóa phản hồi
+                                                                            {t('reviews.deleteComment', 'Delete Reply')}
                                                                         </button>
                                                                     </div>
                                                                 )}
@@ -452,7 +452,7 @@ const EventReviews = ({ eventId, eventEndTime }) => {
                                                             className="text-[11px] font-bold text-gray-500 hover:text-gray-900 dark:hover:text-white hover:underline transition-colors"
                                                             onClick={null}
                                                         >
-                                                            Thích
+                                                            {t('reviews.like', 'Like')}
                                                         </button>
                                                         <button 
                                                             className="text-[11px] font-bold text-gray-500 hover:text-gray-900 dark:hover:text-white hover:underline transition-colors"
@@ -464,7 +464,7 @@ const EventReviews = ({ eventId, eventEndTime }) => {
                                                                 }
                                                             }}
                                                         >
-                                                            Phản hồi
+                                                            {t('reviews.reply', 'Reply')}
                                                         </button>
                                                     </div>
                                                 </div>
@@ -476,7 +476,7 @@ const EventReviews = ({ eventId, eventEndTime }) => {
                                             <div className="flex-1 relative bg-gray-50 dark:bg-[#1a1a1d] border border-gray-200 dark:border-white/10 rounded-[1.5rem] overflow-hidden focus-within:border-neon-green transition-colors flex items-center min-h-[36px]">
                                                 <input 
                                                     type="text"
-                                                    placeholder="Viết phản hồi của bạn..."
+                                                    placeholder={t('reviews.writeReplyPlaceholder', 'Write your reply...')}
                                                     className="w-full bg-transparent outline-none text-xs text-gray-900 dark:text-white px-3 pr-10 py-2 h-full"
                                                     value={commentText}
                                                     onChange={(e) => setCommentText(e.target.value)}
@@ -501,12 +501,12 @@ const EventReviews = ({ eventId, eventEndTime }) => {
                 <div className="bg-gray-50 dark:bg-[#1a1a1d] rounded-2xl p-10 border border-dashed border-gray-200 dark:border-white/10 flex flex-col items-center justify-center text-center space-y-2">
                     <MessageSquare className="w-8 h-8 text-gray-300 dark:text-white/20 mb-2" />
                     <h4 className="text-sm font-black text-gray-900 dark:text-white uppercase">
-                        {isEventEnded ? 'Chưa có cảm nhận nào' : 'Hãy là người mở bát!'}
+                        {isEventEnded ? t('reviews.noReviews', 'No reviews yet') : t('reviews.beFirst', 'Be the first to open the floor!')}
                     </h4>
                     <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
                         {isEventEnded 
-                            ? 'Chia sẻ trải nghiệm của bạn sau khi sự kiện kết thúc nhé.' 
-                            : 'Đăng bình luận tìm vé, tìm người đi cùng để sự kiện thêm xôm tụ nha!'}
+                            ? t('reviews.shareExperience', 'Share your experience after the event ends.') 
+                            : t('reviews.communityDesc', 'Post comments to find tickets or friends for a better event experience!')}
                     </p>
                 </div>
             )}

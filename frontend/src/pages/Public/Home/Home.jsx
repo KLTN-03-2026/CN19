@@ -4,11 +4,11 @@ import { Search, Shield, Zap, Users, ArrowRight, TrendingUp, Calendar, ChevronLe
 import { useTranslation } from 'react-i18next';
 
 import { useQuery } from '@tanstack/react-query';
-import eventService from '../../services/event.service';
-import blogService from '../../services/blog.service';
-import EventCard from '../../components/Home/EventCard';
-import CategoryBar from '../../components/Home/CategoryBar';
-import { useDebounce } from '../../hooks/useDebounce';
+import eventService from '../../../services/event.service';
+import blogService from '../../../services/blog.service';
+import EventCard from '../../../components/events/EventCard';
+import CategoryBar from '../../../components/events/CategoryBar';
+import { useDebounce } from '../../../hooks/useDebounce';
 import { 
   startOfToday, 
   endOfWeek, 

@@ -3,9 +3,9 @@ import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Search, SlidersHorizontal, LayoutGrid, List, ArrowUpDown } from 'lucide-react';
-import eventService from '../../services/event.service';
-import EventCard from '../../components/Home/EventCard';
-import EventsFilter from '../../components/Explore/EventsFilter';
+import eventService from '../../../services/event.service';
+import EventCard from '../../../components/events/EventCard';
+import EventsFilter from '../../../components/events/EventsFilter';
 
 const Events = () => {
     const { t } = useTranslation();

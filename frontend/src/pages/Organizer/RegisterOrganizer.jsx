@@ -12,8 +12,9 @@ import AddressMapModal from '../../components/AddressMapModal';
 import { useAuthStore } from '../../store/useAuthStore';
 import { authService } from '../../services/auth.service';
 import WebcamCapture from '../../components/KYC/WebcamCapture';
-import axios from 'axios';
 import api from '../../services/api';
+import useBotBehavior from '../../hooks/useBotBehavior';
+import { Turnstile } from '@marsidev/react-turnstile';
 
 const RegisterOrganizer = () => {
   const { t } = useTranslation();
@@ -22,6 +23,8 @@ const RegisterOrganizer = () => {
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const { getBehaviorData } = useBotBehavior();
+  const [turnstileToken, setTurnstileToken] = useState(null);
 
   // --- Pre-fill nếu là Customer đã đăng nhập ---
   const isCustomerUpgrade = isAuthenticated && user?.role === 'customer';
@@ -171,6 +174,8 @@ const RegisterOrganizer = () => {
         longitude: latLng?.lng,
         existing_user_id: isCustomerUpgrade ? user?.id : undefined,
         business_license: kycUrls.license, 
+        behaviorData: getBehaviorData(),
+        turnstileToken: turnstileToken,
         kyc_data: {
           ...ocrData, 
           front_image_url: kycUrls.front, 
@@ -227,6 +232,21 @@ const RegisterOrganizer = () => {
       setIsLoading(false);
     }
   };
+
+  if (user?.role === 'admin') {
+    return (
+      <div className="min-h-[85vh] flex items-center justify-center px-4 py-12 relative z-10">
+        <div className="w-full max-w-[600px] bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-2xl shadow-2xl p-12 flex flex-col items-center text-center space-y-6">
+          <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center">
+            <LockIcon className="w-12 h-12 text-red-500" />
+          </div>
+          <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Quyền hạn không hợp lệ</h2>
+          <p className="text-gray-500 dark:text-gray-400">Bạn đang đăng nhập với quyền Quản trị viên (Admin). Admin không cần đăng ký tài khoản Ban tổ chức.</p>
+          <button onClick={() => navigate('/')} className="px-8 py-3 bg-neon-green text-black rounded-xl font-bold">Quay lại Trang chủ</button>
+        </div>
+      </div>
+    );
+  }
 
   if (user?.organizer_profile?.kyc_status === 'pending') {
     return (
@@ -540,7 +560,17 @@ const RegisterOrganizer = () => {
                 )}
                 <div className="flex space-x-3 w-full mt-auto">
                   <button type="button" onClick={() => setStep(2)} className="px-5 py-4 border border-gray-300 dark:border-dark-border text-gray-700 dark:text-white rounded-xl hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors"><ArrowLeft className="w-5 h-5" /></button>
-                  <button type="button" onClick={handleNextStep} disabled={!biometricResult || biometricResult.similarity < 80 || isLoading} className="flex-1 py-4 bg-neon-green hover:bg-neon-hover text-black font-bold rounded-xl shadow-[0_0_15px_rgba(82,196,45,0.4)] transition-all">GỬI OTP</button>
+                  <button type="button" onClick={handleNextStep} disabled={!biometricResult || biometricResult.similarity < 80 || isLoading || !turnstileToken} className="flex-1 py-4 bg-neon-green hover:bg-neon-hover text-black font-bold rounded-xl shadow-[0_0_15px_rgba(82,196,45,0.4)] transition-all">GỬI OTP</button>
+                </div>
+                {/* Cloudflare Turnstile */}
+                <div className="mt-4 flex justify-center">
+                    <Turnstile 
+                      siteKey="1x00000000000000000000AA" 
+                      onSuccess={(token) => setTurnstileToken(token)}
+                      options={{
+                        theme: 'dark'
+                      }}
+                    />
                 </div>
               </div>
             )}

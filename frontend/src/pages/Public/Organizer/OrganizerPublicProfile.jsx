@@ -15,8 +15,8 @@ import {
   MessageSquare, 
   History 
 } from 'lucide-react';
-import { organizerService } from '../../services/organizer.service';
-import blogService from '../../services/blog.service';
+import { organizerService } from '../../../services/organizer.service';
+import blogService from '../../../services/blog.service';
 import { format } from 'date-fns';
 import { vi, enUS } from 'date-fns/locale';
 

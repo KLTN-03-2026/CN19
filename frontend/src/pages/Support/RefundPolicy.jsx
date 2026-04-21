@@ -28,12 +28,12 @@ const RefundPolicy = () => {
             <header className="max-w-[1400px] mx-auto px-4 sm:px-6 pt-8 pb-4">
                 <div className="inline-flex items-center gap-2 px-3 py-1 bg-gray-50 dark:bg-white/5 rounded-full mb-4">
                     <RefreshCcw className="w-3.5 h-3.5 text-neon-green" />
-                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none">
+                    <span className="text-[10px] font-bold text-gray-400 leading-none">
                         Chính sách hoàn tiền
                     </span>
                 </div>
                 
-                <h1 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white uppercase leading-tight mb-2">
+                <h1 className="text-xl md:text-3xl font-black text-gray-900 dark:text-white uppercase leading-tight mb-1">
                     {t(`${k}.title`)} <span className="text-neon-green">{t(`${k}.titleHighlight`)}</span>
                 </h1>
                 
@@ -43,18 +43,15 @@ const RefundPolicy = () => {
             </header>
 
             {/* 📜 MAIN LAYOUT */}
-            <main className="max-w-[1400px] mx-auto px-4 sm:px-6 pb-20 space-y-6">
+            <main className="max-w-[1400px] mx-auto px-4 sm:px-6 pb-10 space-y-6">
                 
                 {/* ⚠️ IMPORTANT WARNING CARD */}
                 <div className="bg-red-500/[0.03] dark:bg-red-500/[0.02] border border-red-500/20 rounded-3xl p-6 shadow-sm overflow-hidden relative group">
                     <div className="absolute top-0 right-0 w-64 h-64 bg-red-500/5 rounded-full blur-[80px] -mr-32 -mt-32"></div>
                     <div className="flex gap-6 items-start relative z-10 flex-col sm:flex-row">
-                        <div className="w-12 h-12 bg-red-500/10 rounded-2xl flex items-center justify-center shrink-0 border border-red-500/20 shadow-lg shadow-red-500/5">
-                            <AlertCircle className="w-6 h-6 text-red-500" />
-                        </div>
-                        <div className="space-y-4">
-                            <h4 className="text-lg font-black text-gray-900 dark:text-white uppercase leading-tight">{t(`${k}.warningTitle`)}</h4>
-                            <p className="text-xs sm:text-sm leading-relaxed font-bold text-gray-500 dark:text-gray-400">{t(`${k}.warningDesc`)}</p>
+                        <div className="space-y-2">
+                            <h4 className=" text-sm sm:text-lg font-black text-gray-900 dark:text-white uppercase leading-tight">{t(`${k}.warningTitle`)}</h4>
+                            <p className="text-xs sm:text-sm leading-relaxed font-medium text-gray-500 dark:text-gray-400">{t(`${k}.warningDesc`)}</p>
                         </div>
                     </div>
                 </div>
@@ -65,13 +62,13 @@ const RefundPolicy = () => {
                     <div className="lg:col-span-8 space-y-6">
                         
                         {/* Refund Cases Section */}
-                        <section className="bg-white dark:bg-[#111114] rounded-3xl border border-gray-100 dark:border-white/5 p-6 sm:p-8 shadow-sm">
-                            <h2 className="text-xl font-black text-gray-900 dark:text-white uppercase leading-tight mb-8 flex items-center gap-4">
-                                <Scale className="w-5 h-5 text-neon-green" /> {t(`${k}.casesTitle`)}
+                        <section className="bg-white dark:bg-[#111114] rounded-3xl border border-gray-100 dark:border-white/5 p-4 sm:p-6 shadow-sm">
+                            <h2 className="text-sm sm:text-lg font-black text-gray-900 dark:text-white uppercase leading-tight mb-6 flex items-center gap-4">
+                                {t(`${k}.casesTitle`)}
                             </h2>
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                                 {cases.map((item, i) => (
-                                    <div key={i} className="p-6 bg-gray-50 dark:bg-white/[0.01] border border-gray-100 dark:border-white/5 rounded-2xl space-y-3 transition-colors hover:border-neon-green/30">
+                                    <div key={i} className="p-4 bg-gray-50 dark:bg-white/[0.01] border border-gray-100 dark:border-white/5 rounded-2xl space-y-3 transition-colors hover:border-neon-green/30">
                                         <div className="w-8 h-8 rounded-lg bg-neon-green/10 flex items-center justify-center shadow-inner">
                                             <CheckCircle2 className="w-4 h-4 text-neon-green" />
                                         </div>
@@ -83,16 +80,12 @@ const RefundPolicy = () => {
                         </section>
 
                         {/* General Notes Section */}
-                        <section className="bg-white dark:bg-[#111114] rounded-3xl border border-gray-100 dark:border-white/5 p-6 sm:p-8 shadow-sm">
-                            <h2 className="text-xl font-black text-gray-900 dark:text-white uppercase leading-tight mb-8 flex items-center gap-3">
-                                <Info className="w-5 h-5 text-neon-green" /> {t(`${k}.notesTitle`)}
+                        <section className="bg-white dark:bg-[#111114] rounded-3xl border border-gray-100 dark:border-white/5 p-4 sm:p-6 shadow-sm">
+                            <h2 className="text-sm sm:text-lg font-black text-gray-900 dark:text-white uppercase leading-tight mb-6 flex items-center gap-3"> {t(`${k}.notesTitle`)}
                             </h2>
-                            <div className="space-y-4">
+                            <div className="space-y-2 mt-">
                                 {[t(`${k}.note1`), t(`${k}.note2`), t(`${k}.note3`)].map((note, i) => (
-                                    <div key={i} className="flex gap-4 items-start p-4 bg-gray-50 dark:bg-white/[0.01] rounded-2xl border border-gray-100 dark:border-white/5">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-neon-green shrink-0 mt-2" />
-                                        <p className="text-xs sm:text-sm font-bold text-gray-600 dark:text-gray-400 leading-relaxed">{note}</p>
-                                    </div>
+                                    <p className="text-xs sm:text-sm font-bold text-gray-600 dark:text-gray-400 leading-relaxed">{note}</p>
                                 ))}
                             </div>
                         </section>
@@ -101,7 +94,7 @@ const RefundPolicy = () => {
                     {/* RIGHT CONTENT: PROCESS STEPS */}
                     <div className="lg:col-span-4">
                         <section className="bg-white dark:bg-[#111114] rounded-3xl border border-gray-100 dark:border-white/5 p-6 sm:p-8 shadow-sm h-full flex flex-col">
-                            <h2 className="text-xl font-black text-gray-900 dark:text-white uppercase leading-tight mb-8">{t(`${k}.processTitle`)}</h2>
+                            <h2 className="text-sm md:text-xl font-black text-gray-900 dark:text-white uppercase leading-tight mb-8">{t(`${k}.processTitle`)}</h2>
                             <div className="flex-1 relative space-y-6">
                                 {steps.map((step, i) => (
                                     <div key={i} className="relative flex gap-6 group">
@@ -112,7 +105,7 @@ const RefundPolicy = () => {
                                             <step.icon className="w-5 h-5 text-neon-green" />
                                         </div>
                                         <div className="pt-2">
-                                            <h4 className="text-[11px] font-black text-gray-900 dark:text-white uppercase tracking-widest mb-1">{step.title}</h4>
+                                            <h4 className="text-[11px] font-black text-gray-900 dark:text-white uppercase mb-1">{step.title}</h4>
                                             <p className="text-[10px] font-bold text-gray-400 group-hover:text-gray-500 transition-colors leading-relaxed">{step.desc}</p>
                                         </div>
                                     </div>
@@ -121,7 +114,7 @@ const RefundPolicy = () => {
 
                             <button 
                                 onClick={() => navigate('/faq')}
-                                className="mt-12 w-full py-4 bg-black dark:bg-white text-white dark:text-black rounded-2xl text-[11px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl"
+                                className="mt-6 w-full py-3 bg-black dark:bg-white text-white dark:text-black rounded-2xl text-[11px] font-black uppercase hover:scale-105 active:scale-95 transition-all shadow-xl"
                             >
                                 {t('support.ctaFaq', 'Check FAQs')}
                             </button>

@@ -6,9 +6,9 @@ import {
   Lock, Bell, Globe, Save, Loader2, X,
   CreditCard, History
 } from 'lucide-react';
-import { useAuthStore } from '../../store/useAuthStore';
-import { userService } from '../../services/user.service';
-import { revenueService } from '../../services/revenue.service';
+import { useAuthStore } from '../../../store/useAuthStore';
+import { userService } from '../../../services/user.service';
+import { revenueService } from '../../../services/revenue.service';
 import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import axios from 'axios';

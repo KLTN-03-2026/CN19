@@ -51,10 +51,10 @@ const FAQ = () => {
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                     <div className="space-y-2">
                         <div className="inline-flex items-center gap-2 px-3 py-1 bg-gray-50 dark:bg-white/5 rounded-full mb-2">
-                            <HelpCircle className="w-3.5 h-3.5 text-neon-green" />
-                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none">Trung tâm trợ giúp</span>
+                            <HelpCircle className="w-3 h-3 text-neon-green" />
+                            <span className="text-[10px] font-black text-gray-400 leading-none">Trung tâm trợ giúp</span>
                         </div>
-                        <h1 className="text-2xl md:text-4xl font-black text-gray-900 dark:text-white uppercase leading-tight tracking-tight">
+                        <h1 className="text-xl md:text-3xl font-black text-gray-900 dark:text-white uppercase leading-tight tracking-tight">
                             {t(`${k}.title`)} <span className="text-neon-green">{t(`${k}.titleHighlight`)}</span>
                         </h1>
                     </div>
@@ -66,7 +66,7 @@ const FAQ = () => {
                             placeholder={t(`${k}.searchPlaceholder`)}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full bg-gray-50 dark:bg-[#111114] border border-gray-100 dark:border-white/5 rounded-2xl py-4 pl-12 pr-6 text-sm font-bold text-gray-900 dark:text-white focus:outline-none focus:border-neon-green transition-all shadow-sm"
+                            className="w-full bg-gray-50 dark:bg-[#111114] border border-gray-100 dark:border-white/5 rounded-2xl py-4 pl-12 pr-6 text-sm font-medium text-gray-900 dark:text-white focus:outline-none focus:border-neon-green transition-all shadow-sm"
                         />
                     </div>
                 </div>
@@ -77,9 +77,8 @@ const FAQ = () => {
                 <div className="flex flex-col lg:flex-row gap-6">
                     
                     {/* SIDEBAR: CATEGORIES (Strict 350px width) */}
-                    <aside className="w-full lg:w-[350px] shrink-0 space-y-6">
-                        <div className="bg-white dark:bg-[#111114] rounded-3xl border border-gray-100 dark:border-white/5 p-6 shadow-sm sticky top-24">
-                            <p className="text-[9px] font-black text-gray-400 uppercase mb-4 ml-2">Danh mục</p>
+                    <aside className="w-full lg:w-[350px] shrink-0 space-y-4">
+                        <div className="bg-white dark:bg-[#111114] rounded-3xl border border-gray-100 dark:border-white/5 p-4 shadow-sm sticky top-24">
                             <nav className="space-y-1">
                                 {categories.map((cat) => (
                                     <button 
@@ -99,7 +98,7 @@ const FAQ = () => {
                                 ))}
                             </nav>
 
-                            <div className="mt-8 pt-8 border-t border-gray-50 dark:border-white/5">
+                            <div className="mt-4 pt-4 border-t border-gray-50 dark:border-white/5">
                                 <h4 className="text-[10px] font-black text-gray-800 dark:text-white uppercase mb-4 ml-2">{t(`${k}.stillNeedHelp`)}</h4>
                                 <a 
                                     href="mailto:basticket.noreply@gmail.com"
@@ -128,16 +127,16 @@ const FAQ = () => {
                                         onClick={() => setOpenIndex(openIndex === index ? -1 : index)}
                                         className="w-full p-6 text-left flex items-start gap-4"
                                     >
-                                        <div className={`mt-0.5 shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-all ${openIndex === index ? 'bg-neon-green text-black' : 'bg-gray-50 dark:bg-white/5 text-gray-400'}`}>
+                                        <div className={`shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-all ${openIndex === index ? 'bg-neon-green text-black' : 'bg-gray-50 dark:bg-white/5 text-gray-400'}`}>
                                             <HelpCircle className="w-4 h-4" />
                                         </div>
                                         <div className="flex-1">
-                                            <h3 className={`text-sm sm:text-[15px] font-black uppercase leading-tight transition-colors ${openIndex === index ? 'text-neon-green' : 'text-gray-900 dark:text-white'}`}>
+                                            <h3 className={`text-sm sm:text-[14px] font-black uppercase leading-tight transition-colors ${openIndex === index ? 'text-neon-green' : 'text-gray-900 dark:text-white'}`}>
                                                 {faq.q}
                                             </h3>
                                             {openIndex === index && (
-                                                <div className="mt-6 animate-in fade-in slide-in-from-top-2 duration-300">
-                                                    <div className="h-px bg-gray-50 dark:bg-white/5 mb-6" />
+                                                <div className="mt-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                                                    <div className="h-px bg-gray-50 dark:bg-white/5 mb-4" />
                                                     <p className="text-xs sm:text-[13px] font-bold text-gray-500 dark:text-gray-400 leading-relaxed">
                                                         {faq.a}
                                                     </p>

@@ -3,13 +3,13 @@ import { Toaster } from 'react-hot-toast';
 
 // Layouts và Pages
 import PublicLayout from './components/layout/PublicLayout';
-import Home from './pages/Home/Home';
-import Events from './pages/Home/Events';
-import PublicEventDetail from './pages/Home/PublicEventDetail';
-import BlogList from './pages/Home/BlogList';
-import BlogDetail from './pages/Home/BlogDetail';
-import OrganizerPublicProfile from './pages/Home/OrganizerPublicProfile';
-import Profile from './pages/Profile/Profile';
+import Home from './pages/Public/Home/Home';
+import Events from './pages/Public/Events/Events';
+import PublicEventDetail from './pages/Public/Events/PublicEventDetail';
+import Blog from './pages/Public/Blog/Blog';
+import BlogDetail from './pages/Public/Blog/BlogDetail';
+import OrganizerPublicProfile from './pages/Public/Organizer/OrganizerPublicProfile';
+import Profile from './pages/Customer/Profile/Profile';
 import MyTickets from './pages/Customer/MyTickets';
 import MyTransactions from './pages/Customer/MyTransactions';
 import CustomerOrderDetail from './pages/Customer/CustomerOrderDetail';
@@ -24,7 +24,6 @@ import OrganizerTerms from './pages/Support/OrganizerTerms';
 import PrivacyPolicy from './pages/Support/PrivacyPolicy';
 import RefundPolicy from './pages/Support/RefundPolicy';
 import FAQ from './pages/Support/FAQ';
-import Blog from './pages/Support/Blog';
 import CommunityPage from './pages/Community/CommunityPage';
 
 // Auth Pages
@@ -109,7 +108,7 @@ const router = createBrowserRouter([
       { path: '', element: <Home /> },
       { path: 'events', element: <Events /> },
       { path: 'events/:id', element: <PublicEventDetail /> },
-      { path: 'blog', element: <BlogList /> },
+      { path: 'blog', element: <Blog /> },
       { path: 'blog/:slug', element: <BlogDetail /> },
       { path: 'organizer/:id', element: <OrganizerPublicProfile /> },
       { path: 'login', element: <Login /> },

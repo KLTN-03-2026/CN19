@@ -12,15 +12,15 @@ const PrivacyPolicy = () => {
         <div className="min-h-screen bg-white dark:bg-[#0a0a0c] transition-colors duration-500 font-sans selection:bg-neon-green/30">
             
             {/* 🧭 NAVIGATION & TITLE AREA */}
-            <header className="max-w-[1400px] mx-auto px-4 sm:px-6 pt-8 pb-4">
+            <header className="max-w-[1400px] mx-auto px-4 sm:px-6 pt-8 pb-6">
                 <div className="inline-flex items-center gap-2 px-3 py-1 bg-gray-50 dark:bg-white/5 rounded-full mb-4">
                     <Lock className="w-3.5 h-3.5 text-neon-green" />
-                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none">
+                    <span className="text-[10px] font-bold text-gray-400 leading-none">
                         Bảo mật dữ liệu
                     </span>
                 </div>
                 
-                <h1 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white uppercase leading-tight mb-2">
+                <h1 className="text-xl md:text-3xl font-black text-gray-900 dark:text-white uppercase leading-tight mb-1">
                     {t(`${k}.title`)} <span className="text-neon-green">{t(`${k}.titleHighlight`)}</span>
                 </h1>
                 
@@ -30,37 +30,19 @@ const PrivacyPolicy = () => {
             </header>
 
             {/* 📜 MAIN LAYOUT */}
-            <main className="max-w-[1400px] mx-auto px-4 sm:px-6 pb-20">
-                
-                {/* Mobile Quick Nav Bar */}
-                <div className="lg:hidden sticky top-[72px] z-30 -mx-4 px-4 py-3 bg-white/80 dark:bg-[#0a0a0c]/80 backdrop-blur-xl border-b border-gray-100 dark:border-white/5 overflow-x-auto no-scrollbar flex items-center gap-2 mb-6">
-                    {Array.isArray(navItems) && navItems.map((label, i) => (
-                        <a 
-                            key={i} 
-                            href={`#s${i+1}`}
-                            className="whitespace-nowrap px-4 py-2 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-[11px] font-bold text-gray-400 hover:text-neon-green transition-colors"
-                        >
-                            {label}
-                        </a>
-                    ))}
-                </div>
-
-                <div className="flex flex-col lg:flex-row gap-6">
-                    
+            <main className="max-w-[1400px] mx-auto px-4 sm:px-6 pb-6">
+                <div className="flex flex-col lg:flex-row gap-6">                   
                     {/* SIDEBAR */}
                     <aside className="w-full lg:w-[350px] shrink-0 space-y-6">
                         <div className="bg-white dark:bg-[#111114] rounded-3xl border border-gray-100 dark:border-white/5 p-6 shadow-sm sticky top-24">
                             <nav className="space-y-1">
-                                <p className="text-[9px] font-black text-gray-400 uppercase mb-4 ml-2">Mục lục</p>
                                 {Array.isArray(navItems) && navItems.map((label, i) => {
-                                    const Icon = navIcons[i] || Shield;
                                     return (
                                         <a 
                                             key={i} 
                                             href={`#s${i+1}`}
                                             className="flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold text-gray-500 dark:text-gray-400 hover:text-neon-green hover:bg-gray-50 dark:hover:bg-white/5 transition-all group"
                                         >
-                                            <Icon className="w-4 h-4 group-hover:scale-110 transition-transform" />
                                             {label}
                                         </a>
                                     );
@@ -139,7 +121,9 @@ const PrivacyPolicy = () => {
                             </div>
                         </section>
 
-                        <section id="s5" className="scroll-mt-32 border-t border-gray-100 dark:border-white/5 pt-10">
+                        <section id="s5" className="scroll-mt-32">
+                            <div className="bg-white dark:bg-[#111114] rounded-3xl border border-gray-100 dark:border-white/5 p-6 sm:p-8 shadow-sm space-y-8">
+
                             <h2 className="text-lg font-black text-gray-900 dark:text-white uppercase leading-tight mb-8">{t(`${k}.s5Title`)}</h2>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 {[t(`${k}.s5r1`), t(`${k}.s5r2`), t(`${k}.s5r3`), t(`${k}.s5r4`)].map((right, i) => (
@@ -148,9 +132,10 @@ const PrivacyPolicy = () => {
                                     </div>
                                 ))}
                             </div>
+                            </div>
                         </section>
 
-                        <section id="s6" className="scroll-mt-32 pt-10">
+                        <section id="s6" className="scroll-mt-32">
                             <div className="bg-white dark:bg-[#111114] rounded-3xl border border-gray-100 dark:border-white/5 p-6 sm:p-8 shadow-sm">
                                 <h2 className="text-lg font-black text-gray-900 dark:text-white uppercase leading-tight mb-8">{t(`${k}.s6Title`)}</h2>
                                 <p className="text-[13px] font-bold text-gray-500 dark:text-gray-400 leading-relaxed mb-8">{t(`${k}.s6p1`)}</p>
@@ -159,14 +144,14 @@ const PrivacyPolicy = () => {
                                         className="flex items-center gap-4 px-6 py-5 bg-neon-green/10 border border-neon-green/20 rounded-2xl hover:bg-neon-green transition-all group">
                                         <Mail className="w-6 h-6 text-neon-green group-hover:text-black shrink-0" />
                                         <div>
-                                            <p className="text-[9px] font-black text-gray-500 group-hover:text-black uppercase tracking-widest mb-1">{t(`${k}.s6emailLabel`)}</p>
-                                            <p className="text-xs font-black text-neon-green group-hover:text-black uppercase tracking-tight">basticket.noreply@gmail.com</p>
+                                            <p className="text-[9px] font-black text-gray-500 group-hover:text-black uppercase mb-1">{t(`${k}.s6emailLabel`)}</p>
+                                            <p className="text-xs font-black text-neon-green group-hover:text-black">basticket.noreply@gmail.com</p>
                                         </div>
                                     </a>
                                     <div className="flex items-center gap-4 px-6 py-5 bg-gray-50 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 rounded-2xl">
                                         <UserCheck className="w-6 h-6 text-gray-400 shrink-0" />
                                         <div>
-                                            <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mb-1">{t(`${k}.s6responseLabel`)}</p>
+                                            <p className="text-[9px] font-black text-gray-500 uppercase mb-1">{t(`${k}.s6responseLabel`)}</p>
                                             <p className="text-xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-tight">{t(`${k}.s6responseTime`)}</p>
                                         </div>
                                     </div>
