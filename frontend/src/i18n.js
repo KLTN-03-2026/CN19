@@ -1,6 +1,8 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
+import enSupport from './locales/enSupport';
+import viSupport from './locales/viSupport';
 
 i18n
   .use(LanguageDetector)
@@ -235,9 +237,6 @@ i18n
             notFound: "Organizer not found",
             joinedSince: "Joined since",
             activeStatus: "Active",
-            totalEvents: "EVENTS",
-            status: "STATUS",
-            follow: "Follow Now",
             lockedStatus: "Locked",
             suspendedStatus: "Suspended",
             totalEvents: "Events",
@@ -292,67 +291,7 @@ i18n
             },
             copyright: "BUILT WITH ❤️ FOR THE WEB3 COMMUNITY."
           },
-          support: {
-            lastUpdated: "Last updated: April 01, 2026",
-            ctaTitle: "Need more help?",
-            ctaDesc: "If you have any questions about our policies, please contact our support team.",
-            ctaEmail: "Send Email",
-            ctaFaq: "View FAQ",
-            customerTerms: {
-              title: "Customer", titleHighlight: "Terms",
-              subtitle: "Please read the following terms carefully before using BASTICKET's ticketing service.",
-              badge: "Last updated: April 01, 2026",
-              nav: ["1. Introduction", "2. NFT Ticket Ownership", "3. Booking Process", "4. Payment & Fees", "5. Transfer & Resale", "6. Refund Policy", "7. Account Security"],
-              s1Title: "1. Introduction",
-              s2Title: "2. NFT Ticket Ownership",
-              s3Title: "3. Booking Process",
-              s4Title: "4. Payment & Fees",
-              s5Title: "5. Transfer & Resale",
-              s6Title: "6. Refund Policy",
-              s7Title: "7. Account Security"
-            },
-            organizerTerms: {
-              title: "Organizer", titleHighlight: "Terms",
-              subtitle: "Regulations for organizations and individuals using the BASTICKET platform.",
-              badge: "Last updated: April 01, 2026",
-              nav: ["1. Partnership & Registration", "2. Event Creation Rules", "3. Ticket Management", "4. Revenue & Payment", "5. Service Fees", "6. Responsibilities"],
-              s1Title: "1. Partnership & Registration",
-              s2Title: "2. Event Creation Rules",
-              s6Title: "6. Organizer Responsibilities"
-            },
-            privacy: {
-              title: "Privacy", titleHighlight: "Policy",
-              subtitle: "Our commitment to protecting your privacy and personal data.",
-              nav: ["1. Data Collection", "2. Data Usage", "3. Blockchain Transparency", "4. Data Security", "5. Your Rights", "6. Contact"],
-              s1Title: "1. Personal Information Collection",
-              s3Title: "3. Blockchain Transparency",
-              s4Title: "4. Data Security",
-              s5Title: "5. Your Rights",
-              s6Title: "Contact Us"
-            },
-            refund: {
-              title: "Refund", titleHighlight: "Policy",
-              subtitle: "Transparent refund processes protecting interests of both parties.",
-              badge: "Last updated: April 01, 2026",
-              warningTitle: "General Rule for NFT Tickets",
-              casesTitle: "Refundable Cases",
-              processTitle: "Request Process"
-            },
-            faq: {
-              title: "Help", titleHighlight: "Center",
-              searchPlaceholder: "Search your question...",
-              cats: { account: "Account", ticket: "Tickets", marketplace: "Marketplace", payment: "Payment", app: "Technical" },
-              noResults: "Sorry, no questions found matching your keyword.",
-              stillNeedHelp: "Still need help?",
-              contactBtn: "Submit Support Request"
-            },
-            blog: {
-              title: "Explore", titleHighlight: "the NFT World",
-              subtitle: "Stay updated on the latest trends in Blockchain technology and events.",
-              badge: "BASTICKET Newsletter",
-              readMore: "Read Article"
-            }
-          },
+          support: enSupport,
           checkout: {
             title: "Complete Checkout",
             orderNumber: "Order:",
@@ -687,8 +626,10 @@ i18n
             notFound: "Không tìm thấy nhà tổ chức",
             joinedSince: "Tham gia từ",
             activeStatus: "Đang hoạt động",
-            totalEvents: "SỰ KIỆN",
-            status: "TRẠNG THÁI",
+            lockedStatus: "Bị khóa",
+            suspendedStatus: "Tạm ngưng",
+            totalEvents: "Sự kiện",
+            status: "Trạng thái",
             follow: "Theo dõi ngay",
             about: "Về nhà tổ chức",
             noDescription: "Nhà tổ chức này chưa cập nhật giới thiệu chi tiết.",
@@ -739,47 +680,7 @@ i18n
             },
             copyright: "BUILT WITH ❤️ FOR THE WEB3 COMMUNITY."
           },
-          support: {
-            lastUpdated: "Cập nhật mới nhất: 01/04/2026",
-            ctaTitle: "Cần hỗ trợ thêm?",
-            ctaDesc: "Nếu có bất kỳ thắc mắc nào, vui lòng liên hệ đội ngũ của chúng tôi.",
-            ctaEmail: "Gửi Email",
-            ctaFaq: "Xem FAQ",
-            customerTerms: {
-              title: "Điều khoản", titleHighlight: "Khách hàng",
-              subtitle: "Vui lòng đọc kỹ các điều khoản trước khi sử dụng dịch vụ của BASTICKET.",
-              badge: "Cập nhật: 01/04/2026",
-              nav: ["1. Giới thiệu", "2. Quyền sở hữu vé NFT", "3. Quy trình đặt vé", "4. Thanh toán & Phí", "5. Chuyển nhượng & Bán lại", "6. Chính sách hoàn tiền", "7. Bảo mật tài khoản"]
-            },
-            organizerTerms: {
-              title: "Điều khoản", titleHighlight: "Nhà tổ chức",
-              subtitle: "Quy định dành cho tổ chức và cá nhân sử dụng BASTICKET.",
-              badge: "Cập nhật: 01/04/2026",
-              nav: ["1. Hợp tác", "2. Sự kiện", "3. Vé & NFT", "4. Doanh thu", "5. Phí dịch vụ", "6. Trách nhiệm"]
-            },
-            privacy: {
-              title: "Chính sách", titleHighlight: "Bảo mật",
-              subtitle: "Cam kết bảo tồn quyền riêng tư và dữ liệu cá nhân của bạn.",
-              nav: ["1. Thu thập", "2. Sử dụng", "3. Blockchain", "4. Bảo mật", "5. Quyền lợi", "6. Liên hệ"]
-            },
-            refund: {
-              title: "Chính sách", titleHighlight: "Hoàn tiền",
-              subtitle: "Quy trình hoàn tiền minh bạch bảo vệ quyền lợi hai bên.",
-              badge: "Cập nhật: 01/04/2026"
-            },
-            faq: {
-              title: "Trung tâm", titleHighlight: "Trợ giúp",
-              searchPlaceholder: "Tìm kiếm...",
-              cats: { account: "Tài khoản", ticket: "Vé", marketplace: "Chợ vé", payment: "Thanh toán", app: "Kỹ thuật" },
-              contactBtn: "Gửi yêu cầu hỗ trợ"
-            },
-            blog: {
-              title: "Khám phá", titleHighlight: "Thế giới NFT",
-              subtitle: "Cập nhật xu hướng công nghệ Blockchain và sự kiện.",
-              badge: "Bản tin BASTICKET",
-              readMore: "Xem bài viết"
-            }
-          },
+          support: viSupport,
           checkout: {
             title: "Hoàn tất Thanh toán",
             orderNumber: "Đơn hàng:",

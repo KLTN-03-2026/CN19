@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { HelpCircle, ChevronDown, Ticket, Shield, RefreshCw, Smartphone, CreditCard, Search } from 'lucide-react';
+import { HelpCircle, ChevronDown, Ticket, Shield, RefreshCw, Smartphone, CreditCard, Search, ArrowRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 const FAQ = () => {
@@ -44,92 +44,121 @@ const FAQ = () => {
     );
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-dark-bg pb-10 transition-colors duration-500">
-            {/* Hero Search */}
-            <div className="relative py-10 flex items-center justify-center overflow-hidden border-b border-gray-200 dark:border-white/5">
-                <div className="absolute inset-0 bg-neon-green/5 blur-[120px] opacity-30" />
-                <div className="max-w-4xl mx-auto px-6 text-center space-y-6 relative z-10 w-full">
-                    <h1 className="text-2xl md:text-3xl font-black mt-10 text-gray-900 dark:text-white uppercase tracking-tighter">
-                        {t(`${k}.title`)} <span className="text-neon-green ">{t(`${k}.titleHighlight`)}</span>
-                    </h1>
-                    <div className="relative max-w-2xl mx-auto">
-                        <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+        <div className="min-h-screen bg-white dark:bg-[#0a0a0c] transition-colors duration-500 font-sans selection:bg-neon-green/30">
+            
+            {/* 🔍 COMPACT SEARCH HERO */}
+            <header className="max-w-[1400px] mx-auto px-4 sm:px-6 pt-12 pb-8">
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+                    <div className="space-y-2">
+                        <div className="inline-flex items-center gap-2 px-3 py-1 bg-gray-50 dark:bg-white/5 rounded-full mb-2">
+                            <HelpCircle className="w-3.5 h-3.5 text-neon-green" />
+                            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none">Trung tâm trợ giúp</span>
+                        </div>
+                        <h1 className="text-2xl md:text-4xl font-black text-gray-900 dark:text-white uppercase leading-tight tracking-tight">
+                            {t(`${k}.title`)} <span className="text-neon-green">{t(`${k}.titleHighlight`)}</span>
+                        </h1>
+                    </div>
+                    
+                    <div className="relative w-full md:w-[400px]">
+                        <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                         <input
                             type="text"
                             placeholder={t(`${k}.searchPlaceholder`)}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full bg-white dark:bg-dark-card border border-gray-200 dark:border-white/10 rounded-[2.5rem] py-4 pl-16 pr-8 text-sm md:text-base font-medium shadow-2xl focus:outline-none focus:border-neon-green transition-all text-gray-900 dark:text-white"
+                            className="w-full bg-gray-50 dark:bg-[#111114] border border-gray-100 dark:border-white/5 rounded-2xl py-4 pl-12 pr-6 text-sm font-bold text-gray-900 dark:text-white focus:outline-none focus:border-neon-green transition-all shadow-sm"
                         />
                     </div>
                 </div>
-            </div>
+            </header>
 
-            <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-12 gap-12 pt-8">
-                {/* Categories */}
-                <div className="lg:col-span-4 space-y-4">
-                    <div className="grid grid-cols-1 gap-2">
-                        {categories.map((cat) => (
-                            <button key={cat.id} onClick={() => { setActiveCat(cat.id); setOpenIndex(-1); }}
-                                className={`flex items-center gap-4 p-5 rounded-3xl text-left transition-all duration-300 border ${
-                                    activeCat === cat.id
-                                    ? 'bg-neon-green border-neon-green shadow-xl shadow-neon-green/20 scale-[1.02]'
-                                    : 'bg-white dark:bg-white/[0.02] border-gray-200 dark:border-white/5 hover:border-neon-green/30 text-gray-500 dark:text-gray-400'
-                                }`}>
-                                <cat.icon className={`w-5 h-5 ${activeCat === cat.id ? 'text-black' : 'text-neon-green'}`} />
-                                <span className={`text-[13px] font-black uppercase tracking-tight ${activeCat === cat.id ? 'text-black' : 'text-gray-800 dark:text-white'}`}>
-                                    {cats && cats[cat.id]}
-                                </span>
-                            </button>
-                        ))}
-                    </div>
+            {/* 📜 MAIN CONTENT GRID (Strict 1400px & Gap-6) */}
+            <main className="max-w-[1400px] mx-auto px-4 sm:px-6 pb-20">
+                <div className="flex flex-col lg:flex-row gap-6">
+                    
+                    {/* SIDEBAR: CATEGORIES (Strict 350px width) */}
+                    <aside className="w-full lg:w-[350px] shrink-0 space-y-6">
+                        <div className="bg-white dark:bg-[#111114] rounded-3xl border border-gray-100 dark:border-white/5 p-6 shadow-sm sticky top-24">
+                            <p className="text-[9px] font-black text-gray-400 uppercase mb-4 ml-2">Danh mục</p>
+                            <nav className="space-y-1">
+                                {categories.map((cat) => (
+                                    <button 
+                                        key={cat.id} 
+                                        onClick={() => { setActiveCat(cat.id); setOpenIndex(0); }}
+                                        className={`w-full flex items-center gap-3 px-4 py-4 rounded-2xl text-left transition-all group ${
+                                            activeCat === cat.id
+                                            ? 'bg-neon-green text-black shadow-lg shadow-neon-green/10 active:scale-95'
+                                            : 'text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-white/5 border border-transparent hover:border-gray-100 dark:hover:border-white/5'
+                                        }`}
+                                    >
+                                        <cat.icon className={`w-4 h-4 shrink-0 ${activeCat === cat.id ? 'text-black' : 'text-neon-green group-hover:scale-110 transition-transform'}`} />
+                                        <span className="text-[11px] font-black uppercase tracking-tight">
+                                            {cats && cats[cat.id]}
+                                        </span>
+                                    </button>
+                                ))}
+                            </nav>
 
-                    <div className="mt-8 p-8 bg-white dark:bg-dark-card border border-gray-200 dark:border-white/5 rounded-[2.5rem] space-y-6 overflow-hidden relative">
-                        <HelpCircle className="absolute -right-4 -top-4 w-24 h-24 text-neon-green opacity-5 rotate-12" />
-                        <h4 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-tighter relative z-10">{t(`${k}.stillNeedHelp`)}</h4>
-                        <p className="text-xs font-bold text-gray-500 leading-relaxed relative z-10">{t(`${k}.supportDesc`)}</p>
-                        <a href="mailto:basticket.noreply@gmail.com"
-                            className="block w-full py-4 bg-gray-100 dark:bg-white/5 hover:bg-neon-green hover:text-black border border-gray-200 dark:border-white/10 rounded-2xl text-center text-[10px] font-black uppercase tracking-widest transition-all relative z-10 text-gray-700 dark:text-gray-300">
-                            {t(`${k}.contactBtn`)}
-                        </a>
-                    </div>
-                </div>
-
-                {/* Accordion */}
-                <div className="lg:col-span-8 space-y-4">
-                    {filteredFaqs.length > 0 ? (
-                        filteredFaqs.map((faq, index) => (
-                            <div key={index}
-                                className={`group overflow-hidden rounded-[2rem] border transition-all duration-500 ${
-                                    openIndex === index
-                                    ? 'bg-white dark:bg-white/[0.03] border-neon-green/40 shadow-2xl'
-                                    : 'bg-white/70 dark:bg-white/[0.01] border-gray-200 dark:border-white/5 hover:border-neon-green/20'
-                                }`}>
-                                <button onClick={() => setOpenIndex(openIndex === index ? -1 : index)}
-                                    className="w-full p-6 flex items-center justify-between text-left">
-                                    <span className={`text-sm md:text-base font-black tracking-tight pr-8 transition-colors ${openIndex === index ? 'text-neon-green' : 'text-gray-900 dark:text-white'}`}>
-                                        {faq.q}
-                                    </span>
-                                    <div className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all ${openIndex === index ? 'bg-neon-green text-black rotate-180' : 'bg-gray-100 dark:bg-white/5 text-gray-400'}`}>
-                                        <ChevronDown className="w-5 h-5" />
-                                    </div>
-                                </button>
-                                {openIndex === index && (
-                                    <div className="px-8 pb-8">
-                                        <div className="h-px bg-gray-100 dark:bg-white/5 mb-8" />
-                                        <p className="text-sm md:text-[15px] font-medium text-gray-600 dark:text-gray-400 leading-[1.8]">{faq.a}</p>
-                                    </div>
-                                )}
+                            <div className="mt-8 pt-8 border-t border-gray-50 dark:border-white/5">
+                                <h4 className="text-[10px] font-black text-gray-800 dark:text-white uppercase mb-4 ml-2">{t(`${k}.stillNeedHelp`)}</h4>
+                                <a 
+                                    href="mailto:basticket.noreply@gmail.com"
+                                    className="flex items-center justify-between px-5 py-4 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl text-[11px] font-black text-neon-green group hover:border-neon-green/30 transition-all shadow-sm"
+                                >
+                                    {t(`${k}.contactBtn`)}
+                                    <ArrowRight className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" />
+                                </a>
                             </div>
-                        ))
-                    ) : (
-                        <div className="p-20 text-center space-y-6 bg-white dark:bg-white/[0.01] rounded-[3rem] border border-dashed border-gray-300 dark:border-white/10">
-                            <Search className="w-16 h-16 text-gray-400 mx-auto" />
-                            <p className="text-sm font-bold uppercase tracking-widest text-gray-500">{t(`${k}.noResults`)}</p>
                         </div>
-                    )}
+                    </aside>
+
+                    {/* MAIN CONTENT Area (Flexible-1) */}
+                    <div className="flex-1 space-y-3">
+                        {filteredFaqs.length > 0 ? (
+                            filteredFaqs.map((faq, index) => (
+                                <div 
+                                    key={index}
+                                    className={`group overflow-hidden rounded-3xl border transition-all duration-300 ${
+                                        openIndex === index
+                                        ? 'bg-white dark:bg-[#111114] border-neon-green/40 shadow-xl'
+                                        : 'bg-white dark:bg-[#111114] border-gray-100 dark:border-white/5 hover:border-neon-green/20'
+                                    }`}
+                                >
+                                    <button 
+                                        onClick={() => setOpenIndex(openIndex === index ? -1 : index)}
+                                        className="w-full p-6 text-left flex items-start gap-4"
+                                    >
+                                        <div className={`mt-0.5 shrink-0 w-8 h-8 rounded-xl flex items-center justify-center transition-all ${openIndex === index ? 'bg-neon-green text-black' : 'bg-gray-50 dark:bg-white/5 text-gray-400'}`}>
+                                            <HelpCircle className="w-4 h-4" />
+                                        </div>
+                                        <div className="flex-1">
+                                            <h3 className={`text-sm sm:text-[15px] font-black uppercase leading-tight transition-colors ${openIndex === index ? 'text-neon-green' : 'text-gray-900 dark:text-white'}`}>
+                                                {faq.q}
+                                            </h3>
+                                            {openIndex === index && (
+                                                <div className="mt-6 animate-in fade-in slide-in-from-top-2 duration-300">
+                                                    <div className="h-px bg-gray-50 dark:bg-white/5 mb-6" />
+                                                    <p className="text-xs sm:text-[13px] font-bold text-gray-500 dark:text-gray-400 leading-relaxed">
+                                                        {faq.a}
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="shrink-0 pt-1">
+                                            <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform duration-300 ${openIndex === index ? 'rotate-180 text-neon-green' : ''}`} />
+                                        </div>
+                                    </button>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="py-24 text-center bg-gray-50/50 dark:bg-[#111114] border-2 border-dashed border-gray-100 dark:border-white/5 rounded-3xl">
+                                <Search className="w-12 h-12 text-gray-200 dark:text-white/10 mx-auto mb-4" />
+                                <h4 className="text-[11px] font-black text-gray-400 uppercase tracking-widest">{t(`${k}.noResults`)}</h4>
+                            </div>
+                        )}
+                    </div>
                 </div>
-            </div>
+            </main>
         </div>
     );
 };

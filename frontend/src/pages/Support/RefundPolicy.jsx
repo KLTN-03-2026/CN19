@@ -1,9 +1,11 @@
 import React from 'react';
-import { AlertCircle, CreditCard, Clock, CheckCircle2, XCircle, Info, RefreshCcw } from 'lucide-react';
+import { AlertCircle, CreditCard, Clock, CheckCircle2, XCircle, Info, RefreshCcw, ArrowLeft, Sparkles, Scale } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 
 const RefundPolicy = () => {
     const { t } = useTranslation();
+    const navigate = useNavigate();
     const k = 'support.refund';
 
     const steps = [
@@ -20,78 +22,113 @@ const RefundPolicy = () => {
     ];
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-dark-bg pb-10 transition-colors duration-500">
-            <div className="relative h-[270px] flex items-center justify-center overflow-hidden border-b border-gray-200 dark:border-white/5">
-                <div className="absolute inset-0 bg-red-500/5 blur-[120px] opacity-50" />
-                <div className="relative z-10 text-center space-y-4 px-6">
-                    <h1 className="text-2xl mt-8 md:text-3xl font-black text-gray-900 dark:text-white uppercase tracking-tighter">
-                        {t(`${k}.title`)} <span className="text-neon-green">{t(`${k}.titleHighlight`)}</span>
-                    </h1>
-                    <p className="max-w-2xl mx-auto text-sm md:text-base font-medium text-gray-600 dark:text-gray-400">{t(`${k}.subtitle`)}</p>
-                    <div className="flex items-center justify-center gap-2 text-[10px] font-black text-red-500 tracking-widest pt-4">
-                        <span>{t(`${k}.badge`)}</span>
-                    </div>
+        <div className="min-h-screen bg-white dark:bg-[#0a0a0c] transition-colors duration-500 font-sans selection:bg-neon-green/30">
+            
+            {/* 🧭 NAVIGATION & TITLE AREA */}
+            <header className="max-w-[1400px] mx-auto px-4 sm:px-6 pt-8 pb-4">
+                <div className="inline-flex items-center gap-2 px-3 py-1 bg-gray-50 dark:bg-white/5 rounded-full mb-4">
+                    <RefreshCcw className="w-3.5 h-3.5 text-neon-green" />
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-none">
+                        Chính sách hoàn tiền
+                    </span>
                 </div>
-            </div>
+                
+                <h1 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white uppercase leading-tight mb-2">
+                    {t(`${k}.title`)} <span className="text-neon-green">{t(`${k}.titleHighlight`)}</span>
+                </h1>
+                
+                <p className="max-w-2xl text-xs sm:text-sm text-gray-500 dark:text-gray-400 leading-relaxed font-medium">
+                    {t(`${k}.subtitle`)}
+                </p>
+            </header>
 
-            <div className="max-w-5xl mx-auto px-6 py-10 space-y-8">
-                <div className="p-8 bg-red-500/5 border border-red-500/10 rounded-[2.5rem] flex flex-col md:flex-row gap-8 items-center">
-                    <div className="space-y-2 text-center md:text-left">
-                        <h4 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tight">{t(`${k}.warningTitle`)}</h4>
-                        <p className="text-sm leading-relaxed font-medium text-gray-600 dark:text-gray-400">{t(`${k}.warningDesc`)}</p>
-                    </div>
-                </div>
-
-                <section className="space-y-6">
-                    <h2 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tighter flex items-center gap-4">
-                        <div className="w-1 h-8 bg-neon-green" />{t(`${k}.casesTitle`)}
-                    </h2>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        {cases.map((item, i) => (
-                            <div key={i} className="p-8 bg-white dark:bg-dark-card border border-gray-200 dark:border-white/5 rounded-3xl space-y-4 hover:border-neon-green/30 transition-colors">
-                                <CheckCircle2 className="w-5 h-5 text-neon-green" />
-                                <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase">{item.title}</h3>
-                                <p className="text-[11px] leading-relaxed font-bold text-gray-500">{item.desc}</p>
-                            </div>
-                        ))}
-                    </div>
-                </section>
-
-                <section className="space-y-6">
-                    <h2 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tighter flex items-center gap-4">
-                        <div className="w-1 h-8 bg-neon-green" />{t(`${k}.processTitle`)}
-                    </h2>
-                    <div className="relative">
-                        <div className="absolute top-8 left-0 right-0 h-0.5 bg-gray-200 dark:bg-white/5 hidden lg:block" />
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-                            {steps.map((step, i) => (
-                                <div key={i} className="relative z-10 flex flex-col items-center text-center space-y-4">
-                                    <div className="w-16 h-16 rounded-2xl bg-white dark:bg-dark-bg border-4 border-gray-100 dark:border-dark-bg shadow-xl flex items-center justify-center">
-                                        <div className="w-full h-full bg-neon-green/10 rounded-xl flex items-center justify-center text-neon-green">
-                                            <step.icon className="w-6 h-6" />
-                                        </div>
-                                    </div>
-                                    <div className="space-y-1">
-                                        <h4 className="text-xs font-black text-gray-900 dark:text-white uppercase tracking-widest">{step.title}</h4>
-                                        <p className="text-[10px] font-bold text-gray-500">{step.desc}</p>
-                                    </div>
-                                </div>
-                            ))}
+            {/* 📜 MAIN LAYOUT */}
+            <main className="max-w-[1400px] mx-auto px-4 sm:px-6 pb-20 space-y-6">
+                
+                {/* ⚠️ IMPORTANT WARNING CARD */}
+                <div className="bg-red-500/[0.03] dark:bg-red-500/[0.02] border border-red-500/20 rounded-3xl p-6 shadow-sm overflow-hidden relative group">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-red-500/5 rounded-full blur-[80px] -mr-32 -mt-32"></div>
+                    <div className="flex gap-6 items-start relative z-10 flex-col sm:flex-row">
+                        <div className="w-12 h-12 bg-red-500/10 rounded-2xl flex items-center justify-center shrink-0 border border-red-500/20 shadow-lg shadow-red-500/5">
+                            <AlertCircle className="w-6 h-6 text-red-500" />
+                        </div>
+                        <div className="space-y-4">
+                            <h4 className="text-lg font-black text-gray-900 dark:text-white uppercase leading-tight">{t(`${k}.warningTitle`)}</h4>
+                            <p className="text-xs sm:text-sm leading-relaxed font-bold text-gray-500 dark:text-gray-400">{t(`${k}.warningDesc`)}</p>
                         </div>
                     </div>
-                </section>
+                </div>
 
-                <div className="p-8 bg-white dark:bg-white/[0.02] border border-gray-200 dark:border-white/5 rounded-[2.5rem] space-y-6">
-                    <h3 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-tight flex items-center gap-3">
-                        <Info className="w-5 h-5 text-neon-green" />{t(`${k}.notesTitle`)}
-                    </h3>
-                    <div className="space-y-4 text-sm font-medium leading-relaxed text-gray-600 dark:text-gray-400">
-                        <p>• {t(`${k}.note1`)}</p>
-                        <p>• {t(`${k}.note2`)}</p>
-                        <p>• {t(`${k}.note3`)}</p>
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    
+                    {/* LEFT CONTENT: CASES & NOTES */}
+                    <div className="lg:col-span-8 space-y-6">
+                        
+                        {/* Refund Cases Section */}
+                        <section className="bg-white dark:bg-[#111114] rounded-3xl border border-gray-100 dark:border-white/5 p-6 sm:p-8 shadow-sm">
+                            <h2 className="text-xl font-black text-gray-900 dark:text-white uppercase leading-tight mb-8 flex items-center gap-4">
+                                <Scale className="w-5 h-5 text-neon-green" /> {t(`${k}.casesTitle`)}
+                            </h2>
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                {cases.map((item, i) => (
+                                    <div key={i} className="p-6 bg-gray-50 dark:bg-white/[0.01] border border-gray-100 dark:border-white/5 rounded-2xl space-y-3 transition-colors hover:border-neon-green/30">
+                                        <div className="w-8 h-8 rounded-lg bg-neon-green/10 flex items-center justify-center shadow-inner">
+                                            <CheckCircle2 className="w-4 h-4 text-neon-green" />
+                                        </div>
+                                        <h3 className="text-xs font-black text-gray-900 dark:text-white uppercase leading-tight">{item.title}</h3>
+                                        <p className="text-[10px] sm:text-[11px] leading-relaxed font-bold text-gray-400">{item.desc}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
+
+                        {/* General Notes Section */}
+                        <section className="bg-white dark:bg-[#111114] rounded-3xl border border-gray-100 dark:border-white/5 p-6 sm:p-8 shadow-sm">
+                            <h2 className="text-xl font-black text-gray-900 dark:text-white uppercase leading-tight mb-8 flex items-center gap-3">
+                                <Info className="w-5 h-5 text-neon-green" /> {t(`${k}.notesTitle`)}
+                            </h2>
+                            <div className="space-y-4">
+                                {[t(`${k}.note1`), t(`${k}.note2`), t(`${k}.note3`)].map((note, i) => (
+                                    <div key={i} className="flex gap-4 items-start p-4 bg-gray-50 dark:bg-white/[0.01] rounded-2xl border border-gray-100 dark:border-white/5">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-neon-green shrink-0 mt-2" />
+                                        <p className="text-xs sm:text-sm font-bold text-gray-600 dark:text-gray-400 leading-relaxed">{note}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
+                    </div>
+
+                    {/* RIGHT CONTENT: PROCESS STEPS */}
+                    <div className="lg:col-span-4">
+                        <section className="bg-white dark:bg-[#111114] rounded-3xl border border-gray-100 dark:border-white/5 p-6 sm:p-8 shadow-sm h-full flex flex-col">
+                            <h2 className="text-xl font-black text-gray-900 dark:text-white uppercase leading-tight mb-8">{t(`${k}.processTitle`)}</h2>
+                            <div className="flex-1 relative space-y-6">
+                                {steps.map((step, i) => (
+                                    <div key={i} className="relative flex gap-6 group">
+                                        {i !== steps.length - 1 && (
+                                            <div className="absolute left-6 top-12 bottom-[-24px] w-0.5 bg-gray-100 dark:bg-white/5" />
+                                        )}
+                                        <div className="w-12 h-12 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 flex items-center justify-center shrink-0 shadow-sm relative z-10 group-hover:border-neon-green/30 transition-all">
+                                            <step.icon className="w-5 h-5 text-neon-green" />
+                                        </div>
+                                        <div className="pt-2">
+                                            <h4 className="text-[11px] font-black text-gray-900 dark:text-white uppercase tracking-widest mb-1">{step.title}</h4>
+                                            <p className="text-[10px] font-bold text-gray-400 group-hover:text-gray-500 transition-colors leading-relaxed">{step.desc}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <button 
+                                onClick={() => navigate('/faq')}
+                                className="mt-12 w-full py-4 bg-black dark:bg-white text-white dark:text-black rounded-2xl text-[11px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl"
+                            >
+                                {t('support.ctaFaq', 'Check FAQs')}
+                            </button>
+                        </section>
                     </div>
                 </div>
-            </div>
+            </main>
         </div>
     );
 };
