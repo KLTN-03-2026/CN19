@@ -59,6 +59,30 @@ const blogService = {
   deleteComment: async (id) => {
     const res = await api.delete(`/blogs/comments/${id}`);
     return res.data;
+  },
+
+  // Lưu hoặc bỏ lưu bài viết
+  toggleSave: async (blogId) => {
+    const res = await api.post(`/blogs/${blogId}/save`);
+    return res.data;
+  },
+
+  // Lấy danh sách bài viết đã lưu
+  getSavedBlogs: async () => {
+    const res = await api.get('/blogs/saved/list');
+    return res.data;
+  },
+
+  // Ẩn hoặc hiện bài viết
+  toggleHide: async (blogId) => {
+    const res = await api.post(`/blogs/${blogId}/hide`);
+    return res.data;
+  },
+  
+  // Lấy danh sách sự kiện đang thảo luận xu hướng
+  getTrendingEvents: async () => {
+    const res = await api.get('/blogs/trending-events');
+    return res.data;
   }
 };
 

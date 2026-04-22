@@ -24,7 +24,6 @@ import OrganizerTerms from './pages/Support/OrganizerTerms';
 import PrivacyPolicy from './pages/Support/PrivacyPolicy';
 import RefundPolicy from './pages/Support/RefundPolicy';
 import FAQ from './pages/Support/FAQ';
-import CommunityPage from './pages/Community/CommunityPage';
 
 // Auth Pages
 import Login from './pages/Auth/Login';
@@ -180,7 +179,6 @@ const router = createBrowserRouter([
       { path: 'privacy-policy', element: <PrivacyPolicy /> },
       { path: 'refund-policy', element: <RefundPolicy /> },
       { path: 'faq', element: <FAQ /> },
-      { path: 'community', element: <CommunityPage /> },
 
       { path: '*', element: <Navigate to="/" replace /> }
     ]

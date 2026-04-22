@@ -400,9 +400,12 @@ model Notification {
   type       String
   title      String
   message    String
+  target_id  String?
+  blog_id    String?
   is_read    Boolean  @default(false)
   created_at DateTime @default(now())
   user       User     @relation(fields: [user_id], references: [id])
+  blog       Blog?    @relation(fields: [blog_id], references: [id])
 }
 
 model Merchandise {
@@ -446,22 +449,29 @@ model Blog {
   views      Int       @default(0)
   created_at DateTime  @default(now())
   updated_at DateTime  @updatedAt
-  images     String[]  @default([])
-  author     User      @relation("BlogAuthor", fields: [author_id], references: [id])
+  images         String[]  @default([])
+  saved_user_ids String[]  @default([])
+  author         User      @relation("BlogAuthor", fields: [author_id], references: [id])
   event      Event?    @relation(fields: [event_id], references: [id])
   comments   Comment[]
   likes      Like[]
+  notifications Notification[]
 }
 
 model Comment {
-  id         String   @id @default(uuid())
-  blog_id    String
-  user_id    String
-  content    String
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-  blog       Blog     @relation(fields: [blog_id], references: [id], onDelete: Cascade)
-  user       User     @relation(fields: [user_id], references: [id])
+  id            String   @id @default(uuid())
+  blog_id       String
+  user_id       String
+  content       String
+  image_url     String?
+  parent_id     String?
+  like_user_ids String[] @default([])
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+  blog          Blog     @relation(fields: [blog_id], references: [id], onDelete: Cascade)
+  user          User     @relation(fields: [user_id], references: [id])
+  parent        Comment? @relation("CommentToReply", fields: [parent_id], references: [id])
+  replies       Comment[] @relation("CommentToReply")
 }
 
 model Like {

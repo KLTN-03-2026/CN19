@@ -41,10 +41,70 @@ export const communityService = {
     }
   },
 
-  // Thêm bình luận
-  addComment: async (blogId, content) => {
+  // Lấy danh sách bình luận
+  getComments: async (blogId) => {
     try {
-      const response = await api.post(`/community/${blogId}/comment`, { content });
+      const response = await api.get(`/blogs/${blogId}/comments`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Thêm bình luận
+  addComment: async (blogId, content, image_url, parent_id = null) => {
+    try {
+      const response = await api.post(`/community/${blogId}/comment`, { content, image_url, parent_id });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Thích/Bỏ thích bình luận
+  toggleCommentLike: async (commentId) => {
+    try {
+      const response = await api.post(`/blogs/comments/${commentId}/like`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Cập nhật bình luận
+  updateComment: async (commentId, data) => {
+    try {
+      const response = await api.put(`/blogs/comments/${commentId}`, data);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Xóa bình luận
+  deleteComment: async (commentId) => {
+    try {
+      const response = await api.delete(`/blogs/comments/${commentId}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Lấy danh sách người thích bài viết
+  getLikers: async (blogId) => {
+    try {
+      const response = await api.get(`/blogs/${blogId}/likers`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Lấy danh sách người thích bình luận
+  getCommentLikers: async (commentId) => {
+    try {
+      const response = await api.get(`/blogs/comments/${commentId}/likers`);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;

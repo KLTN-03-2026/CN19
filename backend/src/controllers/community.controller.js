@@ -64,11 +64,11 @@ const communityController = {
         try {
             const userId = req.user.userId;
 
-            // Tìm tất cả các đơn hàng thành công của người dùng
-            const orders = await prisma.order.findMany({
+            // Tìm tất cả các vé mà người dùng đang sở hữu (bao gồm vé mua và vé được tặng/chuyển nhượng)
+            const tickets = await prisma.ticket.findMany({
                 where: {
-                    customer_id: userId,
-                    status: 'completed'
+                    current_owner_id: userId,
+                    status: { notIn: ['refunded', 'cancelled'] } // Chỉ lấy vé hợp lệ
                 },
                 select: {
                     event: {
@@ -77,9 +77,15 @@ const communityController = {
                 }
             });
 
-            // Lấy danh sách sự kiện duy nhất
-            const events = Array.from(new Set(orders.map(o => o.event.id)))
-                .map(id => orders.find(o => o.event.id === id).event);
+            // Lọc ra danh sách các sự kiện duy nhất
+            const uniqueEventsMap = new Map();
+            tickets.forEach(t => {
+                if (t.event && !uniqueEventsMap.has(t.event.id)) {
+                    uniqueEventsMap.set(t.event.id, t.event);
+                }
+            });
+
+            const events = Array.from(uniqueEventsMap.values());
 
             res.json({ success: true, data: events });
         } catch (error) {
@@ -98,20 +104,20 @@ const communityController = {
                 return res.status(400).json({ success: false, message: 'Nội dung không được để trống.' });
             }
 
-            // Nếu có event_id, kiểm tra xem người dùng có quyền đăng (đã mua vé chưa)
+            // Nếu có event_id, kiểm tra xem người dùng có quyền đăng (phải sở hữu vé hợp lệ)
             if (event_id) {
-                const hasOrder = await prisma.order.findFirst({
+                const hasTicket = await prisma.ticket.findFirst({
                     where: {
-                        customer_id: userId,
+                        current_owner_id: userId,
                         event_id: event_id,
-                        status: 'completed'
+                        status: { notIn: ['refunded', 'cancelled'] }
                     }
                 });
 
-                if (!hasOrder) {
+                if (!hasTicket) {
                     return res.status(403).json({ 
                         success: false, 
-                        message: 'Bạn chỉ có thể đăng bài gắn thẻ sự kiện mà bạn đã tham gia/đặt vé.' 
+                        message: 'Bạn chỉ có thể đăng bài gắn thẻ sự kiện mà bạn đã tham gia hoặc đang sở hữu vé.' 
                     });
                 }
             }
