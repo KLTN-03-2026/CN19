@@ -17,7 +17,7 @@ import { useTranslation } from 'react-i18next';
 import { communityService } from '../../services/community.service';
 import { useAuthStore } from '../../store/useAuthStore';
 
-const CreatePostModal = ({ onClose, onSuccess }) => {
+const CreatePostModal = ({ onClose, onSuccess, postToEdit = null }) => {
     const { t } = useTranslation();
     const { user } = useAuthStore();
     const [title, setTitle] = useState('');
@@ -31,7 +31,13 @@ const CreatePostModal = ({ onClose, onSuccess }) => {
 
     useEffect(() => {
         fetchMyEvents();
-    }, []);
+        if (postToEdit) {
+            setTitle(postToEdit.title || '');
+            setContent(postToEdit.content || '');
+            setImages(postToEdit.images || (postToEdit.image_url ? [postToEdit.image_url] : []));
+            setSelectedEventId(postToEdit.event_id || '');
+        }
+    }, [postToEdit]);
 
     const fetchMyEvents = async () => {
         try {
@@ -91,20 +97,30 @@ const CreatePostModal = ({ onClose, onSuccess }) => {
 
         try {
             setIsSubmitting(true);
-            const res = await communityService.createPost({
-                title,
-                content,
-                images,
-                event_id: selectedEventId || null
-            });
+            let res;
+            if (postToEdit) {
+                res = await communityService.updatePost(postToEdit.id, {
+                    title,
+                    content,
+                    images,
+                    event_id: selectedEventId || null
+                });
+            } else {
+                res = await communityService.createPost({
+                    title,
+                    content,
+                    images,
+                    event_id: selectedEventId || null
+                });
+            }
 
             if (res.success) {
-                toast.success(t('blog.create_post.success'));
+                toast.success(postToEdit ? 'Đã cập nhật bài viết!' : t('blog.create_post.success'));
                 onSuccess(res.data);
                 onClose();
             }
         } catch (error) {
-            toast.error(error.message || 'Lỗi khi đăng bài.');
+            toast.error(error.message || 'Lỗi khi xử lý bài viết.');
         } finally {
             setIsSubmitting(false);
         }
@@ -131,7 +147,7 @@ const CreatePostModal = ({ onClose, onSuccess }) => {
                 {/* Header */}
                 <div className="p-5 border-b border-gray-50 dark:border-white/5 flex items-center justify-between">
                     <h3 className="text-[13px] font-black text-gray-900 dark:text-white uppercase text-center flex-1 ml-9">
-                        {t('blog.create_post.title') || 'Tạo bài viết Blog'}
+                        {postToEdit ? (t('blog.post.edit') || 'Chỉnh sửa bài viết') : (t('blog.create_post.title') || 'Tạo bài viết Blog')}
                     </h3>
                     <button 
                         onClick={onClose}
@@ -264,8 +280,8 @@ const CreatePostModal = ({ onClose, onSuccess }) => {
                         >
                             {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : (
                                 <>
-                                    <Plus className="w-5 h-5" />
-                                    {t('blog.create_post.btn_post') || 'Đăng bài'}
+                                    {postToEdit ? <ImageIcon className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+                                    {postToEdit ? (t('blog.post.save') || 'Cập nhật') : (t('blog.create_post.btn_post') || 'Đăng bài')}
                                 </>
                             )}
                         </button>

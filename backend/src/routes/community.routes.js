@@ -9,6 +9,8 @@ router.get('/', communityController.getFeed);
 
 // 2. Các hành động cần Đăng nhập
 router.post('/posts', authenticate, communityController.createPost);
+router.put('/posts/:id', authenticate, communityController.updatePost);
+router.delete('/posts/:id', authenticate, communityController.deletePost);
 router.get('/my-events', authenticate, communityController.getMyBookedEvents);
 
 // --- Tương tác (Tận dụng logic Blog) ---

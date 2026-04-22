@@ -42,7 +42,9 @@ const UnifiedPostCard = ({
   isAuthenticated = false,
   currentUser = null,
   variant = 'standard', // 'standard' or 'discussion'
-  onStatusChange = null
+  onStatusChange = null,
+  onEdit = null,
+  onDelete = null
 }) => {
   const { t, i18n } = useTranslation();
   const [showComments, setShowComments] = useState(false);
@@ -355,7 +357,7 @@ const UnifiedPostCard = ({
                           </button>
                           <button 
                             onClick={() => {
-                              toast.success('Chế độ chỉnh sửa đang được phát triển');
+                              if (onEdit) onEdit(post);
                               setShowTopMenu(false);
                             }}
                             className="w-full flex items-center gap-2 px-3 py-2.5 text-[11px] font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-all text-left"
@@ -365,9 +367,7 @@ const UnifiedPostCard = ({
                           </button>
                           <button 
                             onClick={() => {
-                              if (window.confirm('Bạn có chắc chắn muốn xóa bài viết này?')) {
-                                toast.success('Đã xóa bài viết');
-                              }
+                              if (onDelete) onDelete(post.id);
                               setShowTopMenu(false);
                             }}
                             className="w-full flex items-center gap-2 px-3 py-2.5 text-[11px] font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all text-left"

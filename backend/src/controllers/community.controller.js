@@ -149,6 +149,61 @@ const communityController = {
             console.error('Create Post Error:', error);
             res.status(500).json({ success: false, message: 'Lỗi khi đăng bài.' });
         }
+    },
+
+    // 4. Cập nhật bài viết cộng đồng
+    updatePost: async (req, res) => {
+        try {
+            const { id } = req.params;
+            const userId = req.user.userId;
+            const { title, content, images, event_id } = req.body;
+
+            const post = await prisma.blog.findUnique({ where: { id } });
+            if (!post) return res.status(404).json({ success: false, message: 'Không tìm thấy bài viết.' });
+            if (post.author_id !== userId) return res.status(403).json({ success: false, message: 'Không có quyền chỉnh sửa bài viết này.' });
+
+            const updated = await prisma.blog.update({
+                where: { id },
+                data: {
+                    title: title || post.title,
+                    content: content || post.content,
+                    images: images || post.images,
+                    image_url: (images && images.length > 0) ? images[0] : post.image_url,
+                    event_id: event_id === undefined ? post.event_id : event_id
+                },
+                include: {
+                    author: { select: { full_name: true, avatar_url: true } },
+                    event: { select: { title: true } }
+                }
+            });
+
+            res.json({ success: true, message: 'Cập nhật bài viết thành công!', data: updated });
+        } catch (error) {
+            console.error('Update Post Error:', error);
+            res.status(500).json({ success: false, message: 'Lỗi khi cập nhật bài viết.' });
+        }
+    },
+
+    // 5. Xóa bài viết cộng đồng
+    deletePost: async (req, res) => {
+        try {
+            const { id } = req.params;
+            const userId = req.user.userId;
+
+            const post = await prisma.blog.findUnique({ where: { id } });
+            if (!post) return res.status(404).json({ success: false, message: 'Không tìm thấy bài viết.' });
+
+            // Quyền xóa: Tác giả hoặc Admin
+            if (post.author_id !== userId && req.user.role !== 'admin') {
+                return res.status(403).json({ success: false, message: 'Không có quyền xóa bài viết này.' });
+            }
+
+            await prisma.blog.delete({ where: { id } });
+            res.json({ success: true, message: 'Đã xóa bài viết thành công.' });
+        } catch (error) {
+            console.error('Delete Post Error:', error);
+            res.status(500).json({ success: false, message: 'Lỗi khi xóa bài viết.' });
+        }
     }
 };
 

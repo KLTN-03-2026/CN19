@@ -34,6 +34,7 @@ const Blog = () => {
     const { t, i18n } = useTranslation();
     const { isAuthenticated, user } = useAuthStore();
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [postToEdit, setPostToEdit] = useState(null);
     const [isNotifModalOpen, setIsNotifModalOpen] = useState(false);
     const [activeTab, setActiveTab] = useState('explorer');
 
@@ -167,10 +168,44 @@ const Blog = () => {
         }
     };
 
-    const handlePostCreated = (newPost) => {
-        setMergedFeed(prev => [{ ...newPost, type: 'community' }, ...prev]);
+    const handlePostSaved = (savedPost) => {
+        setMergedFeed(prev => {
+            const index = prev.findIndex(p => p.id === savedPost.id);
+            if (index !== -1) {
+                // Update existing post
+                const newFeed = [...prev];
+                newFeed[index] = { 
+                    ...prev[index], // Keep metadata like type
+                    ...savedPost 
+                };
+                return newFeed;
+            } else {
+                // Add new post
+                return [{ ...savedPost, type: 'community' }, ...prev];
+            }
+        });
         refetchUserStats();
         setIsCreateModalOpen(false);
+        setPostToEdit(null);
+    };
+
+    const handleEditPost = (post) => {
+        setPostToEdit(post);
+        setIsCreateModalOpen(true);
+    };
+
+    const handleDeletePost = async (postId) => {
+        if (!window.confirm(t('blog.post.confirm_delete') || 'Bạn có chắc chắn muốn xóa bài viết này?')) return;
+        try {
+            const res = await communityService.deletePost(postId);
+            if (res.success) {
+                toast.success(res.message || 'Đã xóa bài viết thành công!');
+                setMergedFeed(prev => prev.filter(p => p.id !== postId));
+                refetchUserStats();
+            }
+        } catch (error) {
+            toast.error(error.message || t('common.error'));
+        }
     };
 
     const handleLike = async (postId) => {
@@ -450,6 +485,8 @@ const Blog = () => {
                                                 onLike={() => handleLike(post.id)}
                                                 onComment={(content, imageUrl, parentId) => handleComment(post.id, content, imageUrl, parentId)}
                                                 onStatusChange={() => handleToggleHide(post.id)}
+                                                onEdit={handleEditPost}
+                                                onDelete={handleDeletePost}
                                                 variant={activeTab === 'discussion' ? 'discussion' : 'standard'}
                                             />
                                         ))}
@@ -556,8 +593,12 @@ const Blog = () => {
             {/* Modals */}
             {isCreateModalOpen && (
                 <CreatePostModal 
-                    onClose={() => setIsCreateModalOpen(false)}
-                    onSuccess={handlePostCreated}
+                    onClose={() => {
+                        setIsCreateModalOpen(false);
+                        setPostToEdit(null);
+                    }}
+                    onSuccess={handlePostSaved}
+                    postToEdit={postToEdit}
                 />
             )}
             <NotificationsModal 

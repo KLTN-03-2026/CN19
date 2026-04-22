@@ -31,6 +31,26 @@ export const communityService = {
     }
   },
 
+  // Cập nhật bài viết
+  updatePost: async (postId, postData) => {
+    try {
+      const response = await api.put(`/community/posts/${postId}`, postData);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Xóa bài viết
+  deletePost: async (postId) => {
+    try {
+      const response = await api.delete(`/community/posts/${postId}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
   // Thích bài viết
   toggleLike: async (blogId) => {
     try {
