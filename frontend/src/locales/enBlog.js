@@ -2,6 +2,7 @@ import enSupport from './enSupport';
 import enMyEvent from './enMyEvent';
 import enMarketplace from './enMarketplace';
 import enEvent from './enEvent';
+import enMerchandise from './enMerchandise';
 
 const enBlog = {
   nav: {
@@ -488,7 +489,8 @@ const enBlog = {
   },
   myTickets: enMyEvent,
   marketplace: enMarketplace,
-  event: enEvent
+  event: enEvent,
+  merchandise: enMerchandise
 };
 
 export default enBlog;

@@ -22,29 +22,27 @@ const RevenueController = {
                 }
             });
 
-            if (!user || !user.organizer_profile) {
-                return res.status(404).json({ error: 'Không tìm thấy thông tin Ban tổ chức.' });
-            }
-
             const organizer = user.organizer_profile;
+            let pendingRevenue = 0;
 
-            // Tính toán doanh thu đang chờ xử lý (Pending)
-            // Là các Order đã thanh toán (paid) nhưng chưa được đối soát (is_settled = false)
-            const pendingOrders = await prisma.order.findMany({
-                where: {
-                    event: { organizer_id: organizer.id },
-                    status: 'paid',
-                    is_settled: false
-                },
-                select: {
-                    total_amount: true,
-                    platform_fee: true
-                }
-            });
+            if (organizer) {
+                // Tính toán doanh thu đang chờ xử lý (Pending) cho BTC
+                const pendingOrders = await prisma.order.findMany({
+                    where: {
+                        event: { organizer_id: organizer.id },
+                        status: 'paid',
+                        is_settled: false
+                    },
+                    select: {
+                        total_amount: true,
+                        platform_fee: true
+                    }
+                });
 
-            const pendingRevenue = pendingOrders.reduce((sum, order) => {
-                return sum + (Number(order.total_amount) - Number(order.platform_fee));
-            }, 0);
+                pendingRevenue = pendingOrders.reduce((sum, order) => {
+                    return sum + (Number(order.total_amount) - Number(order.platform_fee));
+                }, 0);
+            }
 
             // Tính tổng tiền đã rút thành công
             const withdrawnTransactions = await prisma.walletTransaction.aggregate({

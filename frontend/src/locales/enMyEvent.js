@@ -41,7 +41,8 @@ const enMyEvent = {
     location: "Location / Area",
     general_area: "General Area",
     ticket_no: "Ticket No.",
-    nft_price: "NFT Price"
+    nft_price: "NFT Price",
+    nft_id: "NFT ID"
   },
   buttons: {
     write_blog: "Write blog",

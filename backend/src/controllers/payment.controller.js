@@ -725,17 +725,14 @@ async function processMktOrderSuccess(orderNumber, transactionId, method, payloa
                 }
             });
 
-            // D. Chuyển quyền sở hữu Sản phẩm đi kèm
-            const { merchandise_item_ids } = mktTx.listing.metadata || {};
-            if (merchandise_item_ids && Array.isArray(merchandise_item_ids) && merchandise_item_ids.length > 0) {
-                await tx.merchandiseOrderItem.updateMany({
-                    where: {
-                        id: { in: merchandise_item_ids },
-                        order_id: ticket.order_id
-                    },
-                    data: { owner_id: mktTx.buyer_id }
-                });
-            }
+            // D. Chuyển quyền sở hữu Sản phẩm đi kèm (Sử dụng liên kết cứng listing_id)
+            await tx.merchandiseOrderItem.updateMany({
+                where: { listing_id: mktTx.listing_id },
+                data: { 
+                    owner_id: mktTx.buyer_id,
+                    listing_id: null // Giải phóng khỏi listing sau khi đã bán xong
+                }
+            });
 
             // E. Lưu bản ghi Payment
             await tx.payment.create({

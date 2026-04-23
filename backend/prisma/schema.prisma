@@ -280,6 +280,7 @@ model MarketplaceListing {
   event                Event                    @relation(fields: [event_id], references: [id])
   seller               User                     @relation(fields: [seller_id], references: [id])
   ticket               Ticket                   @relation(fields: [ticket_id], references: [id])
+  merchandise_items    MerchandiseOrderItem[]   @relation("ListingMerchandise")
   transactions         MarketplaceTransaction[]
 }
 
@@ -442,10 +443,13 @@ model MerchandiseOrderItem {
   subtotal       Decimal
   owner_id       String?     // Chủ sở hữu hiện tại của vật phẩm
   is_redeemed    Boolean     @default(false) // Trạng thái đã nhận hàng
+  listing_id     String?     // Nếu vật phẩm đang được đăng bán kèm vé
+  pickup_code    String?     @unique // Mã nhận hàng duy nhất
   
   merchandise    Merchandise @relation(fields: [merchandise_id], references: [id])
   order          Order       @relation(fields: [order_id], references: [id])
   owner          User?       @relation("ProductOwner", fields: [owner_id], references: [id])
+  listing        MarketplaceListing? @relation("ListingMerchandise", fields: [listing_id], references: [id])
 }
 
 model Blog {

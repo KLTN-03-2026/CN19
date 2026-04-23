@@ -2,6 +2,7 @@ import viSupport from './viSupport';
 import vnMyEvent from './vnMyEvent';
 import vnMarketplace from './vnMarketplace';
 import vnEvent from './vnEvent';
+import vnMerchandise from './vnMerchandise';
 
 const vnBlog = {
   nav: {
@@ -489,7 +490,8 @@ const vnBlog = {
   },
   myTickets: vnMyEvent,
   marketplace: vnMarketplace,
-  event: vnEvent
+  event: vnEvent,
+  merchandise: vnMerchandise
 };
 
 export default vnBlog;

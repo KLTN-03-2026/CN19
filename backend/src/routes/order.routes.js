@@ -5,6 +5,9 @@ const { authenticate } = require('../middlewares/auth.middleware');
 
 router.use(authenticate);
 
+// [GET] /api/orders/my-merchandise
+router.get('/my-merchandise', orderController.getMyMerchandise);
+
 // [POST] /api/orders
 router.post('/', orderController.createPrimaryOrder);
 

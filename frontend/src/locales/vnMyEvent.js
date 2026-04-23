@@ -41,7 +41,8 @@ const vnMyEvent = {
     location: "Vị trí / Area",
     general_area: "Khu vực chung",
     ticket_no: "Số vé",
-    nft_price: "Giá NFT"
+    nft_price: "Giá NFT",
+    nft_id: "NFT ID"
   },
   buttons: {
     write_blog: "Viết blog",

@@ -5,6 +5,12 @@ const merchandiseService = {
     getEventMerchandise: async (eventId) => {
         const response = await api.get(`/events/${eventId}/merchandise`);
         return response.data;
+    },
+
+    // Lấy danh sách sản phẩm đã mua của tôi
+    getMyMerchandise: async () => {
+        const response = await api.get('/orders/my-merchandise');
+        return response.data;
     }
 };
 

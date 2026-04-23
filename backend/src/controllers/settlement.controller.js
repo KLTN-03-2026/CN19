@@ -58,6 +58,19 @@ const SettlementController = {
         const totalRevenue = unsettledOrders.reduce((sum, order) => sum + Number(order.total_amount), 0);
         const totalFees = unsettledOrders.reduce((sum, order) => sum + Number(order.platform_fee), 0);
 
+        // -- Marketplace Revenue for this event --
+        const unsettledMarketplace = await prisma.marketplaceTransaction.findMany({
+          where: {
+            ticket: { event_id: event.id },
+            status: 'paid', // Or 'completed'
+            is_settled: false
+          }
+        });
+
+        const pendingMarketplaceRevenue = unsettledMarketplace.reduce((sum, tx) => {
+          return sum + Number(tx.organizer_royalty || 0);
+        }, 0);
+
         // Tìm yêu cầu quyết toán gần nhất
         const latestPayout = event.payouts.length > 0 ? event.payouts[0] : null;
 
@@ -65,11 +78,12 @@ const SettlementController = {
           ...event,
           financials: {
             pending_orders_count: unsettledOrders.length,
-            pending_revenue: pendingRevenue,
+            pending_marketplace_count: unsettledMarketplace.length,
+            pending_revenue: pendingRevenue + pendingMarketplaceRevenue,
             total_revenue: totalRevenue,
             total_fees: totalFees
           },
-          settlement_status: latestPayout ? latestPayout.status : (unsettledOrders.length > 0 ? 'eligible' : 'no_data')
+          settlement_status: latestPayout ? latestPayout.status : ((unsettledOrders.length > 0 || unsettledMarketplace.length > 0) ? 'eligible' : 'no_data')
         };
       }));
 
@@ -87,6 +101,7 @@ const SettlementController = {
     try {
       const { eventId } = req.body;
       const userId = req.user.userId;
+      const user = await prisma.user.findUnique({ where: { id: userId } });
       const organizer = await prisma.organizer.findUnique({ where: { user_id: userId } });
 
       const event = await prisma.event.findUnique({
@@ -113,7 +128,14 @@ const SettlementController = {
 
       const totalRevenue = unsettledOrders.reduce((sum, o) => sum + Number(o.total_amount), 0);
       const platformFee = unsettledOrders.reduce((sum, o) => sum + Number(o.platform_fee), 0);
-      const netPayout = totalRevenue - platformFee;
+      
+      // -- Add Marketplace Royalties --
+      const unsettledMarketplace = await prisma.marketplaceTransaction.findMany({
+        where: { ticket: { event_id: eventId }, status: 'paid', is_settled: false }
+      });
+      const marketplaceRoyalties = unsettledMarketplace.reduce((sum, tx) => sum + Number(tx.organizer_royalty || 0), 0);
+
+      const netPayout = (totalRevenue - platformFee) + marketplaceRoyalties;
 
       // Tạo yêu cầu
       const payoutRequest = await prisma.escrowPayout.create({
@@ -125,9 +147,9 @@ const SettlementController = {
           status: 'pending',
           requested_at: new Date(),
           bank_info: {
-            bank_name: organizer.bank_name,
-            account_number: organizer.account_number,
-            account_holder: organizer.account_holder
+            bank_name: user.bank_name || organizer.bank_name,
+            account_number: user.account_number || organizer.account_number,
+            account_holder: user.account_holder || organizer.account_holder
           }
         }
       });
@@ -177,7 +199,13 @@ const SettlementController = {
 
       const payout = await prisma.escrowPayout.findUnique({
         where: { id },
-        include: { event: true }
+        include: { 
+          event: { 
+            include: { 
+              organizer: true 
+            } 
+          } 
+        }
       });
 
       if (!payout || payout.status === 'settled') {
@@ -215,16 +243,16 @@ const SettlementController = {
             }
           });
 
-          // 2. Cộng tiền vào balance Organizer
-          await tx.organizer.update({
-            where: { id: payout.event.organizer_id },
+          // 2. Cộng tiền vào balance Organizer (User)
+          await tx.user.update({
+            where: { id: payout.event.organizer.user_id },
             data: { balance: { increment: payout.net_payout } }
           });
 
-          // 3. Tạo WalletTransaction
+          // 3. Tạo WalletTransaction cho Organizer
           await tx.walletTransaction.create({
             data: {
-              organizer_id: payout.event.organizer_id,
+              user_id: payout.event.organizer.user_id,
               amount: payout.net_payout,
               type: 'REVENUE',
               description: `Quyết toán thủ công sự kiện: ${payout.event.title}`,
@@ -237,6 +265,36 @@ const SettlementController = {
             where: { event_id: payout.event_id, status: 'paid', is_settled: false },
             data: { is_settled: true }
           });
+
+          // 5. CẬP NHẬT MARKETPLACE PAYOUTS (Người bán hưởng tiền sau khi sự kiện kết thúc)
+          const unsettledMkt = await tx.marketplaceTransaction.findMany({
+            where: { ticket: { event_id: payout.event_id }, status: 'paid', is_settled: false }
+          });
+
+          for (const mktTx of unsettledMkt) {
+            // Cộng tiền cho người bán (Seller)
+            await tx.user.update({
+              where: { id: mktTx.seller_id },
+              data: { balance: { increment: mktTx.seller_receive_amount } }
+            });
+
+            // Ghi log giao dịch ví cho người bán
+            await tx.walletTransaction.create({
+              data: {
+                user_id: mktTx.seller_id,
+                amount: mktTx.seller_receive_amount,
+                type: 'REVENUE',
+                description: `Tiền bán vé Marketplace: ${payout.event.title}`,
+                status: 'completed'
+              }
+            });
+
+            // Đánh dấu Transaction đã quyết toán
+            await tx.marketplaceTransaction.update({
+              where: { id: mktTx.id },
+              data: { is_settled: true }
+            });
+          }
         });
 
         return res.status(200).json({ message: 'Quyết toán thành công. Tiền đã được cộng vào ví BTC.' });

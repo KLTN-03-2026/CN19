@@ -53,7 +53,9 @@ const createListing = async (req, res) => {
       const items = await prisma.merchandiseOrderItem.findMany({
         where: {
           id: { in: merchandise_item_ids },
-          order_id: ticket.order_id,
+          order_id: ticket.order_id, // Ràng buộc: Cùng đơn hàng với vé
+          listing_id: null,          // Ràng buộc: Chưa đăng bán ở bài đăng khác
+          is_redeemed: false,        // Ràng buộc: Chưa nhận hàng
           OR: [
             { owner_id: userId },
             { 
@@ -66,7 +68,9 @@ const createListing = async (req, res) => {
       });
 
       if (items.length !== merchandise_item_ids.length) {
-        return res.status(400).json({ error: 'Một số sản phẩm không hợp lệ hoặc không thuộc quyền sở hữu của bạn.' });
+        return res.status(400).json({ 
+          error: 'Một số sản phẩm không hợp lệ, đã được đăng bán ở bài khác hoặc không thuộc đơn hàng của vé này.' 
+        });
       }
 
       items.forEach(item => {
@@ -85,7 +89,7 @@ const createListing = async (req, res) => {
 
     await prisma.$transaction(async (tx) => {
       // Đăng Listing
-      await tx.marketplaceListing.create({
+      const newListing = await tx.marketplaceListing.create({
         data: {
           ticket_id: ticket.id,
           seller_id: userId,
@@ -93,7 +97,6 @@ const createListing = async (req, res) => {
           listing_number: 'LST-' + Date.now(),
           asking_price: totalAskingPrice,
           status: 'active',
-          // Lưu lại % bản quyền tại thời điểm đăng bán
           platform_fee_percent: ticket.event.royalty_fee_percent || 3.0,
           metadata: {
             ticket_price: ticketAskingPrice,
@@ -103,6 +106,14 @@ const createListing = async (req, res) => {
           }
         }
       });
+
+      // [New] Liên kết chính thức các sản phẩm với Listing này
+      if (merchandise_item_ids && merchandise_item_ids.length > 0) {
+        await tx.merchandiseOrderItem.updateMany({
+          where: { id: { in: merchandise_item_ids } },
+          data: { listing_id: newListing.id }
+        });
+      }
 
       // Khóa tính năng vé
       await tx.ticket.update({
@@ -154,6 +165,12 @@ const deleteListing = async (req, res) => {
       await tx.marketplaceListing.update({
         where: { id: listing.id },
         data: { status: 'cancelled' }
+      });
+
+      // [New] Giải phóng sản phẩm đi kèm
+      await tx.merchandiseOrderItem.updateMany({
+        where: { listing_id: listing.id },
+        data: { listing_id: null }
       });
 
       await tx.ticket.update({

@@ -5,6 +5,14 @@ const botService = require('../services/bot.service');
 const utilsController = require('./utils.controller');
 
 // logic previously here moved to bot.service.js
+const generatePickupCode = () => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let code = '';
+  for (let i = 0; i < 8; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return `BT-${code}`;
+};
 
 // [UC_08] Tạo đơn hàng Mua vé (Primary Market)
 const createPrimaryOrder = async (req, res) => {
@@ -438,7 +446,8 @@ const updatePendingOrder = async (req, res) => {
             merchandise_id: m.id,
             quantity: item.quantity,
             unit_price: m.price,
-            subtotal: lineTotal
+            subtotal: lineTotal,
+            pickup_code: generatePickupCode() // Sinh mã nhận hàng duy nhất
           });
         }
       }
@@ -591,10 +600,186 @@ const createTransferOrder = async (req, res) => {
   }
 };
 
+// [UC_xx] Lấy danh sách vật phẩm của tôi (Phân loại: Đã mua, Đang bán, Đã bán)
+const getMyMerchandise = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    // 1. Lấy tất cả vật phẩm hiện đang sở hữu
+    const items = await prisma.merchandiseOrderItem.findMany({
+      where: {
+        OR: [
+          { owner_id: userId },
+          { 
+            owner_id: null,
+            order: { 
+              customer_id: userId,
+              status: { in: ['paid', 'success', 'completed'] }
+            }
+          }
+        ]
+      },
+      select: {
+        id: true,
+        quantity: true,
+        unit_price: true,
+        subtotal: true,
+        is_redeemed: true,
+        pickup_code: true,
+        order_id: true,
+        merchandise: {
+          select: {
+            id: true,
+            name: true,
+            image_url: true,
+            event: { select: { title: true } }
+          }
+        },
+        order: { 
+          select: { 
+            status: true,
+            event: { select: { title: true } }
+          } 
+        }
+      },
+      orderBy: { order: { created_at: 'desc' } }
+    });
+
+    // 2. Lấy danh sách bài đăng đang hoạt động
+    const activeListings = await prisma.marketplaceListing.findMany({
+      where: { seller_id: userId, status: 'active' },
+      select: { 
+        id: true, 
+        metadata: true,
+        asking_price: true,
+        listing_number: true,
+        ticket: {
+          select: {
+            id: true,
+            nft_token_id: true,
+            ticket_tier: { select: { tier_name: true } },
+            event: { select: { title: true, image_url: true, location_address: true, resale_gas_fee: true, resale_platform_fee_percent: true } }
+          }
+        }
+      }
+    });
+
+    // 3. Lấy danh sách giao dịch đã bán thành công
+    const soldTransactions = await prisma.marketplaceTransaction.findMany({
+      where: { 
+        seller_id: userId, 
+        status: { in: ['paid', 'success', 'completed'] } 
+      },
+      select: {
+        id: true,
+        created_at: true,
+        buyer: { select: { id: true, full_name: true, email: true, avatar_url: true } },
+        listing: { select: { metadata: true } }
+      }
+    });
+
+    // 4. Chuẩn hóa sản phẩm sở hữu
+    const formattedOwned = items.map(item => {
+      let status = item.is_redeemed ? 'received' : 'pending';
+      if (item.order?.status === 'cancelled') status = 'cancelled';
+      
+      const listing = activeListings.find(l => {
+        const mIds = l.metadata?.merchandise_item_ids || [];
+        return Array.isArray(mIds) && mIds.includes(item.id);
+      });
+      if (listing) status = 'listing';
+
+      return { 
+        ...item, 
+        status,
+        listing_info: listing ? {
+            ...listing,
+            asking_price: Number(listing.asking_price),
+            order_number: item.order?.order_number,
+            event_title: item.order?.event?.title,
+            ticket: listing.ticket ? {
+                ...listing.ticket,
+                event: listing.ticket.event ? {
+                    ...listing.ticket.event,
+                    resale_gas_fee: Number(listing.ticket.event.resale_gas_fee || 10000),
+                    resale_platform_fee_percent: Number(listing.ticket.event.resale_platform_fee_percent || 3.0)
+                } : null
+            } : null
+        } : null,
+        unit_price: Number(item.unit_price),
+        subtotal: Number(item.subtotal),
+        event_title: item.merchandise?.event?.title || item.order?.event?.title || 'Sự kiện hệ thống'
+      };
+    });
+
+    // 5. Chuẩn hóa sản phẩm đã bán
+    const formattedSold = [];
+    const soldItemIds = [];
+    const transactionMap = {};
+
+    soldTransactions.forEach(tx => {
+      const mIds = tx.listing?.metadata?.merchandise_item_ids;
+      if (Array.isArray(mIds)) {
+        mIds.forEach(id => {
+          soldItemIds.push(id);
+          transactionMap[id] = tx;
+        });
+      }
+    });
+
+    if (soldItemIds.length > 0) {
+      const soldItems = await prisma.merchandiseOrderItem.findMany({
+        where: { id: { in: soldItemIds } },
+        select: {
+          id: true,
+          quantity: true,
+          unit_price: true,
+          subtotal: true,
+          merchandise: {
+            select: {
+              id: true,
+              name: true,
+              image_url: true,
+              event: { select: { title: true } }
+            }
+          },
+          order: { 
+            select: { 
+              status: true,
+              id: true,
+              event: { select: { title: true } }
+            } 
+          }
+        }
+      });
+
+      soldItems.forEach(item => {
+        const tx = transactionMap[item.id];
+        formattedSold.push({
+          ...item,
+          status: 'sold',
+          unit_price: Number(item.unit_price),
+          subtotal: Number(item.subtotal),
+          sold_at: tx.created_at,
+          transaction_id: tx.id,
+          buyer: tx.buyer,
+          event_title: item.merchandise?.event?.title || item.order?.event?.title || 'Sự kiện hệ thống'
+        });
+      });
+    }
+
+    res.status(200).json({ data: [...formattedOwned, ...formattedSold] });
+  } catch (error) {
+    console.error('getMyMerchandise error:', error);
+    res.status(500).json({ error: 'Lỗi server khi lấy danh sách sản phẩm.' });
+  }
+};
+
 module.exports = {
   createPrimaryOrder,
   createMarketplaceOrder,
   getOrderById,
   updatePendingOrder,
-  createTransferOrder
+  createTransferOrder,
+  getMyMerchandise
 };

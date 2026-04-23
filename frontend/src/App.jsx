@@ -11,6 +11,7 @@ import BlogDetail from './pages/Public/Blog/BlogDetail';
 import OrganizerPublicProfile from './pages/Public/Organizer/OrganizerPublicProfile';
 import Profile from './pages/Customer/Profile/Profile';
 import MyTickets from './pages/Customer/MyTickets';
+import MyProducts from './pages/Customer/MyProducts';
 import MyTransactions from './pages/Customer/MyTransactions';
 import CustomerOrderDetail from './pages/Customer/CustomerOrderDetail';
 import ResaleTicket from './pages/Customer/ResaleTicket';
@@ -129,6 +130,14 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute>
             <MyTickets />
+          </ProtectedRoute>
+        ) 
+      },
+       { 
+        path: 'my-merchandise', 
+        element: (
+          <ProtectedRoute>
+            <MyProducts />
           </ProtectedRoute>
         ) 
       },
