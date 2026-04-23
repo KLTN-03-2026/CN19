@@ -10,15 +10,19 @@ import {
   Mail, 
   Phone, 
   Globe, 
-  Sparkles, 
   ChevronRight, 
   MessageSquare, 
-  History 
+  History,
+  Loader2
 } from 'lucide-react';
 import { organizerService } from '../../../services/organizer.service';
 import blogService from '../../../services/blog.service';
+import { communityService } from '../../../services/community.service';
+import UnifiedPostCard from '../../../components/blog/UnifiedPostCard';
+import { useAuthStore } from '../../../store/useAuthStore';
 import { format } from 'date-fns';
 import { vi, enUS } from 'date-fns/locale';
+import toast from 'react-hot-toast';
 
 const OrganizerPublicProfile = () => {
   const { id } = useParams();
@@ -34,15 +38,78 @@ const OrganizerPublicProfile = () => {
 
   const organizer = profile?.data;
 
-  const { data: allBlogs, isLoading: isBlogsLoading } = useQuery({
-    queryKey: ['public-blogs'],
-    queryFn: () => blogService.getPublicBlogs(),
+  const { isAuthenticated, user: currentUser } = useAuthStore();
+  const [localBlogs, setLocalBlogs] = useState([]);
+
+  const { data: blogsData, isLoading: isBlogsLoading } = useQuery({
+    queryKey: ['organizer-blogs', organizer?.user_id],
+    queryFn: () => blogService.getPublicBlogs({ authorId: organizer.user_id, limit: 20 }),
+    enabled: !!organizer?.user_id,
+    onSuccess: (res) => {
+      setLocalBlogs(res.data || []);
+    }
   });
 
-  const organizerBlogs = useMemo(() => {
-    if (!allBlogs?.data || !organizer?.user_id) return [];
-    return allBlogs.data.filter(b => b.author_id === organizer.user_id);
-  }, [allBlogs?.data, organizer?.user_id]);
+  // Sync blogsData to local state when query completes
+  React.useEffect(() => {
+    if (blogsData?.data) {
+      setLocalBlogs(blogsData.data);
+    }
+  }, [blogsData]);
+
+  const handleLike = async (postId) => {
+    if (!isAuthenticated) return toast.error('Vui lòng đăng nhập để tương tác.');
+    
+    // Optimistic update
+    setLocalBlogs(prev => prev.map(post => {
+      if (post.id === postId) {
+        const wasLiked = post.is_liked;
+        return {
+          ...post,
+          is_liked: !wasLiked,
+          _count: {
+            ...post._count,
+            likes: Math.max(0, (post._count?.likes || 0) + (wasLiked ? -1 : 1))
+          }
+        };
+      }
+      return post;
+    }));
+
+    try { 
+      await blogService.toggleLike(postId); 
+    } catch (e) { 
+      // Revert if error (simplified for brevity, similar to Blog.jsx)
+      toast.error('Lỗi khi thực hiện thích bài viết.');
+    }
+  };
+
+  const handleComment = async (postId, content, image_url, parentId = null) => {
+    if (!isAuthenticated) return toast.error('Vui lòng đăng nhập để bình luận.');
+    if (!content?.trim() && !image_url) return;
+    
+    try {
+      const res = await communityService.addComment(postId, content, image_url, parentId);
+      if (res.data && !parentId) {
+        // Update comment count locally
+        setLocalBlogs(prev => prev.map(post => {
+          if (post.id === postId) {
+            return {
+              ...post,
+              _count: {
+                ...post._count,
+                comments: (post._count?.comments || 0) + 1
+              }
+            };
+          }
+          return post;
+        }));
+      }
+      return res.data;
+    } catch (e) { 
+      toast.error('Lỗi khi gửi bình luận.'); 
+    }
+  };
 
   const formattedJoinDate = useMemo(() => {
     if (!organizer?.user?.created_at) return '---';
@@ -259,13 +326,26 @@ const OrganizerPublicProfile = () => {
                 )}
 
                 {activeTab === 'blog' && (
-                  <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    {organizerBlogs.length > 0 ? (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                        {organizerBlogs.map(blog => (
-                          <BlogCard key={blog.id} blog={blog} t={t} />
+                  <div className="animate-in px-20 fade-in slide-in-from-bottom-4 duration-500 space-y-4">
+                    {isBlogsLoading ? (
+                      <div className="space-y-4">
+                        {[1,2,3].map(i => (
+                          <div key={i} className="h-52 bg-gray-100 dark:bg-white/5 rounded-2xl animate-pulse" />
                         ))}
                       </div>
+                    ) : localBlogs.length > 0 ? (
+                      localBlogs.map(post => (
+                        <UnifiedPostCard
+                          key={post.id}
+                          post={{ ...post, type: post.type === 'SYSTEM_NEWS' ? 'official' : 'community' }}
+                          isOfficial={post.type === 'SYSTEM_NEWS'}
+                          isAuthenticated={isAuthenticated}
+                          currentUser={currentUser}
+                          onLike={() => handleLike(post.id)}
+                          onComment={(content, imageUrl, parentId) => handleComment(post.id, content, imageUrl, parentId)}
+                          variant="standard"
+                        />
+                      ))
                     ) : (
                       <div className="py-20 text-center px-4 bg-gray-50/50 dark:bg-white/[0.01] rounded-3xl border border-dashed border-gray-100 dark:border-white/5">
                         <MessageSquare className="w-12 h-12 text-gray-200 dark:text-white/10 mx-auto mb-4" />
@@ -273,7 +353,7 @@ const OrganizerPublicProfile = () => {
                            {t('publicOrganizer.noContentTitle', 'No Posts Yet')}
                         </h4>
                         <p className="text-xs text-gray-500 max-w-sm mx-auto leading-relaxed">
-                          {t('publicOrganizer.noBlogContent', 'This organizer has not posted any blogs or community updates yet. Check back soon for future announcements!')}
+                          {t('publicOrganizer.noBlogContent', 'This organizer has not posted any blogs yet. Check back soon!')}
                         </p>
                       </div>
                     )}
@@ -329,44 +409,7 @@ const EventCard = ({ event, t, isPast = false }) => (
   </Link>
 );
 
-const BlogCard = ({ blog, t }) => (
-  <Link 
-    to={`/blog/${blog.slug}`}
-    className="group flex flex-col bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 overflow-hidden shadow-sm hover:shadow-md transition-all h-full"
-  >
-    <div className="h-48 overflow-hidden relative">
-      <img 
-        src={blog.image_url || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30'} 
-        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-        alt={blog.title}
-      />
-      {/* <div className="absolute top-4 left-4">
-        <span className="px-2 py-0.5 bg-black/60 text-white text-[9px] font-black rounded backdrop-blur-sm border border-white/20">
-          {blog.category || 'Announcement'}
-        </span>
-      </div> */}
-    </div>
-    <div className="p-5 flex-1 flex flex-col">
-      <div className="flex items-center gap-2 mb-3">
-        <span className="text-[10px] text-gray-400 font-bold uppercase">
-          {blog.created_at ? format(new Date(blog.created_at), 'dd MMM yyyy') : '---'}
-        </span>
-      </div>
-      <h3 className="text-sm font-black text-gray-900 dark:text-white mb-3 line-clamp-2 uppercase leading-tight group-hover:text-neon-green transition-colors">
-        {blog.title}
-      </h3>
-      <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-3 mb-6 leading-relaxed">
-        {blog.excerpt || (blog.content && blog.content.substring(0, 120) + '...')}
-      </p>
-      <div className="mt-auto flex items-center justify-between pt-4 border-t border-gray-100 dark:border-white/10">
-        <span className="text-[12px] font-bold dark:text-gray-400 group-hover:text-neon-green transition-colors text-black">
-          {t('publicOrganizer.viewPost', 'Read More')}
-        </span>
-        <ChevronRight className="w-4 h-4 text-neon-green group-hover:translate-x-1 transition-transform" />
-      </div>
-    </div>
-  </Link>
-);
+
 
 const EmptyState = ({ icon: Icon, message }) => (
   <div className="col-span-full py-20 text-center bg-gray-50/50 dark:bg-white/[0.01] border-2 border-dashed border-gray-100 dark:border-white/5 rounded-3xl">
