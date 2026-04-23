@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { 
     ArrowLeft, 
     Tag, 
-    DollarSign, 
+    Coins, 
     Shield, 
     AlertCircle, 
     Loader2, 
@@ -25,6 +25,10 @@ const ResaleTicket = () => {
     const [loading, setLoading] = useState(true);
     const [resalePrice, setResalePrice] = useState('');
     const [isListing, setIsListing] = useState(false);
+    const [selectedMerchandise, setSelectedMerchandise] = useState([]);
+    const [isEditing, setIsEditing] = useState(false);
+    const [activeListingId, setActiveListingId] = useState(null);
+    const [isCancelling, setIsCancelling] = useState(false);
 
     useEffect(() => {
         fetchTicketDetail();
@@ -34,8 +38,21 @@ const ResaleTicket = () => {
         try {
             setLoading(true);
             const res = await ticketService.getTicketById(id);
-            setTicket(res.data);
-            setResalePrice(res.data.ticket_tier.price); // Default to original price
+            const ticketData = res.data;
+            setTicket(ticketData);
+            
+            // Kiểm tra xem có bài đăng active không
+            const activeListing = ticketData.marketplace_listings?.find(l => l.status === 'active');
+            if (activeListing) {
+                setIsEditing(true);
+                setActiveListingId(activeListing.id);
+                // Lấy giá vé từ metadata nếu có, nếu không lấy asking_price (trừ đi merchandise nếu có)
+                const metadata = activeListing.metadata || {};
+                setResalePrice(metadata.ticket_price || activeListing.asking_price);
+                setSelectedMerchandise(metadata.merchandise_item_ids || []);
+            } else {
+                setResalePrice(ticketData.ticket_tier.price); // Default to original price
+            }
         } catch (error) {
             toast.error('Không thể tải thông tin vé.');
             navigate('/my-tickets');
@@ -44,29 +61,62 @@ const ResaleTicket = () => {
         }
     };
 
+    const toggleMerchandise = (itemId) => {
+        setSelectedMerchandise(prev => 
+            prev.includes(itemId) 
+                ? prev.filter(id => id !== itemId) 
+                : [...prev, itemId]
+        );
+    };
+
     const handleResaleConfirm = async () => {
         if (!resalePrice || resalePrice <= 0) {
             toast.error('Vui lòng nhập giá bán hợp lệ.');
             return;
         }
 
-        const originalPrice = ticket.ticket_tier.price;
-        const maxResalePrice = originalPrice * 1.08;
+        const originalPrice = Number(ticket.ticket_tier.price);
+        const limitPercent = Number(ticket.event.resale_price_limit_percent || 108.0);
+        const maxResalePrice = (originalPrice * limitPercent) / 100;
 
         if (resalePrice > maxResalePrice) {
-            toast.error(`Giá bán không được vượt quá 108% giá gốc: ${maxResalePrice.toLocaleString()} VND (Chống đầu cơ)`);
+            toast.error(`Giá bán không được vượt quá ${limitPercent}% giá gốc: ${maxResalePrice.toLocaleString()} VND`);
             return;
         }
 
         try {
             setIsListing(true);
-            const res = await marketplaceService.createListing(ticket.id, resalePrice);
-            toast.success(res.message || 'Đăng bán vé thành công!');
+            if (isEditing) {
+                // Cập nhật bài đăng hiện có
+                await marketplaceService.updateListing(activeListingId, Number(resalePrice), selectedMerchandise);
+                toast.success('Cập nhật bài đăng thành công!');
+            } else {
+                const res = await marketplaceService.createListing(ticket.id, resalePrice, selectedMerchandise);
+                toast.success(res.message || 'Đăng bán vé thành công!');
+            }
             navigate('/my-tickets');
         } catch (error) {
-            toast.error(error.response?.data?.error || 'Lỗi khi đăng bán vé.');
+            const errorMsg = error.response?.data?.details 
+                ? `${error.response.data.error}: ${error.response.data.details}`
+                : (error.response?.data?.error || 'Lỗi khi thực hiện thao tác.');
+            toast.error(errorMsg);
         } finally {
             setIsListing(false);
+        }
+    };
+
+    const handleCancelListing = async () => {
+        if (!window.confirm('Bạn có chắc chắn muốn hủy bài đăng này? Vé sẽ được mở khóa để sử dụng bình thường.')) return;
+        
+        try {
+            setIsCancelling(true);
+            await marketplaceService.deleteListing(activeListingId);
+            toast.success('Đã hủy bài đăng thành công.');
+            navigate('/my-tickets');
+        } catch (error) {
+            toast.error(error.response?.data?.error || 'Lỗi khi hủy bài đăng.');
+        } finally {
+            setIsCancelling(false);
         }
     };
 
@@ -80,209 +130,324 @@ const ResaleTicket = () => {
 
     if (!ticket) return null;
 
-    const royaltyFee = (resalePrice * 3) / 100; // Fixed 3%
-    const netProfit = resalePrice - royaltyFee;
-    const buyerPays = parseFloat(resalePrice) + (resalePrice * 0.03) + 10000; // Price + 3% + 10k
+    const event = ticket.event;
+    const profit = Math.max(0, resalePrice - ticket.ticket_tier.price);
+    
+    // Phí từ database
+    const royaltyPercent = Number(event.royalty_fee_percent || 3.0);
+    const platformPercent = Number(event.resale_platform_fee_percent || 3.0);
+    const gasFee = Number(event.resale_gas_fee || 10000);
+
+    const merchandiseTotal = ticket.order?.merchandise_items
+        ?.filter(item => selectedMerchandise.includes(item.id))
+        ?.reduce((acc, item) => acc + (Number(item.unit_price) * item.quantity), 0) || 0;
+
+    const royaltyFee = resalePrice > ticket.ticket_tier.price ? (ticket.ticket_tier.price * royaltyPercent) / 100 : 0; 
+    const systemFee = (resalePrice * platformPercent) / 100 + gasFee; 
+    
+    // Tổng số tiền người mua phải trả (Vé + Sản phẩm + Phí)
+    const buyerPays = parseFloat(resalePrice || 0) + merchandiseTotal + systemFee; 
+    
+    // Số tiền người bán thực nhận (Vé + Sản phẩm - Phí bản quyền)
+    const netProfit = parseFloat(resalePrice || 0) + merchandiseTotal - royaltyFee; 
+
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-dark-bg transition-colors duration-500 pt-24 pb-20 px-4 sm:px-8">
-            <div className="max-w-6xl mx-auto space-y-8">
+        <div className="min-h-screen bg-white dark:bg-[#080808] transition-colors duration-500 pt-10 pb-10 px-4 sm:px-8 relative overflow-hidden">
+            {/* Background elements - Enhanced Neon Glow */}
+            <div className="fixed inset-0 pointer-events-none -z-10">
+                <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-neon-green/10 blur-[130px] rounded-full animate-pulse duration-[4000ms]"></div>
+                <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-blue-500/5 blur-[120px] rounded-full"></div>
+                <div className="absolute inset-0 bg-grid-pattern opacity-[0.03]"></div>
+            </div>
+
+            <div className="max-w-5xl mx-auto space-y-4 relative z-10">
                 {/* Navigation & Header */}
-                <div className="flex flex-col gap-4">
+                <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-top-4 duration-700">
                     <Link 
                         to="/my-tickets" 
-                        className="inline-flex items-center gap-2 text-gray-500 hover:text-neon-green transition-colors text-xs font-black uppercase tracking-widest group"
+                        className="inline-flex items-center gap-2 text-gray-500 hover:text-neon-hover dark:hover:text-neon-green transition-colors text-[12px] font-black group"
                     >
-                        <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+                        <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-1 transition-transform" />
                         Quay lại kho vé
                     </Link>
-                    <div className="flex items-center justify-between">
-                        <h1 className="text-4xl sm:text-5xl font-black text-gray-900 dark:text-white uppercase tracking-tighter">Niêm yết vé lên Marketplace</h1>
-                        <div className="hidden sm:flex items-center gap-2 px-4 py-2 bg-neon-green/10 border border-neon-green/20 rounded-full">
-                            <Shield className="w-4 h-4 text-neon-green" />
-                            <span className="text-[10px] font-black text-neon-green uppercase tracking-widest">Xác thực bởi BASTICKET</span>
+                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-2">
+                        <div className="space-y-2">
+                            <h1 className="text-xl md:text-3xl font-black text-gray-900 dark:text-white uppercase leading-[1.1] tracking-tighter">
+                                {isEditing ? 'Chỉnh sửa' : 'Niêm yết'} lên <br/> <span className="text-neon-hover dark:text-neon-green">Marketplace</span>
+                            </h1>
+                        </div>
+                        <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-neon-green/10 border border-neon-green/20 rounded-xl">
+                            <Shield className="w-3.5 h-3.5 text-neon-green" />
+                            <span className="text-[10px] font-black text-neon-green uppercase tracking-tight">Xác thực Blockchain</span>
                         </div>
                     </div>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                     {/* Left Side: Ticket Preview */}
-                    <div className="lg:col-span-5 space-y-6">
-                        <div className="relative group overflow-hidden rounded-[2.5rem] bg-dark-card border border-white/5 shadow-2xl">
-                            <img 
-                                src={ticket.event.poster_url} 
-                                alt={ticket.event.title}
-                                className="w-full aspect-[3/4] object-cover opacity-80 group-hover:scale-105 transition-transform duration-700"
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-dark-bg via-transparent to-transparent opacity-90" />
-                            <div className="absolute bottom-0 left-0 right-0 p-8 space-y-4">
-                                <span className="inline-block px-3 py-1 bg-neon-green text-black text-[10px] font-black uppercase tracking-widest rounded-full">
-                                    {ticket.category_name}
-                                </span>
-                                <h3 className="text-3xl font-black text-white uppercase leading-none tracking-tighter">
-                                    {ticket.event.title}
-                                </h3>
-                                <div className="flex flex-col gap-2 text-gray-400">
-                                    <div className="flex items-center gap-2">
-                                        <Calendar className="w-3.5 h-3.5 text-neon-green" />
-                                        <span className="text-[11px] font-bold uppercase tracking-wide">
-                                            {new Date(ticket.event.start_date).toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                                        </span>
+                    <div className="lg:col-span-5 space-y-4 animate-in fade-in slide-in-from-left-6 duration-1000">
+                        <div className="bg-white dark:bg-[#0c0c0d] rounded-3xl border border-gray-200 dark:border-white/5 shadow-xl overflow-hidden group relative">
+                            <div className="relative aspect-[16/9] overflow-hidden">
+                                <img 
+                                    src={ticket.event.image_url} 
+                                    alt={ticket.event.title}
+                                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-white dark:from-[#0c0c0d] via-transparent to-transparent" />
+                                <div className="absolute top-4 left-4">
+                                    <span className="bg-neon-green text-black px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-tight shadow-[0_0_20px_rgba(57,255,20,0.4)]">
+                                        TÀI SẢN BÁN LẠI
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div className="p-6 pt-2 space-y-4">
+                                <div className="space-y-2">
+                                    <h3 className="text-2xl font-black text-gray-900 dark:text-white uppercase leading-tight tracking-tight group-hover:text-neon-hover dark:group-hover:text-neon-green transition-colors">
+                                        {ticket.event.title}
+                                    </h3>
+                                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-gray-600 dark:text-gray-400 text-[11px] font-bold">
+                                        <div className="flex items-center gap-1.5">
+                                            <Calendar className="w-3.5 h-3.5 text-neon-hover dark:text-neon-green" />
+                                            {new Date(ticket.event.event_date).toLocaleDateString('vi-VN', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' })}
+                                        </div>
+                                        <div className="flex items-center gap-1.5">
+                                            <MapPin className="w-3.5 h-3.5 text-blue-500" />
+                                            {ticket.event.location_address}
+                                        </div>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <MapPin className="w-3.5 h-3.5 text-neon-green" />
-                                        <span className="text-[11px] font-bold uppercase tracking-wide truncate">
-                                            {ticket.event.location}
-                                        </span>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 dark:bg-neon-green/[0.02] rounded-2xl border border-gray-100 dark:border-neon-green/10">
+                                    <div className="space-y-0.5">
+                                        <p className="text-[10px] font-black text-gray-500 dark:text-gray-400">Hạng vé / Vị trí</p>
+                                        <p className="text-sm font-black text-gray-900 dark:text-white uppercase truncate">
+                                            {ticket.ticket_tier.tier_name}
+                                        </p>
+                                        <p className="text-[10px] font-black text-neon-hover dark:text-neon-green uppercase truncate">
+                                            {ticket.ticket_tier.section_name || 'Standard Area'}
+                                        </p>
+                                    </div>
+                                    <div className="space-y-0.5 text-right">
+                                        <p className="text-[10px] font-black text-gray-500 dark:text-gray-400 ">Mã định danh NFT</p>
+                                        <p className="text-sm font-black text-gray-900 dark:text-white uppercase">#{ticket.nft_token_id || 'CHƯA ĐÚC'}</p>
+                                        <p className="text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase">Trạng thái: Hợp lệ</p>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Ticket ID Card */}
-                        <div className="p-8 bg-dark-card border border-white/5 rounded-[2rem] flex items-center justify-between shadow-xl">
-                            <div className="space-y-1">
-                                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">NFT Asset ID</p>
-                                <p className="text-xl font-black text-white tracking-tighter leading-none">#{ticket.nft_token_id || 'NOT_MINTED'}</p>
+                        {/* Summary Stats - More Compact */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="px-3 py-3 bg-white dark:bg-[#0c0c0d] border border-gray-200 dark:border-white/5 rounded-2xl space-y-1">
+                                <p className="text-[9px] font-black text-gray-500 dark:text-gray-400 uppercase">Giá mua gốc</p>
+                                <p className="text-lg font-black text-gray-900 dark:text-white tracking-tight">
+                                    {ticket.ticket_tier.price.toLocaleString('vi-VN')} <span className="text-[10px] text-neon-green">VND</span>
+                                </p>
                             </div>
-                            <div className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center border border-white/10">
-                                <TicketIcon className="w-6 h-6 text-neon-green" />
+                            <div className="p-4 bg-white dark:bg-[#0c0c0d] border border-gray-200 dark:border-white/5 rounded-2xl space-y-1">
+                                <p className="text-[9px] font-black text-gray-500 dark:text-gray-400 uppercase">Giá trần (+8%)</p>
+                                <p className="text-lg font-black text-red-500 tracking-tight">
+                                    {(ticket.ticket_tier.price * 1.08).toLocaleString()} <span className="text-[10px] text-red-500/50">VND</span>
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="p-3 bg-red-500/5 border border-red-500/10 rounded-2xl flex gap-4">
+                            <AlertCircle className="w-5 h-5 text-red-500 shrink-0" />
+                            <div className="space-y-1">
+                                <p className="text-[10px] font-black text-red-500 uppercase">Lưu ý quan trọng</p>
+                                <p className="text-[11px] text-gray-600 dark:text-gray-400 font-medium leading-relaxed">
+                                    Sau khi niêm yết, vé sẽ bị <b>tạm khóa QR Code</b> cho đến khi giao dịch hoàn tất hoặc bạn gỡ bài đăng.
+                                </p>
                             </div>
                         </div>
                     </div>
 
                     {/* Right Side: Resale Pricing Controls */}
-                    <div className="lg:col-span-7 space-y-8">
-                        {/* Summary Stats */}
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="p-6 bg-dark-card border border-white/5 rounded-3xl space-y-2">
-                                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Giá mua gốc</p>
-                                <p className="text-2xl font-black text-white tracking-tighter">
-                                    {ticket.ticket_tier.price.toLocaleString()} <span className="text-xs text-neon-green ml-1">VND</span>
-                                </p>
-                            </div>
-                            <div className="p-6 bg-dark-card border border-white/5 rounded-3xl space-y-2">
-                                <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Giá trần niêm yết (+8%)</p>
-                                <p className="text-2xl font-black text-red-500 tracking-tighter">
-                                    {(ticket.ticket_tier.price * 1.08).toLocaleString()} <span className="text-xs text-red-500/50 ml-1">VND</span>
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* Price Input Form */}
-                        <div className="p-10 bg-dark-card border border-white/10 rounded-[3rem] shadow-2xl space-y-10 relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
-                                <DollarSign className="w-32 h-32 text-neon-green" />
-                            </div>
+                    <div className="lg:col-span-7 space-y-2">
+                        <div className="bg-white dark:bg-[#0c0c0d] rounded-3xl border border-gray-200 dark:border-white/5 shadow-2xl p-8 md:p-10 space-y- relative overflow-hidden">
+                            <div className="absolute top-0 right-0 w-48 h-48 bg-neon-green/5 blur-[80px] -z-10"></div>
                             
-                            <div className="space-y-6 relative z-10">
+                            {/* Step 1: Price Input */}
+                            <div className="space-y-4 relative z-10">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <span className="w-6 h-6 rounded-md bg-neon-green text-black flex items-center justify-center font-black text-[10px] shadow-[0_0_10px_rgba(57,255,20,0.3)]">01</span>
+                                        <h3 className="text-xs font-black text-gray-900 dark:text-white uppercase">Cấu hình giá niêm yết</h3>
+                                    </div>
+                                    <span className="text-[10px] font-black text-neon-green border border-neon-green/20 px-2 py-0.5 rounded-lg">Giao thức Chống đầu cơ</span>
+                                </div>
+                                
+                                <div className="relative group">
+                                    <Coins className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 dark:text-gray-400 group-focus-within:text-neon-green transition-colors" />
+                                    <input 
+                                        type="text"
+                                        inputMode="numeric"
+                                        placeholder="0"
+                                        value={resalePrice}
+                                        onChange={(e) => {
+                                            const val = e.target.value.replace(/\D/g, '');
+                                            // Giới hạn không cho nhập quá dài
+                                            if (val.length <= 12) setResalePrice(val);
+                                        }}
+                                        className="w-full bg-gray-50 dark:bg-white/[0.02] border border-gray-200 dark:border-white/10 rounded-2xl py-4 pl-14 pr-32 text-2xl font-black text-gray-900 dark:text-white focus:outline-none focus:border-neon-green focus:ring-4 focus:ring-neon-green/5 transition-all"
+                                    />
+                                    <div className="absolute right-5 top-1/2 -translate-y-1/2 flex flex-col items-end pointer-events-none">
+                                        <span className="text-xs font-black text-neon-green uppercase tracking-tighter">VND</span>
+                                        {resalePrice && (
+                                            <span className="text-[10px] font-black text-gray-400 dark:text-gray-500 animate-in fade-in slide-in-from-right-2">
+                                                ≈ {Number(resalePrice).toLocaleString('vi-VN')}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Step 2: Merchandise Selection */}
+                            {ticket.order?.merchandise_items?.length > 0 && (
                                 <div className="space-y-4">
-                                    <div className="flex items-center justify-between px-2">
-                                        <label className="text-xs font-black text-white uppercase tracking-[0.2em]">Giá niêm yết mới</label>
-                                        <span className="text-[10px] font-black text-neon-green uppercase border border-neon-green/30 px-3 py-1 rounded-full">Matic Marketplace</span>
+                                    <div className="relative flex items-center justify-start">
+                                        <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                                            <div className="w-full border-t border-gray-100 dark:border-white/5 mt-4"></div>
+                                        </div>
+                                        <div className="relative flex items-center gap-2 bg-white dark:bg-[#0c0c0d] pr-4">
+                                            <span className="w-6 h-6 rounded-md bg-blue-600 text-white flex items-center justify-center font-black text-[10px] shadow-[0_0_10px_rgba(37,99,235,0.4)] mt-4">02</span>
+                                            <h4 className="text-[11px] font-black text-gray-900 dark:text-white uppercase mt-4">Sản phẩm tặng kèm (Tùy chọn)</h4>
+                                        </div>
                                     </div>
-                                    <div className="relative">
-                                        <DollarSign className="absolute left-8 top-1/2 -translate-y-1/2 w-6 h-6 text-neon-green" />
-                                        <input 
-                                            type="number"
-                                            placeholder="0"
-                                            value={resalePrice}
-                                            onChange={(e) => setResalePrice(e.target.value)}
-                                            className="w-full bg-white/[0.03] border border-white/10 rounded-[2rem] py-8 pl-20 pr-8 text-4xl font-black text-white focus:outline-none focus:border-neon-green focus:ring-1 focus:ring-neon-green transition-all placeholder:text-gray-800"
-                                        />
-                                    </div>
-                                </div>
 
-                                {/* Calculation Breakdown */}
-                                <div className="space-y-4 pt-6 border-t border-white/5">
-                                    <div className="flex justify-between items-center px-2">
-                                        <div className="flex items-center gap-2">
-                                            <p className="text-[11px] font-black text-gray-500 uppercase tracking-widest">Phí bản quyền (Royalty)</p>
-                                            <div className="group relative">
-                                                <Info className="w-3 h-3 text-gray-600 cursor-help" />
-                                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-3 bg-white text-black text-[9px] font-bold uppercase tracking-widest rounded-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-2xl z-50">
-                                                    Khoản phí (Cố định 3%) trích lại cho Ban tổ chức dựa trên giá bán của bạn để duy trì hệ thống & bản quyền.
+                                    <div className="grid grid-cols-1 gap-2">
+                                        {ticket.order.merchandise_items.map((item) => (
+                                            <div 
+                                                key={item.id}
+                                                onClick={() => toggleMerchandise(item.id)}
+                                                className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between group ${
+                                                    selectedMerchandise.includes(item.id)
+                                                        ? 'bg-neon-green/10 border-neon-green/50 shadow-[0_0_15px_rgba(82,196,45,0.1)]'
+                                                        : 'bg-white dark:bg-white/[0.02] border-gray-100 dark:border-white/5 hover:border-white/20'
+                                                }`}
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 rounded-xl overflow-hidden bg-gray-100 dark:bg-white/5 border border-white/5">
+                                                        <img src={item.merchandise.image_url} alt="" className="w-full h-full object-cover" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[11px] font-black text-gray-900 dark:text-white uppercase leading-none mb-1">{item.merchandise.name}</p>
+                                                        <div className="flex items-center gap-2">
+                                                            <p className="text-[9px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-tight">Số lượng: {item.quantity}</p>
+                                                            <span className="text-[9px] font-black text-neon-green">|</span>
+                                                            <p className="text-[9px] font-black text-neon-green uppercase tracking-tight">{Number(item.unit_price).toLocaleString()} VND</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className={`w-5 h-5 rounded-lg border flex items-center justify-center transition-all ${
+                                                    selectedMerchandise.includes(item.id)
+                                                        ? 'bg-neon-green border-neon-green'
+                                                        : 'bg-white/5 border-gray-200 dark:border-white/10 group-hover:border-white/30'
+                                                }`}>
+                                                    {selectedMerchandise.includes(item.id) && <CheckCircle2 className="w-3.5 h-3.5 text-black" />}
                                                 </div>
                                             </div>
-                                        </div>
-                                        <p className="text-sm font-black text-red-500">-{royaltyFee.toLocaleString()} VND</p>
+                                        ))}
                                     </div>
+                                </div>
+                            )}
 
-                                    <div className="flex justify-between items-center px-2">
-                                        <div className="flex items-center gap-2">
-                                            <p className="text-[11px] font-black text-gray-500 uppercase tracking-widest">Giá hiển thị cho người mua</p>
-                                            <div className="group relative">
-                                                <Info className="w-3 h-3 text-gray-600 cursor-help" />
-                                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-3 bg-white text-black text-[9px] font-bold uppercase tracking-widest rounded-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-2xl z-50">
-                                                    Bao gồm: Giá niêm yết + 3% Phí giao dịch + 10.000đ Phí Xác thực Blockchain/AI.
-                                                </div>
+                            {/* Step 3: Breakdown & Confirm */}
+                            <div className="space-y-4">
+                                <div className="relative flex items-center justify-start">
+                                    <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                                        <div className="w-full border-t border-gray-100 dark:border-white/5 mt-4"></div>
+                                    </div>
+                                    <div className="relative flex items-center gap-2 bg-white dark:bg-[#0c0c0d] pr-4">
+                                        <span className="w-6 h-6 rounded-md bg-orange-500 text-white flex items-center justify-center font-black text-[10px] shadow-[0_0_10px_rgba(249,115,22,0.4)] mt-4">03</span>
+                                        <h3 className="text-[11px] font-black text-gray-900 dark:text-white uppercase tracking-tight mt-4">Quyết toán giao dịch</h3>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="p-4 bg-gray-50 dark:bg-white/[0.02] rounded-2xl space-y-1 border border-gray-100 dark:border-white/5">
+                                        <div className="flex items-center justify-between text-[10px] font-black text-gray-500 dark:text-gray-400 ">
+                                            <span>Giá niêm yết vé</span>
+                                            <span>{Number(resalePrice || 0).toLocaleString()} VND</span>
+                                        </div>
+                                        {merchandiseTotal > 0 && (
+                                            <div className="flex items-center justify-between text-[10px] font-black text-gray-500 dark:text-gray-400 ">
+                                                <span>Giá trị sản phẩm kèm theo</span>
+                                                <span className="text-blue-500">+{merchandiseTotal.toLocaleString()} VND</span>
                                             </div>
+                                        )}
+                                        <div className="flex items-center justify-between text-[10px] font-black text-gray-500 dark:text-gray-400 ">
+                                            <span>Phí hệ thống ({event.resale_platform_fee_percent}% + {Number(event.resale_gas_fee).toLocaleString()})</span>
+                                            <span className="text-red-500">+{systemFee.toLocaleString()}</span>
                                         </div>
-                                        <p className="text-sm font-black text-blue-500">{buyerPays.toLocaleString()} VND</p>
-                                    </div>
-                                    
-                                    <div className="p-8 bg-neon-green/5 rounded-[2rem] border border-neon-green/20 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-                                        <div className="space-y-1">
-                                            <p className="text-[10px] font-black text-neon-green uppercase tracking-[0.2em]">Số tiền bạn thực nhận</p>
-                                            <p className="text-4xl font-black text-white tracking-tighter">
-                                                {netProfit.toLocaleString()} <span className="text-lg text-neon-green">VND</span>
-                                            </p>
-                                        </div>
-                                        <div className="hidden sm:block">
-                                            <div className="w-16 h-16 bg-neon-green rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(82,196,45,0.3)] animate-pulse">
-                                                <CheckCircle2 className="w-8 h-8 text-black" />
-                                            </div>
+                                        <div className="flex items-center justify-between text-[10px] font-black text-gray-500 dark:text-gray-400 ">
+                                            <span className="text-orange-500">Phí bản quyền BTC ({royaltyFee > 0 ? `${event.royalty_fee_percent}%` : '0đ'})</span>
+                                            <span className="text-orange-500">-{royaltyFee.toLocaleString()}</span>
                                         </div>
                                     </div>
+                                    <div className="p-4 bg-gray-50 dark:bg-white/[0.02] rounded-2xl space-y-1 border border-gray-100 dark:border-white/5">
+                                        <div className="flex items-center gap-1.5 text-[10px] font-black text-gray-500 dark:text-gray-400">
+                                            Giá hiển thị trên Chợ (Người mua trả)
+                                        </div>
+                                        <p className="text-lg font-black text-blue-500 leading-none">{buyerPays.toLocaleString()} <span className="text-[10px]">VND</span></p>
+                                    </div>
+                                </div>
+                                
+                                <div className="p-4 bg-neon-green/5 rounded-3xl border border-neon-green/20 flex items-center justify-between gap-6 shadow-inner">
+                                    <div className="space-y-1">
+                                        <p className="text-[11px] font-black text-neon-green">Số tiền bạn nhận về (Vé + Sản phẩm - Phí BTC)</p>
+                                        <p className="text-2xl font-black text-gray-900 dark:text-white tracking-tighter">
+                                            {Number(netProfit).toLocaleString('vi-VN')} <span className="text-sm text-neon-green">VND</span>
+                                        </p>
+                                    </div>
+                                    <div className="w-10 h-10 bg-neon-green rounded-2xl flex items-center justify-center shadow-lg shadow-neon-green/20">
+                                        <CheckCircle2 className="w-4 h-4 text-black" />
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-col gap-3">
+                                    <button 
+                                        onClick={handleResaleConfirm}
+                                        disabled={isListing || !resalePrice || resalePrice <= 0}
+                                        className="w-full bg-neon-green hover:bg-neon-hover disabled:opacity-20 text-black font-black uppercase py-4 rounded-2xl text-[13px] flex items-center justify-center gap-3 transition-all shadow-[0_15px_30px_-10px_rgba(82,196,45,0.4)] active:scale-[0.98] border-none"
+                                    >
+                                        {isListing ? (
+                                            <>
+                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                                Đang mã hóa dữ liệu...
+                                            </>
+                                        ) : (
+                                            <>
+                                                {isEditing ? 'Cập nhật trên chợ vé' : 'Xác nhận niêm yết ngay'}
+                                            </>
+                                        )}
+                                    </button>
+
+                                    {isEditing && (
+                                        <button 
+                                            onClick={handleCancelListing}
+                                            disabled={isCancelling}
+                                            className="w-full bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white border border-red-500/20 font-black uppercase py-4 rounded-2xl text-[13px] flex items-center justify-center gap-3 transition-all active:scale-[0.98]"
+                                        >
+                                            {isCancelling ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Hủy bài đăng (Gỡ khỏi chợ)'}
+                                        </button>
+                                    )}
                                 </div>
                             </div>
 
-                            {/* Warning Section */}
-                            <div className="p-6 bg-red-500/5 border border-red-500/10 rounded-2xl flex gap-4">
-                                <AlertCircle className="w-5 h-5 text-red-500 shrink-0" />
-                                <div className="space-y-1">
-                                    <p className="text-[10px] font-black text-red-500 uppercase tracking-widest">Lưu ý quan trọng</p>
-                                    <p className="text-[11px] text-gray-500 font-medium leading-relaxed">
-                                        Sau khi xác nhận niêm yết, vé của bạn sẽ bị <b>tạm khóa (không thể sử dụng QR code)</b> cho đến khi có người mua hoặc bạn thực hiện gỡ bài đăng.
-                                    </p>
+                            {/* Footer Trust Info */}
+                            <div className="grid grid-cols-2 mt-8 gap-4">
+                                <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                                    <Shield className="w-3 h-3" />
+                                    <span className="text-[9px] font-black uppercase tracking-tight">Bảo mật Smart Contract</span>
                                 </div>
-                            </div>
-
-                            {/* Action Button */}
-                            <button 
-                                onClick={handleResaleConfirm}
-                                disabled={isListing || !resalePrice || resalePrice <= 0}
-                                className="w-full bg-neon-green hover:bg-neon-hover disabled:opacity-20 text-black font-black uppercase tracking-[0.2em] py-6 rounded-[1.5rem] text-sm flex items-center justify-center gap-3 transition-all shadow-xl shadow-neon-green/20 active:scale-[0.98] border-none"
-                            >
-                                {isListing ? (
-                                    <>
-                                        <Loader2 className="w-5 h-5 animate-spin" />
-                                        Mã hóa & Đưa lên sàn...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Tag className="w-5 h-5" />
-                                        Xác nhận niêm yết vé ngay
-                                    </>
-                                )}
-                            </button>
-                        </div>
-
-                        {/* Marketplace Guidelines */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="p-6 bg-white/[0.02] border border-white/5 rounded-2xl space-y-3">
-                                <div className="flex items-center gap-2 text-neon-green">
-                                    <Shield className="w-4 h-4" />
-                                    <span className="text-[10px] font-black uppercase tracking-widest">Bảo vệ người bán</span>
+                                <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 justify-end">
+                                    <AlertCircle className="w-3 h-3" />
+                                    <span className="text-[9px] font-black uppercase tracking-tight">Chống gian lận AI</span>
                                 </div>
-                                <p className="text-[11px] text-gray-500 leading-relaxed font-medium capitalize">Tiền bán vé sẽ được chuyển tự động vào ví BASTICKET của bạn ngay khi giao dịch hoàn tất.</p>
-                            </div>
-                            <div className="p-6 bg-white/[0.02] border border-white/5 rounded-2xl space-y-3">
-                                <div className="flex items-center gap-2 text-neon-green">
-                                    <CheckCircle2 className="w-4 h-4" />
-                                    <span className="text-[10px] font-black uppercase tracking-widest">Ký gửi an toàn</span>
-                                </div>
-                                <p className="text-[11px] text-gray-500 leading-relaxed font-medium capitalize">Hệ thống sẽ thay mặt bạn quản lý vé NFT và chuyển quyền sở hữu cho người mua mới.</p>
                             </div>
                         </div>
                     </div>

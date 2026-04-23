@@ -242,14 +242,30 @@ const getEventAvailability = async (req, res) => {
 const getEventMerchandise = async (req, res) => {
   try {
     const { id } = req.params;
+
+    // Lấy thông tin event để biết organizer_id
+    const event = await prisma.event.findUnique({
+      where: { id },
+      select: { organizer_id: true }
+    });
+
+    if (!event) {
+      return res.status(404).json({ error: 'Không tìm thấy sự kiện.' });
+    }
+
+    // Lấy các sản phẩm mua kèm (của riêng event này HOẶC dùng chung cho toàn bộ event của organizer đó)
     const merchandise = await prisma.merchandise.findMany({
       where: { 
-        event_id: id,
         is_active: true,
-        stock: { gt: 0 }
+        stock: { gt: 0 },
+        OR: [
+          { event_id: id },
+          { event_id: null, organizer_id: event.organizer_id }
+        ]
       },
       orderBy: { created_at: 'desc' }
     });
+    
     res.status(200).json({ data: merchandise });
   } catch (error) {
     console.error('Lỗi khi lấy Merchandise sự kiện:', error);

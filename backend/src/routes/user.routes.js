@@ -24,4 +24,8 @@ router.post('/link-external-wallet', userController.linkExternalWallet);
 // [GET] /api/users/wallet-balance
 router.get('/wallet-balance', userController.getWalletBalance);
 
+// Notifications
+router.get('/notifications', userController.getNotifications);
+router.put('/notifications/:id/read', userController.markAsRead);
+
 module.exports = router;

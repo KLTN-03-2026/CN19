@@ -20,8 +20,8 @@ const orderService = {
     },
 
     // Tạo đơn hàng phí chuyển nhượng (Transfer)
-    createTransferOrder: async (ticket_id, receiver_email) => {
-        const response = await api.post('/orders/transfer', { ticket_id, receiver_email });
+    createTransferOrder: async (ticket_id, receiver_email, merchandise_item_ids = []) => {
+        const response = await api.post('/orders/transfer', { ticket_id, receiver_email, merchandise_item_ids });
         return response.data;
     },
 

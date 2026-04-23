@@ -11,7 +11,7 @@ const queryClient = new QueryClient()
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <GoogleReCaptchaProvider reCaptchaKey="6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI">
+      <GoogleReCaptchaProvider reCaptchaKey="6LekXLcsAAAAAJO8n4rHWXg1xWNyuMdEff7v3Vjo">
         <App />
       </GoogleReCaptchaProvider>
     </QueryClientProvider>

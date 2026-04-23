@@ -2,10 +2,11 @@ import api from './api';
 
 export const marketplaceService = {
     // Đăng bán lại vé
-    createListing: async (ticket_id, asking_price) => {
+    createListing: async (ticket_id, asking_price, merchandise_item_ids = []) => {
         const response = await api.post('/marketplace', { 
             ticket_id, 
-            asking_price: Number(asking_price) 
+            asking_price: Number(asking_price),
+            merchandise_item_ids
         });
         return response.data;
     },
@@ -19,6 +20,15 @@ export const marketplaceService = {
     // Hủy đăng bán
     deleteListing: async (listingId) => {
         const response = await api.delete(`/marketplace/${listingId}`);
+        return response.data;
+    },
+
+    // Cập nhật bài đăng
+    updateListing: async (listingId, asking_price, merchandise_item_ids = []) => {
+        const response = await api.put(`/marketplace/${listingId}`, { 
+            asking_price: Number(asking_price), 
+            merchandise_item_ids 
+        });
         return response.data;
     }
 };

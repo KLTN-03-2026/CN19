@@ -32,7 +32,11 @@ const PaymentController = {
                     decision: aiAnalysis.isBot ? 'BLOCK' : 'ALLOW',
                     ip_address: botService.getClientIp(req),
                     user_agent: req.headers['user-agent'],
-                    detection_details: aiAnalysis.details
+                    detection_details: {
+                      details: aiAnalysis.details,
+                      recaptchaScore: aiAnalysis.recaptchaScore,
+                      aiRiskScore: aiAnalysis.aiRiskScore
+                    }
                 }
             }).catch(err => console.error('Log error:', err));
 
@@ -43,17 +47,40 @@ const PaymentController = {
                 });
             }
 
-            const order = await prisma.order.findUnique({
+            let order = await prisma.order.findUnique({
                 where: { order_number: ma_don_hang },
                 include: { event: { select: { title: true } } }
             });
 
-            if (!order) return res.status(404).json({ error: 'Đơn hàng không tồn tại.' });
-            if (order.status === 'paid') return res.status(400).json({ error: 'Đơn hàng này đã được thanh toán.' });
+            // Nếu không tìm thấy trong Order, tìm trong MarketplaceTransaction
+            let isMarketplace = false;
+            if (!order) {
+                const mktTx = await prisma.marketplaceTransaction.findUnique({
+                    where: { transaction_number: ma_don_hang },
+                    include: { ticket: { include: { event: { select: { title: true } } } } }
+                });
+
+                if (mktTx) {
+                    isMarketplace = true;
+                    // Map MarketplaceTransaction sang cấu trúc giống Order để dùng chung logic bên dưới
+                    order = {
+                        order_number: mktTx.transaction_number,
+                        total_amount: mktTx.buyer_pay_amount,
+                        expires_at: new Date(Date.now() + 15 * 60 * 1000), // Mặc định 15p cho mkt
+                        status: mktTx.status,
+                        event: mktTx.ticket.event,
+                        isMarketplace: true,
+                        id: mktTx.id
+                    };
+                }
+            }
+
+            if (!order) return res.status(404).json({ error: 'Đơn hàng hoặc giao dịch không tồn tại.' });
+            if (order.status === 'paid' || order.status === 'success') return res.status(400).json({ error: 'Giao dịch này đã được thanh toán.' });
 
             // Kiểm tra xem đơn hàng đã hết hạn chưa (10 phút giữ vé)
             if (new Date() > order.expires_at) {
-                return res.status(400).json({ error: 'Đơn hàng đã hết hạn giữ vé. Vui lòng đặt lại vé mới.' });
+                return res.status(400).json({ error: 'Giao dịch đã hết hạn. Vui lòng thực hiện lại.' });
             }
 
             if (phuong_thuc === 'vnpay') {
@@ -92,23 +119,53 @@ const PaymentController = {
             if (secureHash === signed) {
                 const orderNumber = vnp_Params['vnp_TxnRef'];
                 const rspCode = vnp_Params['vnp_ResponseCode'];
-
-                const associatedOrder = await prisma.order.findUnique({
-                    where: { order_number: orderNumber },
-                    include: { event: true }
-                });
+                const isMarketplace = orderNumber.startsWith('MKT');
 
                 if (rspCode === '00') {
                     await processOrderSuccess(orderNumber, vnp_Params['vnp_TransactionNo'], 'VNPAY', vnp_Params);
-                    const updatedOrder = await prisma.order.findUnique({
-                        where: { order_number: orderNumber },
-                        include: { event: true }
-                    });
-                    return res.status(200).json({ 
-                        message: 'Thanh toán VNPay thành công',
-                        order: updatedOrder
-                    });
+
+                    if (isMarketplace) {
+                        const updatedMktTx = await prisma.marketplaceTransaction.findUnique({
+                            where: { transaction_number: orderNumber },
+                            include: { ticket: { include: { event: true } } }
+                        });
+                        return res.status(200).json({ 
+                            message: 'Thanh toán VNPay thành công',
+                            order: updatedMktTx
+                        });
+                    } else {
+                        const updatedOrder = await prisma.order.findUnique({
+                            where: { order_number: orderNumber },
+                            include: { event: true }
+                        });
+                        return res.status(200).json({ 
+                            message: 'Thanh toán VNPay thành công',
+                            order: updatedOrder
+                        });
+                    }
                 }
+
+                // Thanh toán thất bại
+                if (isMarketplace) {
+                    // Giải phóng lại listing khi thanh toán thất bại
+                    const mktTx = await prisma.marketplaceTransaction.findUnique({
+                        where: { transaction_number: orderNumber }
+                    });
+                    if (mktTx) {
+                        await prisma.marketplaceListing.update({
+                            where: { id: mktTx.listing_id },
+                            data: { status: 'active', is_locked: false, lock_expires_at: null }
+                        });
+                        await prisma.marketplaceTransaction.update({
+                            where: { id: mktTx.id },
+                            data: { status: 'failed' }
+                        });
+                    }
+                    return res.status(400).json({ error: 'Thanh toán VNPay thất bại' });
+                }
+                const associatedOrder = await prisma.order.findUnique({
+                    where: { order_number: orderNumber }, include: { event: true }
+                });
                 return res.status(400).json({ 
                     error: 'Thanh toán VNPay thất bại',
                     order: associatedOrder
@@ -373,6 +430,12 @@ async function processOrderSuccess(orderNumber, transactionId, method, payload) 
     let createdTickets = [];
     let orderData = null;
 
+    // Nếu là giao dịch Marketplace, xử lý riêng và thoát sớm
+    if (orderNumber.startsWith('MKT')) {
+        await processMktOrderSuccess(orderNumber, transactionId, method, payload);
+        return;
+    }
+
     await prisma.$transaction(async (tx) => {
         const order = await tx.order.findUnique({
             where: { order_number: orderNumber },
@@ -399,7 +462,8 @@ async function processOrderSuccess(orderNumber, transactionId, method, payload) 
         // 2. Tạo bản ghi Payment
         await tx.payment.create({
             data: {
-                order_id: order.id,
+                order_id: order.isMarketplace ? null : order.id,
+                mkt_transaction_id: order.isMarketplace ? order.id : null,
                 method: method.toLowerCase(),
                 transaction_id: transactionId,
                 amount: order.total_amount,
@@ -444,14 +508,15 @@ async function processOrderSuccess(orderNumber, transactionId, method, payload) 
                     // Thực thi gọi Blockchain
                     let txHash = '0xTxHashMock' + Date.now();
                     try {
-                        if (ticket.nft_token_id && ticket.event.smart_contract_address) {
-                            // Sử dụng ví Custodial thật từ Database
+                        // Dùng smart_contract_address của event, hoặc fallback về contract chung
+                        const contractAddress = ticket.event.smart_contract_address || process.env.CONTRACT_ADDRESS;
+                        if (ticket.nft_token_id && contractAddress) {
                             const senderWallet = order.customer.wallet_address;
                             const receiverWallet = receiver.wallet_address;
                             
                             if (senderWallet && receiverWallet) {
                                 txHash = await web3Service.transferTicket(
-                                    ticket.event.smart_contract_address, 
+                                    contractAddress, 
                                     senderWallet, 
                                     receiverWallet, 
                                     parseInt(ticket.nft_token_id)
@@ -486,10 +551,102 @@ async function processOrderSuccess(orderNumber, transactionId, method, payload) 
                         }
                     });
 
+                    // Cập nhật quyền sở hữu Sản phẩm (Merchandise)
+                    const { merchandise_item_ids } = order.metadata || {};
+                    if (merchandise_item_ids && Array.isArray(merchandise_item_ids) && merchandise_item_ids.length > 0) {
+                        await tx.merchandiseOrderItem.updateMany({
+                            where: {
+                                id: { in: merchandise_item_ids },
+                                order_id: ticket.order_id
+                            },
+                            data: {
+                                owner_id: receiver.id
+                            }
+                        });
+                    }
+
                     // Gửi email thông báo qua EmailService (Không đợi phản hồi)
                     emailService.sendTransferSuccessEmail(sender, receiver, ticket);
                     emailService.sendTicketReceivedEmail(receiver, sender, ticket);
                 }
+            }
+        }
+
+        // 5. Nếu là đơn hàng Mua vé trên Marketplace (MKT...)
+        if (orderNumber.startsWith('MKT')) {
+            const mktTx = await tx.marketplaceTransaction.findUnique({
+                where: { transaction_number: orderNumber },
+                include: { 
+                    listing: { include: { ticket: true } },
+                    buyer: true,
+                    seller: true
+                }
+            });
+
+            if (mktTx && mktTx.status !== 'paid') {
+                // A. Cập nhật trạng thái Transaction
+                await tx.marketplaceTransaction.update({
+                    where: { id: mktTx.id },
+                    data: { 
+                        status: 'paid',
+                        nft_transfer_tx_hash: '0xMktTxHash' + Date.now() // Mock
+                    }
+                });
+
+                // B. Cập nhật trạng thái Listing
+                await tx.marketplaceListing.update({
+                    where: { id: mktTx.listing_id },
+                    data: { 
+                        status: 'sold',
+                        sold_at: new Date()
+                    }
+                });
+
+                // C. Chuyển quyền sở hữu Vé
+                const ticket = await tx.ticket.findUnique({
+                    where: { id: mktTx.ticket_id },
+                    include: { event: true }
+                });
+
+                await tx.ticket.update({
+                    where: { id: mktTx.ticket_id },
+                    data: {
+                        current_owner_id: mktTx.buyer_id,
+                        is_on_marketplace: false,
+                        is_transferred: true
+                    }
+                });
+
+                // D. Chuyển quyền sở hữu Sản phẩm đi kèm (lấy từ metadata của listing)
+                const { merchandise_item_ids } = mktTx.listing.metadata || {};
+                if (merchandise_item_ids && Array.isArray(merchandise_item_ids) && merchandise_item_ids.length > 0) {
+                    await tx.merchandiseOrderItem.updateMany({
+                        where: {
+                            id: { in: merchandise_item_ids },
+                            order_id: ticket.order_id
+                        },
+                        data: {
+                            owner_id: mktTx.buyer_id
+                        }
+                    });
+                }
+
+                // E. Gọi Blockchain Transfer NFT (Nếu có)
+                if (ticket.nft_token_id && ticket.event.smart_contract_address) {
+                    try {
+                        await web3Service.transferTicket(
+                            ticket.event.smart_contract_address,
+                            mktTx.seller.wallet_address,
+                            mktTx.buyer.wallet_address,
+                            parseInt(ticket.nft_token_id)
+                        );
+                    } catch (err) {
+                        console.error('Blockchain Marketplace transfer error:', err);
+                    }
+                }
+
+                // F. Gửi Email (Có thể thêm email riêng cho marketplace sau)
+                emailService.sendTicketReceivedEmail(mktTx.buyer, mktTx.seller, ticket);
             }
         }
     });
@@ -508,15 +665,143 @@ async function processOrderSuccess(orderNumber, transactionId, method, payload) 
 }
 
 /**
+ * Xử lý sau khi thanh toán Marketplace thành công:
+ * 1. Cập nhật MarketplaceTransaction status = paid
+ * 2. Cập nhật Listing status = sold
+ * 3. Chuyển quyền sở hữu Vé + Sản phẩm sang Người mua
+ * 4. Lưu bản ghi Payment
+ */
+async function processMktOrderSuccess(orderNumber, transactionId, method, payload) {
+    try {
+        await prisma.$transaction(async (tx) => {
+            const mktTx = await tx.marketplaceTransaction.findUnique({
+                where: { transaction_number: orderNumber },
+                include: {
+                    listing: { include: { ticket: true } },
+                    buyer: true,
+                    seller: true
+                }
+            });
+
+            if (!mktTx || mktTx.status === 'paid') {
+                console.log(`[MKT] Giao dịch ${orderNumber} đã xử lý hoặc không tồn tại.`);
+                return;
+            }
+
+            console.log(`[MKT] Xử lý thanh toán thành công cho giao dịch ${orderNumber}...`);
+
+            // A. Cập nhật trạng thái Transaction -> paid
+            await tx.marketplaceTransaction.update({
+                where: { id: mktTx.id },
+                data: {
+                    status: 'paid',
+                    nft_transfer_tx_hash: '0xMktTxHash' + Date.now()
+                }
+            });
+
+            // B. Cập nhật trạng thái Listing -> sold
+            await tx.marketplaceListing.update({
+                where: { id: mktTx.listing_id },
+                data: {
+                    status: 'sold',
+                    is_locked: false,
+                    lock_expires_at: null,
+                    sold_at: new Date()
+                }
+            });
+
+            // C. Chuyển quyền sở hữu Vé sang Người mua
+            const ticket = await tx.ticket.findUnique({
+                where: { id: mktTx.ticket_id },
+                include: { event: true }
+            });
+
+            await tx.ticket.update({
+                where: { id: mktTx.ticket_id },
+                data: {
+                    current_owner_id: mktTx.buyer_id,
+                    is_on_marketplace: false,
+                    is_transferred: true
+                }
+            });
+
+            // D. Chuyển quyền sở hữu Sản phẩm đi kèm
+            const { merchandise_item_ids } = mktTx.listing.metadata || {};
+            if (merchandise_item_ids && Array.isArray(merchandise_item_ids) && merchandise_item_ids.length > 0) {
+                await tx.merchandiseOrderItem.updateMany({
+                    where: {
+                        id: { in: merchandise_item_ids },
+                        order_id: ticket.order_id
+                    },
+                    data: { owner_id: mktTx.buyer_id }
+                });
+            }
+
+            // E. Lưu bản ghi Payment
+            await tx.payment.create({
+                data: {
+                    order_id: null,
+                    mkt_transaction_id: mktTx.id,
+                    method: method.toLowerCase(),
+                    transaction_id: transactionId,
+                    amount: mktTx.buyer_pay_amount,
+                    status: 'thanh_cong',
+                    response_data: payload,
+                    paid_at: new Date()
+                }
+            });
+
+            console.log(`[MKT] Giao dịch ${orderNumber} hoàn tất. Vé đã chuyển sang buyer_id=${mktTx.buyer_id}`);
+
+            // F. Blockchain Transfer NFT (nếu có)
+            // Dùng smart_contract_address của event, hoặc fallback về contract chung của hệ thống
+            const contractAddress = ticket?.event?.smart_contract_address || process.env.CONTRACT_ADDRESS;
+            if (ticket?.nft_token_id && contractAddress) {
+                try {
+                    const txHash = await web3Service.transferTicket(
+                        contractAddress,
+                        mktTx.seller.wallet_address,
+                        mktTx.buyer.wallet_address,
+                        parseInt(ticket.nft_token_id)
+                    );
+                    // Cập nhật tx hash thật vào DB
+                    await tx.marketplaceTransaction.update({
+                        where: { id: mktTx.id },
+                        data: { nft_transfer_tx_hash: txHash }
+                    });
+                    console.log(`[MKT Blockchain] Transfer NFT thành công! TxHash: ${txHash}`);
+                } catch (err) {
+                    console.error('[MKT Blockchain] Lỗi transfer NFT:', err.message);
+                }
+            }
+
+            // G. Gửi Email
+            emailService.sendTicketReceivedEmail(mktTx.buyer, mktTx.seller, ticket);
+        });
+    } catch (error) {
+        console.error(`[MKT Error] Lỗi xử lý sau thanh toán ${orderNumber}:`, error);
+        throw error;
+    }
+}
+
+/**
  * Gọi Blockchain Service để đúc vé lên chuỗi
+ * Dùng web3Service với contract của sự kiện (hoặc fallback về contract chung)
  */
 async function triggerNFTMinting(ticket, walletAddress) {
     try {
         const toAddress = walletAddress || "0x0000000000000000000000000000000000000000"; 
         const tokenURI = `https://api.basticket.site/metadata/${ticket.id}`; 
         
-        console.log(`[Web3] [Ticket ${ticket.ticket_number}] Đang bắt đầu đúc NFT...`);
-        const { tokenId, txHash } = await blockchainService.mintTicket(toAddress, tokenURI);
+        // Lấy smart_contract_address của sự kiện, fallback về contract chung nếu chưa có
+        const event = await prisma.event.findUnique({
+            where: { id: ticket.event_id },
+            select: { smart_contract_address: true }
+        });
+        const contractAddress = event?.smart_contract_address || process.env.CONTRACT_ADDRESS;
+
+        console.log(`[Web3] [Ticket ${ticket.ticket_number}] Đang bắt đầu đúc NFT (contract: ${contractAddress})...`);
+        const { tokenId, transactionHash } = await web3Service.mintTicket(contractAddress, toAddress, tokenURI);
         
         console.log(`[Web3] [Ticket ${ticket.ticket_number}] Đúc thành công! TokenId: ${tokenId}. Đang cập nhật Database...`);
         
@@ -524,9 +809,9 @@ async function triggerNFTMinting(ticket, walletAddress) {
         const updatedTicket = await prisma.ticket.update({
             where: { id: ticket.id },
             data: {
-                nft_token_id: tokenId,
-                nft_mint_tx_hash: txHash,
-                status: 'minted' // Quan trọng: Cập nhật status để UI và Stats hiển thị đúng
+                nft_token_id: String(tokenId),
+                nft_mint_tx_hash: transactionHash,
+                status: 'minted'
             }
         });
         
@@ -534,7 +819,7 @@ async function triggerNFTMinting(ticket, walletAddress) {
         return updatedTicket;
     } catch (e) {
         console.error(`[Web3 Error] [Ticket ${ticket.id}] Lỗi khi đúc vé:`, e.message);
-        // Lưu ý: Chúng ta không đổi status sang failed ở đây để có thể thử lại (retry) sau này nếu cần
+        // Không đổi status sang failed để có thể retry sau này
     }
 }
 

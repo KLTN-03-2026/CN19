@@ -180,7 +180,8 @@ const findByEmail = async (req, res) => {
         id: true,
         email: true,
         full_name: true,
-        avatar_url: true
+        avatar_url: true,
+        role: true
       }
     });
 
@@ -195,11 +196,50 @@ const findByEmail = async (req, res) => {
   }
 };
 
+// [Notifications] Lấy danh sách thông báo
+const getNotifications = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    console.log('--- GET NOTIFICATIONS for UserID:', userId);
+    const notifications = await prisma.notification.findMany({
+      where: { user_id: userId },
+      include: {
+        blog: {
+          select: { slug: true }
+        }
+      },
+      orderBy: { created_at: 'desc' },
+      take: 20
+    });
+    console.log(`Found ${notifications.length} notifications for user ${userId}`);
+    res.status(200).json({ data: notifications });
+  } catch (error) {
+    console.error('Lỗi khi lấy thông báo:', error);
+    res.status(500).json({ error: 'Lỗi server.' });
+  }
+};
+
+// [Notifications] Đánh dấu đã đọc
+const markAsRead = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await prisma.notification.update({
+      where: { id },
+      data: { is_read: true }
+    });
+    res.status(200).json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Lỗi server.' });
+  }
+};
+
 module.exports = {
   getProfile,
   updateProfile,
   changePassword,
   linkExternalWallet,
   getWalletBalance,
-  findByEmail
+  findByEmail,
+  getNotifications,
+  markAsRead
 };

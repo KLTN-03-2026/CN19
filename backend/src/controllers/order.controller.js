@@ -151,6 +151,9 @@ const createMarketplaceOrder = async (req, res) => {
   try {
     const userId = req.user.userId;
     const { listing_id, behaviorData, captchaToken, puzzleData } = req.body;
+    
+    // Giải phóng các đơn hàng quá hạn trước khi kiểm tra listing
+    await orderService.releaseExpiredOrders().catch(e => console.error('Release error:', e));
 
     // 1. Phân tích AI rủi ro Bot
     const aiAnalysis = await botService.analyzeBotBehavior(req, captchaToken, behaviorData, puzzleData);
@@ -200,19 +203,20 @@ const createMarketplaceOrder = async (req, res) => {
         }
       });
 
-      // [Business Rule] Luồng tiền Bán lại (Resale):
-      // 1. Người mua trả: Giá niêm yết + 10,000đ (Gas) + 3% (Phí giao dịch)
-      // 2. Hệ thống thu: 10,000đ + 3% phí giao dịch
-      // 3. BTC nhận: 3% phí bản quyền (Royalty)
-      // 4. Người bán nhận: Giá niêm yết - 3% phí bản quyền
+      // [Business Rule] Luồng tiền Bán lại (Resale) lấy từ Database Event:
+      const event = listing.ticket.event;
       const askingPrice = Number(listing.asking_price);
-      const system_fee = 10000 + (askingPrice * 0.03);
-      const royalty_fee = askingPrice * 0.03;
-      const seller_receive_amount = askingPrice - royalty_fee;
-      const total_buyer_pay = askingPrice + system_fee;
+      const ticketPriceOnly = Number(listing.metadata?.ticket_price || askingPrice);
+      
+      const resale_gas_fee = Number(event.resale_gas_fee || 10000);
+      const platform_fee_percent = Number(event.resale_platform_fee_percent || 3.0) / 100;
+      const royalty_fee_percent = Number(event.royalty_fee_percent || 3.0) / 100;
 
-      // 5. Tính toán lợi nhuận bán lại (Resale Profit)
-      // Tìm giá vón (cost): Marketplace Tx trước đó gần nhất hoặc Order sơ cấp gốc
+      // 1. Phí hệ thống (Cộng vào người mua) = Phí Gas + (Giá vé niêm yết * % Phí sàn)
+      // Chỉ tính 3% trên giá vé, không tính trên giá sản phẩm đi kèm
+      const system_fee = resale_gas_fee + (ticketPriceOnly * platform_fee_percent);
+      
+      // 2. Tính toán lợi nhuận bán lại (Resale Profit) để tính phí bản quyền BTC
       let acquisitionCost = 0;
       const lastSuccessTx = await tx.marketplaceTransaction.findFirst({
         where: { 
@@ -232,22 +236,31 @@ const createMarketplaceOrder = async (req, res) => {
         acquisitionCost = Number(originalOrder?.items[0]?.unit_price || 0);
       }
 
+      const gross_profit = Math.max(0, askingPrice - acquisitionCost);
+      
+      // 3. BTC nhận (Khấu trừ người bán) = % Bản quyền * Giá gốc (Nếu bán cao hơn giá gốc)
+      const royalty_fee = askingPrice > acquisitionCost ? (acquisitionCost * royalty_fee_percent) : 0;
+      
+      const seller_receive_amount = askingPrice - royalty_fee;
+      const total_buyer_pay = askingPrice + system_fee;
       const resale_profit = seller_receive_amount - acquisitionCost;
       
       const mTransaction = await tx.marketplaceTransaction.create({
         data: {
+          transaction_number: 'MKT' + Date.now(),
           listing_id: listing.id,
           ticket_id: listing.ticket_id,
           seller_id: listing.seller_id,
           buyer_id: userId,
           seller_receive_amount: seller_receive_amount,
           platform_fee: system_fee,
-          commission_fee: askingPrice * 0.03,
-          gas_fee: 10000,
+          commission_fee: ticketPriceOnly * platform_fee_percent,
+          gas_fee: resale_gas_fee,
           organizer_royalty: royalty_fee,
           resale_profit: resale_profit,
           buyer_pay_amount: total_buyer_pay,
           status: 'pending',
+          is_settled: false,
           ip_address: botService.getClientIp(req)
         }
       });
@@ -272,7 +285,7 @@ const getOrderById = async (req, res) => {
     const { id } = req.params;
     const userId = req.user.userId;
 
-    const order = await prisma.order.findUnique({
+    let order = await prisma.order.findUnique({
       where: { id },
       include: {
         event: {
@@ -287,8 +300,77 @@ const getOrderById = async (req, res) => {
       }
     });
 
-    if (!order) return res.status(404).json({ error: 'Không tìm thấy đơn hàng.' });
-    if (order.customer_id !== userId) return res.status(403).json({ error: 'Bạn không có quyền xem đơn hàng này.' });
+    // Nếu không thấy trong Order, tìm trong MarketplaceTransaction
+    if (!order) {
+      const mktTx = await prisma.marketplaceTransaction.findFirst({
+        where: { 
+          OR: [
+            { id: id },
+            { transaction_number: id }
+          ]
+        },
+        include: {
+          ticket: {
+            include: {
+              event: true,
+              ticket_tier: true
+            }
+          },
+          buyer: true,
+          seller: true,
+          listing: true
+        }
+      });
+
+      if (mktTx) {
+        if (mktTx.buyer_id !== userId && mktTx.seller_id !== userId) {
+          return res.status(403).json({ error: 'Bạn không có quyền xem giao dịch này.' });
+        }
+
+        // Map sang cấu trúc Order
+        order = {
+          id: mktTx.id,
+          order_number: mktTx.transaction_number,
+          total_amount: mktTx.buyer_pay_amount,
+          subtotal: mktTx.listing.asking_price,
+          status: mktTx.status,
+          order_type: 'MARKETPLACE_PURCHASE',
+          event: mktTx.ticket.event,
+          expires_at: mktTx.listing.lock_expires_at, // Bổ sung thời hạn giữ vé
+          items: [
+            {
+              id: 'mkt-item',
+              quantity: 1,
+              unit_price: mktTx.listing.metadata?.ticket_price || mktTx.listing.asking_price,
+              subtotal: mktTx.listing.metadata?.ticket_price || mktTx.listing.asking_price,
+              ticket_tier: mktTx.ticket.ticket_tier
+            }
+          ],
+          platform_fee: mktTx.platform_fee,
+          commission_fee: mktTx.commission_fee,
+          gas_fee: mktTx.gas_fee,
+          organizer_royalty: mktTx.organizer_royalty,
+          merchandise_items: [] 
+        };
+
+        // Thêm thông tin quà tặng từ metadata listing
+        const { merchandise_item_ids } = mktTx.listing.metadata || {};
+        if (merchandise_item_ids && Array.isArray(merchandise_item_ids) && merchandise_item_ids.length > 0) {
+           const gifts = await prisma.merchandiseOrderItem.findMany({
+             where: { id: { in: merchandise_item_ids } },
+             include: { merchandise: true }
+           });
+           order.merchandise_items = gifts.map(g => ({ ...g, is_gift: true }));
+        }
+      }
+    }
+
+    if (!order) return res.status(404).json({ error: 'Không tìm thấy đơn hàng hoặc giao dịch.' });
+    
+    // Check ownership for Order model
+    if (order.customer_id && order.customer_id !== userId) {
+       return res.status(403).json({ error: 'Bạn không có quyền xem đơn hàng này.' });
+    }
 
     res.status(200).json({ data: order });
   } catch (error) {
@@ -441,7 +523,7 @@ const updatePendingOrder = async (req, res) => {
 const createTransferOrder = async (req, res) => {
   try {
     const userId = req.user.userId;
-    const { ticket_id, receiver_email } = req.body;
+    const { ticket_id, receiver_email, merchandise_item_ids } = req.body;
 
     // 1. Kiểm tra vé và quyền sở hữu
     const ticket = await prisma.ticket.findUnique({
@@ -492,7 +574,8 @@ const createTransferOrder = async (req, res) => {
         ip_address: botService.getClientIp(req),
         metadata: {
           ticket_id: ticket.id,
-          receiver_email: receiver_email
+          receiver_email: receiver_email,
+          merchandise_item_ids: merchandise_item_ids || []
         }
       }
     });

@@ -24,5 +24,13 @@ export const userService = {
   linkExternalWallet: async (address) => {
     const response = await api.post('/users/link-external-wallet', { address });
     return response.data;
+  },
+  getNotifications: async () => {
+    const response = await api.get('/users/notifications');
+    return response.data;
+  },
+  markNotificationAsRead: async (id) => {
+    const response = await api.put(`/users/notifications/${id}/read`);
+    return response.data;
   }
 };

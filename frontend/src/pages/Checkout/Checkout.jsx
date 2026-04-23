@@ -14,7 +14,9 @@ import {
   MapPin,
   Check,
   Info,
-  ArrowRightLeft
+  ArrowRightLeft,
+  Shield,
+  CheckSquare
 } from 'lucide-react';
 import orderService from '../../services/order.service';
 import merchandiseService from '../../services/merchandise.service';
@@ -132,6 +134,17 @@ const Checkout = () => {
   });
 
   const availableCoupons = couponsData?.data?.data || [];
+
+  // Sync selectedMerch with order data
+  useEffect(() => {
+    if (order?.merchandise_items && !isUpdatingOrder) {
+      const initialMerch = {};
+      order.merchandise_items.forEach(item => {
+        initialMerch[item.merchandise_id] = item.quantity;
+      });
+      setSelectedMerch(initialMerch);
+    }
+  }, [order, isUpdatingOrder]);
 
   // Persistence & Real-time Ticketing logic
   useEffect(() => {
@@ -374,6 +387,42 @@ const Checkout = () => {
                             <p className="font-black text-sm">{formatPrice(item.subtotal, currentLocale)}</p>
                          </div>
                       ))}
+                      {order.merchandise_items && order.merchandise_items.map((item, idx) => (
+                         <div key={`merch-${idx}`} className="flex items-center justify-between animate-in fade-in slide-in-from-right-4 duration-500 mt-2">
+                            <div className="flex items-center gap-4">
+                               <ShoppingBag className="w-4 h-4 text-neon-green/50" />
+                               <div>
+                                  <p className="text-sm font-black uppercase tracking-tight">{item.merchandise.name}</p>
+                                  <p className="text-[10px] text-gray-400 font-bold">{t('checkout.quantity')} x{item.quantity}</p>
+                               </div>
+                            </div>
+                            <p className="font-black text-sm">{formatPrice(item.subtotal, currentLocale)}</p>
+                         </div>
+                      ))}
+                      {order && order.order_type === 'MARKETPLACE_PURCHASE' && (
+                         <div className="space-y-3 pt-4 border-t border-gray-100 dark:border-white/5 mt-4">
+                            <div className="flex items-center justify-between">
+                               <div className="flex items-center gap-4">
+                                  <Shield className="w-4 h-4 text-neon-green/50" />
+                                  <div>
+                                     <p className="text-sm font-black uppercase tracking-tight">Phí giao dịch hệ thống</p>
+                                     <p className="text-[10px] text-gray-400 font-bold">Xác thực giao dịch & Chống gian lận</p>
+                                  </div>
+                               </div>
+                               <p className="font-black text-sm">+{formatPrice(order.commission_fee || 0, currentLocale)}</p>
+                            </div>
+                            <div className="flex items-center justify-between">
+                               <div className="flex items-center gap-4">
+                                  <CheckSquare className="w-4 h-4 text-neon-green/50" />
+                                  <div>
+                                     <p className="text-sm font-black uppercase tracking-tight">Phí vận hành (Gas fee)</p>
+                                     <p className="text-[10px] text-gray-400 font-bold">Duy trì mạng lưới Blockchain</p>
+                                  </div>
+                               </div>
+                               <p className="font-black text-sm">+{formatPrice(order.gas_fee || 0, currentLocale)}</p>
+                            </div>
+                         </div>
+                      )}
                       {order && order.order_type === 'TICKET_TRANSFER' && (
                          <div className="flex items-center justify-between py-2 border-t border-gray-100 dark:border-white/5 mt-4">
                             <div className="flex items-center gap-4">
@@ -383,7 +432,7 @@ const Checkout = () => {
                                   <p className="text-[10px] text-gray-400 font-bold">Bao gồm phí Gas & Xác thực AI</p>
                                </div>
                             </div>
-                            <p className="font-black text-sm">{formatPrice(10000, currentLocale)}</p>
+                            <p className="font-black text-sm">{formatPrice(order.gas_fee || 10000, currentLocale)}</p>
                          </div>
                       )}
                    </div>

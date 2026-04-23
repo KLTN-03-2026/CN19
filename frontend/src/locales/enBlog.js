@@ -1,4 +1,7 @@
 import enSupport from './enSupport';
+import enMyEvent from './enMyEvent';
+import enMarketplace from './enMarketplace';
+import enEvent from './enEvent';
 
 const enBlog = {
   nav: {
@@ -482,7 +485,10 @@ const enBlog = {
       comment_success: "Comment posted successfully!",
       error_empty: "Please enter content or select an image!"
     }
-  }
+  },
+  myTickets: enMyEvent,
+  marketplace: enMarketplace,
+  event: enEvent
 };
 
 export default enBlog;

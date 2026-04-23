@@ -1,4 +1,7 @@
 import viSupport from './viSupport';
+import vnMyEvent from './vnMyEvent';
+import vnMarketplace from './vnMarketplace';
+import vnEvent from './vnEvent';
 
 const vnBlog = {
   nav: {
@@ -483,7 +486,10 @@ const vnBlog = {
       comment_success: "Đã gửi bình luận hành công!",
       error_empty: "Vui lòng nhập nội dung hoặc chọn ảnh!"
     }
-  }
+  },
+  myTickets: vnMyEvent,
+  marketplace: vnMarketplace,
+  event: vnEvent
 };
 
 export default vnBlog;

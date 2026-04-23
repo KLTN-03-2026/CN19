@@ -17,6 +17,7 @@ import ResaleTicket from './pages/Customer/ResaleTicket';
 import TicketTransfer from './pages/Customer/TicketTransfer';
 import Checkout from './pages/Checkout/Checkout';
 import PaymentResult from './pages/Checkout/PaymentResult';
+import Marketplace from './pages/Public/Marketplace';
 
 // Support Pages
 import CustomerTerms from './pages/Support/CustomerTerms';
@@ -107,6 +108,7 @@ const router = createBrowserRouter([
       { path: '', element: <Home /> },
       { path: 'events', element: <Events /> },
       { path: 'events/:id', element: <PublicEventDetail /> },
+      { path: 'marketplace', element: <Marketplace /> },
       { path: 'blog', element: <Blog /> },
       { path: 'blog/:slug', element: <BlogDetail /> },
       { path: 'organizer/:id', element: <OrganizerPublicProfile /> },

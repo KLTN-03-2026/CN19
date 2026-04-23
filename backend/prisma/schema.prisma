@@ -48,6 +48,7 @@ model User {
   refunds               RefundRequest[]
   owned_tickets         Ticket[]                 @relation("CurrentOwner")
   original_tickets      Ticket[]                 @relation("OriginalBuyer")
+  owned_products        MerchandiseOrderItem[]   @relation("ProductOwner")
   transfers_sent        TicketTransfer[]         @relation("Sender")
   transfers_received    TicketTransfer[]         @relation("Receiver")
 }
@@ -122,8 +123,10 @@ model Event {
   created_at                 DateTime               @default(now())
   updated_at                 DateTime               @updatedAt
   seating_charts             String[]               @default([])
-  resale_price_limit_percent Decimal                @default(108.0)
-  is_featured                Boolean                @default(false)
+  resale_price_limit_percent    Decimal                @default(108.0)
+  resale_platform_fee_percent   Decimal                @default(3.0)
+  resale_gas_fee               Decimal                @default(10000.0)
+  is_featured                   Boolean                @default(false)
   blogs                      Blog[]
   coupons                    Coupon[]
   emergency_requests         EmergencyRequest[]
@@ -205,21 +208,23 @@ model Order {
 }
 
 model Payment {
-  id             String   @id @default(uuid())
-  order_id       String
-  method         String
-  transaction_id String?
-  amount         Decimal
-  status         String   @default("pending")
-  response_data  Json?
-  paid_at        DateTime @default(now())
-  created_at     DateTime @default(now())
-  updated_at     DateTime @updatedAt
-  order          Order    @relation(fields: [order_id], references: [id])
+  id                    String                  @id @default(uuid())
+  order_id              String?
+  mkt_transaction_id    String?
+  method                String
+  transaction_id        String?
+  amount                Decimal
+  status                String                  @default("pending")
+  response_data         Json?
+  paid_at               DateTime                @default(now())
+  created_at            DateTime                @default(now())
+  updated_at            DateTime                @updatedAt
+  order                 Order?                  @relation(fields: [order_id], references: [id])
+  marketplace_transaction MarketplaceTransaction? @relation(fields: [mkt_transaction_id], references: [id])
 }
 
 model OrderItem {
-  id             String     @id @default(uuid())
+  id             String      @id @default(uuid())
   order_id       String
   ticket_tier_id String
   quantity       Int
@@ -271,6 +276,7 @@ model MarketplaceListing {
   lock_expires_at      DateTime?
   sold_at              DateTime?
   platform_fee_percent Decimal                  @default(5.0)
+  metadata             Json?
   event                Event                    @relation(fields: [event_id], references: [id])
   seller               User                     @relation(fields: [seller_id], references: [id])
   ticket               Ticket                   @relation(fields: [ticket_id], references: [id])
@@ -279,6 +285,7 @@ model MarketplaceListing {
 
 model MarketplaceTransaction {
   id                    String             @id @default(uuid())
+  transaction_number    String?            @unique
   listing_id            String
   ticket_id             String
   seller_id             String
@@ -299,6 +306,7 @@ model MarketplaceTransaction {
   listing               MarketplaceListing @relation(fields: [listing_id], references: [id])
   seller                User               @relation("Seller", fields: [seller_id], references: [id])
   ticket                Ticket             @relation(fields: [ticket_id], references: [id])
+  payments              Payment[]
 }
 
 model TicketTransfer {
@@ -432,8 +440,12 @@ model MerchandiseOrderItem {
   quantity       Int
   unit_price     Decimal
   subtotal       Decimal
+  owner_id       String?     // Chủ sở hữu hiện tại của vật phẩm
+  is_redeemed    Boolean     @default(false) // Trạng thái đã nhận hàng
+  
   merchandise    Merchandise @relation(fields: [merchandise_id], references: [id])
   order          Order       @relation(fields: [order_id], references: [id])
+  owner          User?       @relation("ProductOwner", fields: [owner_id], references: [id])
 }
 
 model Blog {

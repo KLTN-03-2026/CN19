@@ -241,6 +241,7 @@ const login = async (req, res) => {
         full_name: user.full_name,
         avatar_url: user.avatar_url,
         date_of_birth: user.date_of_birth,
+        created_at: user.created_at,
         permissions: user.permissions || [],
         organizer_profile: user.organizer_profile
       }
@@ -544,6 +545,7 @@ const googleLogin = async (req, res) => {
         status: user.status,
         avatar_url: user.avatar_url,
         date_of_birth: user.date_of_birth,
+        created_at: user.created_at,
         wallet_address: user.wallet_address,
         permissions: user.permissions || [],
         organizer_profile: user.organizer_profile

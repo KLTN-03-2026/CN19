@@ -69,6 +69,7 @@ app.use(globalLimiter); // Giới hạn chung toàn hệ thống
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use('/uploads', express.static('uploads'));
 
 // --- Mount Routes ---
 // Public & Customer
@@ -80,7 +81,7 @@ app.use('/api/coupons', couponRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/tickets', ticketRoutes);
-app.use('/api/marketplace/listings', marketplaceRoutes);
+app.use('/api/marketplace', marketplaceRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/refunds', refundRoutes);
 app.use('/api/blogs', blogRoutes);
@@ -128,4 +129,9 @@ app.get('/', (req, res) => {
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
+});
+
+// Chặn server bị sập khi gặp lỗi không mong muốn
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });

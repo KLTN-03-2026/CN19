@@ -73,7 +73,11 @@ const scanQr = async (req, res) => {
           // Check-in Ticket
           await tx.ticket.update({
             where: { id: ticketId },
-            data: { is_used: true, checked_in_at: new Date() }
+            data: { 
+              is_used: true, 
+              status: 'used', 
+              checked_in_at: new Date() 
+            }
           });
         }
       });

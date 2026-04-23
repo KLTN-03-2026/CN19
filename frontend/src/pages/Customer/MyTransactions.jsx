@@ -91,16 +91,13 @@ const MyTransactions = () => {
         };
         return labels[type] || type;
     };
-
     const filteredTransactions = transactions.filter(t => {
         const matchesSearch = t.description?.toLowerCase().includes(searchTerm.toLowerCase()) || 
                              t.transaction_id?.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesTab = activeTab === 'all' || t.type === activeTab;
         
-        // Khách hàng chỉ xem giao dịch thành công
-        const isSuccessful = ['completed', 'success', 'paid'].includes(t.status?.toLowerCase());
-        
-        return matchesSearch && matchesTab && isSuccessful;
+        // Khách hàng xem toàn bộ giao dịch (có thể ẩn pending nếu quá nhiều but user requested missing)
+        return matchesSearch && matchesTab;
     });
 
     const formatCurrency = (amount) => {

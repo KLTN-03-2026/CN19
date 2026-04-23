@@ -35,16 +35,30 @@ const getMyTickets = async (req, res) => {
             section_name: true,
             price: true
           } 
+        },
+        // Kiểm tra xem vé có listing đã được bán trên chợ không
+        marketplace_listings: {
+          select: { id: true, status: true }
         }
       },
     });
 
     // Bổ sung thêm flag để frontend dễ phân biệt
-    const enrichedTickets = tickets.map(t => ({
-      ...t,
-      is_current_owner: t.current_owner_id === userId,
-      is_original_buyer: t.original_buyer_id === userId
-    }));
+    const enrichedTickets = tickets.map(t => {
+      const activeListing = t.marketplace_listings.find(l => l.status === 'active');
+      const soldListing = t.marketplace_listings.find(l => l.status === 'sold');
+      
+      return {
+        ...t,
+        status: t.is_used ? 'used' : t.status,
+        is_current_owner: t.current_owner_id === userId,
+        is_original_buyer: t.original_buyer_id === userId,
+        // true nếu vé này từng được bán qua Chợ vé (có listing với status = 'sold')
+        was_sold_on_marketplace: !!soldListing,
+        // ID của bài đăng đang hoạt động (để hủy/sửa)
+        active_listing_id: activeListing ? activeListing.id : null
+      };
+    });
 
     res.status(200).json({ data: enrichedTickets });
   } catch (error) {
@@ -66,6 +80,18 @@ const getTicketDetail = async (req, res) => {
         ticket_tier: true,
         current_owner: {
            select: { id: true, email: true, full_name: true }
+        },
+        order: {
+          include: {
+            merchandise_items: {
+              include: {
+                merchandise: true
+              }
+            }
+          }
+        },
+        marketplace_listings: {
+          where: { status: 'active' }
         }
       }
     });
@@ -74,9 +100,20 @@ const getTicketDetail = async (req, res) => {
       return res.status(404).json({ error: 'Không tìm thấy vé hoặc bạn không sở hữu vé này.' });
     }
 
+    // [Business Logic] Lọc các sản phẩm thuộc quyền sở hữu của user
+    // Một sản phẩm thuộc về user nếu:
+    // 1. User là owner_id trực tiếp
+    // 2. owner_id là null VÀ user là người mua đơn hàng đó (order.user_id)
+    if (ticket.order && ticket.order.merchandise_items) {
+      ticket.order.merchandise_items = ticket.order.merchandise_items.filter(item => 
+        item.owner_id === userId || (item.owner_id === null && ticket.order.customer_id === userId)
+      );
+    }
+
     res.status(200).json({ 
       data: {
         ...ticket,
+        status: ticket.is_used ? 'used' : ticket.status, 
         is_current_owner: ticket.current_owner_id === userId,
         is_original_buyer: ticket.original_buyer_id === userId
       } 
@@ -197,6 +234,24 @@ const transferTicket = async (req, res) => {
           is_transferred: true
         }
       });
+
+      // 3. Cập nhật quyền sở hữu sản phẩm (nếu có chọn)
+      if (merchandise_item_ids && Array.isArray(merchandise_item_ids) && merchandise_item_ids.length > 0) {
+        await tx.merchandiseOrderItem.updateMany({
+          where: {
+            id: { in: merchandise_item_ids },
+            order_id: ticket.order_id,
+            // Kiểm tra quyền sở hữu: Hoặc là chủ sở hữu hiện tại, hoặc là người mua đơn hàng (nếu chưa từng chuyển nhượng)
+            OR: [
+              { owner_id: userId },
+              { owner_id: null, order: { user_id: userId } }
+            ]
+          },
+          data: {
+            owner_id: receiver.id
+          }
+        });
+      }
     });
 
     // Gửi email thông báo (Không đợi phản hồi)
