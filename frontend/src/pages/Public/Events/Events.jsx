@@ -119,10 +119,10 @@ const Events = () => {
                                 className="w-full flex items-center justify-between gap-3 px-6 py-4 bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/5 rounded-2xl font-bold text-xs text-gray-900 dark:text-white hover:border-neon-green/30 transition-all shadow-sm"
                             >
                                 <span className="truncate">
-                                    {sortBy === 'newest' && t('explore.sort.newest', 'Mới nhất')}
-                                    {sortBy === 'price-asc' && t('explore.sort.price_asc', 'Giá: Thấp → Cao')}
-                                    {sortBy === 'price-desc' && t('explore.sort.price_desc', 'Giá: Cao → Thấp')}
-                                    {sortBy === 'popular' && t('explore.sort.popular', 'Phổ biến')}
+                                    {sortBy === 'newest' && t('explore.sort.newest')}
+                                    {sortBy === 'price-asc' && t('explore.sort.price_asc')}
+                                    {sortBy === 'price-desc' && t('explore.sort.price_desc')}
+                                    {sortBy === 'popular' && t('explore.sort.popular')}
                                 </span>
                                 <ArrowUpDown className={`w-4 h-4 text-gray-400 transition-transform duration-300 ${isSortOpen ? 'rotate-180' : ''}`} />
                             </button>
@@ -134,12 +134,12 @@ const Events = () => {
                                         className="fixed inset-0 z-[110]" 
                                         onClick={() => setIsSortOpen(false)}
                                     />
-                                    <div className="absolute top-[calc(100%+12px)] right-0 min-w-[260px] z-[150] bg-white dark:bg-[#111114] border border-gray-100 dark:border-white/10 rounded-[2rem] shadow-[0_30px_60px_rgba(0,0,0,0.6)] p-3 animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
+                                    <div className="absolute top-[calc(100%+12px)] right-0 w-full z-[150] bg-white dark:bg-[#111114] border border-gray-100 dark:border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] p-1.5 animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
                                         {[
-                                            { id: 'newest', label: t('explore.sort.newest', 'Mới nhất') },
-                                            { id: 'price-asc', label: t('explore.sort.price_asc', 'Giá: Thấp → Cao') },
-                                            { id: 'price-desc', label: t('explore.sort.price_desc', 'Giá: Cao → Thấp') },
-                                            { id: 'popular', label: t('explore.sort.popular', 'Phổ biến') }
+                                            { id: 'newest', label: t('explore.sort.newest') },
+                                            { id: 'price-asc', label: t('explore.sort.price_asc') },
+                                            { id: 'price-desc', label: t('explore.sort.price_desc') },
+                                            { id: 'popular', label: t('explore.sort.popular') }
                                         ].map((opt) => (
                                             <button
                                                 key={opt.id}

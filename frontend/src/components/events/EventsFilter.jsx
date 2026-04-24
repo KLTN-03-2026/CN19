@@ -39,7 +39,7 @@ const EventsFilter = ({
                 <div className="space-y-4">
                     <div className="flex items-center justify-between">
                         <h3 className="text-[10px] font-black uppercase text-gray-400 flex items-center gap-2">
-                            <Tag className="w-3 h-3 text-neon-green" /> {t('explore.category_label', 'Danh mục')}
+                            <Tag className="w-3 h-3 text-neon-green" /> {t('explore.filter_section.category')}
                         </h3>
                     </div>
                     <div className="grid grid-cols-2 gap-x-4 gap-y-2 max-h-[140px] overflow-y-auto no-scrollbar pr-2">
@@ -72,7 +72,7 @@ const EventsFilter = ({
                 {/* 💰 Price Range Column */}
                 <div className="space-y-4">
                     <h3 className="text-[10px]  font-black uppercase text-gray-400 flex items-center gap-2">
-                        {t('explore.price_label', 'Khoảng giá')}
+                        {t('explore.filter_section.price')}
                     </h3>
                     <div className="space-y-6 pt-2">
                         <input 
@@ -86,7 +86,7 @@ const EventsFilter = ({
                         />
                         <div className="flex items-center justify-between">
                             <div className="flex flex-col">
-                                <span className="text-[9px] uppercase font-bold text-gray-400">Đến mức:</span>
+                                <span className="text-[9px] uppercase font-bold text-gray-400">{t('explore.filter_section.price_up_to')}</span>
                                 <span className="text-sm font-black text-gray-900 dark:text-white">
                                     {formatPrice(Array.isArray(priceRange) ? priceRange[1] : 10000000)}
                                 </span>
@@ -101,7 +101,7 @@ const EventsFilter = ({
                 {/* 📅 Date & Actions Column */}
                 <div className="space-y-4">
                     <h3 className="text-[10px] font-black uppercase text-gray-400 flex items-center gap-2">
-                         {t('explore.date_label', 'Thời gian')}
+                         {t('explore.filter_section.time')}
                     </h3>
                     <div className="space-y-4 pt-2">
                         <div className="relative">
@@ -120,13 +120,13 @@ const EventsFilter = ({
                                 className="flex-1 py-3 px-4 flex items-center justify-center gap-2 border border-gray-200 dark:border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-red-500 hover:bg-red-500/5 transition-all"
                             >
                                 <RefreshCcw className="w-3 h-3" />
-                                {t('explore.clear_all')}
+                                {t('explore.filter_section.clear')}
                             </button>
                             <button 
                                 onClick={onClose}
                                 className="px-6 py-3 bg-gray-900 dark:bg-white text-white dark:text-black rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all"
                             >
-                                {t('common.done', 'Xong')}
+                                {t('explore.filter_section.done')}
                             </button>
                         </div>
                     </div>
