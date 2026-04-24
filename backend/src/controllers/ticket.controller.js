@@ -39,6 +39,14 @@ const getMyTickets = async (req, res) => {
         // Kiểm tra xem vé có listing đã được bán trên chợ không
         marketplace_listings: {
           select: { id: true, status: true }
+        },
+        transactions: {
+          where: { 
+            buyer_id: userId,
+            status: { in: ['paid', 'success', 'completed', 'thanh_cong'] }
+          },
+          select: { transaction_number: true },
+          take: 1
         }
       },
     });
@@ -47,6 +55,7 @@ const getMyTickets = async (req, res) => {
     const enrichedTickets = tickets.map(t => {
       const activeListing = t.marketplace_listings.find(l => l.status === 'active');
       const soldListing = t.marketplace_listings.find(l => l.status === 'sold');
+      const purchaseTransaction = t.transactions[0];
       
       return {
         ...t,
@@ -55,6 +64,8 @@ const getMyTickets = async (req, res) => {
         is_original_buyer: t.original_buyer_id === userId,
         // true nếu vé này từng được bán qua Chợ vé (có listing với status = 'sold')
         was_sold_on_marketplace: !!soldListing,
+        // Mã giao dịch mua lại (nếu có) để frontend điều hướng
+        mkt_transaction_number: purchaseTransaction ? purchaseTransaction.transaction_number : null,
         // ID của bài đăng đang hoạt động (để hủy/sửa)
         active_listing_id: activeListing ? activeListing.id : null
       };

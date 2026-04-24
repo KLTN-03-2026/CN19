@@ -9,6 +9,8 @@ import enMarketplace from './locales/enMarketplace';
 import enMerchandise from './locales/enMerchandise';
 import enMyEvent from './locales/enMyEvent';
 import enSupport from './locales/enSupport';
+import enMyTransaction from './locales/enMyTransaction';
+import enMyRevenue from './locales/enMyRevenue';
 
 // Import các file ngôn ngữ Tiếng Việt
 import vnBlog from './locales/vnBlog';
@@ -17,6 +19,8 @@ import vnMarketplace from './locales/vnMarketplace';
 import vnMerchandise from './locales/vnMerchandise';
 import vnMyEvent from './locales/vnMyEvent';
 import viSupport from './locales/viSupport';
+import vnMyTransaction from './locales/vnMyTransaction';
+import vnMyRevenue from './locales/vnMyRevenue';
 
 i18n
   .use(LanguageDetector)
@@ -30,7 +34,9 @@ i18n
           ...enMarketplace,
           ...enMerchandise,
           ...enMyEvent,
-          ...enSupport
+          ...enSupport,
+          ...enMyTransaction,
+          ...enMyRevenue
         }
       },
       vi: {
@@ -40,7 +46,9 @@ i18n
           ...vnMarketplace,
           ...vnMerchandise,
           ...vnMyEvent,
-          ...viSupport
+          ...viSupport,
+          ...vnMyTransaction,
+          ...vnMyRevenue
         }
       }
     },

@@ -109,7 +109,6 @@ const BlogList = () => {
     return (
         <div className="min-h-screen bg-white dark:bg-dark-bg pt-20 pb-20 px-4 md:px-8 selection:bg-neon-green/30 transition-colors duration-500">
             {/* 🌌 Hệ thống Grid Background nhẹ nhàng */}
-            <div className="fixed inset-0 bg-grid-pattern opacity-[0.03] pointer-events-none"></div>
 
             <div className="max-w-7xl mx-auto relative z-10">
                 

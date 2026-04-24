@@ -3,6 +3,7 @@ import vnMyEvent from './vnMyEvent';
 import vnMarketplace from './vnMarketplace';
 import vnEvent from './vnEvent';
 import vnMerchandise from './vnMerchandise';
+import vnMyTransaction from './vnMyTransaction';
 
 const vnBlog = {
   nav: {
@@ -491,7 +492,8 @@ const vnBlog = {
   myTickets: vnMyEvent,
   marketplace: vnMarketplace,
   event: vnEvent,
-  merchandise: vnMerchandise
+  merchandise: vnMerchandise,
+  transactions: vnMyTransaction
 };
 
 export default vnBlog;

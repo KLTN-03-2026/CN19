@@ -307,7 +307,7 @@ const MyProducts = () => {
                                                 <span className="text-[15px] font-black text-gray-900 dark:text-white">{formatPrice(item.subtotal)}</span>
                                             </div>
                                             <Link 
-                                                to={`/my-transactions/${item.order_id}`}
+                                                to={`/my-transactions/${item.mkt_transaction_number || item.order_id}`}
                                                 className="p-2 bg-gray-100 dark:bg-white/5 text-gray-500 hover:text-neon-green rounded-lg transition-all"
                                                 title="Xem chi tiết giao dịch"
                                             >

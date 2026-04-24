@@ -23,12 +23,12 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
 const MyTransactions = () => {
-    const { i18n } = useTranslation();
-    const isVi = i18n.language.startsWith('vi');
+    const { t, i18n } = useTranslation();
     const [transactions, setTransactions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [activeTab, setActiveTab] = useState('all'); // 'all', 'PRIMARY_PURCHASE', 'TRANSFER_FEE', 'MARKETPLACE_BUY'
+    const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'success', 'pending', 'cancelled'
 
     useEffect(() => {
         fetchTransactions();
@@ -40,7 +40,7 @@ const MyTransactions = () => {
             const res = await transactionService.getMyTransactions();
             setTransactions(res.data || []);
         } catch (error) {
-            toast.error(isVi ? 'Không thể tải lịch sử giao dịch.' : 'Failed to load transaction history.');
+            toast.error(t('transactions.toast.error'));
             console.error(error);
         } finally {
             setLoading(false);
@@ -52,14 +52,14 @@ const MyTransactions = () => {
             case 'completed':
             case 'success':
             case 'paid':
-                return 'Thành công';
+                return t('transactions.status.success');
             case 'pending':
             case 'processing':
-                return 'Đang xử lý';
+                return t('transactions.status.pending');
             case 'failed':
-                return 'Thất bại';
             case 'cancelled':
-                return 'Đã hủy';
+            case 'expired':
+                return t('transactions.status.cancelled');
             default:
                 return status;
         }
@@ -76,6 +76,7 @@ const MyTransactions = () => {
                 return 'bg-amber-500/10 text-amber-500 border-amber-500/20';
             case 'failed':
             case 'cancelled':
+            case 'expired':
                 return 'bg-red-500/10 text-red-500 border-red-500/20';
             default:
                 return 'bg-gray-500/10 text-gray-500 border-gray-500/20';
@@ -83,21 +84,26 @@ const MyTransactions = () => {
     };
 
     const getTypeLabel = (type) => {
-        const labels = {
-            'PRIMARY_PURCHASE': isVi ? 'Mua vé sơ cấp' : 'Primary Purchase',
-            'MARKETPLACE_BUY': isVi ? 'Mua vé chợ đen' : 'Marketplace Purchase',
-            'TRANSFER_FEE': isVi ? 'Chuyển nhượng' : 'Transfer',
-            'RESELL_REVENUE': isVi ? 'Doanh thu bán lại' : 'Resell Revenue'
-        };
-        return labels[type] || type;
+        return t(`transactions.type.${type}`) || type;
     };
     const filteredTransactions = transactions.filter(t => {
-        const matchesSearch = t.description?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                             t.transaction_id?.toLowerCase().includes(searchTerm.toLowerCase());
+        // Loại bỏ giao dịch doanh thu khỏi trang lịch sử chi tiêu
+        if (t.type === 'RESELL_REVENUE') return false;
+
+        const matchesSearch = (t.description?.toLowerCase() || '').includes(searchTerm.toLowerCase()) || 
+                             (t.transaction_id?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+                             (t.event_name?.toLowerCase() || '').includes(searchTerm.toLowerCase());
         const matchesTab = activeTab === 'all' || t.type === activeTab;
         
-        // Khách hàng xem toàn bộ giao dịch (có thể ẩn pending nếu quá nhiều but user requested missing)
-        return matchesSearch && matchesTab;
+        let matchesStatus = true;
+        const s = t.status?.toLowerCase();
+        if (statusFilter === 'success') {
+            matchesStatus = ['success', 'completed', 'paid'].includes(s);
+        } else if (statusFilter === 'cancelled') {
+            matchesStatus = ['failed', 'cancelled', 'expired', 'pending', 'processing'].includes(s);
+        }
+
+        return matchesSearch && matchesTab && matchesStatus;
     });
 
     const formatCurrency = (amount) => {
@@ -105,143 +111,186 @@ const MyTransactions = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-dark-bg transition-colors duration-500 flex flex-col pt-10 pb-20 px-4 sm:px-8 relative overflow-hidden">
-            {/* Background Decorations */}
-            <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-neon-green/5 blur-[120px] rounded-full -z-10"></div>
-            <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-blue-500/5 blur-[100px] rounded-full -z-10"></div>
+        <div className="min-h-screen bg-gray-50 dark:bg-[#050505] text-gray-900 dark:text-white transition-colors duration-500 pt-6 pb-10 overflow-x-hidden">
+            {/* Background Decorative Elements */}
+            <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
+                <div className="absolute top-[-10%] right-[-5%] w-[40rem] h-[40rem] bg-neon-green/5 blur-[120px] rounded-full"></div>
+                <div className="absolute bottom-[-10%] left-[-5%] w-[30rem] h-[30rem] bg-blue-500/5 blur-[100px] rounded-full"></div>
+            </div>
 
-            <div className="max-w-[1400px] mx-auto space-y-8 relative z-10 w-full">
+            <div className="max-w-[1400px] mx-auto px-4 md:px-8 pt-4 space-y-4">
                 {/* Header Section */}
-                <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
-                    <div className="space-y-4">
-                        <div className="inline-flex items-center gap-2 text-neon-green font-black uppercase text-[10px] bg-neon-green/5 px-4 py-2 rounded-full border border-neon-green/20">
-                            <CreditCard className="w-3.5 h-3.5" />
-                            <span>Financial Log / Giao dịch</span>
-                        </div>
-                        <h1 className="text-3xl font-black text-gray-900 dark:text-white uppercase leading-none">Lịch sử giao dịch</h1>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 font-medium tracking-wide">
-                            Xem lại toàn bộ lịch sử nạp tiền, mua vé và phí dịch vụ của bạn.
+                <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                    <div className="space-y-1 animate-in fade-in slide-in-from-bottom-6 duration-700">
+                        <h1 className="text-xl md:text-3xl font-black leading-tight tracking-tighter">
+                            {t('transactions.title')}
+                        </h1>
+                        <p className="text-[13px] text-gray-00 dark:text-gray-400 font-medium max-w-lg leading-relaxed">
+                            {t('transactions.subtitle')}
                         </p>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
-                        <div className="relative">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    {/* Stats Bar - Focused on Spending */}
+                    <div className="grid grid-cols-3 gap-0 bg-white dark:bg-white/[0.02] border border-gray-200 dark:border-white/5 rounded-xl p-0.5 animate-in fade-in slide-in-from-bottom-10 duration-1000 w-full lg:w-auto">
+                        <div className="px-4 py-2 border-r border-gray-100 dark:border-white/5 text-center">
+                            <p className="text-[8px] font-black text-gray-500 uppercase mb-0.5">{t('transactions.stats.count')}</p>
+                            <h4 className="text-base font-black text-gray-900 dark:text-white">{filteredTransactions.length}</h4>
+                        </div>
+                        <div className="px-4 py-2 border-r border-gray-100 dark:border-white/5 text-center">
+                            <p className="text-[8px] font-black text-gray-500 uppercase mb-0.5">{t('transactions.stats.cancelled')}</p>
+                            <h4 className="text-base font-black text-red-500">
+                                {filteredTransactions.filter(t => ['failed', 'cancelled', 'expired'].includes(t.status?.toLowerCase())).length}
+                            </h4>
+                        </div>
+                        <div className="px-4 py-2 text-center">
+                            <p className="text-[8px] font-black text-gray-500 uppercase mb-0.5">{t('transactions.stats.total_spent')}</p>
+                            <h4 className="text-base font-black text-neon-green">
+                                {formatCurrency(transactions
+                                    .filter(t => ['completed', 'success', 'paid'].includes(t.status?.toLowerCase()) && t.type !== 'RESELL_REVENUE')
+                                    .reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0)
+                                )}
+                            </h4>
+                        </div>
+                    </div>
+                </header>
+
+                {/* Controls Section */}
+                <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+                    {/* Search Bar */}
+                    <div className="flex-1 max-w-2xl bg-white dark:bg-white/[0.02] border border-gray-200 dark:border-white/5 rounded-2xl p-1 backdrop-blur-md">
+                        <div className="relative group">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500 group-focus-within:text-neon-green transition-colors" />
                             <input 
                                 type="text"
-                                placeholder={isVi ? "Tìm ID, mô tả..." : "Search ID, description..."}
+                                placeholder={t('transactions.search_placeholder')}
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="bg-white dark:bg-dark-card border border-gray-200 dark:border-dark-border rounded-2xl py-3.5 pl-12 pr-6 text-sm focus:outline-none focus:ring-4 focus:ring-neon-green/10 focus:border-neon-green transition-all w-full sm:w-80 dark:text-white shadow-sm"
+                                className="w-full pl-10 pr-4 py-2 bg-transparent text-[12px] font-medium border-0 focus:ring-0 focus:outline-none placeholder:text-gray-500 text-gray-900 dark:text-white"
                             />
+                        </div>
+                    </div>
+
+                    {/* Filters & Tabs */}
+                    <div className="flex flex-wrap items-center gap-3">
+                        {/* Status Filter Dropdown */}
+                        <div className="bg-white dark:bg-white/[0.02] border border-gray-200 dark:border-white/5 rounded-2xl p-1 backdrop-blur-md">
+                            <div className="flex items-center gap-2 px-4 py-2 group hover:bg-white/[0.02] rounded-xl transition-all cursor-pointer">
+                                <Filter className="w-3.5 h-3.5 text-gray-400 group-hover:text-neon-green transition-colors" />
+                                <select 
+                                    value={statusFilter}
+                                    onChange={(e) => setStatusFilter(e.target.value)}
+                                    className="bg-transparent border-0 text-[12px] font-bold text-gray-600 dark:text-gray-400 focus:ring-0 focus:outline-none cursor-pointer pr-8"
+                                >
+                                    <option value="all" className="bg-white dark:bg-[#0a0a0a]">{t('transactions.status.all')}</option>
+                                    <option value="success" className="bg-white dark:bg-[#0a0a0a]">{t('transactions.status.success')}</option>
+                                    <option value="cancelled" className="bg-white dark:bg-[#0a0a0a]">{t('transactions.status.cancelled')}</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        {/* Category Tabs */}
+                        <div className="bg-white dark:bg-white/[0.02] border border-gray-200 dark:border-white/5 rounded-2xl p-1 backdrop-blur-md flex items-center gap-1 overflow-x-auto no-scrollbar">
+                            {[
+                                { id: 'all', label: t('transactions.tabs.all') },
+                                { id: 'PRIMARY_PURCHASE', label: t('transactions.tabs.buy') },
+                                { id: 'MARKETPLACE_BUY', label: t('transactions.tabs.resale') },
+                                { id: 'TRANSFER_FEE', label: t('transactions.tabs.transfer') },
+                            ].map((tab) => (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => setActiveTab(tab.id)}
+                                    className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase transition-all whitespace-nowrap ${
+                                        activeTab === tab.id 
+                                        ? 'bg-neon-green text-black shadow-lg shadow-neon-green/10' 
+                                        : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
+                                    }`}
+                                >
+                                    {tab.label}
+                                </button>
+                            ))}
                         </div>
                     </div>
                 </div>
 
-                {/* Filter Tabs */}
-                <div className="no-scrollbar overflow-x-auto pb-2">
-                    <div className="flex gap-2 p-1.5 bg-gray-200/30 dark:bg-white/5 rounded-2xl w-max border border-gray-100 dark:border-dark-border backdrop-blur-xl">
-                        {[
-                            { id: 'all', label: isVi ? 'Tất cả' : 'All' },
-                            { id: 'PRIMARY_PURCHASE', label: isVi ? 'Mua vé' : 'Purchase' },
-                            { id: 'MARKETPLACE_BUY', label: isVi ? 'Mua lại' : 'Resale-Buy' },
-                            { id: 'TRANSFER_FEE', label: isVi ? 'Chuyển nhượng' : 'Transfer' },
-                        ].map((tab) => (
-                            <button
-                                key={tab.id}
-                                onClick={() => setActiveTab(tab.id)}
-                                className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                                    activeTab === tab.id 
-                                    ? 'bg-white dark:bg-neon-green text-neon-hover dark:text-black shadow-md' 
-                                    : 'text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-white/10'
-                                }`}
-                            >
-                                {tab.label}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Transactions Table/List */}
+                {/* Transactions Table Section */}
                 {loading ? (
-                    <div className="space-y-4">
+                    <div className="bg-white dark:bg-white/[0.02] border border-gray-200 dark:border-white/5 rounded-2xl p-4 space-y-3">
                         {[1, 2, 3, 4, 5].map(i => (
-                            <div key={i} className="h-20 bg-gray-200 dark:bg-dark-card rounded-2xl animate-pulse border border-transparent"></div>
+                            <div key={i} className="h-10 bg-gray-100 dark:bg-white/5 rounded-lg animate-pulse"></div>
                         ))}
                     </div>
                 ) : filteredTransactions.length > 0 ? (
-                    <div className="bg-white dark:bg-dark-card rounded-3xl border border-gray-200 dark:border-dark-border overflow-hidden shadow-sm">
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left border-collapse">
+                    <div className="bg-white dark:bg-white/[0.02] border border-gray-200 dark:border-white/5 rounded-2xl overflow-hidden shadow-sm">
+                        <div className="overflow-x-auto no-scrollbar">
+                            <table className="w-full text-left border-collapse min-w-[900px]">
                                 <thead>
-                                    <tr className="border-b border-gray-100 dark:border-dark-border bg-gray-50/50 dark:bg-white/[0.02]">
-                                        <th className="px-6 py-4 text-[10px] font-black uppercase text-gray-400 tracking-wider w-40">{isVi ? 'Mã GD' : 'TX ID'}</th>
-                                        <th className="px-6 py-4 text-[10px] font-black uppercase text-gray-400 tracking-wider">{isVi ? 'Chi tiết' : 'Details'}</th>
-                                        <th className="px-6 py-4 text-[10px] font-black uppercase text-gray-400 tracking-wider w-32">{isVi ? 'Thời gian' : 'Time'}</th>
-                                        <th className="px-6 py-4 text-[10px] font-black uppercase text-gray-400 tracking-wider w-40 text-right">{isVi ? 'Số tiền' : 'Amount'}</th>
-                                        <th className="px-6 py-4 text-[10px] font-black uppercase text-gray-400 tracking-wider w-32 text-center">{isVi ? 'Trạng thái' : 'Status'}</th>
-                                        <th className="px-6 py-4 text-[10px] font-black uppercase text-gray-400 tracking-wider w-20 text-center">{isVi ? 'Xem' : 'View'}</th>
+                                    <tr className="border-b border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/[0.01]">
+                                        <th className="px-6 py-4 text-[11px] font-black uppercase text-gray-500 ">{t('transactions.table.info')}</th>
+                                        <th className="px-6 py-4 text-[11px] font-black uppercase text-gray-500 ">{t('home.for_you.title')}</th>
+                                        <th className="px-6 py-4 text-[11px] font-black uppercase text-gray-500 ">{t('blog.post.tag')}</th>
+                                        <th className="px-6 py-4 text-[11px] font-black uppercase text-gray-500 ">{t('transactions.table.amount')}</th>
+                                        <th className="px-6 py-4 text-[11px] font-black uppercase text-gray-500 ">{t('transactions.table.status')}</th>
+                                        <th className="px-6 py-4 text-[11px] font-black uppercase text-gray-500 text-right">{t('transactions.table.date')}</th>
+                                        <th className="px-6 py-4 w-12"></th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-100 dark:divide-dark-border">
+                                <tbody className="divide-y divide-gray-100 dark:divide-white/5">
                                     {filteredTransactions.map((tx) => (
-                                        <tr key={tx.transaction_id} className="hover:bg-gray-50 dark:hover:bg-white/[0.01] transition-colors group">
-                                            <td className="px-6 py-5">
-                                                <div className="flex items-center gap-3">
-                                                    <div className={`p-2 rounded-lg ${tx.type === 'TRANSFER_FEE' ? 'bg-blue-500/10 text-blue-500' : 'bg-neon-green/10 text-neon-green'}`}>
-                                                        {tx.type === 'TRANSFER_FEE' ? <ArrowRightLeft className="w-4 h-4" /> : <DollarSign className="w-4 h-4" />}
-                                                    </div>
-                                                    <span className="text-xs font-mono font-bold text-gray-600 dark:text-gray-300">
-                                                        {tx.transaction_id}
-                                                    </span>
-                                                </div>
-                                            </td>
+                                        <tr key={tx.transaction_id} className="group hover:bg-neon-green/[0.02] transition-colors">
                                             <td className="px-6 py-5">
                                                 <div className="flex flex-col">
-                                                    <span className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tight">
-                                                        {tx.description}
+                                                    <span className="text-sm font-black text-gray-900 dark:text-white tracking-tight">
+                                                        {tx.transaction_id.toUpperCase()}
                                                     </span>
-                                                    <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mt-0.5">
-                                                        {getTypeLabel(tx.type)}
+                                                    <span className="text-[10px] text-gray-500 font-medium mt-0.5">
+                                                        ID: {tx.order_id || tx.transaction_id}
                                                     </span>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-5">
-                                                <div className="flex flex-col">
-                                                    <span className="text-xs font-bold text-gray-700 dark:text-gray-300">
-                                                        {new Date(tx.timestamp).toLocaleDateString('vi-VN')}
-                                                    </span>
-                                                    <span className="text-[10px] font-medium text-gray-400">
-                                                        {new Date(tx.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
-                                                    </span>
-                                                </div>
+                                                <p className="text-xs font-bold text-gray-700 dark:text-gray-300 line-clamp-1 max-w-[200px]">
+                                                    {tx.description.split(':').pop().trim()}
+                                                </p>
                                             </td>
-                                            <td className="px-6 py-5 text-right">
-                                                <span className={`text-sm font-black ${tx.type === 'RESELL_REVENUE' ? 'text-emerald-500' : 'text-gray-900 dark:text-white'}`}>
+                                            <td className="px-6 py-5">
+                                                <span className={`px-3 py-1 rounded-md text-[9px] font-black uppercase tracking-wider ${
+                                                    tx.type === 'TRANSFER_FEE' 
+                                                    ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' 
+                                                    : tx.type === 'RESELL_REVENUE'
+                                                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                                                    : 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
+                                                }`}>
+                                                    {getTypeLabel(tx.type)}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-5">
+                                                <span className={`text-base font-black tracking-tight ${tx.type === 'RESELL_REVENUE' ? 'text-emerald-500' : 'text-gray-900 dark:text-white'}`}>
                                                     {tx.type === 'RESELL_REVENUE' ? '+' : '-'}{formatCurrency(tx.amount)}
                                                 </span>
                                             </td>
                                             <td className="px-6 py-5">
-                                                <div className="flex justify-center">
-                                                    <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase border whitespace-nowrap ${getStatusStyle(tx.status)}`}>
-                                                        {getStatusLabel(tx.status)}
+                                                <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border w-fit ${getStatusStyle(tx.status)}`}>
+                                                    {['paid', 'success', 'completed'].includes(tx.status?.toLowerCase()) ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                                                    <span className="text-[9px] font-black uppercase">{getStatusLabel(tx.status)}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-5 text-right">
+                                                <div className="flex flex-col">
+                                                    <span className="text-xs font-black text-gray-900 dark:text-white">
+                                                        {new Date(tx.timestamp).toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit' })}
+                                                    </span>
+                                                    <span className="text-[10px] font-bold text-gray-500 mt-0.5">
+                                                        {new Date(tx.timestamp).toLocaleDateString(i18n.language, { day: '2-digit', month: 'short', year: 'numeric' })}
                                                     </span>
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-5">
-                                                <div className="flex justify-center">
-                                                    {tx.type === 'PRIMARY_PURCHASE' ? (
-                                                        <Link 
-                                                            to={`/my-transactions/${tx.order_id || tx.transaction_id}`}
-                                                            className="p-2 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg text-gray-400 hover:text-neon-green transition-colors"
-                                                            title={isVi ? "Xem chi tiết" : "View details"}
-                                                        >
-                                                            <Eye className="w-4 h-4" />
-                                                        </Link>
-                                                    ) : (
-                                                        <span className="text-gray-200 dark:text-white/5">-</span>
-                                                    )}
-                                                </div>
+                                            <td className="px-6 py-5 text-right">
+                                                <Link 
+                                                    to={`/my-transactions/${tx.order_id || tx.transaction_id}`}
+                                                    className="inline-flex w-8 h-8 rounded-full bg-gray-100 dark:bg-white/5 items-center justify-center text-gray-400 hover:bg-neon-green hover:text-black transition-all"
+                                                >
+                                                    <Eye className="w-4 h-4" />
+                                                </Link>
                                             </td>
                                         </tr>
                                     ))}
@@ -257,48 +306,14 @@ const MyTransactions = () => {
                         </div>
                         <div className="space-y-2">
                             <h3 className="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tighter">
-                                {isVi ? 'Không tìm thấy giao dịch' : 'No transactions found'}
+                                {t('transactions.empty.title')}
                             </h3>
                             <p className="text-gray-500 dark:text-gray-400 max-w-xs mx-auto text-sm">
-                                {isVi ? 'Có vẻ như bạn chưa thực hiện giao dịch nào hoặc bộ lọc không khớp.' : 'It seems you haven\'t made any transactions yet or the filter doesn\'t match.'}
+                                {t('transactions.empty.desc')}
                             </p>
                         </div>
                     </div>
                 )}
-
-                {/* Info Card */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="bg-neon-green p-8 rounded-[2.5rem] text-black space-y-4 shadow-xl shadow-neon-green/10 flex flex-col justify-between">
-                        <ArrowUpRight className="w-10 h-10 opacity-20 self-end" />
-                        <div>
-                            <p className="text-[11px] font-black uppercase tracking-widest opacity-60">Tổng chi tiêu</p>
-                            <h4 className="text-3xl font-black">
-                                {formatCurrency(transactions
-                                    .filter(t => ['completed', 'success', 'paid'].includes(t.status?.toLowerCase()))
-                                    .reduce((acc, curr) => acc + (curr.type !== 'RESELL_REVENUE' ? curr.amount : 0), 0)
-                                )}
-                            </h4>
-                        </div>
-                    </div>
-                    <div className="bg-white dark:bg-dark-card p-8 rounded-[2.5rem] border border-gray-200 dark:border-dark-border flex flex-col justify-between">
-                        <div className="w-12 h-12 bg-blue-500/10 rounded-2xl flex items-center justify-center text-blue-500 mb-4">
-                            <FileText className="w-6 h-6" />
-                        </div>
-                        <div>
-                            <p className="text-[11px] font-black text-gray-400 uppercase tracking-widest">{isVi ? 'Yêu cầu hóa đơn' : 'Request Invoice'}</p>
-                            <p className="text-xs text-gray-500 mt-1">{isVi ? 'Liên hệ bộ phận chăm sóc khách hàng để nhận hóa đơn VAT.' : 'Contact support to receive VAT invoices.'}</p>
-                        </div>
-                    </div>
-                    <div className="bg-white dark:bg-dark-card p-8 rounded-[2.5rem] border border-gray-200 dark:border-dark-border flex flex-col justify-between">
-                        <div className="w-12 h-12 bg-purple-500/10 rounded-2xl flex items-center justify-center text-purple-500 mb-4">
-                            <ExternalLink className="w-6 h-6" />
-                        </div>
-                        <div>
-                            <p className="text-[11px] font-black text-gray-400 uppercase tracking-widest">{isVi ? 'Tra cứu Blockchain' : 'Blockchain Lookup'}</p>
-                            <p className="text-xs text-gray-500 mt-1">{isVi ? 'Các giao dịch NFT được ghi lại trên mạng Polygon.' : 'NFT transactions are recorded on the Polygon network.'}</p>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
     );

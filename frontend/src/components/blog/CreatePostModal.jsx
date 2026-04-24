@@ -142,10 +142,10 @@ const CreatePostModal = ({ onClose, onSuccess, postToEdit = null }) => {
                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                className="relative w-full max-w-[600px] bg-white dark:bg-[#111114] rounded-[1.75rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+                className="relative mt-20 w-full max-w-[600px] bg-white dark:bg-[#111114] rounded-[1.75rem] shadow-2xl overflow-hidden flex flex-col max-h-[86vh]"
             >
                 {/* Header */}
-                <div className="p-5 border-b border-gray-50 dark:border-white/5 flex items-center justify-between">
+                <div className="p-2 border-b border-gray-50 dark:border-white/5 flex items-center justify-between">
                     <h3 className="text-[13px] font-black text-gray-900 dark:text-white uppercase text-center flex-1 ml-9">
                         {postToEdit ? (t('blog.post.edit') || 'Chỉnh sửa bài viết') : (t('blog.create_post.title') || 'Tạo bài viết Blog')}
                     </h3>
@@ -180,10 +180,10 @@ const CreatePostModal = ({ onClose, onSuccess, postToEdit = null }) => {
                     </div>
 
                     {/* Body / Input */}
-                    <div className="p-5 pt-3 space-y-4">
+                    <div className="p-5 pt-3 space-y-3">
                         {/* Blog Title Input */}
                         <div className="space-y-1.5">
-                            <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest px-1">{t('blog.create_post.post_title')}</label>
+                            <label className="text-[9px] font-black text-gray-400 uppercase px-1">{t('blog.create_post.post_title')}</label>
                             <input 
                                 type="text"
                                 className="w-full bg-gray-50 dark:bg-white/[0.03] border border-gray-100 dark:border-white/5 rounded-xl px-4 py-3 text-[15px] font-black text-gray-900 dark:text-white placeholder-gray-400 focus:ring-1 focus:ring-neon-green transition-all"
@@ -195,7 +195,7 @@ const CreatePostModal = ({ onClose, onSuccess, postToEdit = null }) => {
 
                         {/* Blog Content Input */}
                         <div className="space-y-1.5">
-                            <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest px-1">{t('blog.create_post.post_content')}</label>
+                            <label className="text-[9px] font-black text-gray-400 uppercase px-1">{t('blog.create_post.post_content')}</label>
                             <textarea 
                                 className="w-full bg-gray-50 dark:bg-white/[0.03] border border-gray-100 dark:border-white/5 rounded-xl px-4 py-3 text-[14px] font-medium text-gray-800 dark:text-gray-200 placeholder-gray-400 min-h-[150px] resize-none focus:ring-1 focus:ring-neon-green transition-all"
                                 placeholder={t('blog.create_post.placeholder', { name: user?.full_name?.split(' ').pop() })}

@@ -475,10 +475,10 @@ const Marketplace = () => {
 
             {/* Detail Modal */}
             {selectedListing && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
+                <div className="fixed inset-0 mt-20 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
                     <div className="relative w-full max-w-lg bg-white dark:bg-dark-card border border-gray-100 dark:border-white/10 rounded-[2rem] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
                         {/* Modal Header Image */}
-                        <div className="relative h-48">
+                        <div className="relative h-46">
                             <img 
                                 src={formatImageUrl(selectedListing.event.image_url || selectedListing.event.poster_url)} 
                                 className="w-full h-full object-cover"
@@ -501,7 +501,7 @@ const Marketplace = () => {
                         </div>
 
                         {/* Modal Body */}
-                        <div className="p-8 space-y-4">
+                        <div className="p-8 space-y-3">
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="p-3.5 bg-gray-50 dark:bg-white/[0.02] border border-gray-200 dark:border-white/5 rounded-2xl">
                                     <p className="text-[9px] font-black text-gray-50 uppercase mb-1">{t('myTickets.labels.tier')} & {t('myTickets.labels.location')}</p>

@@ -44,6 +44,24 @@ const RevenueController = {
                 }, 0);
             }
 
+            // --- BỔ SUNG: Tính doanh thu chờ xử lý cho Khách hàng bán vé trên Marketplace ---
+            const pendingMktSales = await prisma.marketplaceTransaction.findMany({
+                where: {
+                    seller_id: userId,
+                    status: { in: ['paid', 'completed', 'success'] },
+                    is_settled: false
+                },
+                select: {
+                    seller_receive_amount: true
+                }
+            });
+
+            const mktPendingRevenue = pendingMktSales.reduce((sum, tx) => {
+                return sum + Number(tx.seller_receive_amount);
+            }, 0);
+
+            pendingRevenue += mktPendingRevenue;
+
             // Tính tổng tiền đã rút thành công
             const withdrawnTransactions = await prisma.walletTransaction.aggregate({
                 where: {
@@ -187,6 +205,43 @@ const RevenueController = {
             res.status(200).json({ message: 'Cập nhật thông tin ngân hàng thành công.' });
         } catch (error) {
             res.status(500).json({ error: 'Lỗi khi cập nhật thông tin ngân hàng.' });
+        }
+    },
+
+    /**
+     * Lấy danh sách đơn hàng đã bán trên chợ (Dành cho khách hàng)
+     */
+    getResaleOrders: async (req, res) => {
+        try {
+            const userId = req.user.userId;
+
+            const sales = await prisma.marketplaceTransaction.findMany({
+                where: { 
+                    seller_id: userId,
+                    status: { in: ['paid', 'completed', 'success'] }
+                },
+                include: {
+                    ticket: {
+                        include: {
+                            event: {
+                                select: { title: true, event_date: true, image_url: true }
+                            },
+                            ticket_tier: {
+                                select: { tier_name: true }
+                            }
+                        }
+                    },
+                    buyer: {
+                        select: { full_name: true, email: true }
+                    }
+                },
+                orderBy: { created_at: 'desc' }
+            });
+
+            res.status(200).json({ data: sales });
+        } catch (error) {
+            console.error('Get Resale Orders Error:', error);
+            res.status(500).json({ error: 'Lỗi khi lấy danh sách đơn hàng đã bán.' });
         }
     },
 

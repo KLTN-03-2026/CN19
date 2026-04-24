@@ -3,6 +3,7 @@ import enMyEvent from './enMyEvent';
 import enMarketplace from './enMarketplace';
 import enEvent from './enEvent';
 import enMerchandise from './enMerchandise';
+import enMyTransaction from './enMyTransaction';
 
 const enBlog = {
   nav: {
@@ -490,7 +491,8 @@ const enBlog = {
   myTickets: enMyEvent,
   marketplace: enMarketplace,
   event: enEvent,
-  merchandise: enMerchandise
+  merchandise: enMerchandise,
+  transactions: enMyTransaction
 };
 
 export default enBlog;

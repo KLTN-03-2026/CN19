@@ -14,14 +14,27 @@ const api = axios.create({
 // Interceptor nạp Token vào mọi Request
 api.interceptors.request.use(
   (config) => {
-    // Đọc token từ Zustand store (mà Zustand đang lưu ở localStorage)
     const token = useAuthStore.getState().token;
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`;
     }
     return config;
   },
+  (error) => Promise.reject(error)
+);
+
+// Interceptor xử lý phản hồi từ Server
+api.interceptors.response.use(
+  (response) => response,
   (error) => {
+    // Nếu lỗi 401 (Unauthorized) -> Token hết hạn hoặc không hợp lệ
+    if (error.response && error.response.status === 401) {
+      // Tự động Logout để dọn dẹp trạng thái Frontend
+      useAuthStore.getState().logout();
+      
+      // Có thể chuyển hướng về trang login nếu cần
+      // window.location.href = '/login';
+    }
     return Promise.reject(error);
   }
 );

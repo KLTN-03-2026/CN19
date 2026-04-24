@@ -310,41 +310,48 @@ const getOrderById = async (req, res) => {
 
     // Nếu không thấy trong Order, tìm trong MarketplaceTransaction
     if (!order) {
-      const mktTx = await prisma.marketplaceTransaction.findFirst({
-        where: { 
-          OR: [
-            { id: id },
-            { transaction_number: id }
-          ]
-        },
-        include: {
-          ticket: {
-            include: {
-              event: true,
-              ticket_tier: true
-            }
+        const mktTx = await prisma.marketplaceTransaction.findFirst({
+          where: { 
+            OR: [
+              { id: id },
+              { transaction_number: id }
+            ]
           },
-          buyer: true,
-          seller: true,
-          listing: true
-        }
-      });
+          include: {
+            ticket: {
+              include: {
+                event: true,
+                ticket_tier: true
+              }
+            },
+            buyer: true,
+            seller: true,
+            listing: true,
+            payments: {
+              where: { status: { in: ['paid', 'success', 'completed', 'thanh_cong'] } },
+              take: 1
+            }
+          }
+        });
 
-      if (mktTx) {
-        if (mktTx.buyer_id !== userId && mktTx.seller_id !== userId) {
-          return res.status(403).json({ error: 'Bạn không có quyền xem giao dịch này.' });
-        }
+        if (mktTx) {
+          if (mktTx.buyer_id !== userId && mktTx.seller_id !== userId) {
+            return res.status(403).json({ error: 'Bạn không có quyền xem giao dịch này.' });
+          }
 
-        // Map sang cấu trúc Order
-        order = {
-          id: mktTx.id,
-          order_number: mktTx.transaction_number,
-          total_amount: mktTx.buyer_pay_amount,
-          subtotal: mktTx.listing.asking_price,
-          status: mktTx.status,
-          order_type: 'MARKETPLACE_PURCHASE',
-          event: mktTx.ticket.event,
-          expires_at: mktTx.listing.lock_expires_at, // Bổ sung thời hạn giữ vé
+          // Map sang cấu trúc Order
+          order = {
+            id: mktTx.id,
+            order_number: mktTx.transaction_number,
+            total_amount: mktTx.buyer_pay_amount,
+            subtotal: mktTx.listing.asking_price,
+            status: mktTx.status,
+            order_type: 'MARKETPLACE_PURCHASE',
+            payment_method: mktTx.payments[0]?.method || 'vnpay',
+            event: mktTx.ticket.event,
+            created_at: mktTx.created_at,
+            updated_at: mktTx.updated_at,
+            expires_at: mktTx.listing.lock_expires_at, // Bổ sung thời hạn giữ vé
           items: [
             {
               id: 'mkt-item',
@@ -375,6 +382,45 @@ const getOrderById = async (req, res) => {
 
     if (!order) return res.status(404).json({ error: 'Không tìm thấy đơn hàng hoặc giao dịch.' });
     
+    // [Bổ sung] Xử lý lấy thông tin vé cho đơn hàng Chuyển nhượng (TICKET_TRANSFER)
+    if (order.order_type === 'TICKET_TRANSFER' && order.metadata?.ticket_id) {
+      const [transferTicket, receiver] = await Promise.all([
+        prisma.ticket.findUnique({
+          where: { id: order.metadata.ticket_id },
+          include: { ticket_tier: true }
+        }),
+        prisma.user.findUnique({
+          where: { email: order.metadata.receiver_email },
+          select: { 
+            full_name: true, 
+            avatar_url: true, 
+            email: true,
+            organizer_profile: {
+              select: { organization_name: true }
+            }
+          }
+        })
+      ]);
+      
+      if (transferTicket) {
+        order.items = [{
+          id: 'transfer-item',
+          quantity: 1,
+          unit_price: 10000,
+          subtotal: 10000,
+          ticket_code: transferTicket.nft_token_id || transferTicket.id.substring(0, 8),
+          ticket_tier: transferTicket.ticket_tier
+        }];
+      }
+      if (receiver) {
+        // Ưu tiên lấy tên Tổ chức nếu là tài khoản BTC
+        if (receiver.organizer_profile?.organization_name) {
+          receiver.full_name = receiver.organizer_profile.organization_name;
+        }
+        order.receiver = receiver;
+      }
+    }
+
     // Check ownership for Order model
     if (order.customer_id && order.customer_id !== userId) {
        return res.status(403).json({ error: 'Bạn không có quyền xem đơn hàng này.' });
@@ -668,7 +714,7 @@ const getMyMerchandise = async (req, res) => {
     const soldTransactions = await prisma.marketplaceTransaction.findMany({
       where: { 
         seller_id: userId, 
-        status: { in: ['paid', 'success', 'completed'] } 
+        status: { in: ['paid', 'success', 'completed', 'thanh_cong'] } 
       },
       select: {
         id: true,
@@ -678,7 +724,19 @@ const getMyMerchandise = async (req, res) => {
       }
     });
 
-    // 4. Chuẩn hóa sản phẩm sở hữu
+    // 4. Lấy các giao dịch mua Marketplace của user này để map ngược lại sản phẩm
+    const purchaseTransactions = await prisma.marketplaceTransaction.findMany({
+      where: { 
+        buyer_id: userId,
+        status: { in: ['paid', 'success', 'completed', 'thanh_cong'] }
+      },
+      select: {
+        transaction_number: true,
+        listing: { select: { metadata: true } }
+      }
+    });
+
+    // 5. Chuẩn hóa sản phẩm sở hữu
     const formattedOwned = items.map(item => {
       let status = item.is_redeemed ? 'received' : 'pending';
       if (item.order?.status === 'cancelled') status = 'cancelled';
@@ -689,9 +747,16 @@ const getMyMerchandise = async (req, res) => {
       });
       if (listing) status = 'listing';
 
+      // Tìm giao dịch mua lại nếu có
+      const purchaseTx = purchaseTransactions.find(tx => {
+        const mIds = tx.listing?.metadata?.merchandise_item_ids || [];
+        return Array.isArray(mIds) && mIds.includes(item.id);
+      });
+
       return { 
         ...item, 
         status,
+        mkt_transaction_number: purchaseTx ? purchaseTx.transaction_number : null,
         listing_info: listing ? {
             ...listing,
             asking_price: Number(listing.asking_price),

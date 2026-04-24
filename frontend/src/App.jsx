@@ -19,6 +19,7 @@ import TicketTransfer from './pages/Customer/TicketTransfer';
 import Checkout from './pages/Checkout/Checkout';
 import PaymentResult from './pages/Checkout/PaymentResult';
 import Marketplace from './pages/Public/Marketplace';
+import MyRevenue from './pages/Customer/MyRevenue';
 
 // Support Pages
 import CustomerTerms from './pages/Support/CustomerTerms';
@@ -146,6 +147,14 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute>
             <MyTransactions />
+          </ProtectedRoute>
+        ) 
+      },
+      { 
+        path: 'my-revenue', 
+        element: (
+          <ProtectedRoute>
+            <MyRevenue />
           </ProtectedRoute>
         ) 
       },

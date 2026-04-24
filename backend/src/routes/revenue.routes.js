@@ -9,6 +9,9 @@ router.get('/summary', authenticate, revenueController.getRevenueSummary);
 // [GET] /api/revenue/transactions - Lấy lịch sử giao dịch
 router.get('/transactions', authenticate, revenueController.getTransactionHistory);
 
+// [GET] /api/revenue/resale-orders - Lấy danh sách đơn hàng đã bán trên chợ (Customer)
+router.get('/resale-orders', authenticate, revenueController.getResaleOrders);
+
 // [POST] /api/revenue/withdraw - Yêu cầu rút tiền
 router.post('/withdraw', authenticate, revenueController.requestWithdrawal);
 

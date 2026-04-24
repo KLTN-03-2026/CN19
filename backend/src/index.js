@@ -86,6 +86,7 @@ app.use('/api/transactions', transactionRoutes);
 app.use('/api/refunds', refundRoutes);
 app.use('/api/blogs', blogRoutes);
 app.use('/api/community', communityRoutes);
+app.use('/api/revenue', revenueRoutes);
 
 // Organizer
 app.use('/api/organizers', organizerRoutes); // Public profile of organizer

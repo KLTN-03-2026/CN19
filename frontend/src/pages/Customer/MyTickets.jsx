@@ -261,7 +261,6 @@ const MyTickets = () => {
             <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
                 <div className="absolute top-[-10%] right-[-5%] w-[40rem] h-[40rem] bg-[#52c42d]/10 dark:bg-neon-green/5 blur-[120px] rounded-full animate-pulse transition-colors duration-1000"></div>
                 <div className="absolute bottom-[-10%] left-[-5%] w-[30rem] h-[30rem] bg-blue-500/10 dark:bg-blue-500/5 blur-[100px] rounded-full transition-colors duration-1000"></div>
-                <div className="absolute inset-0 bg-grid-pattern opacity-[0.03] dark:opacity-[0.03]"></div>
             </div>
 
             <div className="max-w-[1450px] mx-auto px-6 md:px-12 pt-8 space-y-6">
@@ -456,7 +455,7 @@ const MyTickets = () => {
                                                         </button>
                                                     )}
                                                     <Link 
-                                                        to={`/my-transactions/${ticket.order_id}`}
+                                                        to={`/my-transactions/${ticket.mkt_transaction_number || ticket.order_id}`}
                                                         className="h-11 px-4 bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/5 text-gray-500 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-white/10 rounded-xl flex items-center justify-center transition-all"
                                                         title={t('myTickets.buttons.view_nft')}
                                                     >
@@ -535,7 +534,7 @@ const MyTickets = () => {
                                                     </button>
                                                 )}
                                                 <Link 
-                                                    to={`/my-transactions/${ticket.order_id}`}
+                                                    to={`/my-transactions/${ticket.mkt_transaction_number || ticket.order_id}`}
                                                     className="h-9 px-5 bg-gray-100 dark:bg-white/[0.03] border border-gray-200 dark:border-white/5 text-gray-500 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 rounded-xl flex items-center justify-center transition-all"
                                                     title="Xem chi tiết vé NFT"
                                                 >
