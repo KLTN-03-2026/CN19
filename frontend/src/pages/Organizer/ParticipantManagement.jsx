@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import * as XLSX from 'xlsx';
 import { 
   Users, 
   Search, 
@@ -105,7 +106,47 @@ const ParticipantManagement = () => {
     };
 
     const handleExport = () => {
-        toast.success('Đang chuẩn bị danh sách để tải về...');
+        try {
+            toast.loading('Đang chuẩn bị danh sách để tải về...', { id: 'export-toast' });
+            
+            const dataToExport = filteredParticipants.map((p, index) => ({
+                'STT': index + 1,
+                'Họ và tên': p.current_owner?.full_name || 'Khách ẩn danh',
+                'Email': p.current_owner?.email || 'N/A',
+                'Số điện thoại': p.current_owner?.phone_number || 'N/A',
+                'Sự kiện': p.event?.title || 'N/A',
+                'Hạng vé': p.ticket_tier?.tier_name || 'N/A',
+                'Mã vé': p.ticket_number?.toUpperCase() || 'N/A',
+                'Trạng thái': p.is_used ? 'Đã soát vé' : 'Chờ tham gia',
+                'Thời gian soát vé': p.checked_in_at ? format(new Date(p.checked_in_at), 'dd/MM/yyyy HH:mm:ss') : '---',
+            }));
+
+            const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'Danh sách tham gia');
+
+            // Adjust column widths
+            const wscols = [
+                { wch: 5 },  // STT
+                { wch: 25 }, // Họ và tên
+                { wch: 30 }, // Email
+                { wch: 15 }, // Số điện thoại
+                { wch: 40 }, // Sự kiện
+                { wch: 20 }, // Hạng vé
+                { wch: 15 }, // Mã vé
+                { wch: 15 }, // Trạng thái
+                { wch: 20 }, // Thời gian soát vé
+            ];
+            worksheet['!cols'] = wscols;
+
+            const fileName = `Danh_sach_tham_gia_${format(new Date(), 'ddMMyyyy_HHmm')}.xlsx`;
+            XLSX.writeFile(workbook, fileName);
+            
+            toast.success('Tải danh sách thành công!', { id: 'export-toast' });
+        } catch (error) {
+            console.error('Export error:', error);
+            toast.error('Có lỗi xảy ra khi xuất danh sách.', { id: 'export-toast' });
+        }
     };
 
     if (isInitialLoading) {
@@ -124,7 +165,7 @@ const ParticipantManagement = () => {
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div className="space-y-2">
-                    <h1 className="text-xl font-black text-gray-900 dark:text-white tracking-tight uppercase">
+                    <h1 className="text-base md:text-xl font-black text-gray-900 dark:text-white tracking-tight uppercase">
                         Quản lý người tham gia
                     </h1>
                     <div className="flex items-center gap-2">
@@ -134,13 +175,13 @@ const ParticipantManagement = () => {
                         </p>
                     </div>
                 </div>
-                {/* <button 
+                <button 
                     onClick={handleExport}
-                    className="bg-white dark:bg-[#111114] border border-gray-100 dark:border-white/5 text-gray-900 dark:text-white px-6 py-3 rounded-2xl text-sm font-black shadow-sm transition-all flex items-center uppercase gap-3 hover:bg-gray-50 dark:hover:bg-white/5"
+                    className="bg-white dark:bg-[#111114] border border-gray-100 dark:border-white/5 text-gray-900 dark:text-white px-5 py-2.5 rounded-2xl text-xs font-bold shadow-sm transition-all flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-white/5 active:scale-95"
                 >
-                    <Download className="w-4 h-4" />
-                    Xuất danh sách
-                </button> */}
+                    <Download className="w-4 h-4 text-blue-600" />
+                    Xuất báo cáo
+                </button>
             </div>
 
             {/* Stats Cards */}
@@ -150,13 +191,13 @@ const ParticipantManagement = () => {
                     { label: 'Đã soát vé', value: stats.checkedIn, icon: CheckCircle2, color: 'text-green-500', bg: 'bg-green-500/10' },
                     { label: 'Chưa soát vé', value: stats.pending, icon: Clock, color: 'text-yellow-500', bg: 'bg-yellow-500/10' }
                 ].map((stat, idx) => (
-                    <div key={idx} className="bg-white dark:bg-[#111114] p-4 rounded-[1.5rem] border border-gray-100 dark:border-white/5 shadow-sm flex items-center gap-4">
-                        <div className={`w-12 h-12 ${stat.bg} ${stat.color} rounded-xl flex items-center justify-center`}>
-                            <stat.icon className="w-6 h-6" />
+                    <div key={idx} className="bg-white dark:bg-[#111114] p-3 md:p-4 rounded-2xl md:rounded-[1.5rem] border border-gray-100 dark:border-white/5 shadow-sm flex items-center gap-3 md:gap-4">
+                        <div className={`w-10 h-10 md:w-12 md:h-12 ${stat.bg} ${stat.color} rounded-xl flex items-center justify-center shrink-0`}>
+                            <stat.icon className="w-5 h-5 md:w-6 md:h-6" />
                         </div>
                         <div>
-                            <p className="text-[10px] font-black uppercase text-gray-500 leading-none mb-1">{stat.label}</p>
-                            <p className="text-xl font-black text-gray-900 dark:text-white leading-none">{stat.value}</p>
+                            <p className="text-[9px] md:text-[10px] font-black uppercase text-gray-500 leading-none mb-1">{stat.label}</p>
+                            <p className="text-lg md:text-xl font-black text-gray-900 dark:text-white leading-none">{stat.value}</p>
                         </div>
                     </div>
                 ))}
@@ -165,21 +206,21 @@ const ParticipantManagement = () => {
             {/* Filter & Table Container */}
             <div className="bg-white dark:bg-[#111114] rounded-[2.5rem] border border-gray-200 dark:border-white/5 shadow-xl overflow-hidden">
                 {/* Search & Filters */}
-                <div className="p-4 border-b border-gray-200 dark:border-white/5 bg-gray-50/50 dark:bg-white/5 backdrop-blur-xl">
-                    <div className="flex flex-col lg:flex-row gap-4 ">
+                <div className="p-3 md:p-4 border-b border-gray-200 dark:border-white/5 bg-gray-50/50 dark:bg-white/5 backdrop-blur-xl">
+                    <div className="flex flex-col lg:flex-row gap-3 md:gap-4">
                         <div className="flex-1 relative group border border-gray-200 dark:border-white/5 rounded-2xl">
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-blue-600 transition-colors" />
                             <input 
                                 type="text"
                                 placeholder="Tìm kiếm theo tên, email, mã vé..."
-                                className="w-full pl-12 pr-4 py-3 bg-white dark:bg-[#1a1a1e] border border-transparent focus:bg-white dark:focus:bg-[#111114] border-gray-200 dark:border-white/5 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all font-medium text-sm"
+                                className="w-full pl-10 md:pl-12 pr-4 py-2.5 md:py-3 bg-white dark:bg-[#1a1a1e] border border-transparent focus:bg-white dark:focus:bg-[#111114] border-gray-200 dark:border-white/5 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all font-medium text-xs md:text-sm"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                             />
                         </div>
-                        <div className="flex flex-wrap items-center gap-4">
+                        <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
                             {/* EVENT FILTER */}
-                            <div className="relative flex items-center bg-white dark:bg-[#1a1a1e] border border-gray-200 dark:border-white/5 rounded-2xl px-4 py-3 min-w-[200px]">
+                            <div className="relative flex items-center bg-white dark:bg-[#1a1a1e] border border-gray-200 dark:border-white/5 rounded-2xl px-4 py-3 flex-1 lg:min-w-[200px] lg:flex-none">
                                 <select 
                                     className="bg-transparent border-none focus:outline-none focus:ring-0 font-medium text-sm dark:text-white appearance-none pr-8 cursor-pointer w-full"
                                     value={filterEvent}
@@ -193,7 +234,7 @@ const ParticipantManagement = () => {
                             </div>
 
                             {/* TIER FILTER */}
-                            <div className="relative flex items-center bg-white dark:bg-[#1a1a1e] border border-gray-200 dark:border-white/5 rounded-2xl px-4 py-3">
+                            <div className="relative flex items-center bg-white dark:bg-[#1a1a1e] border border-gray-200 dark:border-white/5 rounded-2xl px-4 py-3 flex-1 lg:flex-none">
                                 <select 
                                     className="bg-transparent border-none focus:outline-none focus:ring-0 font-medium text-sm dark:text-white appearance-none pr-8 cursor-pointer"
                                     value={filterTier}
@@ -220,7 +261,7 @@ const ParticipantManagement = () => {
                             </div>
                         </div>
                     )}
-                    <table className="w-full">
+                    <table className="w-full hidden md:table">
                         <thead>
                             <tr className="bg-gray-50/50 dark:bg-white/5">
                                 <th className="px-6 py-4 text-left text-[10px] font-black uppercase text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-white/5">Người tham gia</th>
@@ -318,6 +359,72 @@ const ParticipantManagement = () => {
                             )}
                         </tbody>
                     </table>
+
+                    {/* Mobile Card View */}
+                    <div className="md:hidden divide-y divide-gray-100 dark:divide-white/5">
+                        {filteredParticipants.length > 0 ? (
+                            filteredParticipants.map((p) => (
+                                <div key={p.id} className="p-4 space-y-4 hover:bg-gray-50/50 dark:hover:bg-white/5 transition-colors">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-full bg-blue-600/10 flex items-center justify-center overflow-hidden ring-2 ring-gray-100 dark:ring-white/5">
+                                                {p.current_owner?.avatar_url ? (
+                                                    <img src={p.current_owner.avatar_url} alt="" className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <Users className="w-5 h-5 text-blue-600" />
+                                                )}
+                                            </div>
+                                            <div>
+                                                <p className="font-bold text-gray-900 dark:text-white text-xs">{p.current_owner?.full_name || 'Khách ẩn danh'}</p>
+                                                <p className="text-[9px] text-gray-500 dark:text-gray-400">{p.current_owner?.email}</p>
+                                            </div>
+                                        </div>
+                                        {p.is_used && (
+                                            <button 
+                                                onClick={() => {
+                                                    setSelectedParticipant(p);
+                                                    setIsModalOpen(true);
+                                                }}
+                                                className="p-2 bg-blue-600/10 text-blue-600 rounded-lg"
+                                            >
+                                                <Eye className="w-4 h-4" />
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="space-y-1">
+                                            <p className="text-[8px] font-black uppercase text-gray-400">Sự kiện & Hạng vé</p>
+                                            <p className="text-[10px] font-bold text-gray-700 dark:text-gray-300 line-clamp-1">{p.event?.title}</p>
+                                            <span className="inline-block px-2 py-0.5 bg-gray-100 dark:bg-white/5 rounded-full text-[8px] font-black text-blue-600 uppercase">
+                                                {p.ticket_tier?.tier_name}
+                                            </span>
+                                        </div>
+                                        <div className="space-y-1 text-right">
+                                            <p className="text-[8px] font-black uppercase text-gray-400">Mã vé & Trạng thái</p>
+                                            <p className="text-[10px] font-mono font-black text-gray-500">#{p.ticket_number?.toUpperCase()}</p>
+                                            <div className="flex justify-end">
+                                                {p.is_used ? (
+                                                    <span className="flex items-center gap-1 text-[8px] font-black uppercase text-green-500">
+                                                        <CheckCircle2 className="w-2.5 h-2.5" /> Đã soát
+                                                    </span>
+                                                ) : (
+                                                    <span className="flex items-center gap-1 text-[8px] font-black uppercase text-yellow-500">
+                                                        <Clock className="w-2.5 h-2.5" /> Chờ
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
+                        ) : (
+                            <div className="py-12 text-center">
+                                <Users className="w-10 h-10 text-gray-200 mx-auto mb-2" />
+                                <p className="text-[10px] font-bold text-gray-500 uppercase">Không có dữ liệu</p>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -329,7 +436,7 @@ const ParticipantManagement = () => {
                         onClick={() => setIsModalOpen(false)}
                     ></div>
                     
-                    <div className="bg-white dark:bg-[#111114] w-full max-w-sm rounded-[2.5rem] border border-gray-200 dark:border-white/5 shadow-2xl overflow-hidden relative z-10 animate-in zoom-in-95 duration-300">
+                    <div className="bg-white dark:bg-[#111114] w-full max-w-sm rounded-3xl md:rounded-[2.5rem] border border-gray-200 dark:border-white/5 shadow-2xl overflow-hidden relative z-10 animate-in zoom-in-95 duration-300">
                         {/* Modal Header */}
                         <div className="p-6 border-b border-gray-100 dark:border-white/5 flex items-center justify-between bg-gray-50/50 dark:bg-white/5">
                             <div className="flex items-center gap-3">
