@@ -201,7 +201,20 @@ const getById = async (req, res) => {
                 status: true,
                 created_at: true,
                 customer: {
-                  select: { id: true, full_name: true, email: true, avatar_url: true }
+                  select: { id: true, full_name: true, email: true, phone_number: true, avatar_url: true }
+                },
+                event: {
+                  select: { id: true, title: true }
+                }
+              }
+            },
+            scan_history: {
+              where: { is_success: true },
+              take: 1,
+              orderBy: { scanned_at: 'desc' },
+              include: {
+                staff: {
+                  select: { id: true, full_name: true }
                 }
               }
             }
@@ -233,4 +246,46 @@ const getById = async (req, res) => {
   }
 };
 
-module.exports = { getAll, getById, create, update, remove, toggle };
+// Xác nhận nhận hàng thủ công từ dashboard
+const confirmPickup = async (req, res) => {
+  try {
+    const { order_item_id } = req.body;
+    const staffId = req.user.userId;
+
+    const item = await prisma.merchandiseOrderItem.findUnique({
+      where: { id: order_item_id },
+      include: { merchandise: true }
+    });
+
+    if (!item) return res.status(404).json({ error: 'Không tìm thấy vật phẩm.' });
+    if (item.is_redeemed) return res.status(400).json({ error: 'Vật phẩm này đã được nhận.' });
+
+    await prisma.$transaction(async (tx) => {
+      // 1. Cập nhật trạng thái nhận
+      await tx.merchandiseOrderItem.update({
+        where: { id: order_item_id },
+        data: {
+          is_redeemed: true,
+          redeemed_at: new Date()
+        }
+      });
+
+      // 2. Ghi log lịch sử quét (Xác nhận từ web)
+      await tx.merchandiseScanHistory.create({
+        data: {
+          order_item_id,
+          staff_id: staffId,
+          is_success: true,
+          failure_reason: 'Xác nhận thủ công từ Dashboard'
+        }
+      });
+    });
+
+    res.json({ data: { id: order_item_id }, message: 'Xác nhận nhận hàng thành công.' });
+  } catch (error) {
+    console.error('confirmPickup error:', error);
+    res.status(500).json({ error: 'Lỗi hệ thống.' });
+  }
+};
+
+module.exports = { getAll, getById, create, update, remove, toggle, confirmPickup };

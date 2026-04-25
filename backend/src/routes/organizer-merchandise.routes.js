@@ -23,4 +23,7 @@ router.delete('/:id', controller.remove);
 // [PATCH] /api/organizer/merchandise/:id/toggle
 router.patch('/:id/toggle', controller.toggle);
 
+// [POST] /api/organizer/merchandise/confirm-pickup
+router.post('/confirm-pickup', controller.confirmPickup);
+
 module.exports = router;

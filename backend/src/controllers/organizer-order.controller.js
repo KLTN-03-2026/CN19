@@ -75,55 +75,59 @@ const OrganizerOrderController = {
             const { id } = req.params;
             const userId = req.user.userId;
 
-            const order = await prisma.order.findUnique({
+            // 1. Try finding in Order table
+            let order = await prisma.order.findUnique({
                 where: { id },
                 include: {
                     customer: { 
-                        select: { 
-                            id: true, 
-                            full_name: true, 
-                            email: true, 
-                            phone_number: true, 
-                            avatar_url: true 
-                        } 
+                        select: { id: true, full_name: true, email: true, phone_number: true, avatar_url: true } 
                     },
-                    event: { 
-                        include: { 
-                            organizer: true 
-                        } 
-                    },
-                    items: { 
-                        include: { 
-                            ticket_tier: {
-                                select: {
-                                    tier_name: true,
-                                    price: true
-                                }
-                            } 
-                        } 
-                    },
-                    merchandise_items: { 
-                        include: { 
-                            merchandise: true 
-                        } 
-                    },
-                    tickets: { 
-                        include: { 
-                            ticket_tier: {
-                                select: {
-                                    tier_name: true
-                                }
-                            }
-                        } 
-                    },
-                    payments: { 
-                        orderBy: { created_at: 'desc' },
-                        take: 5
-                    }
+                    event: { include: { organizer: true } },
+                    items: { include: { ticket_tier: { select: { tier_name: true, price: true } } } },
+                    merchandise_items: { include: { merchandise: true } },
+                    tickets: { include: { ticket_tier: { select: { tier_name: true } } } },
+                    payments: { orderBy: { created_at: 'desc' }, take: 5 }
                 }
             });
 
-            if (!order || order.event.organizer.user_id !== userId) {
+            // 2. If not found, try finding in MarketplaceTransaction table
+            if (!order) {
+                const mktTx = await prisma.marketplaceTransaction.findUnique({
+                    where: { id },
+                    include: {
+                        buyer: { select: { id: true, full_name: true, email: true, avatar_url: true } },
+                        seller: { select: { id: true, full_name: true, email: true, avatar_url: true } },
+                        ticket: { 
+                            include: { 
+                                ticket_tier: { select: { tier_name: true, price: true } },
+                                event: { include: { organizer: true } }
+                            } 
+                        },
+                        listing: true
+                    }
+                });
+
+                if (mktTx) {
+                    // Map MarketplaceTransaction to Order-like structure for the frontend
+                    order = {
+                        id: mktTx.id,
+                        order_number: mktTx.listing?.listing_number || 'RESALE',
+                        status: mktTx.status === 'completed' ? 'paid' : mktTx.status,
+                        total_amount: mktTx.buyer_pay_amount,
+                        payment_method: 'marketplace',
+                        created_at: mktTx.created_at,
+                        customer: mktTx.buyer,
+                        event: mktTx.ticket?.event,
+                        order_type: 'TICKET_RESALE',
+                        tickets: [mktTx.ticket],
+                        // Additional info for resale
+                        seller: mktTx.seller,
+                        is_resale: true
+                    };
+                }
+            }
+
+            if (!order || order.event?.organizer?.user_id !== userId) {
                 return res.status(403).json({ error: 'Bạn không có quyền xem đơn hàng này.' });
             }
 

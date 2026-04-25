@@ -80,6 +80,11 @@ export const organizerService = {
     return res.data;
   },
 
+  confirmMerchandisePickup: async (orderItemId) => {
+    const res = await api.post('/organizer/merchandise/confirm-pickup', { order_item_id: orderItemId });
+    return res.data;
+  },
+
   // ======= Blog =======
   getMyBlogs: async () => {
     const res = await api.get('/organizer/blogs');
