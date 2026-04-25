@@ -61,6 +61,24 @@ const blogService = {
     return res.data;
   },
 
+  // Thích phản hồi con
+  toggleCommentLike: async (id) => {
+    const res = await api.post(`/blogs/comments/${id}/like`);
+    return res.data;
+  },
+
+  // Lấy danh sách người thích bài viết
+  getLikers: async (id) => {
+    const res = await api.get(`/blogs/${id}/likers`);
+    return res.data;
+  },
+
+  // Lấy danh sách người thích bình luận
+  getCommentLikers: async (id) => {
+    const res = await api.get(`/blogs/comments/${id}/likers`);
+    return res.data;
+  },
+
   // Lưu hoặc bỏ lưu bài viết
   toggleSave: async (blogId) => {
     const res = await api.post(`/blogs/${blogId}/save`);

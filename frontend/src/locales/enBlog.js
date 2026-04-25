@@ -211,7 +211,9 @@ const enBlog = {
     labels: {
       name: "Full Name", phone: "Phone Number", dob: "Date of Birth", address: "Address", email: "Email Address",
       save: "Save Changes", cancel: "Cancel", edit: "Edit Profile",
-      save_success: "Profile updated successfully!", update_failed: "Update failed, please try again."
+      save_success: "Profile updated successfully!", update_failed: "Update failed, please try again.",
+      edit_btn: "Edit", current_address: "Current Address", address_placeholder: "Enter your address...",
+      save_btn: "Save Changes", cancel_btn: "Cancel"
     },
     roles: {
       admin: "Administrator", organizer: "Organizer", customer: "Customer"
@@ -219,15 +221,36 @@ const enBlog = {
     placeholders: {
        address: "Ex: 123 District 1, HCMC"
     },
+    bank: {
+      title: "Bank Information",
+      bank_name: "Bank Name",
+      bank_placeholder: "e.g. Vietcombank, MB Bank...",
+      account_number: "Account Number",
+      account_placeholder: "Enter account number...",
+      account_holder: "Account Holder",
+      holder_placeholder: "ACCOUNT HOLDER NAME (Uppercase, no accents)"
+    },
     wallet: {
       title: "Custodial Wallet", desc: "Managed safely by BASTICKET", address: "Wallet Address", balance: "Balance",
-      no_wallet: "No wallet connected", network: "Network", type: "Type"
+      no_wallet: "No wallet connected", network: "Network", type: "Type",
+      system_wallet: "System Wallet", vnd_desc: "Balance withdrawable to bank account",
+      withdraw_btn: "Create Withdrawal Request", blockchain_wallet: "Blockchain Wallet",
+      blockchain_desc: "Used for Gas fees & NFT transactions",
+      history: "Withdrawal History", transactions: "Transactions",
+      table_id_time: "ID / Time", table_amount: "Amount", table_status: "Status", table_note: "Admin Note",
+      loading_history: "Loading history...", empty_history: "No withdrawal requests yet.",
+      status_completed: "Completed", status_pending: "Pending", status_rejected: "Rejected"
     },
     security: {
       title: "Account Security", desc: "Manage your password and security settings.", change_pass: "Change Password",
       pass_desc: "Always keep your password safe and private.", preferences: "Preferences", email_notif: "Email Notifications",
       old_pass: "Old Password", new_pass: "New Password", confirm_new_pass: "Confirm New Password",
-      change_success: "Password changed successfully!", change_failed: "Failed to change password."
+      change_success: "Password changed successfully!", change_failed: "Failed to change password.",
+      header: "Account Security", subtitle: "Manage password and other security options.",
+      change_pass_header: "Change Password", old_pass_label: "Old Password",
+      forgot_pass: "Forgot Password?", new_pass_label: "New Password",
+      confirm_pass_label: "Confirm New Password", update_pass_btn: "Update Password",
+      notif_settings: "Notification Settings", email_notif_label: "Receive notifications via Email"
     },
     forgot: {
       title: "Forgot Password", desc: "Enter your email to receive an OTP reset code.",
@@ -237,7 +260,9 @@ const enBlog = {
       success: "Password reset successfully!"
     },
     organizer: {
-      title: "Organizer Info", name: "Organization Name", kyc: "KYC Status", desc: "Description"
+      title: "Organizer Info", name: "Organization Name", kyc: "KYC Status", desc: "Description",
+      details: "Organizer Details", org_name: "Organization Name", kyc_status_label: "Verification Status",
+      verified: "Verified", pending: "Pending"
     }
   },
   publicOrganizer: {

@@ -89,13 +89,12 @@ const BlogDetail = () => {
     const unreadCount = notifications.filter(n => !n.is_read).length;
     const trendingEvents = trendingEventsData?.data || [];
     
-    // Normalize images array
+    // Normalize images array: Combine image_url and images array, removing duplicates
     const images = blog ? (
-        (blog.images && blog.images.length > 0) 
-            ? blog.images 
-            : (blog.image_url) 
-                ? [blog.image_url] 
-                : []
+        [...new Set([
+            ...(blog.image_url ? [blog.image_url] : []),
+            ...(Array.isArray(blog.images) ? blog.images : [])
+        ])]
     ) : [];
 
     useEffect(() => {
@@ -402,11 +401,11 @@ const BlogDetail = () => {
 
                 <div className="flex items-center justify-between mb-4 px-1">
                     <button 
-                        onClick={() => navigate('/blog')}
+                        onClick={() => navigate(-1)}
                         className="flex items-center mt-2 gap-2 text-gray-900 dark:text-gray-400 hover:text-neon-green transition-all text-[13px] font-bold group"
                     >
                         <ArrowLeft className="w-4 h-4 transform group-hover:-translate-x-1 transition-transform" />
-                        {t('blog.nav.back_to_blog')}
+                        {t('blog.nav.back', 'Quay lại')}
                     </button>
                     <div className="px-3 py-1 mt-2 bg-neon-green/10 text-neon-green rounded-lg text-[10px] font-bold uppercase border border-neon-green/20">
                         {blog.category || (blog.type === 'SYSTEM_NEWS' ? (t('blog.post.system') || 'Hệ thống') : (t('blog.post.community') || 'Cộng đồng'))}

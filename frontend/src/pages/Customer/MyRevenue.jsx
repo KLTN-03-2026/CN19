@@ -663,7 +663,7 @@ const TransactionDetailModal = ({ order, onClose, formatCurrency }) => {
                     <div className="bg-gray-50 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 rounded-2xl p-4 space-y-1">
                         <div className="flex justify-between items-center py-2 text-xs font-bold text-gray-600 dark:text-gray-400">
                             <span>{t('revenue.modal.buyer_pay')}</span>
-                            <span>{formatCurrency(order?.seller_receive_amount + order?.platform_fee + order?.organizer_royalty)}</span>
+                            <span>{formatCurrency(Number(order?.seller_receive_amount || 0) + Number(order?.platform_fee || 0) + Number(order?.organizer_royalty || 0))}</span>
                         </div>
                         <div className="flex justify-between items-center py-2 text-xs font-bold text-red-500/80">
                             <span>{t('revenue.modal.platform_fee')}</span>

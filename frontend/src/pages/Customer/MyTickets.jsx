@@ -24,8 +24,10 @@ import {
     Grid as LucideGrid,
     Sparkles,
     CheckCircle2,
-    PartyPopper
+    PartyPopper,
+    User
 } from 'lucide-react';
+import { format } from 'date-fns';
 import { QRCodeSVG } from 'qrcode.react';
 import { ticketService } from '../../services/ticket.service';
 import { marketplaceService } from '../../services/marketplace.service';
@@ -73,8 +75,14 @@ const MyTickets = () => {
             toast.error(t('myTickets.error_not_owner') || 'Bạn không còn sở hữu vé này.');
             return;
         }
-        if (ticket.status === 'used' || ticket.status === 'cancelled') {
+        if (ticket.status === 'cancelled') {
             toast.error(t('myTickets.error_invalid_auth') || 'Vé không khả dụng để xác thực.');
+            return;
+        }
+        if (ticket.status === 'used') {
+            setIsScanned(true);
+            setSelectedTicket(ticket);
+            setShowQrModal(true);
             return;
         }
         setIsScanned(false);
@@ -122,7 +130,8 @@ const MyTickets = () => {
                     const res = await ticketService.getTicketById(selectedTicket.id);
                     if (res.data?.status === 'used' || res.data?.is_used === true) {
                         setIsScanned(true);
-                        toast.success(t('myTickets.scan_success') || 'Tuyệt vời! Vé đã được xác thực thành công.');
+                        setSelectedTicket(res.data);
+                        toast.success(t('myTickets.header.scan_success') || 'Tuyệt vời! Vé đã được xác thực thành công.');
                         // Làm mới danh sách vé ở nền
                         fetchTickets();
                     }
@@ -208,16 +217,16 @@ const MyTickets = () => {
         // Kiểm tra xem sự kiện đã diễn ra chưa
         const isPastEvent = new Date(ticket.event.event_date) < new Date();
 
-        // Nếu vé đã quét, hiện nút Viết Blog
-        if (ticket.status === 'used') {
+        // Nếu vé đã quét HOẶC sự kiện đã qua, hiện nút Viết Blog/Chỉnh sửa Blog
+        if (ticket.status === 'used' || isPastEvent) {
             return (
                 <div className={containerClass}>
                     <Link 
-                        to={`/blog/create?eventId=${ticket.event.id}`}
+                        to={`/blog/create?eventId=${ticket.event.id}${ticket.has_blog ? `&blogId=${ticket.blog_id}` : ''}`}
                         className={`${buttonBaseClass} bg-gray-900 dark:bg-neon-green text-white dark:text-black hover:bg-black dark:hover:bg-neon-hover w-full shadow-lg dark:shadow-neon-green/10`}
                     >
-                        <FileText className="w-3.5 h-3.5" />
-                        {t('myTickets.buttons.write_blog')}
+                        {ticket.has_blog ? <RefreshCcw className="w-3.5 h-3.5" /> : <FileText className="w-3.5 h-3.5" />}
+                        {ticket.has_blog ? 'Chỉnh sửa Blog' : t('myTickets.buttons.write_blog')}
                     </Link>
                 </div>
             );
@@ -446,16 +455,29 @@ const MyTickets = () => {
                                                 <div className="flex gap-2">
                                                     {ticket.is_current_owner && (
                                                         <button 
-                                                            disabled={ticket.status === 'used' || ticket.status === 'cancelled' || ticket.is_on_marketplace}
+                                                            disabled={(ticket.status !== 'used' && (ticket.status === 'cancelled' || ticket.is_on_marketplace))}
                                                             onClick={() => handleViewQr(ticket)}
-                                                            className="flex-1 h-11 bg-gray-900 dark:bg-white hover:bg-neon-green text-white dark:text-black rounded-xl text-[10px] font-black uppercase transition-all duration-300 flex items-center justify-center gap-2 group/qr active:scale-95 disabled:opacity-20"
+                                                            className={`flex-1 h-11 rounded-xl text-[10px] font-black uppercase transition-all duration-300 flex items-center justify-center gap-2 group/qr active:scale-95 disabled:opacity-20 ${
+                                                                ticket.status === 'used' 
+                                                                ? 'bg-blue-500/10 text-blue-500 border border-blue-500/20 hover:bg-blue-500 hover:text-white' 
+                                                                : 'bg-gray-900 dark:bg-white hover:bg-neon-green text-white dark:text-black'
+                                                            }`}
                                                         >
-                                                            <QrCode className="w-4 h-4 group-hover/qr:rotate-12 transition-transform" />
-                                                            {ticket.is_on_marketplace ? t('myTickets.buttons.locked') : t('myTickets.buttons.use_ticket')}
+                                                            {ticket.status === 'used' ? (
+                                                                <>
+                                                                    <Clock className="w-4 h-4" />
+                                                                    {t('myTickets.buttons.view_scan_history')}
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <QrCode className="w-4 h-4 group-hover/qr:rotate-12 transition-transform" />
+                                                                    {ticket.is_on_marketplace ? t('myTickets.buttons.locked') : t('myTickets.buttons.use_ticket')}
+                                                                </>
+                                                            )}
                                                         </button>
                                                     )}
                                                     <Link 
-                                                        to={`/my-transactions/${ticket.mkt_transaction_number || ticket.order_id}`}
+                                                        to={`/my-transactions/${ticket.mkt_transaction_id || ticket.mkt_transaction_number || ticket.order_id}`}
                                                         className="h-11 px-4 bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/5 text-gray-500 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-white/10 rounded-xl flex items-center justify-center transition-all"
                                                         title={t('myTickets.buttons.view_nft')}
                                                     >
@@ -527,14 +549,19 @@ const MyTickets = () => {
                                                 {ticket.is_current_owner && (
                                                     <button 
                                                         onClick={() => handleViewQr(ticket)}
-                                                        className="h-9 px-5 bg-gray-900 dark:bg-neon-green text-white dark:text-black rounded-xl hover:brightness-105 active:scale-95 transition-all disabled:opacity-20"
-                                                        disabled={ticket.status === 'used' || ticket.status === 'cancelled' || ticket.is_on_marketplace}
+                                                        className={`h-9 px-5 rounded-xl hover:brightness-105 active:scale-95 transition-all disabled:opacity-20 flex items-center justify-center ${
+                                                            ticket.status === 'used'
+                                                            ? 'bg-blue-500/10 text-blue-500 border border-blue-500/20 hover:bg-blue-500 hover:text-white'
+                                                            : 'bg-gray-900 dark:bg-neon-green text-white dark:text-black'
+                                                        }`}
+                                                        disabled={(ticket.status !== 'used' && (ticket.status === 'cancelled' || ticket.is_on_marketplace))}
+                                                        title={ticket.status === 'used' ? t('myTickets.buttons.view_scan_history') : t('myTickets.buttons.use_ticket')}
                                                     >
-                                                        <QrCode className="w-4.5 h-4.5" />
+                                                        {ticket.status === 'used' ? <Clock className="w-4 h-4" /> : <QrCode className="w-4.5 h-4.5" />}
                                                     </button>
                                                 )}
                                                 <Link 
-                                                    to={`/my-transactions/${ticket.mkt_transaction_number || ticket.order_id}`}
+                                                    to={`/my-transactions/${ticket.mkt_transaction_id || ticket.mkt_transaction_number || ticket.order_id}`}
                                                     className="h-9 px-5 bg-gray-100 dark:bg-white/[0.03] border border-gray-200 dark:border-white/5 text-gray-500 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 rounded-xl flex items-center justify-center transition-all"
                                                     title="Xem chi tiết vé NFT"
                                                 >
@@ -590,10 +617,10 @@ const MyTickets = () => {
                     
                     {/* Modal Wrapper - Căn giữa nhưng vẫn cho phép cuộn */}
                     <div className="flex min-h-full items-center justify-center p-4 sm:p-6 cursor-default">
-                        <div className="relative bg-white dark:bg-[#0c0c0d] w-full max-w-sm rounded-[2.5rem] overflow-hidden shadow-2xl border border-gray-200 dark:border-white/5 animate-in zoom-in-95 duration-300">
+                        <div className="relative bg-white dark:bg-[#0c0c0d] w-full max-w-sm rounded-[2.5rem] overflow-hidden shadow-2xl border border-gray-200 dark:border-white/5 animate-in zoom-in-95 duration-300 mt-[60px]">
                             
                             {/* Header - Xanh Neon rực rỡ */}
-                            <div className="bg-neon-green px-7 py-5 text-black relative">
+                            <div className="bg-neon-green px-7 py-3 text-black relative">
                                 <button 
                                     onClick={() => setShowQrModal(false)}
                                     className="absolute top-6 right-6 p-2 bg-black/5 hover:bg-black/10 rounded-full transition-all active:scale-90"
@@ -606,17 +633,17 @@ const MyTickets = () => {
                                     <span className="bg-black/10 px-3 py-1 rounded-full text-[8.5px] font-black border border-black/5 uppercase tracking-wider">#{selectedTicket.ticket_number}</span>
                                 </div>
                                 
-                                <h2 className="text-[20px] font-black leading-tight uppercase mb-2 pr-10 tracking-tight">{selectedTicket.event.title}</h2>
+                                <h2 className="text-[20px] font-black leading-tight mb-2 pr-10 tracking-tight">{selectedTicket.event.title}</h2>
                                 <div className="flex items-center gap-2 opacity-70">
                                     <MapPin className="w-3 h-3" />
                                     <span className="text-[9px] font-black truncate">{selectedTicket.event.location_address}</span>
                                 </div>
                             </div>
 
-                            <div className="px-8 pb-4 space-y-7 flex flex-col items-center">
+                            <div className="px-8 pb-3 space-y-5 flex flex-col items-center">
                                 {isScanned ? (
                                     /* Giao diện Xác thực Thành công */
-                                    <div className="w-full py-6 flex flex-col items-center text-center space-y-6 animate-in zoom-in-95 duration-500">
+                                    <div className="w-full py-4 flex flex-col items-center text-center space-y-4 animate-in zoom-in-95 duration-500">
                                         <div className="relative">
                                             <div className="absolute inset-0 bg-neon-green/20 blur-[40px] rounded-full animate-pulse"></div>
                                             <div className="relative w-24 h-24 bg-neon-green text-black rounded-full flex items-center justify-center shadow-[0_0_50px_rgba(57,255,20,0.4)]">
@@ -628,22 +655,37 @@ const MyTickets = () => {
                                         </div>
 
                                         <div className="space-y-2">
-                                            <h3 className="text-[22px] font-black text-neon-hover dark:text-neon-green uppercase tracking-tighter leading-none">
-                                                {t('myTickets.qr_modal.success_title') || 'XÁC THỰC THÀNH CÔNG'}
+                                            <h3 className="text-[22px] font-black text-neon-hover dark:text-neon-green tracking-tighter leading-none">
+                                                {t('myTickets.qr_modal.success_title') || 'Xác thực thành công'}
                                             </h3>
-                                            <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest">
+                                            <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold tracking-widest">
                                                 {t('myTickets.qr_modal.success_subtitle') || 'Chúc bạn có một sự kiện tuyệt vời!'}
                                             </p>
                                         </div>
 
-                                        <div className="w-full p-5 bg-neon-green/5 rounded-2xl border border-neon-green/10 space-y-3">
+                                        <div className="w-full p-4 bg-neon-green/5 rounded-2xl border border-neon-green/10 space-y-2">
                                             <div className="flex justify-between items-center text-[9px] font-black uppercase text-gray-500">
                                                 <span>{t('myTickets.labels.ticket_no')}</span>
                                                 <span className="text-gray-900 dark:text-white">#{selectedTicket?.ticket_number}</span>
                                             </div>
+                                            
+                                            {selectedTicket?.scan_history?.[0] && (
+                                                <>
+                                                    <div className="flex justify-between items-center text-[9px] font-black uppercase text-gray-500">
+                                                        <span>Nhân viên soát vé</span>
+                                                        <span className="text-neon-hover dark:text-neon-green">{selectedTicket.scan_history[0].staff?.full_name || 'Hệ thống'}</span>
+                                                    </div>
+                                                    <div className="flex justify-between items-center text-[9px] font-black uppercase text-gray-500">
+                                                        <span>Thời gian check-in</span>
+                                                        <span className="text-gray-900 dark:text-white">
+                                                            {format(new Date(selectedTicket.scan_history[0].scanned_at), 'HH:mm:ss - dd/MM/yyyy')}
+                                                        </span>
+                                                    </div>
+                                                </>
+                                            )}
                                             <div className="h-[1px] bg-neon-green/10"></div>
                                             <div className="flex justify-center text-[10px] font-black text-neon-hover dark:text-neon-green">
-                                                POLYGON BLOCKCHAIN VERIFIED
+                                                Polygon Blockchain Verified
                                             </div>
                                         </div>
 

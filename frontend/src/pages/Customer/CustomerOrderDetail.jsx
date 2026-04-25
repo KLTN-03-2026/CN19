@@ -100,7 +100,7 @@ const CustomerOrderDetail = () => {
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="flex items-center gap-4">
                         <button 
-                            onClick={() => navigate('/my-transactions')}
+                            onClick={() => navigate(-1)}
                             className="w-10 h-10 flex items-center justify-center bg-white dark:bg-white/[0.03] border border-gray-200 dark:border-white/5 rounded-2xl hover:border-neon-green/40 hover:text-neon-green transition-all group"
                         >
                             <ChevronLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
@@ -286,7 +286,7 @@ const CustomerOrderDetail = () => {
                                 </div>
 
                                 {/* Chi tiết phí cho giao dịch Marketplace/Transfer */}
-                                {Number(order.platform_fee) > 0 && (
+                                {['MARKETPLACE_PURCHASE', 'TICKET_TRANSFER'].includes(order.order_type) && Number(order.platform_fee) > 0 && (
                                     <div className="flex justify-between items-center">
                                         <span className="text-[12px] font-medium text-gray-500 dark:text-gray-400">{t('transactions.detail.service_fee')}</span>
                                         <span className="text-sm font-bold text-gray-700 dark:text-gray-400">+{formatCurrency(order.platform_fee)}</span>

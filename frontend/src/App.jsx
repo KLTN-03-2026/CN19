@@ -48,6 +48,7 @@ import MerchandiseManagement from './pages/Organizer/MerchandiseManagement';
 import MerchandiseDetail from './pages/Organizer/MerchandiseDetail';
 import BlogManagement from './pages/Organizer/BlogManagement';
 import CreateBlog from './pages/Organizer/CreateBlog';
+import CustomerCreateBlog from './components/blog/CreateBlog';
 import ParticipantManagement from './pages/Organizer/ParticipantManagement';
 import Revenue from './pages/Organizer/Revenue';
 import OrderManagement from './pages/Organizer/OrderManagement';
@@ -112,6 +113,7 @@ const router = createBrowserRouter([
       { path: 'events/:id', element: <PublicEventDetail /> },
       { path: 'marketplace', element: <Marketplace /> },
       { path: 'blog', element: <Blog /> },
+      { path: 'blog/create', element: <ProtectedRoute><CustomerCreateBlog /></ProtectedRoute> },
       { path: 'blog/:slug', element: <BlogDetail /> },
       { path: 'organizer/:id', element: <OrganizerPublicProfile /> },
       { path: 'login', element: <Login /> },

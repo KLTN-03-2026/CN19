@@ -53,6 +53,7 @@ const blogController = {
                     title,
                     content,
                     image_url,
+                    images: req.body.images || [],
                     slug,
                     type: 'CUSTOMER_REVIEW',
                     status: 'published' // Review khách hàng mặc định hiển thị
@@ -81,8 +82,8 @@ const blogController = {
                 const jwt = require('jsonwebtoken');
                 const token = authHeader.split(' ')[1];
                 try {
-                    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-                    currentUserId = decoded.id;
+                    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret_key');
+                    currentUserId = decoded.userId || decoded.id;
                 } catch (e) {
                     // Token lỗi thì coi như khách vãng lai
                 }
@@ -150,7 +151,9 @@ const blogController = {
                 comments: r.comments ? r.comments.map(cmt => ({
                     ...cmt,
                     has_ticket: usersWithTickets.has(cmt.user_id),
-                    is_organizer: cmt.user_id === organizerUserId
+                    is_organizer: cmt.user_id === organizerUserId,
+                    is_liked: currentUserId ? (cmt.like_user_ids || []).includes(currentUserId) : false,
+                    likes_count: cmt.like_user_ids?.length || 0
                 })) : []
             }));
 
@@ -465,6 +468,8 @@ const blogController = {
                     where.type = 'COMMUNITY_POST';
                 } else if (type === 'discussion') {
                     where.type = 'DISCUSSION';
+                } else if (type === 'news') {
+                    where.type = { in: ['SYSTEM_NEWS', 'ORGANIZER_NEWS'] };
                 } else {
                     where.type = type;
                 }
@@ -614,7 +619,12 @@ const blogController = {
 
             const updated = await prisma.blog.update({
                 where: { id },
-                data: { title, content, image_url }
+                data: { 
+                    title, 
+                    content, 
+                    image_url,
+                    images: req.body.images // Có thể là mảng mới
+                }
             });
             res.json({ success: true, data: updated });
         } catch (error) {
@@ -685,7 +695,7 @@ const blogController = {
                 where: { blog_id: id },
                 include: {
                     user: {
-                        select: { id: true, full_name: true, avatar_url: true }
+                        select: { id: true, full_name: true, avatar_url: true, role: true }
                     }
                 }
             });
@@ -705,7 +715,7 @@ const blogController = {
 
             const users = await prisma.user.findMany({
                 where: { id: { in: comment.like_user_ids || [] } },
-                select: { id: true, full_name: true, avatar_url: true }
+                select: { id: true, full_name: true, avatar_url: true, role: true }
             });
             res.json({ success: true, data: users });
         } catch (error) {

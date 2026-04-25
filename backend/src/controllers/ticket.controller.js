@@ -42,20 +42,51 @@ const getMyTickets = async (req, res) => {
         },
         transactions: {
           where: { 
-            buyer_id: userId,
+            OR: [
+              { buyer_id: userId },
+              { seller_id: userId }
+            ],
             status: { in: ['paid', 'success', 'completed', 'thanh_cong'] }
           },
-          select: { transaction_number: true },
+          select: { 
+            id: true,
+            transaction_number: true,
+            buyer_id: true,
+            seller_id: true
+          },
+          orderBy: { created_at: 'desc' }
+        },
+        scan_history: {
+          where: { is_success: true },
+          include: {
+            staff: {
+              select: { full_name: true, email: true }
+            }
+          },
+          orderBy: { scanned_at: 'desc' },
           take: 1
         }
       },
     });
+
+    // 2. Lấy danh sách blog của user cho các sự kiện này để check has_blog
+    const eventIds = [...new Set(tickets.map(t => t.event_id))];
+    const userBlogs = await prisma.blog.findMany({
+      where: {
+        author_id: userId,
+        event_id: { in: eventIds }
+      },
+      select: { id: true, event_id: true }
+    });
+
+    const blogMap = new Map(userBlogs.map(b => [b.event_id, b.id]));
 
     // Bổ sung thêm flag để frontend dễ phân biệt
     const enrichedTickets = tickets.map(t => {
       const activeListing = t.marketplace_listings.find(l => l.status === 'active');
       const soldListing = t.marketplace_listings.find(l => l.status === 'sold');
       const purchaseTransaction = t.transactions[0];
+      const blogId = blogMap.get(t.event_id);
       
       return {
         ...t,
@@ -64,10 +95,15 @@ const getMyTickets = async (req, res) => {
         is_original_buyer: t.original_buyer_id === userId,
         // true nếu vé này từng được bán qua Chợ vé (có listing với status = 'sold')
         was_sold_on_marketplace: !!soldListing,
-        // Mã giao dịch mua lại (nếu có) để frontend điều hướng
+        // Mã giao dịch mua/bán để frontend điều hướng
         mkt_transaction_number: purchaseTransaction ? purchaseTransaction.transaction_number : null,
+        mkt_transaction_id: purchaseTransaction ? purchaseTransaction.id : null,
+        is_seller_of_mkt: purchaseTransaction ? purchaseTransaction.seller_id === userId : false,
         // ID của bài đăng đang hoạt động (để hủy/sửa)
-        active_listing_id: activeListing ? activeListing.id : null
+        active_listing_id: activeListing ? activeListing.id : null,
+        // Thông tin blog
+        has_blog: !!blogId,
+        blog_id: blogId || null
       };
     });
 
@@ -103,6 +139,16 @@ const getTicketDetail = async (req, res) => {
         },
         marketplace_listings: {
           where: { status: 'active' }
+        },
+        scan_history: {
+          where: { is_success: true },
+          include: {
+            staff: {
+              select: { full_name: true, email: true }
+            }
+          },
+          orderBy: { scanned_at: 'desc' },
+          take: 1
         }
       }
     });

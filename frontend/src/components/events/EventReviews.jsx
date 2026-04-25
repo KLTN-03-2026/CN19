@@ -19,6 +19,7 @@ import blogService from '../../services/blog.service';
 import { useAuthStore } from '../../store/useAuthStore';
 import toast from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
+import LikersModal from '../blog/LikersModal';
 
 const EventReviews = ({ eventId, eventEndTime }) => {
     const { t } = useTranslation();
@@ -36,6 +37,8 @@ const EventReviews = ({ eventId, eventEndTime }) => {
     const [editingReviewContent, setEditingReviewContent] = useState('');
     const [editingCommentId, setEditingCommentId] = useState(null);
     const [editingCommentContent, setEditingCommentContent] = useState('');
+
+    const [likersModal, setLikersModal] = useState({ isOpen: false, id: null, type: 'blog' });
 
     const isEventEnded = new Date() > new Date(eventEndTime);
 
@@ -113,6 +116,13 @@ const EventReviews = ({ eventId, eventEndTime }) => {
         }
     });
 
+    const toggleCommentLikeMutation = useMutation({
+        mutationFn: blogService.toggleCommentLike,
+        onSuccess: () => {
+            queryClient.invalidateQueries(['event-reviews', eventId]);
+        }
+    });
+
     const handleSubmitReview = async (e) => {
         e.preventDefault();
         let finalTitle = newReview.title;
@@ -132,6 +142,11 @@ const EventReviews = ({ eventId, eventEndTime }) => {
         if (!isAuthenticated) return toast.error(t('reviews.loginToComment', 'Please login to comment.'));
         if (!commentText.trim()) return;
         addCommentMutation.mutate({ blogId, content: commentText });
+    };
+
+    const handleCommentLike = (commentId) => {
+        if (!isAuthenticated) return toast.error(t('reviews.loginToInteract', 'Please login to interact.'));
+        toggleCommentLikeMutation.mutate(commentId);
     };
 
     const handleDeleteReview = (id) => {
@@ -346,12 +361,23 @@ const EventReviews = ({ eventId, eventEndTime }) => {
                                     <span className="text-[11px] text-gray-400 font-medium">
                                         {new Date(rev.created_at).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})} - {new Date(rev.created_at).toLocaleDateString('vi-VN')}
                                     </span>
-                                    <button 
-                                        onClick={() => handleLike(rev.id)}
-                                        className={`text-[12px] font-bold transition-colors ${rev.is_liked ? 'text-red-500' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white hover:underline'}`}
-                                    >
-                                        {t('reviews.like', 'Like')} {rev._count?.likes > 0 && `(${rev._count.likes})`}
-                                    </button>
+                                    <div className="flex items-center gap-2">
+                                        <button 
+                                            onClick={() => handleLike(rev.id)}
+                                            className={`text-[12px] font-bold transition-all flex items-center gap-1.5 ${rev.is_liked ? 'text-red-500 scale-105' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white hover:underline'}`}
+                                        >
+                                            <Heart className={`w-3.5 h-3.5 ${rev.is_liked ? 'fill-red-500 text-red-500' : 'text-current'}`} />
+                                            {t('reviews.like', 'Thích')}
+                                        </button>
+                                        {rev._count?.likes > 0 && (
+                                            <button 
+                                                onClick={() => setLikersModal({ isOpen: true, id: rev.id, type: 'blog' })}
+                                                className={`text-[12px] font-black hover:text-neon-green transition-colors ${rev.is_liked ? 'text-red-500/80' : 'text-gray-500'}`}
+                                            >
+                                                ({rev._count.likes})
+                                            </button>
+                                        )}
+                                    </div>
 
                                     <button 
                                         onClick={() => setActiveCommentBlog(activeCommentBlog === rev.id ? null : rev.id)}
@@ -448,12 +474,23 @@ const EventReviews = ({ eventId, eventEndTime }) => {
                                                         <span className="text-[10px] text-gray-400 font-medium whitespace-nowrap">
                                                             {new Date(cmt.created_at).toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'})} - {new Date(cmt.created_at).toLocaleDateString('vi-VN')}
                                                         </span>
+                                                    <div className="flex items-center gap-2">
                                                         <button 
-                                                            className="text-[11px] font-bold text-gray-500 hover:text-gray-900 dark:hover:text-white hover:underline transition-colors"
-                                                            onClick={null}
+                                                            onClick={() => handleCommentLike(cmt.id)}
+                                                            className={`text-[11px] font-bold transition-all flex items-center gap-1.5 ${cmt.is_liked ? 'text-red-500 scale-105' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white hover:underline'}`}
                                                         >
-                                                            {t('reviews.like', 'Like')}
+                                                            <Heart className={`w-3 h-3 ${cmt.is_liked ? 'fill-red-500 text-red-500' : 'text-current'}`} />
+                                                            {t('reviews.like', 'Thích')}
                                                         </button>
+                                                        {cmt.likes_count > 0 && (
+                                                            <button 
+                                                                onClick={() => setLikersModal({ isOpen: true, id: cmt.id, type: 'comment' })}
+                                                                className={`text-[11px] font-black hover:text-neon-green transition-colors ${cmt.is_liked ? 'text-red-500/80' : 'text-gray-500'}`}
+                                                            >
+                                                                ({cmt.likes_count})
+                                                            </button>
+                                                        )}
+                                                    </div>
                                                         <button 
                                                             className="text-[11px] font-bold text-gray-500 hover:text-gray-900 dark:hover:text-white hover:underline transition-colors"
                                                             onClick={(e) => {
@@ -509,6 +546,14 @@ const EventReviews = ({ eventId, eventEndTime }) => {
                             : t('reviews.communityDesc', 'Post comments to find tickets or friends for a better event experience!')}
                     </p>
                 </div>
+            )}
+
+            {likersModal.isOpen && (
+                <LikersModal 
+                    id={likersModal.id}
+                    type={likersModal.type}
+                    onClose={() => setLikersModal({ isOpen: false, id: null, type: 'blog' })}
+                />
             )}
         </div>
     );

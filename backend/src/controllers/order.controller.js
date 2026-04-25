@@ -684,8 +684,19 @@ const getMyMerchandise = async (req, res) => {
         order: { 
           select: { 
             status: true,
+            order_number: true,
             event: { select: { title: true } }
           } 
+        },
+        scan_history: {
+          where: { is_success: true },
+          take: 1,
+          orderBy: { scanned_at: 'desc' },
+          include: {
+            staff: {
+              select: { full_name: true }
+            }
+          }
         }
       },
       orderBy: { order: { created_at: 'desc' } }
@@ -827,6 +838,7 @@ const getMyMerchandise = async (req, res) => {
           subtotal: Number(item.subtotal),
           sold_at: tx.created_at,
           transaction_id: tx.id,
+          transaction_number: tx.transaction_number,
           buyer: tx.buyer,
           event_title: item.merchandise?.event?.title || item.order?.event?.title || 'Sự kiện hệ thống'
         });
@@ -840,11 +852,49 @@ const getMyMerchandise = async (req, res) => {
   }
 };
 
+const getMerchandiseOrderItemById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.userId;
+
+    const item = await prisma.merchandiseOrderItem.findUnique({
+      where: { id },
+      include: {
+        merchandise: {
+          select: { name: true, image_url: true }
+        },
+        order: {
+          select: { customer_id: true, order_number: true }
+        },
+        scan_history: {
+          where: { is_success: true },
+          take: 1,
+          orderBy: { scanned_at: 'desc' },
+          include: {
+            staff: {
+              select: { full_name: true }
+            }
+          }
+        }
+      }
+    });
+
+    if (!item) return res.status(404).json({ error: 'Không tìm thấy sản phẩm.' });
+    if (item.order.customer_id !== userId) return res.status(403).json({ error: 'Bạn không có quyền xem thông tin này.' });
+
+    res.status(200).json({ data: item });
+  } catch (error) {
+    console.error('getMerchandiseOrderItemById error:', error);
+    res.status(500).json({ error: 'Lỗi server.' });
+  }
+};
+
 module.exports = {
   createPrimaryOrder,
   createMarketplaceOrder,
   getOrderById,
   updatePendingOrder,
   createTransferOrder,
-  getMyMerchandise
+  getMyMerchandise,
+  getMerchandiseOrderItemById
 };

@@ -8,7 +8,8 @@ import {
   Loader2, 
   Globe, 
   ChevronDown,
-  Plus
+  Plus,
+  Play
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-hot-toast';
@@ -67,13 +68,13 @@ const CreatePostModal = ({ onClose, onSuccess, postToEdit = null }) => {
                 formData.append('upload_preset', uploadPreset);
 
                 const res = await axios.post(
-                    `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+                    `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`,
                     formData
                 );
                 uploadedUrls.push(res.data.secure_url);
             }
             setImages(uploadedUrls);
-            toast.success(t('blog.create_post.uploading_success', { count: files.length }) || `Đã tải lên ${files.length} ảnh!`);
+            toast.success(`Đã tải lên ${files.length} tệp thành công!`);
         } catch (error) {
             toast.error('Lỗi khi tải ảnh lên.');
         } finally {
@@ -83,6 +84,11 @@ const CreatePostModal = ({ onClose, onSuccess, postToEdit = null }) => {
 
     const removeImage = (index) => {
         setImages(images.filter((_, i) => i !== index));
+    };
+
+    const isVideoUrl = (url) => {
+        if (!url) return false;
+        return url.includes('/video/') || url.match(/\.(mp4|webm|ogg|mov)$/i);
     };
 
     const handleSubmit = async () => {
@@ -208,11 +214,22 @@ const CreatePostModal = ({ onClose, onSuccess, postToEdit = null }) => {
                         {images.length > 0 && (
                             <div className={`grid gap-2 ${images.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
                                 {images.map((url, idx) => (
-                                    <div key={idx} className="relative group rounded-xl overflow-hidden h-44 border border-gray-100 dark:border-white/5">
-                                        <img src={url} className="w-full h-full object-cover" alt="preview" />
+                                    <div key={idx} className="relative group rounded-xl overflow-hidden h-44 border border-gray-100 dark:border-white/5 bg-black/5">
+                                        {isVideoUrl(url) ? (
+                                            <div className="w-full h-full relative">
+                                                <video src={url} className="w-full h-full object-cover" />
+                                                <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/10 transition-colors">
+                                                    <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30">
+                                                        <Play className="w-5 h-5 text-white fill-current" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <img src={url} className="w-full h-full object-cover" alt="preview" />
+                                        )}
                                         <button 
                                             onClick={() => removeImage(idx)}
-                                            className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500"
+                                            className="absolute top-2 right-2 w-8 h-8 rounded-full bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500 z-10"
                                         >
                                             <X className="w-4 h-4" />
                                         </button>
@@ -254,9 +271,12 @@ const CreatePostModal = ({ onClose, onSuccess, postToEdit = null }) => {
                 <div className="p-5 border-t border-gray-50 dark:border-white/5 space-y-4 bg-gray-50/30 dark:bg-white/[0.01]">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1.5 p-1 bg-white dark:bg-white/5 rounded-2xl border border-gray-100 dark:border-white/5">
-                            <label className="p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 text-neon-green transition-all cursor-pointer group" title="Thêm ảnh">
-                                <ImageIcon className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                                <input type="file" multiple hidden onChange={handleImageUpload} accept="image/*" />
+                            <label className="p-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 text-neon-green transition-all cursor-pointer group flex items-center gap-1" title="Thêm ảnh/video">
+                                <div className="relative">
+                                    <ImageIcon className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                                    <Play className="w-2.5 h-2.5 absolute -bottom-1 -right-1 text-neon-green fill-current" />
+                                </div>
+                                <input type="file" multiple hidden onChange={handleImageUpload} accept="image/*,video/*" />
                             </label>
                             <button 
                                 onClick={() => setShowEventPicker(!showEventPicker)}

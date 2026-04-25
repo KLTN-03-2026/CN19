@@ -11,6 +11,12 @@ const merchandiseService = {
     getMyMerchandise: async () => {
         const response = await api.get('/orders/my-merchandise');
         return response.data;
+    },
+
+    // Lấy chi tiết một vật phẩm đã mua
+    getMerchandiseItemById: async (id) => {
+        const response = await api.get(`/orders/my-merchandise/${id}`);
+        return response.data;
     }
 };
 

@@ -69,7 +69,7 @@ const Home = () => {
   // 1.2 Fetch Blogs for footer section
   const { data: blogsData, isLoading: isBlogsLoading } = useQuery({
     queryKey: ['public-blogs-home'],
-    queryFn: () => blogService.getPublicBlogs({ limit: 3, type: 'all' })
+    queryFn: () => blogService.getPublicBlogs({ limit: 3, type: 'news' })
   });
   const blogs = blogsData?.data || [];
 
@@ -427,7 +427,9 @@ const Home = () => {
                               <div className="absolute inset-0 bg-gradient-to-t from-[#111114] via-transparent to-transparent opacity-60"></div>
                               <div className="absolute top-3 left-3 md:top-4 md:left-4 px-2 md:px-3 py-0.5 md:py-1 bg-black/60 backdrop-blur-md rounded-full border border-white/10">
                                   <span className="text-[8px] md:text-[10px] font-bold text-white uppercase tracking-tight">
-                                      {blog.type === 'SYSTEM_NEWS' ? t('home.blogs.system_news') : t('home.blogs.organizer_news')}
+                                      {blog.type === 'SYSTEM_NEWS' ? t('home.blogs.system_news') : 
+                                       blog.type === 'ORGANIZER_NEWS' ? t('home.blogs.organizer_news') : 
+                                       blog.type === 'CUSTOMER_REVIEW' ? 'Cảm nhận' : 'Bài viết'}
                                   </span>
                               </div>
                           </div>
@@ -445,7 +447,7 @@ const Home = () => {
                                   {blog.title}
                               </h3>
                               <p className="text-[10px] md:text-sm text-gray-500 dark:text-gray-400 font-medium line-clamp-2 md:line-clamp-3 mb-2 md:mb-4">
-                                  {blog.content}
+                                  {blog.content?.replace(/<[^>]*>?/gm, '')}
                               </p>
                               <div className="mt-auto pt-2 md:pt-4 flex items-center text-[10px] md:text-xs font-black text-neon-green uppercase tracking-tight gap-2 opacity-0 group-hover:opacity-100 transition-all">
                                   {t('home.blogs.read_more')} <ArrowRight className="w-4 h-4" />

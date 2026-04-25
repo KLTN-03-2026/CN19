@@ -13,7 +13,7 @@ import { useTranslation } from 'react-i18next';
 import toast from 'react-hot-toast';
 import axios from 'axios';
 import { format } from 'date-fns';
-import { vi } from 'date-fns/locale';
+import { vi, enUS } from 'date-fns/locale';
 
 const Profile = () => {
   const { t, i18n } = useTranslation();
@@ -116,7 +116,7 @@ const Profile = () => {
     const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
 
     if (!cloudName || !uploadPreset) {
-      throw new Error("Cloudinary chưa được cấu hình (Thiếu Cloud Name hoặc Preset)");
+      throw new Error(i18n.language.startsWith('vi') ? "Cloudinary chưa được cấu hình (Thiếu Cloud Name hoặc Preset)" : "Cloudinary not configured (Missing Cloud Name or Preset)");
     }
 
     const formData = new FormData();
@@ -150,7 +150,7 @@ const Profile = () => {
       toast.success(i18n.language.startsWith('vi') ? 'Cập nhật ảnh đại diện thành công!' : 'Avatar updated!');
     } catch (error) {
       console.error('Upload error:', error);
-      toast.error('Upload failed');
+      toast.error(i18n.language.startsWith('vi') ? 'Tải ảnh thất bại' : 'Upload failed');
     } finally {
       setUploadingAvatar(false);
     }
@@ -324,7 +324,7 @@ const Profile = () => {
                           className="flex items-center gap-2 px-4 py-1.5 bg-neon-green/10 text-neon-green rounded-xl text-[10px] font-black hover:bg-neon-green hover:text-black transition-all"
                         >
                           <Save className="w-3 h-3 rotate-180" />
-                          Chỉnh sửa
+                          {t('profile.labels.edit_btn')}
                         </button>
                       )}
                     </div>
@@ -374,14 +374,14 @@ const Profile = () => {
                       {user?.role === 'organizer' ? (
                         <div className="space-y-1 animate-in fade-in duration-300">
                           <label className="text-[11px] font-black text-gray-500 dark:text-gray-400 ml-1">
-                            Địa chỉ hiện tại
+                            {t('profile.labels.current_address')}
                           </label>
                           <input 
                             type="text"
                             value={formData.address}
                             readOnly={!isEditing}
                             onChange={(e) => setFormData({...formData, address: e.target.value})}
-                            placeholder="Nhập địa chỉ của bạn..."
+                            placeholder={t('profile.labels.address_placeholder')}
                             className={`w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-gray-900 dark:text-white font-medium transition-all outline-none ${isEditing ? 'focus:border-neon-green shadow-sm' : 'cursor-default opacity-80'}`}
                           />
                         </div>
@@ -407,46 +407,46 @@ const Profile = () => {
                     {/* Bank Information Section */}
                     <div className="pt-6 border-t border-gray-100 dark:border-white/5 space-y-4">
                        <h4 className="text-xs font-black text-blue-500 uppercase flex items-center gap-2">
-                         <CreditCard className="w-4 h-4" /> Thông tin ngân hàng
+                         <CreditCard className="w-4 h-4" /> {t('profile.bank.title')}
                        </h4>
                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6">
                           <div className="space-y-2">
                             <label className="text-[11px] font-black text-gray-500 dark:text-gray-400 ml-1">
-                              Tên ngân hàng
+                              {t('profile.bank.bank_name')}
                             </label>
                             <input 
                               type="text"
                               value={formData.bankName}
                               readOnly={!isEditing}
                               onChange={(e) => setFormData({...formData, bankName: e.target.value})}
-                              placeholder="Ví dụ: Vietcombank, MB Bank..."
+                              placeholder={t('profile.bank.bank_placeholder')}
                               className={`w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-gray-900 dark:text-white font-medium transition-all outline-none ${isEditing ? 'focus:border-neon-green shadow-sm' : 'cursor-default opacity-80'}`}
                             />
                           </div>
                           <div className="space-y-2">
                             <label className="text-[11px] font-black text-gray-500 dark:text-gray-400 ml-1">
-                              Số tài khoản
+                              {t('profile.bank.account_number')}
                             </label>
                             <input 
                               type="text"
                               value={formData.accountNumber}
                               readOnly={!isEditing}
                               onChange={(e) => setFormData({...formData, accountNumber: e.target.value})}
-                              placeholder="Nhập số tài khoản..."
+                              placeholder={t('profile.bank.account_placeholder')}
                               className={`w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-gray-900 dark:text-white font-medium transition-all outline-none ${isEditing ? 'focus:border-neon-green shadow-sm' : 'cursor-default opacity-80'}`}
                             />
                           </div>
                        </div>
                        <div className="space-y-2">
                           <label className="text-[11px] font-black text-gray-500 dark:text-gray-400 ml-1">
-                            Chủ tài khoản
+                            {t('profile.bank.account_holder')}
                           </label>
                           <input 
                             type="text"
                             value={formData.accountHolder}
                             readOnly={!isEditing}
                             onChange={(e) => setFormData({...formData, accountHolder: e.target.value})}
-                            placeholder="TÊN CHỦ TÀI KHOẢN (Viết hoa không dấu)"
+                            placeholder={t('profile.bank.holder_placeholder')}
                             className={`w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-gray-900 dark:text-white font-medium transition-all outline-none ${isEditing ? 'focus:border-neon-green shadow-sm' : 'cursor-default opacity-80'}`}
                           />
                        </div>
@@ -460,14 +460,14 @@ const Profile = () => {
                           className="bg-neon-green text-black px-6 py-2.5 rounded-xl font-black uppercase text-[10px] hover:shadow-[0_0_30px_rgba(82,196,45,0.4)] transition-all duration-300 flex items-center gap-2"
                         >
                           {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
-                          Lưu thay đổi
+                          {t('profile.labels.save_btn')}
                         </button>
                         <button 
                           type="button"
                           onClick={handleCancel}
                           className="bg-gray-100 px-6 py-2.5 rounded-xl font-black uppercase text-[10px] text-gray-500 hover:text-gray-900 dark:hover:text-white transition-all"
                         >
-                          Hủy bỏ
+                          {t('profile.labels.cancel_btn')}
                         </button>
                       </div>
                     )}
@@ -476,12 +476,12 @@ const Profile = () => {
                   {user?.role === 'organizer' && user?.organizer_profile && (
                     <div className="pt-10 border-t border-gray-100 dark:border-white/5 space-y-6 animate-in fade-in duration-500">
                        <h3 className="text-sm font-black text-neon-green uppercase">
-                         Chi tiết Ban tổ chức
+                         {t('profile.organizer.details')}
                        </h3>
                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
                           <div className="space-y-2">
                              <label className="text-[11px] font-black text-gray-500 dark:text-gray-400 ml-1">
-                               Tên tổ chức
+                               {t('profile.organizer.org_name')}
                              </label>
                              <div className="w-full bg-gray-100 dark:bg-white/[0.02] border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-gray-400 dark:text-gray-600 font-medium font-sans">
                                 {user.organizer_profile.organization_name}
@@ -489,11 +489,11 @@ const Profile = () => {
                           </div>
                           <div className="space-y-2">
                              <label className="text-[11px] font-black text-gray-500 dark:text-gray-400 ml-1">
-                               Trạng thái xác thực
+                               {t('profile.organizer.kyc_status_label')}
                              </label>
                              <div className="w-full bg-gray-100 dark:bg-white/[0.02] border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 flex items-center justify-between">
                                 <span className="font-black text-[10px] tracking-wider text-neon-green flex items-center gap-2">
-                                  {user.organizer_profile.kyc_status === 'verified' ? 'Đã xác minh' : 'Chờ xử lý'}
+                                  {user.organizer_profile.kyc_status === 'verified' ? t('profile.organizer.verified') : t('profile.organizer.pending')}
                                   {user.organizer_profile.is_verified && <Shield className="w-3.5 h-3.5" />}
                                 </span>
                              </div>
@@ -516,7 +516,7 @@ const Profile = () => {
                           <div className="p-2 bg-blue-500/20 rounded-xl">
                             <Wallet className="w-5 h-5 md:w-6 md:h-6 text-blue-500" />
                           </div>
-                          <span className="text-[10px] md:text-[11px] font-black text-blue-500 uppercase tracking-wider">Ví hệ thống</span>
+                          <span className="text-[10px] md:text-[11px] font-black text-blue-500 uppercase tracking-wider">{t('profile.wallet.system_wallet')}</span>
                         </div>
                         <div className="flex items-baseline gap-2 mb-1">
                           <span className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white">
@@ -524,13 +524,13 @@ const Profile = () => {
                           </span>
                           <span className="text-xs md:text-sm font-black text-blue-500 uppercase">VND</span>
                         </div>
-                        <p className="text-[10px] text-gray-500 font-medium">Số dư có thể rút về tài khoản ngân hàng</p>
+                        <p className="text-[10px] text-gray-500 font-medium">{t('profile.wallet.vnd_desc')}</p>
                         
                         <button 
                           className="mt-6 w-full py-3 bg-blue-500 text-white rounded-2xl font-black text-[11px] uppercase shadow-lg shadow-blue-500/20 hover:bg-blue-600 transition-all flex items-center justify-center gap-2"
-                          onClick={() => toast.success('Vui lòng liên hệ Admin để tạo yêu cầu rút tiền')}
+                          onClick={() => toast.success(i18n.language.startsWith('vi') ? 'Vui lòng liên hệ Admin để tạo yêu cầu rút tiền' : 'Please contact Admin to create a withdrawal request')}
                         >
-                          Tạo yêu cầu rút tiền
+                          {t('profile.wallet.withdraw_btn')}
                         </button>
                       </div>
                     </div>
@@ -543,13 +543,10 @@ const Profile = () => {
                           <div className="p-2 bg-neon-green/20 rounded-xl">
                             <Shield className="w-5 h-5 md:w-6 md:h-6 text-neon-green" />
                           </div>
-                          <span className="text-[10px] md:text-[11px] font-black text-neon-green uppercase tracking-wider">Ví Blockchain</span>
+                          <span className="text-[10px] md:text-[11px] font-black text-neon-green uppercase tracking-wider">{t('profile.wallet.blockchain_wallet')}</span>
                         </div>
-                        <div className="flex items-baseline gap-2 mb-1">
-                          <span className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white">{walletBalance}</span>
-                          <span className="text-xs md:text-sm font-black text-neon-green uppercase">POL</span>
-                        </div>
-                        <p className="text-[10px] text-gray-500 font-medium">Sử dụng để thanh toán phí Gas & Giao dịch NFT</p>
+                        {/* Blockchain balance removed per user request */}
+                        <p className="text-[10px] text-gray-500 font-medium">{t('profile.wallet.blockchain_desc')}</p>
 
                         <div className="mt-6 flex items-center justify-between bg-white/50 dark:bg-black/20 px-4 py-2 rounded-xl border border-gray-100 dark:border-white/5">
                            <code className="text-[10px] text-gray-400 font-mono truncate max-w-[120px]">{user?.wallet_address}</code>
@@ -570,9 +567,9 @@ const Profile = () => {
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <h4 className="text-sm font-black text-gray-900 dark:text-white uppercase flex items-center gap-2">
-                         <History className="w-4 h-4 text-blue-500" /> Lịch sử rút tiền
+                         <History className="w-4 h-4 text-blue-500" /> {t('profile.wallet.history')}
                       </h4>
-                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{withdrawalHistory.length} Giao dịch</span>
+                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{withdrawalHistory.length} {t('profile.wallet.transactions')}</span>
                     </div>
 
                     <div className="bg-white dark:bg-white/[0.02] border border-gray-200 dark:border-white/10 rounded-3xl overflow-hidden shadow-sm">
@@ -580,23 +577,23 @@ const Profile = () => {
                           <table className="w-full text-left border-collapse">
                             <thead>
                               <tr className="bg-gray-50 dark:bg-white/5 border-b border-gray-100 dark:border-white/5">
-                                <th className="px-6 py-3 text-[10px] font-black uppercase text-gray-400">ID / Thời gian</th>
-                                <th className="px-6 py-3 text-[10px] font-black uppercase text-gray-400">Số tiền</th>
-                                <th className="px-6 py-3 text-[10px] font-black uppercase text-gray-400">Trạng thái</th>
-                                <th className="px-6 py-3 text-[10px] font-black uppercase text-gray-400">Ghi chú Admin</th>
+                                <th className="px-6 py-3 text-[10px] font-black uppercase text-gray-400">{t('profile.wallet.table_id_time')}</th>
+                                <th className="px-6 py-3 text-[10px] font-black uppercase text-gray-400">{t('profile.wallet.table_amount')}</th>
+                                <th className="px-6 py-3 text-[10px] font-black uppercase text-gray-400">{t('profile.wallet.table_status')}</th>
+                                <th className="px-6 py-3 text-[10px] font-black uppercase text-gray-400">{t('profile.wallet.table_note')}</th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-50 dark:divide-white/5">
                                {loadingFinancial ? (
                                  <tr>
                                    <td colSpan="4" className="px-6 py-12 text-center text-gray-400 italic text-xs">
-                                     Đang tải lịch sử...
+                                     {t('profile.wallet.loading_history')}
                                    </td>
                                  </tr>
                                ) : withdrawalHistory.length === 0 ? (
                                  <tr>
                                    <td colSpan="4" className="px-6 py-12 text-center text-gray-400 italic text-xs">
-                                     Chưa có yêu cầu rút tiền nào.
+                                     {t('profile.wallet.empty_history')}
                                    </td>
                                  </tr>
                                ) : (
@@ -606,7 +603,7 @@ const Profile = () => {
                                        <div className="flex flex-col">
                                          <span className="text-[10px] font-mono font-black text-gray-400 uppercase max-w-[80px] truncate">#{req.id.substring(0, 8)}</span>
                                          <span className="text-[11px] text-gray-600 dark:text-gray-400 mt-0.5">
-                                           {format(new Date(req.created_at), 'dd/MM/yyyy HH:mm', { locale: vi })}
+                                           {format(new Date(req.created_at), 'dd/MM/yyyy HH:mm', { locale: i18n.language.startsWith('vi') ? vi : enUS })}
                                          </span>
                                        </div>
                                      </td>
@@ -621,8 +618,8 @@ const Profile = () => {
                                          req.status === 'pending' ? 'bg-amber-500/10 text-amber-500' :
                                          'bg-red-500/10 text-red-500'
                                        }`}>
-                                         {req.status === 'completed' ? 'Hoàn thành' : 
-                                          req.status === 'pending' ? 'Chờ duyệt' : 'Từ chối'}
+                                         {req.status === 'completed' ? t('profile.wallet.status_completed') : 
+                                          req.status === 'pending' ? t('profile.wallet.status_pending') : t('profile.wallet.status_rejected')}
                                        </span>
                                      </td>
                                      <td className="px-6 py-4">
@@ -645,25 +642,25 @@ const Profile = () => {
                 <div className="space-y-8 md:space-y-12 animate-in fade-in duration-500">
                     <div className="space-y-2">
                        <h3 className="text-lg md:text-xl font-black text-gray-900 dark:text-white uppercase">
-                         Bảo mật tài khoản
+                         {t('profile.security.header')}
                        </h3>
                        <p className="text-[11px] md:text-xs font-black text-gray-500 dark:text-gray-400 ">
-                         Quản lý mật khẩu và các tùy chọn bảo mật khác.
+                         {t('profile.security.subtitle')}
                        </p>
                     </div>
 
                    {/* Change Password Form */}
                    <div className="p-6 md:p-8 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-[2rem] space-y-6">
                       <h4 className="text-xs font-black text-neon-green uppercase flex items-center gap-2">
-                        <Lock className="w-4 h-4" /> Đổi mật khẩu
+                        <Lock className="w-4 h-4" /> {t('profile.security.change_pass_header')}
                       </h4>
                       <form onSubmit={handleChangePassword} className="space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           <div className="space-y-1">
                             <div className="flex justify-between items-center px-2">
-                              <label className="text-[11px] font-black text-gray-400">Mật khẩu cũ</label>
+                              <label className="text-[11px] font-black text-gray-400">{t('profile.security.old_pass_label')}</label>
                               <Link to="/forgot-password" size="sm" className="text-[10px] font-black text-neon-green hover:underline">
-                                Quên mật khẩu?
+                                {t('profile.security.forgot_pass')}
                               </Link>
                             </div>
                             <input 
@@ -675,7 +672,7 @@ const Profile = () => {
                             />
                           </div>
                           <div className="space-y-1">
-                            <label className="text-[11px] font-black text-gray-400 ml-2">Mật khẩu mới</label>
+                            <label className="text-[11px] font-black text-gray-400 ml-2">{t('profile.security.new_pass_label')}</label>
                             <input 
                               type="password"
                               required
@@ -685,7 +682,7 @@ const Profile = () => {
                             />
                           </div>
                           <div className="space-y-1">
-                            <label className="text-[11px] font-black text-gray-400 ml-2">Xác nhận mật khẩu mới</label>
+                            <label className="text-[11px] font-black text-gray-400 ml-2">{t('profile.security.confirm_pass_label')}</label>
                             <input 
                               type="password"
                               required
@@ -701,20 +698,20 @@ const Profile = () => {
                           className="px-6 py-2.5 bg-neon-green text-black font-black uppercase text-[10px] rounded-xl hover:shadow-[0_0_20px_rgba(82,196,45,0.3)] transition-all disabled:opacity-50 flex items-center gap-2"
                         >
                           {changingPass ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
-                          Cập nhật mật khẩu
+                          {t('profile.security.update_pass_btn')}
                         </button>
                       </form>
                    </div>
 
                    <div className="pt-2 border-t border-gray-100 dark:border-white/5">
                       <h4 className="text-[11px] font-black text-gray-500 dark:text-gray-400 uppercase mb-6 inline-block border-b-2 border-neon-green pb-1">
-                        Cài đặt thông báo
+                        {t('profile.security.notif_settings')}
                       </h4>
                       
                       <div className="flex items-center justify-between p-4 bg-white dark:bg-transparent rounded-xl border-b border-gray-50 dark:border-white/[0.02]">
                         <div className="flex items-center gap-3">
                           <Bell className="w-4 h-4 text-neon-green" />
-                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Nhận thông báo qua Email</span>
+                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('profile.security.email_notif_label')}</span>
                         </div>
                         <div className="w-10 h-5 bg-neon-green/20 rounded-full p-1 relative cursor-pointer">
                           <div className="w-3 h-3 bg-neon-green rounded-full shadow-[0_0_5px_rgba(82,196,45,1)]"></div>

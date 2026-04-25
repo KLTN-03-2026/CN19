@@ -475,8 +475,8 @@ const Marketplace = () => {
 
             {/* Detail Modal */}
             {selectedListing && (
-                <div className="fixed inset-0 mt-20 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
-                    <div className="relative w-full max-w-lg bg-white dark:bg-dark-card border border-gray-100 dark:border-white/10 rounded-[2rem] overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
+                <div className="fixed inset-0 z-[100] overflow-y-auto bg-black/80 backdrop-blur-sm animate-in fade-in duration-300 flex justify-center py-20 px-4">
+                    <div className="relative w-full max-w-lg h-fit bg-white dark:bg-dark-card border border-gray-100 dark:border-white/10 rounded-[2rem] overflow-hidden shadow-2xl border border-gray-200 dark:border-white/5 animate-in zoom-in-95 duration-300 mt-8">
                         {/* Modal Header Image */}
                         <div className="relative h-46">
                             <img 
@@ -504,8 +504,8 @@ const Marketplace = () => {
                         <div className="p-8 space-y-3">
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="p-3.5 bg-gray-50 dark:bg-white/[0.02] border border-gray-200 dark:border-white/5 rounded-2xl">
-                                    <p className="text-[9px] font-black text-gray-50 uppercase mb-1">{t('myTickets.labels.tier')} & {t('myTickets.labels.location')}</p>
-                                    <p className="text-sm font-bold text-white ">
+                                    <p className="text-[9px] font-black text-gray-500 uppercase mb-1">{t('myTickets.labels.tier')} & {t('myTickets.labels.location')}</p>
+                                    <p className="text-sm font-bold text-slate-900 dark:text-white">
                                         {selectedListing.ticket.ticket_tier.tier_name} - {selectedListing.ticket.ticket_tier.section_name || t('myTickets.labels.general_area')}
                                     </p>
                                 </div>
@@ -520,7 +520,7 @@ const Marketplace = () => {
                                 <h4 className="text-[10px] font-black text-purple-400 uppercase flex items-center gap-2">
                                     {t('eventDetail.importantNote')}
                                 </h4>
-                                <p className="text-xs text-gray-300 leading-relaxed italic">
+                                <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed italic">
                                     {selectedListing.ticket.ticket_tier.benefits ? `"${selectedListing.ticket.ticket_tier.benefits}"` : t('eventDetail.infoUpdating')}
                                 </p>
                             </div>
@@ -528,7 +528,7 @@ const Marketplace = () => {
                             {/* Merchandise Section in Modal */}
                             {selectedListing.metadata?.selected_merchandise?.length > 0 && (
                                 <div className="space-y-3">
-                                    <h4 className="text-[10px] font-black text-white uppercase flex items-center gap-2">
+                                    <h4 className="text-[10px] font-black text-slate-900 dark:text-white uppercase flex items-center gap-2">
                                         <ShoppingBag className="w-3.5 h-3.5 text-blue-500" />
                                         {t('checkout.addons')}
                                     </h4>

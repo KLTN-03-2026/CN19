@@ -10,6 +10,9 @@ router.post('/create-url', authenticate, strictLimiter, paymentController.create
 // [GET] /api/payments/vnpay-return - Redirect sau khi thanh toán VNPay
 router.get('/vnpay-return', paymentController.vnpayReturn);
 
+// [GET] /api/payments/momo-return - Redirect sau khi thanh toán MoMo
+router.get('/momo-return', paymentController.momoReturn);
+
 // [POST] /api/payments/momo-ipn - Callback ngầm xác nhận từ MoMo (IPN)
 router.post('/momo-ipn', paymentController.momoIPN);
 

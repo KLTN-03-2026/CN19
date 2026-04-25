@@ -421,16 +421,9 @@ const UnifiedPostCard = ({
           </Link>
         )}
 
-        {content && (content.includes('</p>') || content.includes('</div>')) ? (
-          <div 
-            className="text-[14px] font-medium text-gray-800 dark:text-gray-200 leading-relaxed prose dark:prose-invert max-w-none prose-p:my-0" 
-            dangerouslySetInnerHTML={{ __html: content }} 
-          />
-        ) : (
-          <p className="text-[14px] font-medium text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap">
-            {content}
-          </p>
-        )}
+        <p className="text-[14px] font-medium text-gray-800 dark:text-gray-200 leading-relaxed line-clamp-3">
+          {content?.replace(/<[^>]*>?/gm, '')}
+        </p>
       </div>
 
       {/* Linked Event Card */}

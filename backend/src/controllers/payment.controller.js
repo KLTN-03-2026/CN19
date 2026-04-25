@@ -217,6 +217,47 @@ const PaymentController = {
         }
     },
 
+    // MoMo Return (Redirect sau khi thanh toán)
+    momoReturn: async (req, res) => {
+        try {
+            const { partnerCode, orderId, requestId, amount, orderInfo, orderType, transId, resultCode, message, payType, responseTime, extraData, signature } = req.query;
+            const secretKey = process.env.MOMO_SECRET_KEY.trim();
+            const accessKey = process.env.MOMO_ACCESS_KEY.trim();
+
+            // Xác thực chữ ký
+            const rawSignature = `accessKey=${accessKey}&amount=${amount}&extraData=${extraData}&message=${message}&orderId=${orderId}&orderInfo=${orderInfo}&orderType=${orderType}&partnerCode=${partnerCode}&payType=${payType}&requestId=${requestId}&responseTime=${responseTime}&resultCode=${resultCode}&transId=${transId}`;
+            const calculatedSignature = crypto.createHmac('sha256', secretKey).update(rawSignature).digest('hex');
+
+            if (calculatedSignature !== signature) {
+                return res.status(400).json({ error: 'Chữ ký không hợp lệ từ MoMo' });
+            }
+
+            // Lấy orderNumber từ orderInfo (mẫu: "Thanh toan don hang ORD...")
+            const orderNumber = orderInfo.includes(' ') ? orderInfo.split(' ').pop() : orderId;
+
+            if (resultCode == 0) {
+                // Thanh toán thành công
+                await processOrderSuccess(orderNumber, transId, 'MOMO', req.query);
+                
+                // Chuyển hướng người dùng về trang kết quả của frontend
+                const redirectUrl = `${process.env.FRONTEND_URL}/payment-result?orderId=${orderId}&resultCode=${resultCode}&orderNumber=${orderNumber}&method=momo`;
+                return res.redirect(redirectUrl);
+            } else {
+                // Thanh toán thất bại hoặc người dùng hủy
+                await prisma.order.update({
+                    where: { order_number: orderNumber },
+                    data: { status: 'failed' }
+                }).catch(() => {});
+
+                const redirectUrl = `${process.env.FRONTEND_URL}/payment-result?orderId=${orderId}&resultCode=${resultCode}&orderNumber=${orderNumber}&method=momo&message=${encodeURIComponent(message)}`;
+                return res.redirect(redirectUrl);
+            }
+        } catch (error) {
+            console.error('MoMo Return Error:', error);
+            res.redirect(`${process.env.FRONTEND_URL}/payment-result?resultCode=99&error=system_error`);
+        }
+    },
+
     // MoMo IPN (Callback ngầm từ MoMo)
     momoIPN: async (req, res) => {
         try {

@@ -52,6 +52,7 @@ const enMyEvent = {
     listed: "Listed",
     edit_listing: "Edit Listing",
     use_ticket: "Use Ticket",
+    view_scan_history: "View scan history",
     view_nft: "View NFT Details",
     view_event: "View Event"
   },

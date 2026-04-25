@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import { Play } from 'lucide-react';
 import ImagePreviewModal from './ImagePreviewModal';
 
 const SocialImageGrid = ({ images = [], variant = 'grid' }) => {
@@ -13,18 +14,47 @@ const SocialImageGrid = ({ images = [], variant = 'grid' }) => {
     setSelectedImageIndex(index);
   };
 
+  const isVideoUrl = (url) => {
+    if (!url) return false;
+    return url.includes('/video/') || url.match(/\.(mp4|webm|ogg|mov)$/i);
+  };
+
+  const MediaItem = ({ url, onClick, className = "" }) => {
+    const isVideo = isVideoUrl(url);
+    return (
+      <div 
+        className={`relative group cursor-zoom-in overflow-hidden ${className}`}
+        onClick={onClick}
+      >
+        {isVideo ? (
+          <div className="w-full h-full relative bg-black">
+            <video src={url} className="w-full h-full object-cover" />
+            <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/10 transition-colors">
+              <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30">
+                <Play className="w-5 h-5 text-white fill-current" />
+              </div>
+            </div>
+          </div>
+        ) : (
+          <img 
+            src={url} 
+            className="w-full h-full object-cover hover:brightness-90 transition-all" 
+            alt="" 
+          />
+        )}
+      </div>
+    );
+  };
+
   const renderGrid = () => {
     switch (count) {
       case 1:
         return (
-          <div 
-            className="w-full rounded-2xl overflow-hidden border border-gray-100 dark:border-white/5"
-            onClick={() => handleImageClick(0)}
-          >
-            <img 
-              src={images[0]} 
-              alt="Post content" 
-              className="w-full max-h-[500px] object-cover hover:scale-[1.02] transition-transform duration-700 cursor-zoom-in" 
+          <div className="w-full rounded-2xl overflow-hidden border border-gray-100 dark:border-white/5">
+            <MediaItem 
+               url={images[0]} 
+               onClick={() => handleImageClick(0)} 
+               className="w-full max-h-[500px]"
             />
           </div>
         );
@@ -32,14 +62,8 @@ const SocialImageGrid = ({ images = [], variant = 'grid' }) => {
       case 2:
         return (
           <div className="grid grid-cols-2 gap-[2px] rounded-2xl overflow-hidden border border-gray-100 dark:border-white/5 h-[300px]">
-            {images.map((img, i) => (
-              <img 
-                key={i} 
-                src={img} 
-                onClick={() => handleImageClick(i)}
-                className="w-full h-full object-cover hover:brightness-90 transition-all cursor-zoom-in" 
-                alt="" 
-              />
+            {images.slice(0, 2).map((img, i) => (
+              <MediaItem key={i} url={img} onClick={() => handleImageClick(i)} className="w-full h-full" />
             ))}
           </div>
         );
@@ -47,25 +71,10 @@ const SocialImageGrid = ({ images = [], variant = 'grid' }) => {
       case 3:
         return (
           <div className="grid grid-cols-2 gap-[2px] rounded-2xl overflow-hidden border border-gray-100 dark:border-white/5 h-[400px]">
-             <img 
-                src={images[0]} 
-                onClick={() => handleImageClick(0)}
-                className="w-full h-full object-cover border-r border-gray-100 dark:border-white/5 hover:brightness-90 transition-all cursor-zoom-in" 
-                alt="" 
-             />
+             <MediaItem url={images[0]} onClick={() => handleImageClick(0)} className="w-full h-full" />
              <div className="grid grid-rows-2 gap-[2px]">
-                <img 
-                    src={images[1]} 
-                    onClick={() => handleImageClick(1)}
-                    className="w-full h-full object-cover hover:brightness-90 transition-all cursor-zoom-in" 
-                    alt="" 
-                />
-                <img 
-                    src={images[2]} 
-                    onClick={() => handleImageClick(2)}
-                    className="w-full h-full object-cover hover:brightness-90 transition-all cursor-zoom-in" 
-                    alt="" 
-                />
+                <MediaItem url={images[1]} onClick={() => handleImageClick(1)} className="w-full h-full" />
+                <MediaItem url={images[2]} onClick={() => handleImageClick(2)} className="w-full h-full" />
              </div>
           </div>
         );
@@ -73,14 +82,8 @@ const SocialImageGrid = ({ images = [], variant = 'grid' }) => {
       case 4:
         return (
           <div className="grid grid-cols-2 grid-rows-2 gap-[2px] rounded-2xl overflow-hidden border border-gray-100 dark:border-white/5 h-[400px]">
-            {images.map((img, i) => (
-              <img 
-                key={i} 
-                src={img} 
-                onClick={() => handleImageClick(i)}
-                className="w-full h-full object-cover hover:brightness-90 transition-all cursor-zoom-in" 
-                alt="" 
-              />
+            {images.slice(0, 4).map((img, i) => (
+              <MediaItem key={i} url={img} onClick={() => handleImageClick(i)} className="w-full h-full" />
             ))}
           </div>
         );
@@ -88,40 +91,26 @@ const SocialImageGrid = ({ images = [], variant = 'grid' }) => {
       default: // 5 or more
         return (
             <div className="grid grid-cols-2 gap-[2px] rounded-2xl overflow-hidden border border-gray-100 dark:border-white/5 h-[400px]">
-               <img 
-                    src={images[0]} 
-                    onClick={() => handleImageClick(0)}
-                    className="w-full h-full object-cover border-r border-gray-100 dark:border-white/5 hover:brightness-90 transition-all cursor-zoom-in" 
-                    alt="" 
-               />
+               <MediaItem url={images[0]} onClick={() => handleImageClick(0)} className="w-full h-full" />
                <div className="grid grid-cols-2 grid-rows-2 gap-[2px]">
-                  <img 
-                    src={images[1]} 
-                    onClick={() => handleImageClick(1)}
-                    className="w-full h-full object-cover hover:brightness-90 transition-all cursor-zoom-in" 
-                    alt="" 
-                  />
-                  <img 
-                    src={images[2]} 
-                    onClick={() => handleImageClick(2)}
-                    className="w-full h-full object-cover hover:brightness-90 transition-all cursor-zoom-in" 
-                    alt="" 
-                  />
-                  <img 
-                    src={images[3]} 
-                    onClick={() => handleImageClick(3)}
-                    className="w-full h-full object-cover hover:brightness-90 transition-all cursor-zoom-in" 
-                    alt="" 
-                  />
+                  <MediaItem url={images[1]} onClick={() => handleImageClick(1)} className="w-full h-full" />
+                  <MediaItem url={images[2]} onClick={() => handleImageClick(2)} className="w-full h-full" />
+                  <MediaItem url={images[3]} onClick={() => handleImageClick(3)} className="w-full h-full" />
                   <div 
-                    className="relative h-full w-full cursor-zoom-in"
+                    className="relative h-full w-full cursor-zoom-in group"
                     onClick={() => handleImageClick(4)}
                   >
-                     <img 
-                        src={images[4]} 
-                        className="w-full h-full object-cover brightness-[0.4] hover:brightness-50 transition-all" 
-                        alt="" 
-                     />
+                     {isVideoUrl(images[4]) ? (
+                        <div className="w-full h-full relative bg-black">
+                            <video src={images[4]} className="w-full h-full object-cover brightness-[0.4]" />
+                        </div>
+                     ) : (
+                        <img 
+                            src={images[4]} 
+                            className="w-full h-full object-cover brightness-[0.4] hover:brightness-50 transition-all" 
+                            alt="" 
+                        />
+                     )}
                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                         <span className="text-white text-2xl font-black">+{count - 4}</span>
                      </div>

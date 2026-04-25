@@ -3,7 +3,7 @@ const rateLimit = require('express-rate-limit');
 // 1. Giới hạn chung toàn hệ thống (Prevent Spam/DDoS)
 const globalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 phút
-  max: 200, // Tối đa 200 requests mỗi IP
+  max: 2000, // Tối đa 2000 requests mỗi IP (Dev mode)
   message: {
     error: 'Quá nhiều yêu cầu từ IP này, vui lòng thử lại sau 15 phút.'
   },

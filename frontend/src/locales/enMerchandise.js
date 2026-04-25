@@ -38,7 +38,13 @@ const enMerchandise = {
         sold_date: "Sold Date",
         sold_time: "Sold Time",
         sold_price: "Sold Price",
-        marketplace_success: "Marketplace Transaction Successful"
+        marketplace_success: "Marketplace Transaction Successful",
+        pickup_success: "Pickup Successful",
+        staff_name: "Scanning Staff",
+        pickup_date: "Pickup Date",
+        thank_you: "Thank you for choosing BASTICKET. We hope you have a great experience at the event!",
+        order_number: "Order Number",
+        close_btn: "Close"
     },
     listing_modal: {
         tag_title: "LISTING TICKET DETAILS",

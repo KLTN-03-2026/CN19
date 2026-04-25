@@ -52,6 +52,7 @@ const vnMyEvent = {
     listed: "Đã đăng",
     edit_listing: "Chỉnh sửa bài đăng",
     use_ticket: "Sử dụng vé",
+    view_scan_history: "Xem lịch sử quét",
     view_nft: "Chi tiết vé NFT",
     view_event: "Trang sự kiện"
   },
@@ -85,7 +86,7 @@ const vnMyEvent = {
     refresh_btn: "Cấp lại mã mới",
     countdown: "Token tự hủy sau",
     disclaimer: "Tài sản NFT được xác minh bởi BASTICKET. Vui lòng trình diện mã tại cổng soát vé chính thức.",
-    success_title: "XÁC THỰC THÀNH CÔNG",
+    success_title: "Xác thực thành công",
     success_subtitle: "Chúc bạn có một sự kiện tuyệt vời!"
   }
 };

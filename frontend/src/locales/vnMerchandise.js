@@ -38,7 +38,13 @@ const vnMerchandise = {
         sold_date: "Ngày bán",
         sold_time: "Giờ bán",
         sold_price: "Giá bán",
-        marketplace_success: "Giao dịch Marketplace thành công"
+        marketplace_success: "Giao dịch Marketplace thành công",
+        pickup_success: "Nhận hàng thành công",
+        staff_name: "Nhân viên soát",
+        pickup_date: "Ngày nhận",
+        thank_you: "Cảm ơn bạn đã đồng hành cùng BASTICKET. Chúc bạn có trải nghiệm tuyệt vời tại sự kiện!",
+        order_number: "Mã đơn hàng",
+        close_btn: "Đóng"
     },
     listing_modal: {
         tag_title: "CHI TIẾT VÉ NIÊM YẾT",

@@ -27,6 +27,7 @@ import merchandiseService from '../../services/merchandise.service';
 import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { format } from 'date-fns';
 
 const MyProducts = () => {
     const { t, i18n } = useTranslation();
@@ -39,6 +40,7 @@ const MyProducts = () => {
     const [showPickupModal, setShowPickupModal] = useState(false);
     const [showSoldInfoModal, setShowSoldInfoModal] = useState(false);
     const [showListingModal, setShowListingModal] = useState(false);
+    const [isRedeemed, setIsRedeemed] = useState(false);
 
     const formatImageUrl = (url) => {
         if (!url) return 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30';
@@ -65,17 +67,40 @@ const MyProducts = () => {
 
     const handleViewPickup = (item) => {
         setSelectedItem(item);
+        setIsRedeemed(!!item.is_redeemed);
         setShowPickupModal(true);
+    };
+
+    // Polling trạng thái nhận hàng
+    useEffect(() => {
+        let pollTimer;
+        if (showPickupModal && selectedItem && !isRedeemed) {
+            pollTimer = setInterval(async () => {
+                try {
+                    const res = await merchandiseService.getMerchandiseItemById(selectedItem.id);
+                    if (res.data?.is_redeemed === true) {
+                        setSelectedItem(res.data);
+                        setIsRedeemed(true);
+                        toast.success(t('merchandise.details.pickup_success') || 'Tuyệt vời! Bạn đã nhận hàng thành công.');
+                        // Làm mới danh sách ở nền
+                        fetchMerchandise();
+                    }
+                } catch (error) {
+                    console.error("Lỗi khi kiểm tra trạng thái sản phẩm:", error);
+                }
+            }, 3000);
+        }
+        return () => clearInterval(pollTimer);
+    }, [showPickupModal, selectedItem, isRedeemed]);
+
+    const handleViewListing = (item) => {
+        setSelectedItem(item);
+        setShowListingModal(true);
     };
 
     const handleViewSoldInfo = (item) => {
         setSelectedItem(item);
         setShowSoldInfoModal(true);
-    };
-
-    const handleViewListing = (item) => {
-        setSelectedItem(item);
-        setShowListingModal(true);
     };
 
     const filteredItems = items.filter(item => {
@@ -250,14 +275,14 @@ const MyProducts = () => {
                                             {getStatusBadge(item.status || 'pending')}
                                         </div>
  
-                                        {(item.status || 'pending') === 'pending' && (
+                                        {['pending', 'received'].includes(item.status || 'pending') && (
                                             <div className="absolute bottom-3 left-3 right-3 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all">
                                                 <button 
                                                     onClick={() => handleViewPickup(item)}
                                                     className="w-full py-2 bg-neon-green text-black text-[9px] font-black uppercase rounded-lg flex items-center justify-center gap-2"
                                                 >
-                                                    <QrCode className="w-3 h-3" />
-                                                    {t('merchandise.labels.pickup_code')}
+                                                    {item.is_redeemed ? <Eye className="w-3 h-3" /> : <QrCode className="w-3 h-3" />}
+                                                    {item.is_redeemed ? t('merchandise.labels.view_details') : t('merchandise.labels.pickup_code')}
                                                 </button>
                                             </div>
                                         )}
@@ -307,7 +332,7 @@ const MyProducts = () => {
                                                 <span className="text-[15px] font-black text-gray-900 dark:text-white">{formatPrice(item.subtotal)}</span>
                                             </div>
                                             <Link 
-                                                to={`/my-transactions/${item.mkt_transaction_number || item.order_id}`}
+                                                to={`/my-transactions/${item.transaction_id || item.transaction_number || item.mkt_transaction_number || item.order_id}`}
                                                 className="p-2 bg-gray-100 dark:bg-white/5 text-gray-500 hover:text-neon-green rounded-lg transition-all"
                                                 title="Xem chi tiết giao dịch"
                                             >
@@ -341,45 +366,110 @@ const MyProducts = () => {
             {showPickupModal && selectedItem && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
                     <div className="fixed inset-0 bg-black/90 backdrop-blur-md animate-in fade-in" onClick={() => setShowPickupModal(false)}></div>
-                    <div className="relative bg-white dark:bg-dark-card w-full max-w-sm rounded-[2.5rem] overflow-hidden shadow-2xl border border-gray-200 dark:border-white/5 animate-in zoom-in-95 duration-300">
-                        <div className="bg-neon-green p-6 text-black relative">
+                    <div className="relative bg-white dark:bg-dark-card w-full max-w-sm rounded-[2.5rem] overflow-hidden shadow-2xl border border-gray-200 dark:border-white/5 animate-in zoom-in-95 duration-300 mt-20">
+                        <div className="bg-neon-green px-6 py-4 text-black relative">
                             <button onClick={() => setShowPickupModal(false)} className="absolute top-6 right-6 p-2 bg-black/5 hover:bg-black/10 rounded-full transition-all">
                                 <X className="w-4 h-4" />
                             </button>
                             <h2 className="text-xl font-black uppercase leading-tight mb-1">{selectedItem.merchandise.name}</h2>
-                            <p className="text-[9px] font-black opacity-60 uppercase">{selectedItem.merchandise.event?.title || 'Sản phẩm lẻ'}</p>
+                            <p className="text-[9px] font-black opacity-60 uppercase">
+                                {selectedItem.merchandise.event?.title || selectedItem.order?.event?.title || selectedItem.event_title || 'Sản phẩm sự kiện'}
+                            </p>
                         </div>
                         
-                        <div className="p-8 flex flex-col items-center space-y-6">
-                            <div className="bg-white p-5 rounded-[2rem] shadow-xl border-4 border-neon-green/20">
-                                <QRCodeSVG 
-                                    value={JSON.stringify({ 
-                                        type: 'MERCHANDISE_PICKUP',
-                                        order_item_id: selectedItem.id,
-                                        pickup_code: selectedItem.pickup_code || selectedItem.order?.order_number || 'N/A'
-                                    })} 
-                                    size={180}
-                                    level="H"
-                                />
-                            </div>
-                            
-                            <div className="text-center space-y-2">
-                                <p className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">{t('merchandise.labels.pickup_code')}</p>
-                                <p className="text-2xl font-black text-gray-900 dark:text-white tracking-[0.2em]">
-                                    {selectedItem.pickup_code || selectedItem.order?.order_number?.slice(-6).toUpperCase() || 'N/A'}
-                                </p>
-                            </div>
+                        <div className="px-8 py-6 flex flex-col items-center space-y-5">
+                            {isRedeemed ? (
+                                <div className="w-full py-4 flex flex-col items-center text-center space-y-4 animate-in zoom-in-95 duration-500">
+                                    <div className="relative">
+                                        <div className="absolute inset-0 bg-neon-green/20 blur-[30px] rounded-full animate-pulse"></div>
+                                        <div className="relative w-20 h-20 bg-neon-green text-black rounded-full flex items-center justify-center shadow-[0_0_40px_rgba(57,255,20,0.3)]">
+                                            <CheckCircle2 className="w-10 h-10 stroke-[3px]" />
+                                        </div>
+                                        <div className="absolute -top-3 -right-3">
+                                            <Sparkles className="w-6 h-6 text-neon-green animate-bounce" />
+                                        </div>
+                                    </div>
 
-                            <div className="w-full p-4 bg-gray-50 dark:bg-white/5 rounded-2xl border border-gray-100 dark:border-white/5">
-                                <div className="flex items-center gap-3 mb-2">
-                                    <AlertCircle className="w-4 h-4 text-neon-green" />
-                                    <span className="text-[9px] font-black text-gray-900 dark:text-white uppercase">{t('merchandise.details.order_info')}</span>
+                                    <div className="space-y-1">
+                                        <h3 className="text-xl font-black text-gray-900 dark:text-neon-green uppercase tracking-tight leading-none">
+                                            {t('merchandise.details.pickup_success')}
+                                        </h3>
+                                        <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium leading-relaxed max-w-[240px]">
+                                            {t('merchandise.details.thank_you')}
+                                        </p>
+                                    </div>
+
+                                    <div className="w-full p-4 bg-neon-green/5 rounded-2xl border border-neon-green/10 space-y-2.5">
+                                        <div className="flex justify-between items-center text-[10px] font-bold text-gray-500">
+                                            <span>{t('merchandise.labels.event')}</span>
+                                            <span className="text-gray-900 dark:text-white font-black text-right line-clamp-1 max-w-[150px]">
+                                                {selectedItem.merchandise?.event?.title || selectedItem.order?.event?.title || 'Sự kiện hệ thống'}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-[10px] font-bold text-gray-500">
+                                            <span>{t('merchandise.details.order_number')}</span>
+                                            <span className="text-gray-900 dark:text-white font-black">#{selectedItem.order?.order_number || 'N/A'}</span>
+                                        </div>
+                                        {selectedItem.scan_history?.[0]?.staff?.full_name && (
+                                            <div className="flex justify-between items-center text-[10px] font-bold text-gray-500">
+                                                <span>{t('merchandise.details.staff_name')}</span>
+                                                <span className="text-neon-green font-black">{selectedItem.scan_history[0].staff.full_name}</span>
+                                            </div>
+                                        )}
+                                        {selectedItem.scan_history?.[0]?.scanned_at && (
+                                            <div className="flex justify-between items-center text-[10px] font-bold text-gray-500">
+                                                <span>{t('merchandise.details.pickup_date')}</span>
+                                                <span className="text-gray-900 dark:text-white font-black">
+                                                    {format(new Date(selectedItem.scan_history[0].scanned_at), 'HH:mm - dd/MM/yyyy')}
+                                                </span>
+                                            </div>
+                                        )}
+                                        <div className="h-[1px] bg-neon-green/10"></div>
+                                        <div className="flex justify-center text-[9px] font-black text-neon-green/60 tracking-widest uppercase">
+                                            Verified Protocol
+                                        </div>
+                                    </div>
+
+                                    <button 
+                                        onClick={() => setShowPickupModal(false)}
+                                        className="w-full py-3.5 bg-gray-900 dark:bg-white dark:text-black text-white rounded-xl text-[12px] font-black uppercase tracking-widest hover:scale-[1.01] active:scale-95 transition-all shadow-lg"
+                                    >
+                                        {t('merchandise.details.close_btn')}
+                                    </button>
                                 </div>
-                                <p className="text-[11px] text-gray-500 leading-relaxed italic">{t('merchandise.details.pickup_instruction')}</p>
-                            </div>
+                            ) : (
+                                <>
+                                    <div className="bg-white p-5 rounded-[2rem] shadow-xl border-4 border-neon-green/20">
+                                        <QRCodeSVG 
+                                            value={JSON.stringify({ 
+                                                type: 'MERCHANDISE_PICKUP',
+                                                order_item_id: selectedItem.id,
+                                                pickup_code: selectedItem.pickup_code || selectedItem.order?.order_number || 'N/A'
+                                            })} 
+                                            size={180}
+                                            level="H"
+                                        />
+                                    </div>
+                                    
+                                    <div className="text-center space-y-2">
+                                        <p className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">{t('merchandise.labels.pickup_code')}</p>
+                                        <p className="text-2xl font-black text-gray-900 dark:text-white tracking-[0.2em]">
+                                            {selectedItem.pickup_code || selectedItem.order?.order_number?.slice(-6).toUpperCase() || 'N/A'}
+                                        </p>
+                                    </div>
+
+                                    <div className="w-full p-4 bg-gray-50 dark:bg-white/5 rounded-2xl border border-gray-100 dark:border-white/5">
+                                        <div className="flex items-center gap-3">
+                                            <AlertCircle className="w-4 h-4 text-neon-green" />
+                                            <span className="text-[9px] font-black text-gray-900 dark:text-white uppercase">{t('merchandise.details.order_info')}</span>
+                                        </div>
+                                        <p className="text-[11px] text-gray-500 leading-relaxed italic">{t('merchandise.details.pickup_instruction')}</p>
+                                    </div>
+                                </>
+                            )}
                         </div>
 
-                        <div className="px-8 py-5 bg-gray-50 dark:bg-black/40 text-center border-t border-gray-100 dark:border-white/5">
+                        <div className="px-8 py-4 bg-gray-50 dark:bg-black/40 text-center border-t border-gray-100 dark:border-white/5">
                             <p className="text-[8px] text-gray-500 font-bold uppercase tracking-tight">Verified by BASTICKET Merchandise Protocol</p>
                         </div>
                     </div>
@@ -389,7 +479,7 @@ const MyProducts = () => {
             {showSoldInfoModal && selectedItem && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
                     <div className="fixed inset-0 bg-black/90 backdrop-blur-md animate-in fade-in" onClick={() => setShowSoldInfoModal(false)}></div>
-                    <div className="relative bg-white dark:bg-dark-card w-full max-w-sm rounded-[2.5rem] overflow-hidden shadow-2xl border border-gray-200 dark:border-white/5 animate-in zoom-in-95 duration-300">
+                    <div className="relative bg-white dark:bg-dark-card w-full max-w-sm rounded-[2.5rem] overflow-hidden shadow-2xl border border-gray-200 dark:border-white/5 animate-in zoom-in-95 duration-300 mt-15">
                         <div className="bg-neon-green p-4 text-black relative">
                             <button onClick={() => setShowSoldInfoModal(false)} className="absolute top-6 right-6 p-2 bg-black/5 hover:bg-black/10 rounded-full transition-all">
                                 <X className="w-4 h-4" />
@@ -457,8 +547,8 @@ const MyProducts = () => {
             )}
             {/* Listing Detail Modal (High Fidelity) */}
             {showListingModal && selectedItem && selectedItem.listing_info && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
-                    <div className="relative w-full max-w-lg max-h-[90vh] bg-dark-card border border-white/10 rounded-[2rem] flex flex-col shadow-2xl animate-in zoom-in-95 duration-300 overflow-hidden">
+                <div className="fixed inset-0 z-[100] overflow-y-auto bg-black/80 backdrop-blur-sm animate-in fade-in duration-300 flex justify-center py-20 px-4">
+                    <div className="relative w-full max-w-lg h-fit bg-dark-card border border-white/10 rounded-[2rem] shadow-2xl animate-in zoom-in-95 duration-300 overflow-hidden mt-8">
                         {/* Modal Header Image - Reduced height */}
                         <div className="relative h-48 flex-shrink-0">
                             <img 
@@ -486,7 +576,7 @@ const MyProducts = () => {
                         </div>
 
                         {/* Modal Body - Scrollable */}
-                        <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+                        <div className="h-fit p-6 space-y-6">
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="bg-white/[0.03] border border-white/5 p-4 rounded-2xl">
                                     <p className="text-[9px] font-black text-gray-500 uppercase mb-1 tracking-tight">{t('merchandise.listing_modal.tier_position')}</p>

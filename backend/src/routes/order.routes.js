@@ -8,6 +8,9 @@ router.use(authenticate);
 // [GET] /api/orders/my-merchandise
 router.get('/my-merchandise', orderController.getMyMerchandise);
 
+// [GET] /api/orders/my-merchandise/:id
+router.get('/my-merchandise/:id', orderController.getMerchandiseOrderItemById);
+
 // [POST] /api/orders
 router.post('/', orderController.createPrimaryOrder);
 

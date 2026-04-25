@@ -200,7 +200,9 @@ const vnBlog = {
     labels: {
       name: "Họ và Tên", phone: "Số điện thoại", dob: "Ngày sinh", address: "Địa chỉ", email: "Địa chỉ Email",
       save: "Lưu thay đổi", cancel: "Hủy bỏ", edit: "Chỉnh sửa hồ sơ",
-      save_success: "Cập nhật hồ sơ thành công!", update_failed: "Cập nhật thất bại, vui lòng thử lại."
+      save_success: "Cập nhật hồ sơ thành công!", update_failed: "Cập nhật thất bại, vui lòng thử lại.",
+      edit_btn: "Chỉnh sửa", current_address: "Địa chỉ hiện tại", address_placeholder: "Nhập địa chỉ của bạn...",
+      save_btn: "Lưu thay đổi", cancel_btn: "Hủy bỏ"
     },
     roles: {
       admin: "Quản trị viên", organizer: "Nhà tổ chức", customer: "Khách hàng"
@@ -208,15 +210,36 @@ const vnBlog = {
     placeholders: {
        address: "VD: 123 Quận 1, TP. HCM"
     },
+    bank: {
+      title: "Thông tin ngân hàng",
+      bank_name: "Tên ngân hàng",
+      bank_placeholder: "Ví dụ: Vietcombank, MB Bank...",
+      account_number: "Số tài khoản",
+      account_placeholder: "Nhập số tài khoản...",
+      account_holder: "Chủ tài khoản",
+      holder_placeholder: "TÊN CHỦ TÀI KHOẢN (Viết hoa không dấu)"
+    },
     wallet: {
       title: "Ví Custodial", desc: "Quản lý an toàn bởi BASTICKET", address: "Địa chỉ ví", balance: "Số dư",
-      no_wallet: "Chưa kết nối ví", network: "Mạng lưới", type: "Loại ví"
+      no_wallet: "Chưa kết nối ví", network: "Mạng lưới", type: "Loại ví",
+      system_wallet: "Ví hệ thống", vnd_desc: "Số dư có thể rút về tài khoản ngân hàng",
+      withdraw_btn: "Tạo yêu cầu rút tiền", blockchain_wallet: "Ví Blockchain",
+      blockchain_desc: "Sử dụng để thanh toán phí Gas & Giao dịch NFT",
+      history: "Lịch sử rút tiền", transactions: "Giao dịch",
+      table_id_time: "ID / Thời gian", table_amount: "Số tiền", table_status: "Trạng thái", table_note: "Ghi chú Admin",
+      loading_history: "Đang tải lịch sử...", empty_history: "Chưa có yêu cầu rút tiền nào.",
+      status_completed: "Hoàn thành", status_pending: "Chờ duyệt", status_rejected: "Từ chối"
     },
     security: {
       title: "Bảo mật tài khoản", desc: "Quản lý mật khẩu và các thiết lập an toàn.", change_pass: "Đổi mật khẩu",
       pass_desc: "Luôn giữ mật khẩu của bạn an toàn và riêng tư.", preferences: "Tùy chọn", email_notif: "Thông báo qua Email",
       old_pass: "Mật khẩu cũ", new_pass: "Mật khẩu mới", confirm_new_pass: "Xác nhận mật khẩu mới",
-      change_success: "Đổi mật khẩu thành công!", change_failed: "Đổi mật khẩu thất bại."
+      change_success: "Đổi mật khẩu thành công!", change_failed: "Đổi mật khẩu thất bại.",
+      header: "Bảo mật tài khoản", subtitle: "Quản lý mật khẩu và các tùy chọn bảo mật khác.",
+      change_pass_header: "Đổi mật khẩu", old_pass_label: "Mật khẩu cũ",
+      forgot_pass: "Quên mật khẩu?", new_pass_label: "Mật khẩu mới",
+      confirm_pass_label: "Xác nhận mật khẩu mới", update_pass_btn: "Cập nhật mật khẩu",
+      notif_settings: "Cài đặt thông báo", email_notif_label: "Nhận thông báo qua Email"
     },
     forgot: {
       title: "Quên mật khẩu", desc: "Nhập email để nhận mã OTP khôi phục.",
@@ -226,7 +249,9 @@ const vnBlog = {
       success: "Đã đặt lại mật khẩu thành công!"
     },
     organizer: {
-      title: "Thông tin BTC", name: "Tên tổ chức", kyc: "Trạng thái KYC", desc: "Mô tả"
+      title: "Thông tin BTC", name: "Tên tổ chức", kyc: "Trạng thái KYC", desc: "Mô tả",
+      details: "Chi tiết Ban tổ chức", org_name: "Tên tổ chức", kyc_status_label: "Trạng thái xác thực",
+      verified: "Đã xác minh", pending: "Chờ xử lý"
     }
   },
   publicOrganizer: {

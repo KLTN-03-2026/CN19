@@ -27,6 +27,11 @@ const ImagePreviewModal = ({ images, currentIndex, onClose, onNavigate }) => {
     if (currentIndex < images.length - 1) onNavigate(currentIndex + 1);
   };
 
+  const isVideoUrl = (url) => {
+    if (!url) return false;
+    return url.includes('/video/') || url.match(/\.(mp4|webm|ogg|mov)$/i);
+  };
+
   return (
     <AnimatePresence>
       <motion.div
@@ -78,14 +83,23 @@ const ImagePreviewModal = ({ images, currentIndex, onClose, onNavigate }) => {
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.9, opacity: 0 }}
           transition={{ type: "spring", damping: 25, stiffness: 300 }}
-          className="relative max-w-5xl max-h-full flex items-center justify-center"
+          className="relative max-w-5xl w-full max-h-full flex items-center justify-center"
           onClick={(e) => e.stopPropagation()}
         >
-          <img 
-            src={images[currentIndex]} 
-            className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl selectable-none"
-            alt={`Image ${currentIndex + 1}`}
-          />
+          {isVideoUrl(images[currentIndex]) ? (
+            <video 
+              src={images[currentIndex]} 
+              controls 
+              autoPlay
+              className="max-w-full max-h-[85vh] rounded-lg shadow-2xl"
+            />
+          ) : (
+            <img 
+              src={images[currentIndex]} 
+              className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl selectable-none"
+              alt={`Image ${currentIndex + 1}`}
+            />
+          )}
         </motion.div>
 
         {/* Next Button */}
@@ -108,11 +122,22 @@ const ImagePreviewModal = ({ images, currentIndex, onClose, onNavigate }) => {
                             e.stopPropagation();
                             onNavigate(idx);
                         }}
-                        className={`w-12 h-12 rounded-lg overflow-hidden border-2 transition-all ${
+                        className={`w-12 h-12 rounded-lg overflow-hidden border-2 transition-all shrink-0 ${
                             idx === currentIndex ? 'border-neon-green scale-110' : 'border-transparent opacity-50 hover:opacity-100'
                         }`}
                     >
-                        <img src={img} className="w-full h-full object-cover" alt="" />
+                        {isVideoUrl(img) ? (
+                            <div className="w-full h-full bg-black flex items-center justify-center relative">
+                                <video src={img} className="w-full h-full object-cover opacity-50" />
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                    <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center">
+                                        <div className="w-0 h-0 border-t-[3px] border-t-transparent border-l-[5px] border-l-white border-b-[3px] border-b-transparent ml-0.5"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <img src={img} className="w-full h-full object-cover" alt="" />
+                        )}
                     </button>
                 ))}
             </div>

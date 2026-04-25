@@ -41,14 +41,14 @@ const EventCard = ({ event, className = "", variant = "default" }) => {
             <div className="absolute inset-0 z-10 p-6 md:p-6 flex flex-col justify-between h-full">
                 <div className="flex justify-between items-start">
                     {/* Date Badge */}
-                    <div className="bg-white/10 backdrop-blur-xl rounded-2xl px-3 py-1.5 flex flex-col items-center min-w-[50px] border border-white/20 shadow-xl">
+                    <div className="bg-black/40 backdrop-blur-xl rounded-2xl px-3 py-1 flex flex-col items-center min-w-[50px] border border-white/20 shadow-xl">
                         <span className="text-base font-black text-white leading-none">{day}</span>
-                        <span className="text-[10px] font-bold text-neon-green mt-1">{month}</span>
+                        <span className="text-[10px] font-bold text-neon-green mt-1 lowercase first-letter:uppercase">{month}</span>
                     </div>
 
                     {/* Category Label */}
-                    <div className="bg-neon-green/20 backdrop-blur-xl px-2.5 py-1 rounded-full border border-neon-green/30">
-                        <span className="text-[10px] font-black text-neon-green">
+                    <div className="bg-black/40 backdrop-blur-xl px-2.5 py-0.5 rounded-full border border-neon-green/40 shadow-2xl">
+                        <span className="text-[10px] font-black text-neon-green tracking-wider lowercase">
                             {event.category?.name || t('event.card.category_default')}
                         </span>
                     </div>
