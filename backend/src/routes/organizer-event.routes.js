@@ -29,6 +29,12 @@ router.get('/:id/attendees', controller.getAttendees);
 // [GET] /api/organizer/events/:id (Chi tiết sự kiện của BTC)
 router.get('/:id', controller.getEventById);
 
+// [GET] /api/organizer/events/:id/transactions (Danh sách giao dịch)
+router.get('/:id/transactions', controller.getTierTransactions);
+
+// [GET] /api/organizer/events/:id/secondary-activity (Hoạt động bán lại/chuyển nhượng)
+router.get('/:id/secondary-activity', controller.getEventSecondaryActivity);
+
 // [DELETE] /api/organizer/events/:id (Xóa sự kiện nháp/chờ duyệt)
 router.delete('/:id', controller.deleteEvent);
 

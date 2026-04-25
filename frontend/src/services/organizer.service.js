@@ -117,13 +117,23 @@ export const organizerService = {
   },
 
   // ======= Participants =======
-  getEventParticipants: async (eventId) => {
-    const res = await api.get(`/organizer/events/${eventId}/attendees`);
+  getEventParticipants: async (eventId, params) => {
+    const res = await api.get(`/organizer/events/${eventId}/attendees`, { params });
     return res.data;
   },
 
   getAllParticipants: async () => {
     const res = await api.get('/organizer/events/all-attendees');
+    return res.data;
+  },
+
+  getTierTransactions: async (id, params) => {
+    const res = await api.get(`/organizer/events/${id}/transactions`, { params });
+    return res.data;
+  },
+
+  getEventSecondaryActivity: async (id, params) => {
+    const res = await api.get(`/organizer/events/${id}/secondary-activity`, { params });
     return res.data;
   }
 };
