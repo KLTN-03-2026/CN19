@@ -51,6 +51,8 @@ model User {
   owned_products        MerchandiseOrderItem[]   @relation("ProductOwner")
   transfers_sent        TicketTransfer[]         @relation("Sender")
   transfers_received    TicketTransfer[]         @relation("Receiver")
+  merchandise_scans     MerchandiseScanHistory[]
+  ticket_scans          ScanHistory[]
 }
 
 model Organizer {
@@ -347,10 +349,12 @@ model BotDetectionLog {
 model ScanHistory {
   id             String   @id @default(uuid())
   ticket_id      String
+  staff_id       String?  // Nhân viên soát vé
   is_success     Boolean
   failure_reason String?
   scanned_at     DateTime @default(now())
   ticket         Ticket   @relation(fields: [ticket_id], references: [id])
+  staff          User?    @relation(fields: [staff_id], references: [id])
 }
 
 model RefundRequest {
@@ -445,11 +449,13 @@ model MerchandiseOrderItem {
   is_redeemed    Boolean     @default(false) // Trạng thái đã nhận hàng
   listing_id     String?     // Nếu vật phẩm đang được đăng bán kèm vé
   pickup_code    String?     @unique // Mã nhận hàng duy nhất
+  redeemed_at    DateTime?   // Thời gian nhận hàng
   
   merchandise    Merchandise @relation(fields: [merchandise_id], references: [id])
   order          Order       @relation(fields: [order_id], references: [id])
   owner          User?       @relation("ProductOwner", fields: [owner_id], references: [id])
   listing        MarketplaceListing? @relation("ListingMerchandise", fields: [listing_id], references: [id])
+  scan_history   MerchandiseScanHistory[]
 }
 
 model Blog {
@@ -544,4 +550,15 @@ model WithdrawalRequest {
   processed_at    DateTime?
   created_at      DateTime  @default(now())
   user            User?     @relation(fields: [user_id], references: [id])
+}
+
+model MerchandiseScanHistory {
+  id             String   @id @default(uuid())
+  order_item_id  String
+  staff_id       String?  // Nhân viên thực hiện quét
+  is_success     Boolean
+  failure_reason String?
+  scanned_at     DateTime @default(now())
+  order_item     MerchandiseOrderItem @relation(fields: [order_item_id], references: [id])
+  staff          User?    @relation(fields: [staff_id], references: [id])
 }

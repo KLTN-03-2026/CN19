@@ -25,12 +25,21 @@ export const loginStaff = (email, password) => {
   return api.post('/auth/login', { email, password });
 };
 
-export const scanTicket = (qrHash) => {
-  return api.post('/staff/scan', { qr_hash: qrHash });
+export const scanTicket = (qrHash, eventId = null) => {
+  return api.post('/staff/scan', { qr_hash: qrHash, event_id: eventId });
 };
 
 export const getScanHistory = (eventId = null) => {
   const url = eventId ? `/staff/scan-history?event_id=${eventId}` : '/staff/scan-history';
+  return api.get(url);
+};
+
+export const scanProduct = (qrHash, eventId = null) => {
+  return api.post('/staff/scan-product', { qr_hash: qrHash, event_id: eventId });
+};
+
+export const getProductScanHistory = (eventId = null) => {
+  const url = eventId ? `/staff/product-scan-history?event_id=${eventId}` : '/staff/product-scan-history';
   return api.get(url);
 };
 

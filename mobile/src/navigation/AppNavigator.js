@@ -5,6 +5,7 @@ import EventSelectScreen from '../screens/EventSelectScreen';
 import ScannerScreen from '../screens/ScannerScreen';
 import HistoryScreen from '../screens/HistoryScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import EventStatsScreen from '../screens/EventStatsScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -22,6 +23,7 @@ export default function AppNavigator() {
       <Stack.Screen name="Scanner" component={ScannerScreen} />
       <Stack.Screen name="History" component={HistoryScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} />
+      <Stack.Screen name="EventStats" component={EventStatsScreen} />
     </Stack.Navigator>
   );
 }

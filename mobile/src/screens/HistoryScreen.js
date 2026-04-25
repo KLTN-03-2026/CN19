@@ -11,15 +11,19 @@ import {
   TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { getScanHistory } from '../services/api';
+import { getScanHistory, getProductScanHistory, getMyEvents } from '../services/api';
 import dayjs from 'dayjs';
-import { ChevronLeft, CheckCircle2, XCircle, Clock, Ticket, Search, Filter, Hash, User, LayoutDashboard } from 'lucide-react-native';
+import { ChevronLeft, CheckCircle2, XCircle, Clock, Ticket, Search, Filter, Hash, User, LayoutDashboard, ShoppingBag } from 'lucide-react-native';
 import { useTheme } from '../context/ThemeContext';
 
 export default function HistoryScreen({ navigation, route }) {
   const { isDarkMode, colors } = useTheme();
   const eventId = route.params?.eventId;
   const eventTitle = route.params?.eventTitle;
+  const historyType = route.params?.type || 'ticket'; // 'ticket' or 'product'
+  const [events, setEvents] = React.useState([]);
+  const [selectedEventId, setSelectedEventId] = React.useState(route.params?.eventId || null);
+  const [loadingEvents, setLoadingEvents] = React.useState(true);
   const [history, setHistory] = React.useState([]);
   const [filteredHistory, setFilteredHistory] = React.useState([]);
   const [loading, setLoading] = React.useState(true);
@@ -27,7 +31,24 @@ export default function HistoryScreen({ navigation, route }) {
   const [filter, setFilter] = React.useState('all');
   const [searchQuery, setSearchQuery] = React.useState('');
 
-  React.useEffect(() => { fetchHistory(); }, [eventId]);
+  React.useEffect(() => { 
+    fetchAssignedEvents();
+  }, []);
+
+  React.useEffect(() => { 
+    fetchHistory(); 
+  }, [selectedEventId, historyType]);
+
+  const fetchAssignedEvents = async () => {
+    try {
+      const res = await getMyEvents();
+      setEvents(res.data?.data || []);
+    } catch (e) {
+      console.log('Fetch events error:', e);
+    } finally {
+      setLoadingEvents(false);
+    }
+  };
 
   React.useEffect(() => {
     let result = history;
@@ -39,12 +60,22 @@ export default function HistoryScreen({ navigation, route }) {
     // Filter by search query
     if (searchQuery.trim() !== '') {
       const q = searchQuery.toLowerCase();
-      result = result.filter(i => 
-        i.ticket?.ticket_number?.toLowerCase().includes(q) ||
-        i.ticket?.order?.customer?.full_name?.toLowerCase().includes(q) ||
-        i.ticket?.event?.title?.toLowerCase().includes(q) ||
-        i.ticket?.ticket_tier?.tier_name?.toLowerCase().includes(q)
-      );
+      if (historyType === 'product') {
+        result = result.filter(i => 
+          i.order_item?.merchandise?.name?.toLowerCase().includes(q) ||
+          i.order_item?.order?.customer?.full_name?.toLowerCase().includes(q) ||
+          i.order_item?.order?.event?.title?.toLowerCase().includes(q) ||
+          i.order_item?.merchandise?.event?.title?.toLowerCase().includes(q) ||
+          i.order_item?.pickup_code?.toLowerCase().includes(q)
+        );
+      } else {
+        result = result.filter(i => 
+          i.ticket?.ticket_number?.toLowerCase().includes(q) ||
+          i.ticket?.order?.customer?.full_name?.toLowerCase().includes(q) ||
+          i.ticket?.event?.title?.toLowerCase().includes(q) ||
+          i.ticket?.ticket_tier?.tier_name?.toLowerCase().includes(q)
+        );
+      }
     }
 
     setFilteredHistory(result);
@@ -52,7 +83,10 @@ export default function HistoryScreen({ navigation, route }) {
 
   const fetchHistory = async () => {
     try {
-      const response = await getScanHistory(eventId);
+      setLoading(true);
+      const response = historyType === 'product' 
+        ? await getProductScanHistory(selectedEventId)
+        : await getScanHistory(selectedEventId);
       const data = response.data?.data || [];
       setHistory(data);
       setFilteredHistory(data);
@@ -88,9 +122,11 @@ export default function HistoryScreen({ navigation, route }) {
         <View style={{ flex: 1 }}>
           <View style={styles.cardLabelRow}>
             <Hash size={12} color={colors.subtext} />
-            <Text style={[styles.cardLabel, { color: colors.subtext }]}>Số hiệu vé</Text>
+            <Text style={[styles.cardLabel, { color: colors.subtext }]}>{historyType === 'product' ? 'Mã đơn hàng SP' : 'Số hiệu vé'}</Text>
           </View>
-          <Text style={[styles.ticketNum, { color: colors.text }]}>{item.ticket?.ticket_number || 'N/A'}</Text>
+          <Text style={[styles.ticketNum, { color: colors.text }]}>
+            {historyType === 'product' ? (item.order_item?.order?.order_number || 'N/A') : (item.ticket?.ticket_number || 'N/A')}
+          </Text>
         </View>
         <View style={[
           styles.statusBadge, 
@@ -102,27 +138,56 @@ export default function HistoryScreen({ navigation, route }) {
             ? <CheckCircle2 size={14} color={colors.primary} />
             : <XCircle size={14} color="#f87171" />}
           <Text style={[styles.statusText, { color: item.is_success ? colors.primary : '#f87171' }]}>
-            {item.is_success ? 'Hợp lệ' : 'Từ chối'}
+            {item.is_success ? (historyType === 'product' ? 'Đã nhận' : 'Hợp lệ') : 'Từ chối'}
           </Text>
         </View>
       </View>
 
       <View style={[styles.detailBox, { backgroundColor: isDarkMode ? 'rgba(0,0,0,0.35)' : 'rgba(0,0,0,0.03)' }]}>
-        <View style={styles.detailRow}>
-           <LayoutDashboard size={13} color={colors.primary} />
-           <Text style={[styles.detailLabel, { color: colors.subtext, fontWeight: '900' }]}>SỰ KIỆN: </Text>
-           <Text style={[styles.detailValue, { color: colors.text, flex: 1 }]} numberOfLines={1}>{item.ticket?.event?.title || 'Event'}</Text>
-        </View>
-        <View style={[styles.detailRow, { marginTop: 8 }]}>
-          <Ticket size={13} color={colors.subtext} />
-          <Text style={[styles.detailLabel, { color: colors.subtext }]}>Loại vé: </Text>
-          <Text style={[styles.detailValue, { color: colors.text }]}>{item.ticket?.ticket_tier?.tier_name || 'Ticket'}</Text>
-        </View>
-        <View style={[styles.detailRow, { marginTop: 8 }]}>
-          <User size={13} color={colors.subtext} />
-          <Text style={[styles.detailLabel, { color: colors.subtext }]}>Khách hàng: </Text>
-          <Text style={[styles.detailValue, { color: colors.text }]}>{item.ticket?.order?.customer?.full_name || 'Khách vãng lai'}</Text>
-        </View>
+        {historyType === 'product' ? (
+          <>
+            <View style={styles.detailRow}>
+               <LayoutDashboard size={13} color={colors.primary} />
+               <Text style={[styles.detailLabel, { color: colors.subtext, fontWeight: '900' }]}>SỰ KIỆN: </Text>
+               <Text style={[styles.detailValue, { color: colors.text, flex: 1 }]} numberOfLines={1}>
+                 {item.order_item?.order?.event?.title || item.order_item?.merchandise?.event?.title || 'Sự kiện hệ thống'}
+               </Text>
+            </View>
+            <View style={[styles.detailRow, { marginTop: 8 }]}>
+               <ShoppingBag size={13} color={colors.primary} />
+               <Text style={[styles.detailLabel, { color: colors.subtext, fontWeight: '900' }]}>SẢN PHẨM: </Text>
+               <Text style={[styles.detailValue, { color: colors.text, flex: 1 }]} numberOfLines={1}>{item.order_item?.merchandise?.name || 'Sản phẩm'}</Text>
+            </View>
+            <View style={[styles.detailRow, { marginTop: 8 }]}>
+              <User size={13} color={colors.subtext} />
+              <Text style={[styles.detailLabel, { color: colors.subtext }]}>Khách hàng: </Text>
+              <Text style={[styles.detailValue, { color: colors.text }]}>{item.order_item?.order?.customer?.full_name || 'Khách vãng lai'}</Text>
+            </View>
+            <View style={[styles.detailRow, { marginTop: 8 }]}>
+              <Hash size={13} color={colors.subtext} />
+              <Text style={[styles.detailLabel, { color: colors.subtext }]}>Số lượng: </Text>
+              <Text style={[styles.detailValue, { color: colors.text }]}>{item.order_item?.quantity || 1}</Text>
+            </View>
+          </>
+        ) : (
+          <>
+            <View style={styles.detailRow}>
+               <LayoutDashboard size={13} color={colors.primary} />
+               <Text style={[styles.detailLabel, { color: colors.subtext, fontWeight: '900' }]}>SỰ KIỆN: </Text>
+               <Text style={[styles.detailValue, { color: colors.text, flex: 1 }]} numberOfLines={1}>{item.ticket?.event?.title || 'Event'}</Text>
+            </View>
+            <View style={[styles.detailRow, { marginTop: 8 }]}>
+              <Ticket size={13} color={colors.subtext} />
+              <Text style={[styles.detailLabel, { color: colors.subtext }]}>Loại vé: </Text>
+              <Text style={[styles.detailValue, { color: colors.text }]}>{item.ticket?.ticket_tier?.tier_name || 'Ticket'}</Text>
+            </View>
+            <View style={[styles.detailRow, { marginTop: 8 }]}>
+              <User size={13} color={colors.subtext} />
+              <Text style={[styles.detailLabel, { color: colors.subtext }]}>Khách hàng: </Text>
+              <Text style={[styles.detailValue, { color: colors.text }]}>{item.ticket?.order?.customer?.full_name || 'Khách vãng lai'}</Text>
+            </View>
+          </>
+        )}
       </View>
 
       <View style={[styles.cardFooter, { borderTopColor: colors.border }]}>
@@ -135,7 +200,7 @@ export default function HistoryScreen({ navigation, route }) {
         {!item.is_success && (
           <View style={styles.reasonBox}>
             <Text style={styles.reasonText} numberOfLines={1}>
-              {item.failure_reason || 'Mã đã sử dụng'}
+              {item.failure_reason || 'Mã không hợp lệ'}
             </Text>
           </View>
         )}
@@ -154,7 +219,7 @@ export default function HistoryScreen({ navigation, route }) {
             <ChevronLeft size={24} color={colors.text} />
           </TouchableOpacity>
           <View style={{ marginLeft: 16, flex: 1 }}>
-            <Text style={[styles.headerSub, { color: colors.primary }]}>AUDIT LOG</Text>
+            <Text style={[styles.headerSub, { color: colors.primary }]}>{historyType === 'product' ? 'LỊCH SỬ NHẬN SẢN PHẨM' : 'LỊCH SỬ QUÉT VÉ'}</Text>
           </View>
         </View>
 
@@ -163,7 +228,7 @@ export default function HistoryScreen({ navigation, route }) {
           <Search size={18} color={isDarkMode ? '#555' : '#aaa'} />
           <TextInput
             style={[styles.searchInput, { color: colors.text }]}
-            placeholder="Tìm theo tên khách, mã vé, sự kiện..."
+            placeholder={historyType === 'product' ? "Tìm theo tên khách, sản phẩm, mã đơn..." : "Tìm theo tên khách, mã vé, sự kiện..."}
             placeholderTextColor={isDarkMode ? '#444' : '#bbb'}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -181,9 +246,38 @@ export default function HistoryScreen({ navigation, route }) {
         )}
 
         <View style={styles.chipRow}>
-          {renderFilterChip('all', 'Tất cả', Filter)}
+          {renderFilterChip('all', 'Tất cả trạng thái', Filter)}
           {renderFilterChip('success', 'Hợp lệ', CheckCircle2)}
           {renderFilterChip('fail', 'Từ chối', XCircle)}
+        </View>
+
+        {/* Event Filter - Horizontal List */}
+        <View style={{ marginTop: 15 }}>
+          <Text style={[styles.eventFilterTitle, { color: colors.subtext }]}>Lọc theo sự kiện:</Text>
+          <FlatList
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            data={[{ id: null, title: 'Tất cả sự kiện' }, ...events]}
+            keyExtractor={(item) => (item.id ? String(item.id) : 'all')}
+            contentContainerStyle={{ paddingRight: 20, paddingTop: 8 }}
+            renderItem={({ item }) => {
+              const isActive = selectedEventId === item.id;
+              return (
+                <TouchableOpacity
+                  onPress={() => setSelectedEventId(item.id)}
+                  style={[
+                    styles.eventChip,
+                    { backgroundColor: colors.card, borderColor: colors.border },
+                    isActive && { backgroundColor: isDarkMode ? 'rgba(57,255,20,0.1)' : 'rgba(57,255,20,0.05)', borderColor: colors.primary }
+                  ]}
+                >
+                  <Text style={[styles.eventChipText, { color: colors.text }, isActive && { color: colors.primary, fontWeight: '900' }]}>
+                    {item.title}
+                  </Text>
+                </TouchableOpacity>
+              );
+            }}
+          />
         </View>
       </View>
 
@@ -225,25 +319,25 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 20 },
   headerRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
   backBtn: { padding: 10, borderRadius: 14, borderWidth: 1 },
-  headerSub: { fontSize: 9, fontWeight: '900', letterSpacing: 5, textTransform: 'uppercase', marginBottom: 2 },
+  headerSub: { fontSize: 9, fontWeight: '900', textTransform: 'uppercase', marginBottom: 2 },
   searchBar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, height: 50, borderRadius: 18, borderWidth: 1, marginBottom: 18 },
   searchInput: { flex: 1, marginLeft: 12, fontSize: 13, fontWeight: '600' },
   eventBox: { borderWidth: 1, borderRadius: 20, padding: 16, marginBottom: 18 },
   eventLabelRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
-  eventLabel: { fontSize: 9, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 2, marginLeft: 6 },
+  eventLabel: { fontSize: 9, fontWeight: '900', textTransform: 'uppercase', marginLeft: 6 },
   eventTitle: { fontSize: 16, fontWeight: '900' },
   chipRow: { flexDirection: 'row' },
   chip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 10, borderRadius: 14, marginRight: 10, borderWidth: 1 },
-  chipText: { fontSize: 9, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 1, marginLeft: 6 },
+  chipText: { fontSize: 9, fontWeight: '900', textTransform: 'uppercase', marginLeft: 6 },
   loadingBox: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  loadingText: { marginTop: 16, fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 2 },
+  loadingText: { marginTop: 16, fontSize: 10, fontWeight: '700', textTransform: 'uppercase' },
   card: { marginHorizontal: 18, marginBottom: 14, padding: 18, borderRadius: 26, borderWidth: 1 },
   cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 },
   cardLabelRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
-  cardLabel: { fontSize: 9, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 2, marginLeft: 5 },
+  cardLabel: { fontSize: 9, fontWeight: '900', textTransform: 'uppercase', marginLeft: 5 },
   ticketNum: { fontSize: 18, fontWeight: '900' },
   statusBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 7, borderRadius: 14, borderWidth: 1 },
-  statusText: { fontSize: 10, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 1, marginLeft: 7 },
+  statusText: { fontSize: 10, fontWeight: '900', textTransform: 'uppercase', marginLeft: 7 },
   detailBox: { borderRadius: 16, padding: 14, marginBottom: 14 },
   detailRow: { flexDirection: 'row', alignItems: 'center' },
   detailLabel: { fontSize: 11, marginLeft: 8 },
@@ -255,7 +349,8 @@ const styles = StyleSheet.create({
   reasonText: { color: '#f87171', fontSize: 10, fontWeight: '700', fontStyle: 'italic' },
   emptyBox: { alignItems: 'center', justifyContent: 'center', marginTop: 100, paddingHorizontal: 40 },
   emptyIcon: { padding: 28, borderRadius: 50, marginBottom: 20, borderWidth: 1 },
-  emptyText: { textAlign: 'center', fontWeight: '900', textTransform: 'uppercase', fontSize: 11, letterSpacing: 2 },
+  emptyText: { textAlign: 'center', fontWeight: '900', textTransform: 'uppercase', fontSize: 11 },
+  eventFilterTitle: { fontSize: 9, fontWeight: '900', textTransform: 'uppercase', marginBottom: 4 },
+  eventChip: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 14, marginRight: 10, borderWidth: 1 },
+  eventChipText: { fontSize: 11, fontWeight: '700' },
 });
-
-

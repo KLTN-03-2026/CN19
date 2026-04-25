@@ -11,9 +11,10 @@ import {
   Vibration,
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { scanTicket } from '../services/api';
-import { History, MoveLeft, Zap, CheckCircle, AlertCircle, RefreshCcw, ShieldCheck, Ticket, X, User } from 'lucide-react-native';
+import { scanTicket, scanProduct } from '../services/api';
+import { History, MoveLeft, Zap, CheckCircle, AlertCircle, RefreshCcw, ShieldCheck, Ticket, X, User, ShoppingBag, Keyboard } from 'lucide-react-native';
 import { useTheme } from '../context/ThemeContext';
+import { TextInput, Modal } from 'react-native';
 
 const { width } = Dimensions.get('window');
 const SCANNER_SIZE = width * 0.75;
@@ -21,13 +22,16 @@ const SCANNER_SIZE = width * 0.75;
 export default function ScannerScreen({ navigation, route }) {
   const { isDarkMode, colors } = useTheme();
   const event = route.params?.event;
+  const scanType = route.params?.type || 'ticket'; // 'ticket' or 'product'
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = React.useState(false);
   const [loading, setLoading] = React.useState(false);
   const [resultMessage, setResultMessage] = React.useState(null);
   const [isSuccess, setIsSuccess] = React.useState(true);
-  const [scannedTicket, setScannedTicket] = React.useState(null);
+  const [scannedData, setScannedData] = React.useState(null);
   const [torch, setTorch] = React.useState(false);
+  const [showManualInput, setShowManualInput] = React.useState(false);
+  const [manualCode, setManualCode] = React.useState('');
 
   const scanAnim = React.useRef(new Animated.Value(0)).current;
   const pulseAnim = React.useRef(new Animated.Value(1)).current;
@@ -56,14 +60,19 @@ export default function ScannerScreen({ navigation, route }) {
     setLoading(true);
     Vibration.vibrate(80);
     try {
-      const response = await scanTicket(data);
+      let response;
+      if (scanType === 'product') {
+        response = await scanProduct(data, event?.id);
+      } else {
+        response = await scanTicket(data, event?.id);
+      }
       setIsSuccess(true);
-      setResultMessage(response.data?.message || 'Vé hợp lệ, chào mừng khách hàng!');
-      setScannedTicket(response.data?.data);
+      setResultMessage(response.data?.message || (scanType === 'product' ? 'Sản phẩm hợp lệ!' : 'Vé hợp lệ, chào mừng khách hàng!'));
+      setScannedData(response.data?.data);
       Vibration.vibrate([0, 80, 60, 80]);
     } catch (error) {
       setIsSuccess(false);
-      setResultMessage(error.response?.data?.error || 'Vé không hợp lệ hoặc đã được sử dụng!');
+      setResultMessage(error.response?.data?.error || (scanType === 'product' ? 'Mã sản phẩm không hợp lệ!' : 'Vé không hợp lệ hoặc đã được sử dụng!'));
       Vibration.vibrate(500);
     } finally {
       setLoading(false);
@@ -73,7 +82,7 @@ export default function ScannerScreen({ navigation, route }) {
   const resetScan = () => {
     setScanned(false);
     setResultMessage(null);
-    setScannedTicket(null);
+    setScannedData(null);
   };
 
   if (!permission) {
@@ -142,9 +151,64 @@ export default function ScannerScreen({ navigation, route }) {
             >
               <Zap size={24} color={torch ? '#000' : '#fff'} fill={torch ? '#000' : 'transparent'} />
             </TouchableOpacity>
+
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => setShowManualInput(true)}
+              style={[styles.manualBtn, { backgroundColor: 'rgba(255,255,255,0.06)', borderColor: 'rgba(255,255,255,0.12)' }]}
+            >
+              <Keyboard size={24} color="#fff" />
+            </TouchableOpacity>
           </View>
         </View>
       </View>
+
+      {/* Manual Input Modal */}
+      <Modal
+        visible={showManualInput}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowManualInput(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Nhập mã thủ công</Text>
+              <TouchableOpacity onPress={() => setShowManualInput(false)}>
+                <X size={20} color={colors.subtext} />
+              </TouchableOpacity>
+            </View>
+            
+            <Text style={[styles.modalDesc, { color: colors.subtext }]}>
+              Nhập mã {scanType === 'product' ? 'nhận hàng' : 'vé'} in trên đơn hàng của khách.
+            </Text>
+
+            <TextInput
+              style={[styles.manualInput, { color: colors.text, borderColor: colors.border, backgroundColor: isDarkMode ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.03)' }]}
+              placeholder="Ví dụ: BT-XXXXXX"
+              placeholderTextColor={colors.subtext + '80'}
+              value={manualCode}
+              onChangeText={setManualCode}
+              autoCapitalize="characters"
+              autoFocus
+            />
+
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => {
+                if (manualCode.trim()) {
+                  setShowManualInput(false);
+                  handleBarCodeScanned({ data: manualCode.trim() });
+                  setManualCode('');
+                }
+              }}
+              style={[styles.confirmBtn, { backgroundColor: colors.primary }]}
+            >
+              <Text style={styles.confirmBtnText}>XÁC NHẬN</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       {/* Header */}
       <View style={styles.header}>
@@ -152,11 +216,11 @@ export default function ScannerScreen({ navigation, route }) {
           <MoveLeft size={22} color="#fff" />
         </TouchableOpacity>
         <View style={styles.headerCenter}>
-          <Text style={[styles.headerSub, { color: colors.primary }]}>SOÁT VÉ TRỰC TUYẾN</Text>
+          <Text style={[styles.headerSub, { color: colors.primary }]}>{scanType === 'product' ? 'QUÉT SẢN PHẨM' : 'SOÁT VÉ TRỰC TUYẾN'}</Text>
           <Text style={styles.headerEvent} numberOfLines={1}>{event?.title || 'Sự kiện'}</Text>
         </View>
         <TouchableOpacity
-          onPress={() => navigation.navigate('History', { eventId: event?.id, eventTitle: event?.title })}
+          onPress={() => navigation.navigate('History', { eventId: event?.id, eventTitle: event?.title, type: scanType })}
           style={styles.headerBtn}
         >
           <History size={22} color={colors.primary} />
@@ -182,25 +246,44 @@ export default function ScannerScreen({ navigation, route }) {
               </View>
 
               <Text style={[styles.resultStatus, { color: isSuccess ? colors.primary : '#f87171' }]}>
-                {isSuccess ? 'VÉ HỢP LỆ' : 'KHÔNG HỢP LỆ'}
+                {isSuccess ? (scanType === 'product' ? 'HỢP LỆ' : 'VÉ HỢP LỆ') : (scanType === 'product' ? 'TỪ CHỐI' : 'KHÔNG HỢP LỆ')}
               </Text>
 
               <View style={[styles.resultCard, { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : colors.card, borderColor: colors.border }]}>
                 <Text style={[styles.resultMsg, { color: colors.text }]}>{resultMessage}</Text>
-                {isSuccess && scannedTicket && (
+                {isSuccess && scannedData && (
                   <View style={[styles.ticketInfo, { borderTopColor: colors.border }]}>
-                    <View style={styles.ticketInfoRow}>
-                      <User size={15} color={colors.primary} />
-                      <Text style={[styles.ticketInfoText, { color: colors.subtext }]}>Khách hàng: {scannedTicket.order?.customer?.full_name || 'Khách vãng lai'}</Text>
-                    </View>
-                    <View style={[styles.ticketInfoRow, { marginTop: 8 }]}>
-                      <ShieldCheck size={15} color={colors.primary} />
-                      <Text style={[styles.ticketInfoText, { color: colors.subtext }]}>Mã vé: {scannedTicket.ticket_number}</Text>
-                    </View>
-                    <View style={[styles.ticketInfoRow, { marginTop: 8 }]}>
-                      <Ticket size={15} color={colors.primary} />
-                      <Text style={[styles.ticketInfoText, { color: colors.subtext }]}>Loại: {scannedTicket.ticket_tier?.tier_name || 'Standard'}</Text>
-                    </View>
+                    {scanType === 'product' ? (
+                      <>
+                        <View style={styles.ticketInfoRow}>
+                          <ShoppingBag size={15} color={colors.primary} />
+                          <Text style={[styles.ticketInfoText, { color: colors.subtext }]}>Sản phẩm: {scannedData.product_name}</Text>
+                        </View>
+                        <View style={[styles.ticketInfoRow, { marginTop: 8 }]}>
+                          <User size={15} color={colors.primary} />
+                          <Text style={[styles.ticketInfoText, { color: colors.subtext }]}>Khách hàng: {scannedData.customer_name}</Text>
+                        </View>
+                        <View style={[styles.ticketInfoRow, { marginTop: 8 }]}>
+                          <ShieldCheck size={15} color={colors.primary} />
+                          <Text style={[styles.ticketInfoText, { color: colors.subtext }]}>Số lượng: {scannedData.quantity}</Text>
+                        </View>
+                      </>
+                    ) : (
+                      <>
+                        <View style={styles.ticketInfoRow}>
+                          <User size={15} color={colors.primary} />
+                          <Text style={[styles.ticketInfoText, { color: colors.subtext }]}>Khách hàng: {scannedData.order?.customer?.full_name || 'Khách vãng lai'}</Text>
+                        </View>
+                        <View style={[styles.ticketInfoRow, { marginTop: 8 }]}>
+                          <ShieldCheck size={15} color={colors.primary} />
+                          <Text style={[styles.ticketInfoText, { color: colors.subtext }]}>Mã vé: {scannedData.ticket_number}</Text>
+                        </View>
+                        <View style={[styles.ticketInfoRow, { marginTop: 8 }]}>
+                          <Ticket size={15} color={colors.primary} />
+                          <Text style={[styles.ticketInfoText, { color: colors.subtext }]}>Loại: {scannedData.ticket_tier?.tier_name || 'Standard'}</Text>
+                        </View>
+                      </>
+                    )}
                   </View>
                 )}
               </View>
@@ -235,12 +318,12 @@ const styles = StyleSheet.create({
   permTitle: { fontSize: 22, fontWeight: '900', marginBottom: 10 },
   permDesc: { textAlign: 'center', lineHeight: 22, marginBottom: 32 },
   permBtn: { width: '100%', paddingVertical: 18, borderRadius: 20, alignItems: 'center' },
-  permBtnText: { color: '#000', fontWeight: '900', textTransform: 'uppercase', letterSpacing: 1.5 },
+  permBtnText: { color: '#000', fontWeight: '900', textTransform: 'uppercase' },
   
   header: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10, paddingTop: 52, paddingHorizontal: 20, paddingBottom: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   headerBtn: { backgroundColor: 'rgba(255,255,255,0.07)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', padding: 10, borderRadius: 14 },
   headerCenter: { alignItems: 'center', flex: 1, marginHorizontal: 12 },
-  headerSub: { fontSize: 9, fontWeight: '900', letterSpacing: 4, textTransform: 'uppercase', marginBottom: 4 },
+  headerSub: { fontSize: 9, fontWeight: '900', textTransform: 'uppercase', marginBottom: 4 },
   headerEvent: { color: '#fff', fontWeight: '700', fontSize: 13, backgroundColor: 'rgba(0,0,0,0.4)', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 50, borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)' },
   
   viewfinder: { flex: 1 },
@@ -259,24 +342,34 @@ const styles = StyleSheet.create({
   bottomControls: { alignItems: 'center' },
   scanningBadge: { backgroundColor: 'rgba(0,0,0,0.55)', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20, flexDirection: 'row', alignItems: 'center', marginBottom: 22, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
   scanDot: { width: 8, height: 8, borderRadius: 4, marginRight: 10 },
-  scanningText: { color: 'rgba(255,255,255,0.7)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1.5, fontSize: 10 },
+  scanningText: { color: 'rgba(255,255,255,0.7)', fontWeight: '700', textTransform: 'uppercase', fontSize: 10 },
   torchBtn: { width: 56, height: 56, borderRadius: 28, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', alignItems: 'center', justifyContent: 'center' },
+  manualBtn: { width: 56, height: 56, borderRadius: 28, borderWidth: 1, alignItems: 'center', justifyContent: 'center', marginLeft: 16 },
+
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center', padding: 24 },
+  modalCard: { width: '100%', borderRadius: 32, padding: 24, borderWidth: 1 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  modalTitle: { fontSize: 18, fontWeight: '900', textTransform: 'uppercase' },
+  modalDesc: { fontSize: 13, marginBottom: 20, lineHeight: 18 },
+  manualInput: { width: '100%', height: 60, borderRadius: 16, borderWidth: 1, paddingHorizontal: 20, fontSize: 18, fontWeight: '700', marginBottom: 20 },
+  confirmBtn: { width: '100%', height: 56, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
+  confirmBtnText: { color: '#000', fontWeight: '900', fontSize: 15 },
 
   resultOverlay: { ...StyleSheet.absoluteFillObject, zIndex: 30, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 24 },
   resultBg: { ...StyleSheet.absoluteFillObject },
   loadingBox: { alignItems: 'center' },
   loadingInner: { padding: 36, borderRadius: 36, borderWidth: 1, marginBottom: 24 },
-  loadingText: { fontWeight: '900', textTransform: 'uppercase', letterSpacing: 4, fontSize: 10 },
+  loadingText: { fontWeight: '900', textTransform: 'uppercase', fontSize: 10 },
   resultContent: { width: '100%', alignItems: 'center' },
   resultIcon: { width: 128, height: 128, borderRadius: 64, borderWidth: 5, justifyContent: 'center', alignItems: 'center', marginBottom: 22 },
-  resultStatus: { fontSize: 36, fontWeight: '900', letterSpacing: -0.5, marginBottom: 20 },
+  resultStatus: { fontSize: 36, fontWeight: '900', marginBottom: 20 },
   resultCard: { borderRadius: 32, padding: 26, width: '100%', marginBottom: 24, borderWidth: 1 },
   resultMsg: { textAlign: 'center', fontWeight: '700', fontSize: 16, lineHeight: 24 },
   ticketInfo: { marginTop: 16, paddingTop: 16, borderTopWidth: 1 },
   ticketInfoRow: { flexDirection: 'row', alignItems: 'center' },
   ticketInfoText: { fontSize: 12, marginLeft: 10 },
   continueBtn: { width: '100%', paddingVertical: 18, borderRadius: 22, flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 10 },
-  continueBtnText: { fontWeight: '900', fontSize: 18, textTransform: 'uppercase', letterSpacing: 1 },
-  goBackText: { fontWeight: '700', textTransform: 'uppercase', letterSpacing: 2, fontSize: 10 },
+  continueBtnText: { fontWeight: '900', fontSize: 18, textTransform: 'uppercase' },
+  goBackText: { fontWeight: '700', textTransform: 'uppercase', fontSize: 10 },
 });
 

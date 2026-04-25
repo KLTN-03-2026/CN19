@@ -13,10 +13,11 @@ import {
   Alert,
 } from 'react-native';
 import { getMyEvents, getProfile } from '../services/api';
-import { Calendar, MapPin, ChevronRight, LogOut, Search, LayoutDashboard, Ticket, User, Clock, Settings } from 'lucide-react-native';
+import { Calendar, MapPin, ChevronRight, LogOut, Search, LayoutDashboard, Ticket, User, Clock, Settings, ShoppingBag, History } from 'lucide-react-native';
 import dayjs from 'dayjs';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../context/ThemeContext';
+import { useFocusEffect } from '@react-navigation/native';
 
 const NEON = '#39FF14';
 
@@ -25,7 +26,8 @@ function BottomTab({ active, onPress }) {
   const { isDarkMode, colors } = useTheme();
   const tabs = [
     { id: 'events', label: 'Sự kiện', Icon: LayoutDashboard },
-    { id: 'history', label: 'Lịch sử', Icon: Clock },
+    { id: 'history_tickets', label: 'Lịch sử quét vé', Icon: Clock },
+    { id: 'history_products', label: 'Lịch sử quét SP', Icon: History },
     { id: 'profile', label: 'Tài khoản', Icon: User },
   ];
   return (
@@ -59,14 +61,17 @@ export default function EventSelectScreen({ navigation }) {
   const [loading, setLoading] = React.useState(true);
   const [refreshing, setRefreshing] = React.useState(false);
   const [totalScanned, setTotalScanned] = React.useState(0);
+  const [totalRedeemed, setTotalRedeemed] = React.useState(0);
   const [activeEvents, setActiveEvents] = React.useState(0);
   const [activeTab, setActiveTab] = React.useState('events');
   const [profile, setProfile] = React.useState(null);
 
-  React.useEffect(() => {
-    fetchEvents();
-    fetchProfile();
-  }, []);
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchEvents();
+      fetchProfile();
+    }, [])
+  );
 
   React.useEffect(() => {
     if (searchQuery.trim() === '') {
@@ -93,12 +98,14 @@ export default function EventSelectScreen({ navigation }) {
     try {
       const response = await getMyEvents();
       const allEvents = response.data?.data || [];
-      let scanned = 0, active = 0;
+      let scanned = 0, active = 0, mScanned = 0;
       allEvents.forEach(e => {
         scanned += (e.scanned_count || 0);
+        mScanned += (e.redeemed_merchandise_count || 0);
         if (!dayjs().isAfter(dayjs(e.event_date).endOf('day'))) active++;
       });
       setTotalScanned(scanned);
+      setTotalRedeemed(mScanned);
       setActiveEvents(active);
       const sorted = allEvents.sort((a, b) => {
         const isPastA = dayjs().isAfter(dayjs(a.event_date).endOf('day'));
@@ -130,8 +137,10 @@ export default function EventSelectScreen({ navigation }) {
   };
 
   const handleTabPress = (tabId) => {
-    if (tabId === 'history') {
-      navigation.navigate('History', {});
+    if (tabId === 'history_tickets') {
+      navigation.navigate('History', { type: 'ticket' });
+    } else if (tabId === 'history_products') {
+      navigation.navigate('History', { type: 'product' });
     } else if (tabId === 'profile') {
       setActiveTab('profile');
     } else {
@@ -164,12 +173,17 @@ export default function EventSelectScreen({ navigation }) {
       <View style={[styles.profileStats, { backgroundColor: colors.card, borderColor: colors.border }]}>
         <View style={styles.profileStatItem}>
           <Text style={[styles.profileStatNum, { color: colors.text }]}>{totalScanned}</Text>
-          <Text style={[styles.profileStatLabel, { color: colors.subtext }]}>Tổng vé đã soát</Text>
+          <Text style={[styles.profileStatLabel, { color: colors.subtext }]}>Tổng vé</Text>
+        </View>
+        <View style={[styles.profileStatDivider, { backgroundColor: colors.border }]} />
+        <View style={styles.profileStatItem}>
+          <Text style={[styles.profileStatNum, { color: colors.text }]}>{totalRedeemed}</Text>
+          <Text style={[styles.profileStatLabel, { color: colors.subtext }]}>Tổng SP</Text>
         </View>
         <View style={[styles.profileStatDivider, { backgroundColor: colors.border }]} />
         <View style={styles.profileStatItem}>
           <Text style={[styles.profileStatNum, { color: colors.text }]}>{activeEvents}</Text>
-          <Text style={[styles.profileStatLabel, { color: colors.subtext }]}>Sự kiện hiện tại</Text>
+          <Text style={[styles.profileStatLabel, { color: colors.subtext }]}>Sự kiện</Text>
         </View>
       </View>
 
@@ -199,7 +213,7 @@ export default function EventSelectScreen({ navigation }) {
   );
 
   // ─── Events Tab List Header ───────────────────────────────────
-  const renderHeader = () => (
+  const renderedHeader = React.useMemo(() => (
     <View style={styles.listHeader}>
       {/* Staff mini profile */}
       <View style={styles.staffRow}>
@@ -224,15 +238,22 @@ export default function EventSelectScreen({ navigation }) {
           <View style={[styles.statIcon, { backgroundColor: 'rgba(57,255,20,0.1)' }]}>
             <Ticket size={18} color={colors.primary} />
           </View>
-          <Text style={[styles.statNumber, { color: colors.text }]}>{totalScanned}</Text>
+          <Text style={[styles.statNumber, { color: colors.text, fontSize: 22 }]}>{totalScanned}</Text>
           <Text style={[styles.statLabel, { color: colors.subtext }]}>Đã soát vé</Text>
         </View>
         <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={[styles.statIcon, { backgroundColor: 'rgba(59,130,246,0.1)' }]}>
-            <LayoutDashboard size={18} color="#3b82f6" />
+            <ShoppingBag size={18} color="#3b82f6" />
           </View>
-          <Text style={[styles.statNumber, { color: colors.text }]}>{activeEvents}</Text>
-          <Text style={[styles.statLabel, { color: colors.subtext }]}>Sự kiện cần soát</Text>
+          <Text style={[styles.statNumber, { color: colors.text, fontSize: 22 }]}>{totalRedeemed}</Text>
+          <Text style={[styles.statLabel, { color: colors.subtext }]}>Sản phẩm đã nhận</Text>
+        </View>
+        <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={[styles.statIcon, { backgroundColor: 'rgba(255,171,0,0.1)' }]}>
+            <LayoutDashboard size={18} color="#ffab00" />
+          </View>
+          <Text style={[styles.statNumber, { color: colors.text, fontSize: 22 }]}>{activeEvents}</Text>
+          <Text style={[styles.statLabel, { color: colors.subtext }]}>Nhiệm vụ</Text>
         </View>
       </View>
 
@@ -250,18 +271,13 @@ export default function EventSelectScreen({ navigation }) {
         />
       </View>
     </View>
-  );
+  ), [profile, totalScanned, totalRedeemed, activeEvents, searchQuery, colors, isDarkMode]);
 
   const renderEventItem = ({ item }) => {
     const isPast = dayjs().isAfter(dayjs(item.event_date).endOf('day'));
     return (
-      <TouchableOpacity
-        activeOpacity={0.85}
+      <View
         style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }, isPast && styles.cardPast]}
-        onPress={() => isPast
-          ? navigation.navigate('History', { eventId: item.id, eventTitle: item.title })
-          : navigation.navigate('Scanner', { event: item })
-        }
       >
         <Image
           source={{ uri: item.image_url || 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30' }}
@@ -291,32 +307,60 @@ export default function EventSelectScreen({ navigation }) {
               <Text style={[styles.metaText, { flex: 1, color: colors.subtext }]} numberOfLines={1}>{item.location_address}</Text>
             </View>
           </View>
-          <View style={[styles.cardFooter, { borderTopColor: colors.border }]}>
-            <View>
-              <Text style={[styles.scannedLabel, { color: colors.subtext }]}>Đã soát vé</Text>
-              <Text style={[styles.scannedCount, { color: colors.text }]}>{item.scanned_count || 0}</Text>
+          <View style={[styles.cardFooter, { borderTopColor: colors.border, paddingVertical: 14, flexDirection: 'column', gap: 14 }]}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <View style={{ flexDirection: 'row', gap: 20 }}>
+                <View>
+                  <Text style={[styles.scannedLabel, { color: colors.subtext, fontSize: 8 }]}>VÉ ĐÃ SOÁT</Text>
+                  <Text style={[styles.scannedCount, { color: colors.text, fontSize: 20 }]}>{item.scanned_count || 0}</Text>
+                </View>
+                <View style={{ width: 1, height: '60%', backgroundColor: colors.border, alignSelf: 'center' }} />
+                <View>
+                  <Text style={[styles.scannedLabel, { color: colors.subtext, fontSize: 8 }]}>SẢN PHẨM ĐÃ NHẬN</Text>
+                  <Text style={[styles.scannedCount, { color: colors.text, fontSize: 20 }]}>{item.redeemed_merchandise_count || 0}</Text>
+                </View>
+              </View>
+              
+              <TouchableOpacity 
+                onPress={() => navigation.navigate('EventStats', { event: item })}
+                style={[styles.actionBtn, { height: 42, width: 42, paddingHorizontal: 0, justifyContent: 'center', backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}
+              >
+                <LayoutDashboard size={18} color={colors.primary} />
+              </TouchableOpacity>
             </View>
+
             <View style={{ flexDirection: 'row', gap: 10 }}>
               {!isPast && (
+                <>
+                  <TouchableOpacity 
+                    onPress={() => navigation.navigate('Scanner', { event: item, type: 'product' })}
+                    style={[styles.actionBtn, { flex: 1, backgroundColor: isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)', borderColor: colors.border, borderWidth: 1 }]}
+                  >
+                    <ShoppingBag size={14} color={colors.text} />
+                    <Text style={[styles.actionBtnText, { color: colors.text, fontSize: 11 }]}>QUÉT SẢN PHẨM</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity 
+                    onPress={() => navigation.navigate('Scanner', { event: item, type: 'ticket' })}
+                    style={[styles.actionBtn, { flex: 1, backgroundColor: colors.primary }]}
+                  >
+                    <Ticket size={14} color="#000" />
+                    <Text style={[styles.actionBtnText, { color: '#000', fontSize: 11 }]}>SOÁT VÉ</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+              {isPast && (
                 <TouchableOpacity 
-                  onPress={(e) => {
-                    e.stopPropagation();
-                    navigation.navigate('History', { eventId: item.id, eventTitle: item.title });
-                  }}
-                  style={[styles.actionBtn, { paddingHorizontal: 12, backgroundColor: isDarkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)' }]}
+                  onPress={() => navigation.navigate('History', { eventId: item.id, eventTitle: item.title, type: 'ticket' })}
+                  style={[styles.actionBtn, { flex: 1, backgroundColor: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}
                 >
-                  <Clock size={16} color={colors.text} />
+                  <Text style={[styles.actionBtnText, { color: colors.text, fontSize: 11 }]}>XEM LỊCH SỬ QUÉT</Text>
                 </TouchableOpacity>
               )}
-              <View style={[styles.actionBtn, !isPast && { backgroundColor: colors.primary }]}>
-                <Text style={[styles.actionBtnText, !isPast && { color: '#000' }]}>
-                  {isPast ? 'Lịch sử' : 'Quét vé'}
-                </Text>
-              </View>
             </View>
           </View>
         </View>
-      </TouchableOpacity>
+      </View>
     );
   };
 
@@ -338,7 +382,7 @@ export default function EventSelectScreen({ navigation }) {
           </View>
         ) : (
           <FlatList
-            ListHeaderComponent={renderHeader}
+            ListHeaderComponent={renderedHeader}
             data={filteredEvents}
             renderItem={renderEventItem}
             keyExtractor={(item) => String(item.id)}
@@ -365,11 +409,11 @@ const styles = StyleSheet.create({
   tabBar: { flexDirection: 'row', height: 75, borderTopWidth: 1, paddingBottom: 15 },
   tabItem: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   tabIconWrap: { width: 44, height: 44, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginBottom: 2 },
-  tabLabel: { fontSize: 9, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.5 },
+  tabLabel: { fontSize: 9, fontWeight: '800', textTransform: 'uppercase' },
   
   topBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 55, paddingBottom: 15, borderBottomWidth: 1 },
-  topBarBrand: { fontSize: 24, fontWeight: '900', letterSpacing: -1 },
-  topBarRole: { fontSize: 10, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 2 },
+  topBarBrand: { fontSize: 24, fontWeight: '900' },
+  topBarRole: { fontSize: 10, fontWeight: '800', textTransform: 'uppercase' },
   
   loadingBox: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   listHeader: { padding: 20 },
@@ -382,10 +426,10 @@ const styles = StyleSheet.create({
   statsRow: { flexDirection: 'row', gap: 15, marginBottom: 32 },
   statCard: { flex: 1, padding: 20, borderRadius: 28, borderWidth: 1 },
   statIcon: { width: 40, height: 40, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginBottom: 12 },
-  statNumber: { fontSize: 28, fontWeight: '900', marginBottom: 4 },
-  statLabel: { fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 },
+  statNumber: { fontSize: 22, fontWeight: '900', marginBottom: 4 },
+  statLabel: { fontSize: 10, fontWeight: '700', textTransform: 'uppercase' },
   
-  sectionTitle: { fontSize: 12, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 3, marginBottom: 16 },
+  sectionTitle: { fontSize: 12, fontWeight: '900', textTransform: 'uppercase', marginBottom: 16 },
   searchBar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, height: 54, borderRadius: 18, borderWidth: 1 },
   searchInput: { flex: 1, marginLeft: 12, fontSize: 15, fontWeight: '600' },
   
@@ -395,9 +439,9 @@ const styles = StyleSheet.create({
   badge: { position: 'absolute', top: 16, left: 16, zIndex: 10 },
   badgeActive: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
   badgeDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: NEON, marginRight: 8 },
-  badgeActiveText: { fontSize: 10, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 1 },
+  badgeActiveText: { fontSize: 10, fontWeight: '900', textTransform: 'uppercase' },
   badgePast: { backgroundColor: 'rgba(0,0,0,0.6)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
-  badgePastText: { color: '#888', fontSize: 10, fontWeight: '900', textTransform: 'uppercase', letterSpacing: 1 },
+  badgePastText: { color: '#888', fontSize: 10, fontWeight: '900', textTransform: 'uppercase' },
   
   cardBody: { padding: 20, paddingTop: 80 },
   cardTitle: { fontSize: 20, fontWeight: '900', marginBottom: 10 },
@@ -406,8 +450,8 @@ const styles = StyleSheet.create({
   metaItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   metaText: { fontSize: 12, fontWeight: '600' },
   
-  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 16, borderTopWidth: 1 },
-  scannedLabel: { fontSize: 10, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 },
+  cardFooter: { borderTopWidth: 1 },
+  scannedLabel: { fontSize: 10, fontWeight: '700', textTransform: 'uppercase', marginBottom: 4 },
   scannedCount: { fontSize: 24, fontWeight: '900' },
   actionBtn: { height: 48, paddingHorizontal: 12, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.06)', flexDirection: 'row', alignItems: 'center', gap: 8 },
   actionBtnActive: { backgroundColor: NEON },
@@ -422,7 +466,7 @@ const styles = StyleSheet.create({
   profileName: { fontSize: 24, fontWeight: '900', marginBottom: 4 },
   profileEmail: { fontSize: 14, marginBottom: 16 },
   roleBadge: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: 50, borderWidth: 1 },
-  roleText: { color: NEON, fontSize: 10, fontWeight: '900', letterSpacing: 2 },
+  roleText: { color: NEON, fontSize: 10, fontWeight: '900' },
   
   profileStats: { flexDirection: 'row', padding: 24, borderRadius: 32, borderWidth: 1, marginBottom: 20 },
   profileStatItem: { flex: 1, alignItems: 'center' },

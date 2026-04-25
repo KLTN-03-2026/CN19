@@ -178,7 +178,6 @@ const styles = StyleSheet.create({
   brandText: {
     fontSize: 46,
     fontWeight: '900',
-    letterSpacing: -1,
   },
   brandGreen: {
     color: NEON,
@@ -195,7 +194,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '900',
     textTransform: 'uppercase',
-    letterSpacing: 2,
   },
   card: {
     borderWidth: 1,
@@ -218,7 +216,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     textTransform: 'uppercase',
-    letterSpacing: 2,
     marginLeft: 4,
     marginBottom: 8,
   },
@@ -252,7 +249,6 @@ const styles = StyleSheet.create({
     fontSize: 17,
     marginRight: 6,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
   footer: {
     marginTop: 32,
@@ -261,7 +257,6 @@ const styles = StyleSheet.create({
   footerText: {
     fontSize: 10,
     fontWeight: '700',
-    letterSpacing: 1,
   },
 });
 
