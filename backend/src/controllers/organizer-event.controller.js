@@ -60,6 +60,12 @@ const createEvent = async (req, res) => {
       }
     }
 
+    // Validate Future Date
+    const selectedEventDate = new Date(`${event_date}T${event_time || '00:00'}`);
+    if (selectedEventDate <= new Date()) {
+      return res.status(400).json({ error: 'Ngày và giờ diễn ra sự kiện phải ở tương lai.' });
+    }
+
     // Validate ticket tiers
     if (!ticket_tiers || !Array.isArray(ticket_tiers) || ticket_tiers.length === 0) {
       return res.status(400).json({ error: 'Vui lòng cung cấp ít nhất một hạng vé.' });
@@ -71,6 +77,16 @@ const createEvent = async (req, res) => {
       }
       if (isNaN(parseFloat(tier.price)) || isNaN(parseInt(tier.quantity_total))) {
         return res.status(400).json({ error: `Thông tin giá hoặc số lượng của hạng vé "${tier.tier_name}" không hợp lệ.` });
+      }
+    }
+
+    // Validate Resale & Royalty
+    if (allow_resale) {
+      if (parseFloat(resale_price_limit_percent) > 108) {
+        return res.status(400).json({ error: 'Giới hạn giá bán lại tối đa không được vượt quá 108%.' });
+      }
+      if (parseFloat(royalty_fee_percent) > 10) {
+        return res.status(400).json({ error: 'Phí bản quyền không được vượt quá 10%.' });
       }
     }
 
@@ -204,6 +220,16 @@ const updateEvent = async (req, res) => {
           return res.status(400).json({ error: 'Nếu cùng một ngày, giờ kết thúc phải lớn hơn giờ bắt đầu.' });
         }
       }
+    }
+
+    // Validate Resale & Royalty
+    if (allow_resale !== false) {
+        if (resale_price_limit_percent && parseFloat(resale_price_limit_percent) > 108) {
+            return res.status(400).json({ error: 'Giới hạn giá bán lại tối đa không được vượt quá 108%.' });
+        }
+        if (royalty_fee_percent && parseFloat(royalty_fee_percent) > 10) {
+            return res.status(400).json({ error: 'Phí bản quyền không được vượt quá 10%.' });
+        }
     }
 
     // Cập nhật thông tin cơ bản

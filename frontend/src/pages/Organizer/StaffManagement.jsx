@@ -317,7 +317,7 @@ const StaffManagement = () => {
                     <table className="w-full border-collapse">
                         <thead>
                             <tr className="bg-gray-50/50 dark:bg-white/5">
-                                <th className="px-6 py-4 text-left text-[] font-black uppercase text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-white/5">Nhân viên</th>
+                                <th className="px-6 py-4 text-left text-[10px] font-black uppercase text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-white/5">Nhân viên</th>
                                 <th className="px-6 py-4 text-left text-[10px] font-black uppercase text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-white/5">Sự kiện đảm nhiệm</th>
                                 <th className="px-6 py-4 text-center text-[10px] font-black uppercase text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-white/5">Ngày gia nhập</th>
                                 <th className="px-6 py-4 text-center text-[10px] font-black uppercase text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-white/5">Trạng thái</th>
