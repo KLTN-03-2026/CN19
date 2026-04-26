@@ -42,5 +42,15 @@ export const staffService = {
   lockStaff: async (id) => {
     const res = await api.put(`/organizer/staffs/${id}/lock`);
     return res.data;
+  },
+
+  /**
+   * Lấy lịch sử quét của nhân viên theo sự kiện
+   */
+  getStaffScanHistory: async (id, eventId) => {
+    const res = await api.get(`/organizer/staffs/${id}/scan-history`, {
+      params: { eventId }
+    });
+    return res.data;
   }
 };

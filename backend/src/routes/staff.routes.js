@@ -20,4 +20,7 @@ router.put('/:id', controller.updateStaff);
 // [PUT] /api/organizer/staffs/:id/lock
 router.put('/:id/lock', controller.lockStaff);
 
+// [GET] /api/organizer/staffs/:id/scan-history
+router.get('/:id/scan-history', controller.getStaffScanHistory);
+
 module.exports = router;

@@ -43,6 +43,8 @@ import MyEvents from './pages/Organizer/MyEvents';
 import EventDetail from './pages/Organizer/EventDetail';
 import EditEvent from './pages/Organizer/EditEvent';
 import StaffManagement from './pages/Organizer/StaffManagement';
+import StaffDetail from './pages/Organizer/StaffDetail';
+import StaffScanHistory from './pages/Organizer/StaffScanHistory';
 import TicketManagement from './pages/Organizer/TicketManagement';
 import MerchandiseManagement from './pages/Organizer/MerchandiseManagement';
 import MerchandiseDetail from './pages/Organizer/MerchandiseDetail';
@@ -259,6 +261,8 @@ const router = createBrowserRouter([
       { path: 'orders', element: <OrderManagement /> },
       { path: 'orders/:id', element: <OrderDetail /> },
       { path: 'staff', element: <StaffManagement /> },
+      { path: 'staff/:id', element: <StaffDetail /> },
+      { path: 'staff/:id/history/:eventId', element: <StaffScanHistory /> },
       { path: 'products', element: <MerchandiseManagement /> },
       { path: 'products/:id', element: <MerchandiseDetail /> },
       { path: 'participants', element: <ParticipantManagement /> },

@@ -46,12 +46,24 @@ class Web3Service {
             const network = await this.provider.getNetwork();
             console.log(`✅ Đã kết nối tới mạng: ${network.name} (ChainID: ${network.chainId})`);
 
+            // Lấy thông tin phí Gas hiện tại của mạng
+            const feeData = await this.provider.getFeeData();
+            console.log(`⛽ Phí Gas hiện tại: Base: ${ethers.formatUnits(feeData.gasPrice, 'gwei')} gwei`);
+
+            // Tính toán phí Gas xông xênh hơn (Thêm 20% buffer để tránh bị kẹt lúc mạng nghẽn)
+            const maxPriorityFeePerGas = (feeData.maxPriorityFeePerGas * 120n) / 100n;
+            const maxFeePerGas = (feeData.maxFeePerGas * 120n) / 100n;
+
             const factory = new ethers.ContractFactory(contractABI, contractBytecode, this.signer);
             
-            console.log(`⏳ Đang gửi giao dịch Deploy...`);
-            const contract = await factory.deploy(initialOwner);
+            console.log(`⏳ Đang gửi giao dịch Deploy với cấu hình Gas tối ưu...`);
+            const contract = await factory.deploy(initialOwner, {
+                maxFeePerGas,
+                maxPriorityFeePerGas
+            });
             
-            console.log(`📜 Transaction Hash: ${contract.deploymentTransaction().hash}`);
+            const deploymentTx = contract.deploymentTransaction();
+            console.log(`📜 Transaction Hash: ${deploymentTx.hash}`);
             console.log(`⏳ Đang chờ xác nhận từ Blockchain (Mining)...`);
             
             await contract.waitForDeployment();
@@ -62,6 +74,10 @@ class Web3Service {
             return address;
         } catch (error) {
             console.error('❌ [Web3 Service Error]:', error);
+            // Ném lỗi chi tiết hơn để controller bắt được
+            if (error.code === 'INSUFFICIENT_FUNDS') {
+                throw new Error('Ví Admin không đủ số dư để trả phí Gas (Cần nạp thêm MATIC).');
+            }
             throw error;
         }
     }
