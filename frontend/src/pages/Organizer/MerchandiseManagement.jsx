@@ -267,21 +267,20 @@ const MerchandiseManagement = () => {
           <h1 className="text-lg md:text-xl font-black text-gray-900 dark:text-white uppercase">
             Quản lý sản phẩm
           </h1>
-          <p className="text-gray-700 dark:text-gray-500 mb-1 text-[11px] md:text-sm italic">
+          <p className="text-gray-700 dark:text-gray-500 mb-1 text-[11px] md:text-sm font-medium">
             Tạo và quản lý lightstick, photocard, đồ ăn thức uống bán kèm vé sự kiện.
           </p>
         </div>
         <div className="flex items-center gap-2 md:gap-3 shrink-0">
           <button 
             onClick={exportToExcel}
-            className="flex items-center gap-1.5 px-2.5 md:px-3 py-1.5 md:py-2 bg-white dark:bg-[#111114] text-gray-700 dark:text-gray-400 rounded-xl md:rounded-2xl text-[9px] md:text-xs font-bold border border-gray-200 dark:border-white/10 hover:bg-gray-200 dark:hover:bg-white/10 transition-all shadow-sm active:scale-95"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-2xl text-xs font-bold shadow-lg shadow-blue-600/20 transition-all active:scale-95 flex items-center gap-2"
           >
-            <Upload className="w-3 h-3 md:w-3.5 md:h-3.5 rotate-180 text-blue-600" /> 
-            <span className="hidden sm:inline">Xuất báo cáo</span>
+            Xuất báo cáo
           </button>
           <button
             onClick={openCreateModal}
-            className="bg-blue-600 text-white px-2.5 md:px-3 py-1.5 md:py-2 rounded-xl md:rounded-2xl text-[9px] md:text-xs font-bold shadow-[0_0_15px_rgba(37,99,235,0.3)] hover:shadow-[0_0_30px_rgba(37,99,235,0.6)] transition-all flex items-center group shrink-0"
+            className="bg-blue-600 text-white px-2.5 md:px-3 py-1.5 md:py-2.5 rounded-xl md:rounded-2xl text-[9px] md:text-xs font-bold shadow-[0_0_15px_rgba(37,99,235,0.3)] hover:shadow-[0_0_30px_rgba(37,99,235,0.6)] transition-all flex items-center group shrink-0"
           >
             <PlusCircle className="w-3 h-3 md:w-3.5 md:h-3.5 mr-1.5 md:mr-2 group-hover:rotate-90 transition-transform duration-300" />
             Thêm sản phẩm

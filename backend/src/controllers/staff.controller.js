@@ -33,7 +33,11 @@ const getStaffs = async (req, res) => {
 const createStaff = async (req, res) => {
   try {
     const userId = req.user.userId;
-    const { email, phone_number, password, full_name, event_id } = req.body;
+    const { email, phone_number, password, full_name, event_ids } = req.body;
+
+    if (!event_ids || !Array.isArray(event_ids) || event_ids.length === 0) {
+      return res.status(400).json({ error: 'Cần chọn ít nhất một sự kiện phụ trách.' });
+    }
 
     const orgId = await getOrganizerId(userId);
 
@@ -46,14 +50,6 @@ const createStaff = async (req, res) => {
       // Nếu đã tồn tại nhưng không phải Role staff thì báo lỗi
       if (staffUser.role !== 'staff') {
         return res.status(400).json({ error: 'Email hoặc SĐT này đã được sử dụng cho tài khoản khác.' });
-      }
-      
-      // Kiểm tra xem nhân viên này đã được gán vào sự kiện này chưa
-      const existingAssignment = await prisma.eventStaffAssignment.findFirst({
-        where: { staff_id: staffUser.id, event_id }
-      });
-      if (existingAssignment) {
-        return res.status(400).json({ error: 'Nhân viên này đã được gán cho sự kiện này.' });
       }
     } else {
       // 2. Tạo User mới nếu chưa có
@@ -75,16 +71,24 @@ const createStaff = async (req, res) => {
       });
     }
 
-    // 3. Gán vào sự kiện
-    await prisma.eventStaffAssignment.create({
-      data: {
-        staff_id: staffUser.id,
-        event_id,
-        creator_id: userId
+    // 3. Gán vào các sự kiện (Bỏ qua các sự kiện đã được gán)
+    await Promise.all(event_ids.map(async (eventId) => {
+      const existing = await prisma.eventStaffAssignment.findFirst({
+        where: { staff_id: staffUser.id, event_id: eventId }
+      });
+      
+      if (!existing) {
+        await prisma.eventStaffAssignment.create({
+          data: {
+            staff_id: staffUser.id,
+            event_id: eventId,
+            creator_id: userId
+          }
+        });
       }
-    });
+    }));
 
-    res.status(201).json({ message: 'Đã gán nhân viên vào sự kiện thành công.' });
+    res.status(201).json({ message: 'Đã thêm mới và gán nhân viên vào các sự kiện thành công.' });
   } catch (error) {
     console.error('Create Staff Error:', error);
     res.status(400).json({ error: error.message || 'Lỗi server.' });
@@ -154,21 +158,166 @@ const getStaffDetail = async (req, res) => {
     const userId = req.user.userId;
     const { id } = req.params;
 
-    const assignment = await prisma.eventStaffAssignment.findFirst({
+    // 1. Kiểm tra xem staff này có thuộc quản lý của organizer không
+    const assignments = await prisma.eventStaffAssignment.findMany({
       where: { staff_id: id, creator_id: userId },
       include: {
-        staff: { select: { id: true, email: true, phone_number: true, full_name: true, status: true, created_at: true, permissions: true } },
-        event: { select: { id: true, title: true, event_date: true } }
+        event: {
+          select: {
+            id: true,
+            title: true,
+            event_date: true,
+            image_url: true,
+            status: true,
+            location_address: true
+          }
+        }
       }
     });
 
-    if (!assignment) {
+    if (assignments.length === 0) {
       return res.status(404).json({ error: 'Không tìm thấy nhân viên hoặc bạn không có quyền.' });
     }
 
-    res.status(200).json({ data: assignment });
+    // 2. Lấy thông tin User và thống kê quét
+    const staff = await prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        email: true,
+        phone_number: true,
+        full_name: true,
+        status: true,
+        created_at: true,
+        avatar_url: true,
+        _count: {
+          select: {
+            ticket_scans: { where: { is_success: true } },
+            merchandise_scans: { where: { is_success: true } }
+          }
+        }
+      }
+    });
+
+    res.status(200).json({ 
+      data: {
+        staff,
+        assignments: assignments.map(a => a.event),
+        stats: {
+          total_ticket_scans: staff._count.ticket_scans,
+          total_merchandise_scans: staff._count.merchandise_scans
+        }
+      }
+    });
   } catch (error) {
+    console.error('Get Staff Detail Error:', error);
     res.status(500).json({ error: 'Lỗi server.' });
+  }
+};
+
+// [UC_18] Lấy lịch sử quét của nhân viên theo sự kiện
+const getStaffScanHistory = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { id } = req.params;
+    const { eventId } = req.query;
+
+    if (!eventId) {
+      return res.status(400).json({ error: 'Thiếu eventId' });
+    }
+
+    // 1. Kiểm tra quyền hạn
+    const staffCheck = await prisma.eventStaffAssignment.findFirst({
+      where: { staff_id: id, creator_id: userId }
+    });
+
+    if (!staffCheck) {
+      return res.status(403).json({ error: 'Bạn không có quyền xem lịch sử của nhân viên này.' });
+    }
+
+    // 2. Lấy lịch sử quét vé
+    const ticketScans = await prisma.scanHistory.findMany({
+      where: {
+        staff_id: id,
+        ticket: { event_id: eventId }
+      },
+      include: {
+        ticket: {
+          include: {
+            current_owner: { select: { full_name: true, email: true, avatar_url: true } },
+            ticket_tier: { select: { tier_name: true } },
+            event: { select: { image_url: true } }
+          }
+        }
+      },
+      orderBy: { scanned_at: 'desc' }
+    });
+
+    // 3. Lấy lịch sử quét vật phẩm
+    const merchScans = await prisma.merchandiseScanHistory.findMany({
+      where: {
+        staff_id: id,
+        order_item: { 
+          order: { event_id: eventId } 
+        }
+      },
+      include: {
+        order_item: {
+          include: {
+            merchandise: { select: { name: true, image_url: true } },
+            owner: { select: { full_name: true, email: true, avatar_url: true } },
+            order: {
+              include: {
+                customer: { select: { full_name: true, email: true, avatar_url: true } }
+              }
+            }
+          }
+        }
+      },
+      orderBy: { scanned_at: 'desc' }
+    });
+
+    // 3.5 Lấy thông tin sự kiện
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
+      select: { title: true, event_date: true }
+    });
+
+    // 4. Tổng hợp và định dạng
+    const history = [
+      ...ticketScans.map(s => ({
+        id: s.id,
+        type: 'TICKET',
+        item_name: s.ticket.ticket_tier.tier_name,
+        item_image: s.ticket.event.image_url,
+        customer_name: s.ticket.current_owner.full_name || s.ticket.current_owner.email,
+        customer_email: s.ticket.current_owner.email,
+        customer_avatar: s.ticket.current_owner.avatar_url,
+        scanned_at: s.scanned_at,
+        is_success: s.is_success,
+        failure_reason: s.failure_reason
+      })),
+      ...merchScans.map(s => {
+        const customer = s.order_item.owner || s.order_item.order.customer;
+        return {
+          id: s.id,
+          type: 'MERCHANDISE',
+          item_name: s.order_item.merchandise.name,
+          item_image: s.order_item.merchandise.image_url,
+          customer_name: customer.full_name || customer.email || 'N/A',
+          customer_email: customer.email,
+          customer_avatar: customer.avatar_url,
+          scanned_at: s.scanned_at,
+          is_success: s.is_success,
+          failure_reason: s.failure_reason
+        };
+      })
+    ].sort((a, b) => new Date(b.scanned_at) - new Date(a.scanned_at));
+
+    res.status(200).json({ data: history, event });
+  } catch (error) {
+    console.error('Get Scan History Error:', error);
+    res.status(500).json({ error: 'Lỗi server khi lấy lịch sử quét.' });
   }
 };
 // [UC_18] Khóa/Mở khóa tài khoản nhân viên (Toggle)
@@ -207,5 +356,6 @@ module.exports = {
   createStaff,
   lockStaff,
   updateStaff,
-  getStaffDetail
+  getStaffDetail,
+  getStaffScanHistory
 };

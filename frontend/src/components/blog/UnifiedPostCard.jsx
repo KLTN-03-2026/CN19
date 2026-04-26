@@ -292,8 +292,8 @@ const UnifiedPostCard = ({
         </div>
         
         <div className="flex items-center gap-1">
-           {post.slug && (
-             <Link to={`/blog/${post.slug}`} className="p-2 rounded-full bg-gray-50 dark:bg-white/5 text-gray-400 hover:text-neon-green transition-all">
+           {(post.slug || post.id) && (
+             <Link to={`/blog/${post.slug || post.id}`} className="p-2 rounded-full bg-gray-50 dark:bg-white/5 text-gray-400 hover:text-neon-green transition-all">
                 <ExternalLink className="w-3.5 h-3.5" />
              </Link>
            )}

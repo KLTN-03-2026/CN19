@@ -87,6 +87,7 @@ const organizerBlogController = {
     // Cập nhật bài viết
     updateBlog: async (req, res) => {
         try {
+            const { id } = req.params;
             const { title, content, image_url, images, event_id, status } = req.body;
             const author_id = req.user.id || req.user.userId;
 

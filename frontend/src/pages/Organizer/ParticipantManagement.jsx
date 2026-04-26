@@ -177,9 +177,8 @@ const ParticipantManagement = () => {
                 </div>
                 <button 
                     onClick={handleExport}
-                    className="bg-white dark:bg-[#111114] border border-gray-100 dark:border-white/5 text-gray-900 dark:text-white px-5 py-2.5 rounded-2xl text-xs font-bold shadow-sm transition-all flex items-center gap-3 hover:bg-gray-50 dark:hover:bg-white/5 active:scale-95"
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-2xl text-xs font-bold shadow-lg shadow-blue-600/20 transition-all flex items-center gap-2 active:scale-95"
                 >
-                    <Download className="w-4 h-4 text-blue-600" />
                     Xuất báo cáo
                 </button>
             </div>

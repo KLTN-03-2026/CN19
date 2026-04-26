@@ -699,9 +699,17 @@ const blogController = {
                     }
                 }
             });
-            res.json({ success: true, data: likes.map(l => l.user) });
+            const formattedLikers = likes.map(l => ({
+                ...l.user,
+                liked_at: l.created_at ? l.created_at.toISOString() : null
+            }));
+
+            res.json({ 
+                success: true, 
+                data: formattedLikers
+            });
         } catch (error) {
-            console.error(error);
+            console.error('getLikers error:', error);
             res.status(500).json({ error: 'Lỗi khi lấy danh sách người thích.' });
         }
     },

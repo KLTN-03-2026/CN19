@@ -26,13 +26,14 @@ import { useAuthStore } from '../../../store/useAuthStore';
 import UnifiedPostCard from '../../../components/blog/UnifiedPostCard';
 import CreatePostModal from '../../../components/blog/CreatePostModal';
 import NotificationsModal from '../../../components/blog/NotificationsModal';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { format, formatDistanceToNow } from 'date-fns';
 import { vi, enUS } from 'date-fns/locale';
 
 const Blog = () => {
     const { t, i18n } = useTranslation();
     const { isAuthenticated, user } = useAuthStore();
+    const location = useLocation();
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [postToEdit, setPostToEdit] = useState(null);
     const [isNotifModalOpen, setIsNotifModalOpen] = useState(false);
@@ -53,6 +54,16 @@ const Blog = () => {
         }, 500);
         return () => clearTimeout(timer);
     }, [searchQuery]);
+ 
+    // Handle deep links from navigation
+    useEffect(() => {
+        if (location.state?.activeTab) {
+            setActiveTab(location.state.activeTab);
+        }
+        if (location.state?.searchQuery) {
+            setSearchQuery(location.state.searchQuery);
+        }
+    }, [location.state]);
 
     // Fetch User Stats (Total posts count) - Always fetch this regardless of activeTab
     const { data: userStatsData, refetch: refetchUserStats } = useQuery({

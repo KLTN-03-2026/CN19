@@ -8,7 +8,7 @@ const getOrganizerProfile = async (req, res) => {
     const organizer = await prisma.organizer.findUnique({
       where: { id },
       include: {
-        user: { select: { email: true, phone_number: true, avatar_url: true } },
+        user: { select: { email: true, phone_number: true, avatar_url: true, status: true, created_at: true } },
         events: {
           where: { 
             status: { in: ['active', 'completed'] } 
