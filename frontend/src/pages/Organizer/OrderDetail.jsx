@@ -11,7 +11,8 @@ import {
   CheckCircle2, 
   Clock, 
   Hash,
-  AlertCircle
+  AlertCircle,
+  Download
 } from 'lucide-react';
 import api from '../../services/api';
 import { format } from 'date-fns';
@@ -39,20 +40,11 @@ const OrderDetail = () => {
         fetchOrderDetail();
     }, [id]);
 
-    const getStatusStyle = (status) => {
-        switch (status) {
-            case 'paid': return 'bg-green-500/10 text-green-500';
-            case 'pending': return 'bg-yellow-500/10 text-yellow-500';
-            case 'cancelled': return 'bg-red-500/10 text-red-500';
-            default: return 'bg-white/5 text-gray-400';
-        }
-    };
-
     if (isLoading) {
         return (
             <div className="min-h-[60vh] flex flex-col items-center justify-center space-y-4">
                 <div className="w-12 h-12 border-4 border-blue-600/20 border-t-blue-600 rounded-full animate-spin"></div>
-                <p className="text-gray-400 font-bold animate-pulse">Đang tải thông tin đơn hàng...</p>
+                <p className="text-gray-600 font-bold animate-pulse">Đang tải thông tin đơn hàng...</p>
             </div>
         );
     }
@@ -61,7 +53,7 @@ const OrderDetail = () => {
         return (
             <div className="min-h-[60vh] flex flex-col items-center justify-center text-center px-4">
                 <AlertCircle className="w-20 h-20 text-gray-200 dark:text-white/5 mb-6" />
-                <h2 className="text-2xl font-black uppercase text-gray-400">Không tìm thấy đơn hàng</h2>
+                <h2 className="text-2xl font-black uppercase text-gray-600">Không tìm thấy đơn hàng</h2>
                 <button 
                     onClick={() => navigate('/organizer/orders')}
                     className="mt-6 px-8 py-3 bg-blue-600 text-white font-bold rounded-2xl hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20"
@@ -74,260 +66,266 @@ const OrderDetail = () => {
 
     return (
         <div className="min-h-screen pb-20">
-            {/* Header & Back Button */}
-            <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <div className="flex items-center gap-6">
+            {/* Header Area */}
+            <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
                     <button 
                         onClick={() => navigate('/organizer/orders')}
-                        className="p-4 bg-gray-50 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-2xl transition-all group"
+                        className="p-3 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/10 rounded-xl transition-all group shadow-sm"
                     >
-                        <ChevronLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+                        <ChevronLeft className="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:-translate-x-1 transition-transform" />
                     </button>
                     <div>
                         <div className="flex items-center gap-3">
-                            <h1 className="text-xl font-black uppercase tracking-tight">Chi tiết Đơn hàng</h1>
-                            <span className="px-4 py-1 bg-blue-600/10 text-blue-600 font-mono text-l font-black rounded-xl">
+                            <h1 className="text-xl font-black uppercase tracking-tight text-gray-900 dark:text-white leading-none">Chi tiết Đơn hàng</h1>
+                            <span className="px-3 py-1 bg-blue-600 text-white font-mono text-[10px] font-black rounded-lg shadow-lg shadow-blue-600/20">
                                 #{order.order_number}
                             </span>
                         </div>
-                        <p className="text-gray-500 dark:text-gray-400 text-sm mt-1 font-medium">
-                            Xem thông tin chi tiết về vé, sản phẩm và giao dịch.
-                        </p>
+                        <div className="flex items-center gap-2 mt-1.5">
+                            <Calendar className="w-3 h-3 text-blue-500" />
+                            <p className="text-gray-900 dark:text-white text-[11px] font-black uppercase tracking-tight">
+                                {order.event?.title || 'Sự kiện chưa xác định'}
+                            </p>
+                        </div>
                     </div>
-                </div>
-                
-                <div className={`px-6 py-2 rounded-2xl font-black uppercase text-xs  border border-current/10 ${getStatusStyle(order.status)}`}>
-                    {order.status === 'paid' ? 'Đã thanh toán' : 
-                     order.status === 'pending' ? 'Chờ xử lý' : 
-                     order.status === 'cancelled' ? 'Đã hủy' : order.status}
                 </div>
             </div>
 
-            {/* Main Content Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Top Row: Overview Grid (3 Columns) */}
+            {(() => {
+                const ticketItems = (order.items || []).filter(i => i.ticket_tier_id);
+                const ticketCommission = ticketItems.reduce((s, i) => s + Number(i.subtotal), 0) * 0.08;
+                const gasFee = ticketItems.reduce((s, i) => s + i.quantity, 0) * 10000;
+                const merchCommission = (order.merchandise_items || []).reduce((s, i) => s + Number(i.subtotal), 0) * 0.08;
+                const totalFees = ticketCommission + gasFee + merchCommission;
+                const netRevenue = Number(order.total_amount) - totalFees;
+
+                return (
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-4">
+                        {/* Column 1: Customer Info */}
+                        <div className="bg-white dark:bg-[#111114] p-6 rounded-[1.5rem] border border-gray-200 dark:border-white/5 shadow-sm flex flex-col h-full">
+                            <h3 className="text-[10px] font-black uppercase text-gray-700 dark:text-gray-400 mb-5 flex items-center gap-2">
+                                <User className="w-3.5 h-3.5 text-blue-500" /> Thông tin khách hàng
+                            </h3>
+                            <div className="flex items-center gap-4 mb-6 pb-6 border-b border-gray-100 dark:border-white/5">
+                                <div className="w-14 h-14 bg-blue-600/10 rounded-2xl border border-blue-600/10 overflow-hidden flex items-center justify-center shrink-0 shadow-inner">
+                                    {order.customer?.avatar_url ? (
+                                        <img src={order.customer.avatar_url} className="w-full h-full object-cover" alt="" />
+                                    ) : (
+                                        <User className="w-8 h-8 text-blue-600/30" />
+                                    )}
+                                </div>
+                                <div className="min-w-0">
+                                    <div className="text-base font-black text-gray-900 dark:text-white truncate leading-tight">{order.customer?.full_name}</div>
+                                    <div className="text-[11px] text-gray-600 dark:text-gray-400 font-bold mt-1 truncate">{order.customer?.email}</div>
+                                </div>
+                            </div>
+                            <div className="space-y-3">
+                                <div className="flex justify-between items-center text-[10px]">
+                                    <span className="text-gray-600 dark:text-gray-400 font-black uppercase tracking-tight">Số điện thoại</span>
+                                    <span className="font-black text-blue-600 tracking-tight">{order.customer?.phone_number || '---'}</span>
+                                </div>
+                                <div className="flex justify-between items-center text-[10px]">
+                                    <span className="text-gray-600 dark:text-gray-400 font-black uppercase tracking-tight">Mã định danh</span>
+                                    <span className="font-mono text-gray-600 dark:text-gray-400 font-bold text-[10px]">#{order.customer?.id?.slice(0, 12)}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Column 2: Financial Summary */}
+                        <div className="bg-slate-900 dark:bg-[#09090b] p-6 rounded-[1.5rem] border border-slate-800 dark:border-white/5 shadow-xl relative overflow-hidden group h-full">
+                            <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity pointer-events-none">
+                                <Tag className="w-32 h-32 scale-150 rotate-12 text-blue-500" />
+                            </div>
+                            <h3 className="text-[10px] font-black uppercase text-slate-400 dark:text-gray-500 mb-5 relative z-10 flex items-center gap-2">
+                                <CreditCard className="w-3.5 h-3.5 text-blue-400" /> Tổng kết tài chính
+                            </h3>
+                            <div className="space-y-4 relative z-10">
+                                <div className="flex justify-between items-end">
+                                    <div>
+                                        <p className="text-[9px] font-black text-slate-400 dark:text-gray-500 mb-1">Tổng tiền (Gross)</p>
+                                        <p className="text-xl font-black text-white tracking-tighter">{Number(order.total_amount).toLocaleString()}đ</p>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-[9px] font-black text-slate-400 dark:text-gray-500 mb-1 tracking-tight">Tổng khấu trừ</p>
+                                        <p className="text-sm font-black text-red-400 dark:text-red-500">-{totalFees.toLocaleString()}đ</p>
+                                    </div>
+                                </div>
+
+                                {/* Chi tiết các loại phí */}
+                                <div className="space-y-2 py-3 border-y border-white/5 dark:border-white/5 mt-2">
+                                    <div className="flex justify-between items-center text-[10px]">
+                                        <span className="text-slate-400 dark:text-gray-500 font-bold tracking-tight">Phí dịch vụ vé (8%)</span>
+                                        <span className="text-slate-200 dark:text-gray-300 font-bold font-mono">-{ticketCommission.toLocaleString()}đ</span>
+                                    </div>
+                                    <div className="flex justify-between items-center text-[10px]">
+                                        <span className="text-slate-400 dark:text-gray-500 font-bold tracking-tight">Phí hệ thống (Gas fee)</span>
+                                        <span className="text-slate-200 dark:text-gray-300 font-bold font-mono">-{gasFee.toLocaleString()}đ</span>
+                                    </div>
+                                    {merchCommission > 0 && (
+                                        <div className="flex justify-between items-center text-[10px]">
+                                            <span className="text-slate-400 dark:text-gray-500 font-bold tracking-tight">Phí dịch vụ vật phẩm (8%)</span>
+                                            <span className="text-slate-200 dark:text-gray-300 font-bold font-mono">-{merchCommission.toLocaleString()}đ</span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="pt-2 bg-blue-500/10 -mx-6 px-6 py-3 -mb-6 border-t border-white/5">
+                                    <div className="flex justify-between items-center">
+                                        <div>
+                                            <p className="text-[10px] font-black text-blue-400 mb-1">Thực nhận về ví (BTC)</p>
+                                            <p className="text-xl font-black text-green-400 dark:text-green-500 tracking-tighter">{netRevenue.toLocaleString()}đ</p>
+                                        </div>
+                                        <div className="w-8 h-8 bg-blue-500/20 rounded-xl flex items-center justify-center border border-blue-500/30">
+                                            <CheckCircle2 className="w-4 h-4 text-blue-400" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Column 3: Order Info */}
+                        <div className="bg-white dark:bg-[#111114] p-6 rounded-[1.5rem] border border-gray-200 dark:border-white/5 shadow-sm h-full">
+                            <h3 className="text-[10px] font-black uppercase text-gray-600 dark:text-gray-400 mb-5 flex items-center gap-2">
+                                <Hash className="w-3.5 h-3.5 text-emerald-500" /> Thông tin giao dịch
+                            </h3>
+                            <div className="space-y-3">
+                                <div>
+                                    <p className="text-[10px] font-black text-gray-700 dark:text-gray-400 mb-1">Ngày đặt hàng</p>
+                                    <p className="text-xs font-black text-gray-800 dark:text-white tracking-tight">
+                                        {format(new Date(order.created_at), 'HH:mm - dd/MM/yyyy')}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-black text-gray-700 dark:text-gray-400 mb-1">Trạng thái đơn</p>
+                                    <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-tighter ${
+                                        order.status === 'paid' ? 'bg-green-500/10 text-green-500' : 
+                                        (order.status === 'cancelled' || order.status === 'canceled') ? 'bg-red-500/10 text-red-500' :
+                                        'bg-orange-500/10 text-orange-500'
+                                    }`}>
+                                        {order.status === 'paid' ? 'Đã thanh toán' : 
+                                         (order.status === 'cancelled' || order.status === 'canceled') ? 'Đã hủy' : 
+                                         'Đang xử lý'}
+                                    </span>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-black text-gray-700 dark:text-gray-400 mb-1">Thanh toán qua</p>
+                                    <p className="text-xs font-black text-blue-600 uppercase leading-none">
+                                        {order.payment_method}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] font-black text-gray-700 dark:text-gray-400 mb-1">Phân loại</p>
+                                    <p className="text-xs font-black text-gray-800 dark:text-white uppercase tracking-tight">
+                                        {order.order_type === 'TICKET_TRANSFER' ? 'Vé chuyển nhượng' : 'Đơn hàng mới'}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
+
+            {/* Bottom Areas: Full Width Tables */}
+            <div className="space-y-6">
                 
-                {/* Left Column: Infos */}
-                <div className="lg:col-span-2 space-y-8">
-                    
-                    {/* Items Section (Tickets & Merchandise Combined if needed, or separate) */}
-                    <div className="bg-white dark:bg-[#111114] rounded-[2.5rem] border border-gray-100 dark:border-white/5 overflow-hidden shadow-sm">
-                        <div className="px-8 py-5 border-b border-gray-50 dark:border-white/5 bg-gray-50/50 dark:bg-white/[0.01]">
-                            <h3 className="text-sm font-black uppercase text-gray-400 flex items-center gap-2">
-                                <Ticket className="w-4 h-4" />
-                                Danh sách Vé ({order.tickets?.length || 0})
+                {/* Tickets Section */}
+                <div className="bg-white dark:bg-[#111114] rounded-[1.5rem] border border-gray-200 dark:border-white/5 overflow-hidden shadow-sm">
+                    <div className="px-6 py-4 border-b border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/[0.01] flex items-center justify-between">
+                        <h3 className="text-[11px] font-black uppercase text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                            <Ticket className="w-4 h-4 text-blue-600" />
+                            Danh sách Vé ({order.tickets?.length || 0})
+                        </h3>
+                    </div>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-sm text-left">
+                            <thead>
+                                <tr className="text-[10px] font-black uppercase text-gray-600 dark:text-gray-400 border-b border-gray-100 dark:border-white/5">
+                                    <th className="px-6 py-4">Mã số vé</th>
+                                    <th className="px-6 py-4">Hạng vé</th>
+                                    <th className="px-6 py-4 text-center">Giá vé</th>
+                                    <th className="px-6 py-4 text-center">NFT Token ID</th>
+                                    <th className="px-6 py-4 text-right">Trạng thái</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100 dark:divide-white/5">
+                                {order.tickets?.map(ticket => (
+                                    <tr key={ticket.id} className="hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
+                                        <td className="px-6 py-4 font-mono font-bold text-blue-600 text-[13px]">{ticket.ticket_number}</td>
+                                        <td className="px-6 py-4">
+                                            <div className="font-bold text-[11px] text-gray-800 dark:text-white leading-none">{ticket.ticket_tier?.tier_name}</div>
+                                            <div className="text-[9px] text-gray-500 mt-1.5 italic font-medium">Bảo mật bởi Blockchain</div>
+                                        </td>
+                                        <td className="px-6 py-4 text-center font-black text-gray-700 dark:text-gray-300">
+                                            {(() => {
+                                                const item = order.items?.find(i => i.ticket_tier_id === ticket.ticket_tier_id);
+                                                return Number(item?.unit_price || ticket.ticket_tier?.price || 0).toLocaleString();
+                                            })()}đ
+                                        </td>
+                                        <td className="px-6 py-4 text-center">
+                                            <span className="px-3 py-1 bg-gray-100 dark:bg-zinc-800 rounded-lg font-mono text-[11px] font-bold text-gray-700 dark:text-gray-300">
+                                                #{ticket.nft_token_id || 'N/A'}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 text-right">
+                                            <span className={`text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-tighter ${
+                                                ticket.status === 'used' ? 'bg-gray-100 text-gray-500' : 'bg-green-500/10 text-green-600 border border-green-500/20'
+                                            }`}>
+                                                {ticket.status === 'used' ? 'Đã sử dụng' : 'Khả dụng'}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                {/* Merchandise Section */}
+                {order.merchandise_items?.length > 0 && (
+                    <div className="bg-white dark:bg-[#111114] rounded-[1.5rem] border border-gray-200 dark:border-white/5 overflow-hidden shadow-sm">
+                        <div className="px-6 py-4 border-b border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/[0.01]">
+                            <h3 className="text-[11px] font-black uppercase text-gray-700 dark:text-gray-300 flex items-center gap-2">
+                                <ShoppingBag className="w-4 h-4 text-emerald-600" />
+                                Vật phẩm đi kèm ({order.merchandise_items.length})
                             </h3>
                         </div>
                         <div className="overflow-x-auto">
                             <table className="w-full text-sm text-left">
                                 <thead>
-                                    <tr className="text-[10px] font-black uppercase text-gray-400 border-b border-gray-50 dark:border-white/5">
-                                        <th className="px-8 py-5">Mã số vé</th>
-                                        <th className="px-8 py-5">Hạng vé</th>
-                                        <th className="px-8 py-5 text-center">NFT Token ID</th>
-                                        <th className="px-8 py-5 text-right">Trạng thái</th>
+                                    <tr className="text-[10px] font-black uppercase text-gray-500 border-b border-gray-100 dark:border-white/5">
+                                        <th className="px-6 py-4">Sản phẩm</th>
+                                        <th className="px-6 py-4 text-center">Số lượng</th>
+                                        <th className="px-6 py-4 text-right">Đơn giá</th>
+                                        <th className="px-6 py-4 text-right">Thành tiền</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-50 dark:divide-white/5">
-                                    {order.tickets?.map(ticket => (
-                                        <tr key={ticket.id} className="hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
-                                            <td className="px-8 py-6 font-mono font-bold text-blue-600">{ticket.ticket_number}</td>
-                                            <td className="px-8 py-6">
-                                                <div className="font-bold text-gray-900 dark:text-white">{ticket.ticket_tier?.tier_name}</div>
-                                                <div className="text-[10px] text-gray-500 mt-0.5 italic">Vé điện tử Blockchain</div>
+                                <tbody className="divide-y divide-gray-100 dark:divide-white/5">
+                                    {order.merchandise_items.map(m => (
+                                        <tr key={m.id} className="hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
+                                            <td className="px-6 py-4">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-10 h-10 bg-gray-100 dark:bg-white/5 rounded-lg overflow-hidden flex items-center justify-center border border-gray-200 dark:border-white/5 shrink-0">
+                                                        {m.merchandise?.image_url ? (
+                                                            <img src={m.merchandise.image_url} className="w-full h-full object-cover" alt="" />
+                                                        ) : (
+                                                            <ShoppingBag className="w-4 h-4 text-gray-400" />
+                                                        )}
+                                                    </div>
+                                                    <div className="font-bold text-gray-800 dark:text-white">{m.merchandise?.name}</div>
+                                                </div>
                                             </td>
-                                            <td className="px-8 py-6 text-center">
-                                                <span className="px-3 py-1 bg-zinc-100 dark:bg-zinc-800 rounded-lg font-mono text-xs font-bold text-gray-500">
-                                                    {ticket.nft_token_id || 'N/A'}
-                                                </span>
-                                            </td>
-                                            <td className="px-8 py-6 text-right">
-                                                <span className="text-[10px] font-black px-3 py-1 bg-green-500/10 text-green-500 rounded-full uppercase tracking-tighter">
-                                                    {ticket.status}
-                                                </span>
-                                            </td>
+                                            <td className="px-6 py-4 text-center font-black text-blue-600">{m.quantity}</td>
+                                            <td className="px-6 py-4 text-right font-bold text-gray-600">{Number(m.unit_price).toLocaleString()}đ</td>
+                                            <td className="px-6 py-4 text-right font-black text-gray-900 dark:text-white">{Number(m.subtotal).toLocaleString()}đ</td>
                                         </tr>
                                     ))}
                                 </tbody>
                             </table>
                         </div>
                     </div>
-
-                    {/* Merchandise Section */}
-                    {order.merchandise_items?.length > 0 && (
-                        <div className="bg-white dark:bg-[#111114] rounded-[2.5rem] border border-gray-100 dark:border-white/5 overflow-hidden shadow-sm">
-                            <div className="px-8 py-5  border-b border-gray-50 dark:border-white/5 bg-gray-50/50 dark:bg-white/[0.01]">
-                                <h3 className="text-sm font-black uppercase  text-gray-400 flex items-center gap-2">
-                                    <ShoppingBag className="w-4 h-4" />
-                                    Vật phẩm đi kèm ({order.merchandise_items.length})
-                                </h3>
-                            </div>
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-sm text-left">
-                                    <thead>
-                                        <tr className="text-[10px] font-black uppercase text-gray-400 border-b border-gray-50 dark:border-white/5">
-                                            <th className="px-8 py-5">Ảnh</th>
-                                            <th className="px-8 py-5">Tên sản phẩm</th>
-                                            <th className="px-8 py-5 text-center">Số lượng</th>
-                                            <th className="px-8 py-5 text-right">Đơn giá</th>
-                                            <th className="px-8 py-5 text-right">Thành tiền</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-50 dark:divide-white/5">
-                                        {order.merchandise_items.map(m => (
-                                            <tr key={m.id} className="hover:bg-gray-50 dark:hover:bg-white/[0.02] transition-colors">
-                                                <td className="px-8 py-4">
-                                                    <div className="w-12 h-12 bg-gray-100 dark:bg-white/5 rounded-xl overflow-hidden flex items-center justify-center border border-gray-100 dark:border-white/5">
-                                                        {m.merchandise?.image_url ? (
-                                                            <img src={m.merchandise.image_url} className="w-full h-full object-cover" alt="" />
-                                                        ) : (
-                                                            <ShoppingBag className="w-5 h-5 text-gray-400" />
-                                                        )}
-                                                    </div>
-                                                </td>
-                                                <td className="px-8 py-6 font-bold">{m.merchandise?.name}</td>
-                                                <td className="px-8 py-6 text-center font-black text-blue-600">{m.quantity}</td>
-                                                <td className="px-8 py-6 text-right font-black">{Number(m.unit_price).toLocaleString()}đ</td>
-                                                <td className="px-8 py-6 text-right font-black text-gray-900 dark:text-white">{Number(m.subtotal).toLocaleString()}đ</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                {/* Right Column: Summaries */}
-                <div className="space-y-8">
-                    
-                    {/* Customer Info Card */}
-                    <div className="bg-white dark:bg-[#111114] rounded-[2.5rem] border border-gray-100 dark:border-white/5 p-8 shadow-sm">
-                        <h3 className="text-sm font-black uppercase text-gray-400 mb-6">Thông tin khách hàng</h3>
-                        <div className="flex items-center gap-5 mb-4">
-                            <div className="w-20 h-20 bg-blue-600/10 rounded-[3rem] border-4 border-white dark:border-zinc-900 shadow-xl overflow-hidden flex items-center justify-center">
-                                {order.customer?.avatar_url ? (
-                                    <img src={order.customer.avatar_url} className="w-full h-full object-cover" alt="" />
-                                ) : (
-                                    <User className="w-10 h-10 text-blue-600" />
-                                )}
-                            </div>
-                            <div>
-                                <div className="text-xl font-black">{order.customer?.full_name}</div>
-                                <div className="text-sm text-gray-500 font-medium">{order.customer?.email}</div>
-                            </div>
-                        </div>
-                        <div className="space-y-4 pt-6 border-t border-gray-50 dark:border-white/5">
-                            <div className="flex justify-between items-center">
-                                <span className="text-xs text-gray-400 font-bold">Số điện thoại</span>
-                                <span className="text-sm font-black text-blue-600">{order.customer?.phone_number || 'Chưa cập nhật'}</span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                                <span className="text-xs text-gray-400 font-bold">Mã Khách hàng</span>
-                                <span className="text-[10px] font-mono font-bold text-gray-500">#{order.customer?.id.slice(0, 13)}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Order Summary & Payment */}
-                    <div className="bg-zinc-900 rounded-[2.5rem] border border-white/5 p-8 text-white relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
-                            <Tag className="w-40 h-40 scale-150 rotate-12 text-blue-500" />
-                        </div>
-                        <h3 className="text-sm font-black uppercase opacity-60 mb-6 relative z-10">Chi tiết Phí & Đối soát</h3>
-                        
-                        <div className="space-y-4 relative z-10">
-                            {/* Order Metadata (Date & Payment) */}
-                            <div className="grid grid-cols-2 gap-3 pb-4 border-b border-white/10">
-                                <div>
-                                    <div className="text-[9px] font-black uppercase opacity-40 mb-1 flex items-center gap-1">
-                                        <Clock className="w-3 h-3" /> Ngày giờ đặt
-                                    </div>
-                                    <div className="text-xs font-bold text-white tracking-tight">
-                                        {format(new Date(order.created_at), 'HH:mm - dd/MM/yyyy')}
-                                    </div>
-                                </div>
-                                <div className="text-right">
-                                    <div className="text-[9px] font-black uppercase opacity-40 mb-1 flex items-center gap-1 justify-end">
-                                        <CreditCard className="w-3 h-3" /> Thanh toán
-                                    </div>
-                                    <div className="text-xs font-black text-blue-400 uppercase italic">
-                                        {order.payment_method}
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Customer Total Payment Highlight */}
-                            <div className="pb-4 border-b border-white/10 mb-2">
-                                <div className="text-[10px] font-black uppercase opacity-60 mb-1">Tổng tiền khách đã thanh toán</div>
-                                <div className="text-2xl font-black text-white">
-                                    {Number(order.total_amount).toLocaleString()}đ
-                                </div>
-                            </div>
-
-                            {/* Fee Calculations */}
-                            {(() => {
-                                const ticketItems = (order.items || []).filter(i => i.ticket_tier_id);
-                                const ticketCommission = ticketItems.reduce((s, i) => s + Number(i.subtotal), 0) * 0.08;
-                                const gasFee = ticketItems.reduce((s, i) => s + i.quantity, 0) * 10000;
-                                const merchCommission = (order.merchandise_items || []).reduce((s, i) => s + Number(i.subtotal), 0) * 0.08;
-                                const totalCalculatedFee = ticketCommission + gasFee + merchCommission;
-
-                                return (
-                                    <>
-                                        {ticketItems.length > 0 && (
-                                            <div className="space-y-3 pb-2 border-b border-white/10">
-                                                <div className="flex justify-between items-start text-xs">
-                                                    <div className="flex flex-col">
-                                                        <span className="opacity-60 font-bold uppercase">Phí vé (8%)</span>
-                                                        <span className="text-[9px] opacity-40 italic mt-0.5">(Sàn 5% + Giao dịch 3%)</span>
-                                                    </div>
-                                                    <span className="font-bold text-red-300">-{Number(ticketCommission).toLocaleString()}đ</span>
-                                                </div>
-                                                <div className="flex justify-between items-center text-xs text-yellow-500/80">
-                                                    <span className="opacity-80 uppercase font-black tracking-tighter text-[10px]">Phí Gas Blockchain</span>
-                                                    <span className="font-bold">-{Number(gasFee).toLocaleString()}đ</span>
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {(order.merchandise_items || []).length > 0 && (
-                                            <div className="space-y-3 pb-3 border-b border-white/10">
-                                                <div className="flex justify-between items-start text-xs">
-                                                    <div className="flex flex-col">
-                                                        <span className="opacity-60 font-bold uppercase">Phí sản phẩm (8%)</span>
-                                                        <span className="text-[9px] opacity-40 italic mt-0.5">(Sàn 5% + Giao dịch 3%)</span>
-                                                    </div>
-                                                    <span className="font-bold text-red-300">-{Number(merchCommission).toLocaleString()}đ</span>
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        <div className="pt-2 flex justify-between items-center">
-                                            <span className="text-[10px] opacity-60 font-black uppercase tracking-widest text-red-400">Tổng phí khấu trừ</span>
-                                            <span className="text-sm font-black text-red-400">-{Number(totalCalculatedFee).toLocaleString()}đ</span>
-                                        </div>
-
-                                        <div className="pt-6 border-t border-white/10 mt-6 bg-blue-600/10 -mx-8 px-8 py-6 rounded-b-[2.5rem]">
-                                            <div className="flex items-center gap-2 mb-2">
-                                                <CreditCard className="w-4 h-4 text-blue-400" />
-                                                <div className="text-[10px] font-black uppercase text-blue-400">Số dư thực nhận dự kiến</div>
-                                            </div>
-                                            <div className="text-xl font-black text-white tracking-tighter">
-                                                {(Number(order.total_amount) - totalCalculatedFee).toLocaleString()}
-                                                <span className="text-xl ml-1 text-blue-400">đ</span>
-                                            </div>
-                                            <div className="text-[10px] text-zinc-500 mt-3 italic flex items-center gap-1.5 font-medium">
-                                                <Clock className="w-3 h-3 text-yellow-600" />
-                                                Phát hành ví đối soát sau 3 ngày hoàn tất thanh toán
-                                            </div>
-                                        </div>
-                                    </>
-                                );
-                            })()}
-                        </div>
-                    </div>
-
-                </div>
+                )}
             </div>
         </div>
     );
