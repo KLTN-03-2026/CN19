@@ -38,6 +38,7 @@ const ParticipantManagement = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [filterTier, setFilterTier] = useState('all');
     const [filterEvent, setFilterEvent] = useState(eventId || 'all');
+    const [filterStatus, setFilterStatus] = useState('all');
     
     const [selectedParticipant, setSelectedParticipant] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -95,8 +96,12 @@ const ParticipantManagement = () => {
             (p.ticket_number?.toLowerCase().includes(searchQuery.toLowerCase()));
         
         const matchesTier = filterTier === 'all' || p.ticket_tier?.tier_name === filterTier;
+        
+        const matchesStatus = filterStatus === 'all' || 
+            (filterStatus === 'used' && p.is_used) || 
+            (filterStatus === 'pending' && !p.is_used);
 
-        return matchesSearch && matchesTier;
+        return matchesSearch && matchesTier && matchesStatus;
     });
 
     const stats = {
@@ -206,44 +211,64 @@ const ParticipantManagement = () => {
             <div className="bg-white dark:bg-[#111114] rounded-[2.5rem] border border-gray-200 dark:border-white/5 shadow-xl overflow-hidden">
                 {/* Search & Filters */}
                 <div className="p-3 md:p-4 border-b border-gray-200 dark:border-white/5 bg-gray-50/50 dark:bg-white/5 backdrop-blur-xl">
-                    <div className="flex flex-col lg:flex-row gap-3 md:gap-4">
-                        <div className="flex-1 relative group border border-gray-200 dark:border-white/5 rounded-2xl">
+                    <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
+                        {/* Search Bar */}
+                        <div className="flex-1 relative group">
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-blue-600 transition-colors" />
                             <input 
                                 type="text"
-                                placeholder="Tìm kiếm theo tên, email, mã vé..."
-                                className="w-full pl-10 md:pl-12 pr-4 py-2.5 md:py-3 bg-white dark:bg-[#1a1a1e] border border-transparent focus:bg-white dark:focus:bg-[#111114] border-gray-200 dark:border-white/5 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all font-medium text-xs md:text-sm"
+                                placeholder="Tìm kiếm người tham gia..."
+                                className="w-full pl-11 pr-4 py-3 bg-white dark:bg-[#1a1a1e] border border-gray-200 dark:border-white/5 rounded-2xl focus:outline-none focus:ring-4 focus:ring-blue-600/5 focus:border-blue-600 transition-all font-bold text-[13px] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 shadow-sm h-[48px]"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                             />
                         </div>
-                        <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
-                            {/* EVENT FILTER */}
-                            <div className="relative flex items-center bg-white dark:bg-[#1a1a1e] border border-gray-200 dark:border-white/5 rounded-2xl px-4 py-3 flex-1 lg:min-w-[200px] lg:flex-none">
-                                <select 
-                                    className="bg-transparent border-none focus:outline-none focus:ring-0 font-medium text-sm dark:text-white appearance-none pr-8 cursor-pointer w-full"
-                                    value={filterEvent}
-                                    onChange={(e) => handleEventFilterChange(e.target.value)}
-                                >
-                                    <option value="all" className="dark:bg-[#1a1a1e]">Tất cả sự kiện</option>
-                                    {myEvents.map(e => (
-                                        <option key={e.id} value={e.id} className="dark:bg-[#1a1a1e]">{e.title}</option>
-                                    ))}
-                                </select>
-                            </div>
 
-                            {/* TIER FILTER */}
-                            <div className="relative flex items-center bg-white dark:bg-[#1a1a1e] border border-gray-200 dark:border-white/5 rounded-2xl px-4 py-3 flex-1 lg:flex-none">
-                                <select 
-                                    className="bg-transparent border-none focus:outline-none focus:ring-0 font-medium text-sm dark:text-white appearance-none pr-8 cursor-pointer"
-                                    value={filterTier}
-                                    onChange={(e) => setFilterTier(e.target.value)}
-                                >
-                                    <option value="all" className="dark:bg-[#1a1a1e]">Hạng vé: Tất cả</option>
-                                    {tiers.filter(t => t !== 'all').map(t => (
-                                        <option key={t} value={t} className="dark:bg-[#1a1a1e]">{t}</option>
-                                    ))}
-                                </select>
+                        {/* All Filters Group */}
+                        <div className="flex flex-wrap lg:flex-nowrap items-center gap-2 md:gap-3">
+                            {/* EVENT FILTER */}
+                            <select 
+                                className="px-4 py-2 bg-white dark:bg-[#1a1a1e] border border-gray-200 dark:border-white/5 rounded-2xl focus:outline-none focus:ring-4 focus:ring-blue-600/5 focus:border-blue-600 transition-all font-bold text-[10px] tracking-tight text-gray-700 dark:text-white appearance-none cursor-pointer min-w-[130px] lg:max-w-[160px] shadow-sm h-[48px]"
+                                value={filterEvent}
+                                onChange={(e) => handleEventFilterChange(e.target.value)}
+                            >
+                                <option value="all">Tất cả sự kiện</option>
+                                {myEvents.map(e => (
+                                    <option key={e.id} value={e.id}>{e.title.toUpperCase()}</option>
+                                ))}
+                            </select>
+
+                            {/* TIER FILTER - Moved to middle */}
+                            <select 
+                                className="px-4 py-2 bg-white dark:bg-[#1a1a1e] border border-gray-200 dark:border-white/5 rounded-2xl focus:outline-none focus:ring-4 focus:ring-blue-600/5 focus:border-blue-600 transition-all font-bold text-[10px] tracking-tight text-gray-700 dark:text-white appearance-none cursor-pointer min-w-[140px] shadow-sm h-[48px]"
+                                value={filterTier}
+                                onChange={(e) => setFilterTier(e.target.value)}
+                            >
+                                <option value="all">Hạng vé: Tất cả</option>
+                                {tiers.filter(t => t !== 'all').map(t => (
+                                    <option key={t} value={t}>{t.toUpperCase()}</option>
+                                ))}
+                            </select>
+
+                            {/* STATUS FILTER */}
+                            <div className="flex items-center gap-1 p-1 bg-white dark:bg-[#1a1a1e] border border-gray-200 dark:border-white/5 rounded-2xl shadow-sm shrink-0 h-[48px]">
+                                {[
+                                    { id: 'all', label: 'Tất cả' },
+                                    { id: 'used', label: 'Đã soát vé' },
+                                    { id: 'pending', label: 'Chờ tham gia' }
+                                ].map((s) => (
+                                    <button
+                                        key={s.id}
+                                        onClick={() => setFilterStatus(s.id)}
+                                        className={`px-3 md:px-4 py-2 rounded-xl text-[10px] font-black transition-all whitespace-nowrap h-full ${
+                                            filterStatus === s.id
+                                                ? 'bg-blue-600 text-white shadow-sm'
+                                                : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
+                                        }`}
+                                    >
+                                        {s.label}
+                                    </button>
+                                ))}
                             </div>
                         </div>
                     </div>
@@ -265,9 +290,9 @@ const ParticipantManagement = () => {
                             <tr className="bg-gray-50/50 dark:bg-white/5">
                                 <th className="px-6 py-4 text-left text-[10px] font-black uppercase text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-white/5">Người tham gia</th>
                                 <th className="px-6 py-4 text-left text-[10px] font-black uppercase text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-white/5">Sự kiện</th>
-                                <th className="px-6 py-4 text-left text-[10px] font-black uppercase text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-white/5 text-center">Hạng vé</th>
-                                <th className="px-6 py-4 text-left text-[10px] font-black uppercase text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-white/5">Mã số vé</th>
-                                <th className="px-6 py-4 text-left text-[10px] font-black uppercase text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-white/5 text-center">Trạng thái</th>
+                                <th className="px-6 py-4 text-center text-[10px] font-black uppercase text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-white/5">Hạng vé</th>
+                                <th className="px-6 py-4 text-center text-[10px] font-black uppercase text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-white/5">Mã số vé</th>
+                                <th className="px-6 py-4 text-center text-[10px] font-black uppercase text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-white/5">Trạng thái</th>
                                 <th className="px-6 py-4 text-right text-[10px] font-black uppercase text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-white/5">Thao tác</th>
                             </tr>
                         </thead>
@@ -308,9 +333,11 @@ const ParticipantManagement = () => {
                                             </span>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <div className="flex items-center font-mono text-[11px] font-black text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-black/20 px-3 py-2 rounded-lg w-fit">
-                                                <Ticket className="w-3.5 h-3.5 mr-2 text-blue-600" />
-                                                #{p.ticket_number?.toUpperCase()}
+                                            <div className="flex justify-center">
+                                                <div className="flex items-center font-mono text-[11px] font-black text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-black/20 px-3 py-2 rounded-lg w-fit">
+                                                    <Ticket className="w-3.5 h-3.5 mr-2 text-blue-600" />
+                                                    #{p.ticket_number?.toUpperCase()}
+                                                </div>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">

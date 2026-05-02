@@ -6,7 +6,7 @@ import {
   PlusCircle, Search, Package, Edit, Trash2, Loader2,
   ToggleLeft, ToggleRight, X, Image, DollarSign,
   Tag, AlertCircle, Archive, Star, ShoppingBag,
-  LayoutGrid, List, Upload, Camera, Eye
+  LayoutGrid, List, Upload, Camera, Eye, Calendar
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import axios from 'axios';
@@ -85,6 +85,8 @@ const MerchandiseManagement = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterEvent, setFilterEvent] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterDate, setFilterDate] = useState('');
   const [viewMode, setViewMode] = useState('grid');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
@@ -244,11 +246,24 @@ const MerchandiseManagement = () => {
   };
 
   const filtered = items.filter(item => {
-    const matchSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchSearch = (item.name || '').toLowerCase().includes(searchQuery.toLowerCase());
     const matchEvent = filterEvent === 'all'
       || (filterEvent === 'global' && !item.event_id)
       || item.event_id === filterEvent;
-    return matchSearch && matchEvent;
+
+    let matchStatus = true;
+    if (filterStatus === 'active') matchStatus = item.is_active && item.stock > 0;
+    else if (filterStatus === 'hidden') matchStatus = !item.is_active;
+    else if (filterStatus === 'out_of_stock') matchStatus = item.stock <= 0;
+
+    let matchDate = true;
+    if (filterDate) {
+      const itemDate = new Date(item.created_at).toDateString();
+      const selectedDate = new Date(filterDate).toDateString();
+      matchDate = itemDate === selectedDate;
+    }
+
+    return matchSearch && matchEvent && matchStatus && matchDate;
   });
 
   const stats = {
@@ -264,10 +279,10 @@ const MerchandiseManagement = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6">
         <div>
-          <h1 className="text-lg md:text-xl font-black text-gray-900 dark:text-white uppercase">
-            Quản lý sản phẩm
+          <h1 className="text-lg md:text-xl font-black text-gray-900 dark:text-white uppercase tracking-tight">
+            Quản lý vật phẩm
           </h1>
-          <p className="text-gray-700 dark:text-gray-500 mb-1 text-[11px] md:text-sm font-medium">
+          <p className="text-gray-500 dark:text-gray-300 mb-1 text-[9px] md:text-xs font-medium">
             Tạo và quản lý lightstick, photocard, đồ ăn thức uống bán kèm vé sự kiện.
           </p>
         </div>
@@ -295,59 +310,104 @@ const MerchandiseManagement = () => {
           { label: 'Đang bán', value: stats.active, icon: Tag, color: 'text-green-500', bg: 'bg-green-500/10' },
           { label: 'Hết hàng', value: stats.outOfStock, icon: Archive, color: 'text-red-500', bg: 'bg-red-500/10' }
         ].map((stat, idx) => (
-          <div key={idx} className="bg-white dark:bg-[#16161a] rounded-2xl border border-gray-200 dark:border-white/5 p-3 md:p-4 flex items-center gap-3 md:gap-4 shadow-sm">
-            <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl ${stat.bg} flex items-center justify-center shrink-0`}>
-              <stat.icon className={`w-5 h-5 md:w-6 md:h-6 ${stat.color}`} />
+          <div key={idx} className="bg-white dark:bg-[#16161a] rounded-2xl border border-gray-200 dark:border-white/5 p-3 md:p-4 flex items-center gap-3 md:gap-4 shadow-sm hover:shadow-md transition-all duration-300">
+            <div className={`w-10 h-10 md:w-10 md:h-10 rounded-2xl ${stat.bg} flex items-center justify-center shrink-0`}>
+              <stat.icon className={`w-3 h-3 md:w-4.5 md:h-4.5 ${stat.color}`} />
             </div>
             <div>
-              <p className="text-[9px] md:text-[10px] font-black text-gray-700 dark:text-gray-500 uppercase leading-none mb-1">{stat.label}</p>
-              <p className="text-lg md:text-xl font-black text-gray-900 dark:text-white leading-none">{stat.value}</p>
+              <p className="text-[9px] md:text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase leading-none mb-1.5 tracking-wider">{stat.label}</p>
+              <p className="text-sm md:text-lg font-black text-gray-900 dark:text-white leading-none tracking-tighter">{stat.value}</p>
             </div>
           </div>
         ))}
       </div>
 
       {/* Filter Bar */}
-      <div className="flex flex-col lg:flex-row items-center gap-3 md:gap-4">
-          <div className="relative group w-full lg:flex-1">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-gray-500 group-focus-within:text-blue-600 transition-colors" />
+      <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
+        {/* Search Bar */}
+        <div className="relative group flex-1">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-blue-600 transition-colors" />
+          <input
+            type="text"
+            placeholder="Tìm kiếm vật phẩm..."
+            className="w-full pl-11 pr-4 py-3 bg-white dark:bg-[#111114] border border-gray-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-4 focus:ring-blue-600/5 focus:border-blue-600 transition-all font-bold text-[13px] text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 shadow-sm h-[48px]"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+
+        {/* Event Select - Moved & Resized */}
+        <select
+          className="px-4 py-2 bg-white dark:bg-[#111114] border border-gray-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-4 focus:ring-blue-600/5 focus:border-blue-600 transition-all font-bold text-[12px] tracking-tight text-gray-700 dark:text-white appearance-none cursor-pointer min-w-[130px] lg:max-w-[160px] shadow-sm h-[48px]"
+          value={filterEvent}
+          onChange={(e) => setFilterEvent(e.target.value)}
+        >
+          <option value="all">Tất cả sự kiện</option>
+          <option value="global">🌐 BÁN CHUNG</option>
+          {events.map(e => <option key={e.id} value={e.id}>{e.title.toUpperCase()}</option>)}
+        </select>
+
+        {/* Filters Group */}
+        <div className="flex flex-wrap lg:flex-nowrap items-center gap-2 md:gap-3">
+          {/* Status Filters */}
+          <div className="flex items-center gap-1 p-1 bg-white dark:bg-[#111114] border border-gray-200 dark:border-white/5 rounded-2xl shadow-sm shrink-0 h-[48px]">
+            {[
+              { id: 'all', label: 'Tất cả' },
+              { id: 'active', label: 'Đang bán' },
+              { id: 'hidden', label: 'Đã ẩn' },
+              { id: 'out_of_stock', label: 'Hết hàng' }
+            ].map((s) => (
+              <button
+                key={s.id}
+                onClick={() => setFilterStatus(s.id)}
+                className={`px-3 md:px-4 py-2 rounded-xl text-[10px] font-black transition-all whitespace-nowrap h-full ${
+                  filterStatus === s.id
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
+                }`}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Date Filter */}
+          <div className="flex items-center gap-2 p-1 bg-white dark:bg-[#111114] border border-gray-200 dark:border-white/5 rounded-2xl shadow-sm shrink-0 px-3 h-[48px]">
+            <Calendar className="w-3.5 h-3.5 text-blue-600" />
             <input
-              type="text"
-              placeholder="Tìm kiếm sản phẩm..."
-              className="w-full pl-10 md:pl-12 pr-4 py-2.5 md:py-3.5 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all font-medium text-xs md:text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-500"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              type="date"
+              value={filterDate}
+              onChange={(e) => setFilterDate(e.target.value)}
+              className="bg-transparent border-none focus:outline-none text-[10px] font-bold text-gray-900 dark:text-white w-24 custom-date-input"
             />
+            {filterDate && (
+              <button
+                onClick={() => setFilterDate('')}
+                className="p-1 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors"
+              >
+                <X className="w-3 h-3 text-gray-400" />
+              </button>
+            )}
           </div>
 
-          <div className="flex items-center gap-3 w-full lg:w-auto">
-            <select
-              className="flex-1 lg:w-auto px-4 py-2.5 md:py-3.5 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-600/20 transition-all font-bold text-xs md:text-sm text-gray-900 dark:text-white appearance-none cursor-pointer md:min-w-[200px]"
-              value={filterEvent}
-              onChange={(e) => setFilterEvent(e.target.value)}
+          {/* View Mode Toggle */}
+          <div className="flex items-center bg-white dark:bg-[#111114] p-1 rounded-2xl border border-gray-200 dark:border-white/10 shadow-sm shrink-0 h-[48px]">
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`p-2 rounded-xl transition-all ${viewMode === 'grid' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5'}`}
+              title="Lưới"
             >
-              <option value="all" className="dark:bg-[#16161a]">Tất cả sự kiện</option>
-              <option value="global" className="dark:bg-[#16161a]">🌐 Bán chung</option>
-              {events.map(e => <option key={e.id} value={e.id} className="dark:bg-[#16161a]">{e.title}</option>)}
-            </select>
-
-            <div className="flex items-center bg-gray-50 dark:bg-white/5 p-1 rounded-xl border border-gray-200 dark:border-white/10 shrink-0">
-              <button
-                onClick={() => setViewMode('grid')}
-                className={`p-2 md:p-2.5 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-white dark:bg-blue-600 text-blue-600 dark:text-white shadow-sm' : 'text-gray-500 hover:text-gray-600 dark:hover:text-gray-200'}`}
-                title="Lưới"
-              >
-                <LayoutGrid className="w-3.5 h-3.5 md:w-4 md:h-4" />
-              </button>
-              <button
-                onClick={() => setViewMode('list')}
-                className={`p-2 md:p-2.5 rounded-lg transition-all ${viewMode === 'list' ? 'bg-white dark:bg-blue-600 text-blue-600 dark:text-white shadow-sm' : 'text-gray-500 hover:text-gray-600 dark:hover:text-gray-200'}`}
-                title="Danh sách"
-              >
-                <List className="w-3.5 h-3.5 md:w-4 md:h-4" />
-              </button>
-            </div>
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setViewMode('list')}
+              className={`p-2 rounded-xl transition-all ${viewMode === 'list' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5'}`}
+              title="Danh sách"
+            >
+              <List className="w-4 h-4" />
+            </button>
           </div>
+        </div>
       </div>
 
       {/* Product Grid */}
@@ -361,7 +421,7 @@ const MerchandiseManagement = () => {
           viewMode === 'grid' ? (
             <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-6">
               {filtered.map(item => (
-                <div key={item.id} className="bg-white dark:bg-[#16161a] rounded-[2rem] border border-gray-300 dark:border-white/5 overflow-hidden group hover:shadow-2xl hover:shadow-blue-500/10 dark:hover:shadow-blue-500/5 transition-all duration-500 hover:-translate-y-1">
+                <div key={item.id} className="bg-white dark:bg-[#16161a] rounded-[2.5rem] border border-gray-200 dark:border-white/5 overflow-hidden group hover:shadow-2xl hover:shadow-blue-500/10 transition-all duration-500 hover:-translate-y-1">
                   {/* Image */}
                   <div className="aspect-[3/2] relative overflow-hidden bg-gray-100 dark:bg-white/5">
                     {item.image_url ? (
@@ -382,16 +442,16 @@ const MerchandiseManagement = () => {
                     </div>
                   </div>
 
-                  <div className="p-2.5 md:p-4 space-y-2 md:space-y-2.5">
-                    <div className="space-y-0.5 md:space-y-1">
-                      <h3 className="text-[11px] md:text-sm font-black text-gray-900 dark:text-white line-clamp-1 uppercase group-hover:text-blue-600 transition-colors">{item.name}</h3>
-                      {item.description && <p className="text-[10px] md:text-xs text-gray-700 dark:text-gray-500 line-clamp-2 font-medium leading-tight">{item.description}</p>}
+                  <div className="p-4 md:p-5 space-y-2 md:space-y-3">
+                    <div className="space-y-1 md:space-y-1.5">
+                      <h3 className="text-[11px] md:text-sm font-black text-gray-900 dark:text-white line-clamp-1 uppercase group-hover:text-blue-600 transition-colors tracking-tight">{item.name}</h3>
+                      {item.description && <p className="text-[9px] md:text-[11px] text-gray-600 dark:text-gray-500 line-clamp-2 font-bold leading-tight">{item.description}</p>}
                     </div>
 
                     <div className="flex items-center justify-between pt-0.5 md:pt-1">
-                      <span className="text-sm md:text-lg font-black text-blue-600">{formatPrice(item.price)}</span>
-                      <div className="flex flex-col items-end gap-1">
-                        <span className={`text-[8px] md:text-[10px] font-black ${item.stock > 0 ? 'text-gray-700 dark:text-gray-500' : 'text-red-500'}`}>
+                      <span className="text-sm md:text-lg font-black text-blue-600 tracking-tighter">{formatPrice(item.price)}</span>
+                      <div className="flex flex-col items-end gap-0.5">
+                        <span className={`text-[8px] md:text-[10px] font-black ${item.stock > 0 ? 'text-gray-400' : 'text-red-500'}`}>
                           {item.stock > 0 ? `Kho: ${item.stock}` : 'Hết hàng'}
                         </span>
                         {item.stock > 0 && item.stock < 10 && (
@@ -402,15 +462,15 @@ const MerchandiseManagement = () => {
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between text-[9px] font-bold text-gray-700 dark:text-gray-500 border-t border-gray-200 dark:border-white/5 pt-2">
-                      <div className="flex items-center gap-1 truncate max-w-[60%]">
+                    <div className="flex items-center justify-between text-[9px] font-black uppercase text-gray-600 dark:text-gray-500 border-t border-gray-200 dark:border-white/5 pt-3">
+                      <div className="flex items-center gap-1.5 truncate max-w-[65%]">
                         {item.event ? (
-                          <><Tag className="w-2.5 h-2.5 text-blue-500 shrink-0" /> <span className="truncate">{item.event.title}</span></>
+                          <><Tag className="w-3 h-3 text-blue-500 shrink-0" /> <span className="truncate">{item.event.title}</span></>
                         ) : (
-                          <><Star className="w-2.5 h-2.5 text-amber-500 shrink-0" /> Bán chung</>
+                          <><Star className="w-3 h-3 text-amber-500 shrink-0" /> Bán chung</>
                         )}
                       </div>
-                      <div className="flex items-center gap-1 shrink-0">
+                      <div className="flex items-center gap-1 shrink-0 bg-gray-50 dark:bg-white/5 px-2 py-0.5 rounded-full border border-gray-200 dark:border-white/5">
                         <ShoppingBag className="w-2.5 h-2.5" /> {item._count?.order_items || 0}
                       </div>
                     </div>
@@ -448,7 +508,7 @@ const MerchandiseManagement = () => {
                 <div key={item.id} className="bg-white dark:bg-[#16161a] rounded-2xl border border-gray-200 dark:border-white/5 p-3 md:p-4 flex flex-col md:flex-row md:items-center gap-3 md:gap-4 group hover:border-blue-600/30 transition-all duration-300">
                   {/* Thumbnail & Basic Info Mobile Header */}
                   <div className="flex items-center gap-3 md:gap-4 w-full md:w-auto flex-1">
-                    <div className="w-16 h-16 md:w-20 md:h-20 rounded-xl overflow-hidden bg-gray-100 dark:bg-white/5 shrink-0 border border-gray-100 dark:border-white/5">
+                    <div className="w-16 h-16 md:w-20 md:h-20 rounded-xl overflow-hidden bg-gray-100 dark:bg-white/5 shrink-0 border border-gray-200 dark:border-white/5">
                       {item.image_url ? (
                         <img src={item.image_url} alt={item.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                       ) : (
@@ -469,9 +529,9 @@ const MerchandiseManagement = () => {
                           {item.is_active ? 'Đang bán' : 'Đã tắt'}
                         </span>
                       </div>
-                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[9px] md:text-[10px] text-gray-700 dark:text-gray-500 font-bold">
-                        <span className="text-blue-600 font-black text-xs md:text-sm">{formatPrice(item.price)}</span>
-                        <span className="flex items-center gap-1">
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[9px] md:text-[10px] text-gray-600 dark:text-gray-500 font-black uppercase">
+                        <span className="text-blue-600 font-black text-xs md:text-sm tracking-tighter">{formatPrice(item.price)}</span>
+                        <span className="flex items-center gap-1.5">
                           {item.event ? (
                             <><Tag className="w-2.5 h-2.5 text-blue-500" /> {item.event.title}</>
                           ) : (
@@ -483,7 +543,7 @@ const MerchandiseManagement = () => {
                   </div>
 
                   {/* Stats & Actions Footer */}
-                  <div className="flex items-center justify-between md:justify-end gap-4 md:gap-8 pt-2 md:pt-0 border-t md:border-t-0 border-gray-100 dark:border-white/5">
+                  <div className="flex items-center justify-between md:justify-end gap-4 md:gap-8 pt-2 md:pt-0 border-t md:border-t-0 border-gray-200 dark:border-white/5">
                     <div className="flex items-center gap-6 md:gap-8">
                       <div className="text-center md:text-right">
                         <p className="text-[8px] md:text-[10px] font-black text-gray-500 dark:text-gray-700 leading-none mb-1">Kho</p>
@@ -622,11 +682,11 @@ const MerchandiseManagement = () => {
 
               {/* Name */}
               <div>
-                <label className="text-[10px] font-black text-gray-700 dark:text-gray-500 uppercase mb-2 block">Tên sản phẩm *</label>
+                <label className="text-[10px] font-black text-gray-600 dark:text-gray-500 uppercase mb-2 block tracking-wider">Tên vật phẩm *</label>
                 <input
                   type="text"
                   placeholder="VD: Lightstick BTS, Combo Bắp Nước..."
-                  className="w-full px-4 py-3 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition-all font-medium text-xs md:text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-500"
+                  className="w-full px-5 py-3 bg-gray-50/50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-4 focus:ring-blue-600/5 focus:border-blue-600 transition-all font-bold text-xs md:text-sm text-gray-900 dark:text-white placeholder-gray-600 dark:placeholder-gray-500 shadow-sm"
                   value={formData.name}
                   onChange={(e) => setFormData({...formData, name: e.target.value})}
                 />

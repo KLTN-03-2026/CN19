@@ -39,24 +39,24 @@ const BlogManagement = () => {
     const [activeTab, setActiveTab] = useState('my-blogs'); // 'my-blogs', 'customer-reviews'
     const [searchQuery, setSearchQuery] = useState('');
     const [filterStatus, setFilterStatus] = useState('all');
+    const [filterDate, setFilterDate] = useState('');
     const [viewMode, setViewMode] = useState('grid');
     const [selectedBlogStats, setSelectedBlogStats] = useState(null);
     const navigate = useNavigate();
 
     useEffect(() => {
         fetchData();
-    }, [activeTab]);
+    }, []);
 
     const fetchData = async () => {
         try {
             setIsLoading(true);
-            if (activeTab === 'my-blogs') {
-                const res = await organizerService.getMyBlogs();
-                setBlogs(res.data);
-            } else {
-                const res = await organizerService.getCustomerReviews();
-                setCustomerReviews(res.data);
-            }
+            const [blogsRes, reviewsRes] = await Promise.all([
+                organizerService.getMyBlogs(),
+                organizerService.getCustomerReviews()
+            ]);
+            setBlogs(blogsRes.data);
+            setCustomerReviews(reviewsRes.data);
         } catch (error) {
             toast.error('Không thể tải dữ liệu.');
             console.error(error);
@@ -157,14 +157,23 @@ const BlogManagement = () => {
     const currentData = activeTab === 'my-blogs' ? blogs : customerReviews;
 
     const filteredData = currentData.filter(item => {
-        const matchesSearch = item.title.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesSearch = (item.title || '').toLowerCase().includes(searchQuery.toLowerCase());
         const matchesStatus = filterStatus === 'all' || item.status === filterStatus;
-        return matchesSearch && matchesStatus;
+        
+        let matchesDate = true;
+        if (filterDate) {
+            const itemDate = new Date(item.created_at).toDateString();
+            const selectedDate = new Date(filterDate).toDateString();
+            matchesDate = itemDate === selectedDate;
+        }
+        
+        return matchesSearch && matchesStatus && matchesDate;
     });
 
     const stats = {
         total: blogs.length,
         published: blogs.filter(b => b.status === 'published').length,
+        drafts: blogs.filter(b => b.status === 'draft').length,
         reviews: customerReviews.length
     };
 
@@ -275,7 +284,7 @@ const BlogManagement = () => {
                 
                 <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 no-scrollbar">
                     <div className="flex items-center gap-1 p-1 bg-white dark:bg-[#111114] border border-gray-200 dark:border-white/5 rounded-2xl shadow-sm shrink-0">
-                        {['all', 'published', 'hidden'].map((s) => (
+                        {['all', 'published', 'draft', 'hidden'].map((s) => (
                             <button
                                 key={s}
                                 onClick={() => setFilterStatus(s)}
@@ -285,9 +294,27 @@ const BlogManagement = () => {
                                     : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
                                 }`}
                             >
-                                {s === 'all' ? 'Tất cả' : s === 'published' ? 'Đã hiển thị' : 'Đã ẩn'}
+                                {s === 'all' ? 'Tất cả' : s === 'published' ? 'Đã hiển thị' : s === 'draft' ? 'Bản nháp' : 'Đã ẩn'}
                             </button>
                         ))}
+                    </div>
+
+                    <div className="flex items-center gap-2 p-1 bg-white dark:bg-[#111114] border border-gray-200 dark:border-white/5 rounded-2xl shadow-sm shrink-0 px-3 py-3">
+                        <Calendar className="w-3.5 h-3.5 text-blue-600" />
+                        <input 
+                            type="date" 
+                            value={filterDate}
+                            onChange={(e) => setFilterDate(e.target.value)}
+                            className="bg-transparent border-none focus:outline-none text-[11px] font-bold text-gray-900 dark:text-white w-24 custom-date-input"
+                        />
+                        {filterDate && (
+                            <button 
+                                onClick={() => setFilterDate('')}
+                                className="p-1 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors"
+                            >
+                                <X className="w-3 h-3 text-gray-400" />
+                            </button>
+                        )}
                     </div>
 
                     <div className="flex items-center bg-white dark:bg-[#111114] p-1 rounded-2xl border border-gray-200 dark:border-white/5 shadow-sm shrink-0">
@@ -376,11 +403,17 @@ const BlogManagement = () => {
                                         </div>
                                         <div className={`flex items-center gap-1.5 ${viewMode === 'grid' ? 'justify-start' : ''}`}>
                                             <button 
-                                                onClick={() => window.open(`/blog/${item.slug || item.id}`, '_blank')}
+                                                onClick={() => {
+                                                    if (item.status === 'draft') {
+                                                        navigate(`/organizer/blog/${item.id}/edit`);
+                                                    } else {
+                                                        window.open(`/blog/${item.slug || item.id}`, '_blank');
+                                                    }
+                                                }}
                                                 className="p-2 bg-gray-50 dark:bg-white/5 text-gray-500 hover:bg-indigo-600 hover:text-white rounded-xl transition-all"
-                                                title="Mở"
+                                                title={item.status === 'draft' ? "Chỉnh sửa bản nháp" : "Mở trang bài viết"}
                                             >
-                                                <ExternalLink className="w-3 h-3" />
+                                                {item.status === 'draft' ? <Edit className="w-3 h-3" /> : <ExternalLink className="w-3 h-3" />}
                                             </button>
                                             
                                             <button 
