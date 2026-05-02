@@ -26,18 +26,23 @@ import {
 import api from '../../services/api';
 import { format } from 'date-fns';
 import { toast } from 'react-hot-toast';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const OrderManagement = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const [orders, setOrders] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [events, setEvents] = useState([]);
-    const [filters, setFilters] = useState({
-        status: '',
-        is_settled: '',
-        event_id: '',
-        search: ''
+    
+    const [filters, setFilters] = useState(() => {
+        const params = new URLSearchParams(location.search);
+        return {
+            status: params.get('status') || '',
+            is_settled: params.get('is_settled') || '',
+            event_id: params.get('event_id') || '',
+            search: params.get('search') || ''
+        };
     });
 
     const fetchEvents = async () => {
@@ -153,35 +158,38 @@ const OrderManagement = () => {
             </div>
             
             {/* Quick Stats Grid */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 {[
                     { label: 'Tổng doanh thu', value: `${stats.totalGross.toLocaleString()}đ`, icon: ShoppingCart, color: 'blue', detail: 'Tổng tiền khách trả' },
                     { label: 'Thực nhận về tay', value: `${stats.totalNet.toLocaleString()}đ`, icon: Wallet, color: 'orange', detail: 'Doanh thu sau phí' },
                     { label: 'Vé đã bán', value: stats.ticketsCount, icon: Ticket, color: 'emerald', detail: 'Số lượng vé thực tế' },
                     { label: 'Đơn thành công', value: stats.paidCount, icon: CheckCircle2, color: 'purple', detail: 'Giao dịch hoàn tất' },
-                ].map((stat, idx) => (
-                    <div key={idx} className="bg-white dark:bg-[#111114] p-3 rounded-[1.25rem] border border-gray-200 dark:border-white/5 shadow-md hover:shadow-xl hover:scale-[1.02] transition-all group overflow-hidden relative">
-                        <div className={`absolute top-0 right-0 w-16 h-16 bg-${stat.color}-600/5 rounded-full -mr-5 -mt-5 group-hover:scale-150 transition-transform duration-700`} />
-                        <div className="relative z-10">
-                            <div className="flex items-center gap-2 mb-1.5">
-                                <div className={`w-7 h-7 bg-${stat.color}-600/10 rounded-lg flex items-center justify-center group-hover:rotate-12 transition-transform shrink-0`}>
-                                    <stat.icon className={`w-3.5 h-3.5 text-${stat.color}-600`} />
+                ].map((stat, idx) => {
+                    const colors = {
+                        blue: 'text-blue-600 bg-blue-600/10 border-blue-600/20 shadow-blue-600/5',
+                        orange: 'text-orange-600 bg-orange-600/10 border-orange-600/20 shadow-orange-600/5',
+                        emerald: 'text-emerald-600 bg-emerald-600/10 border-emerald-600/20 shadow-emerald-600/5',
+                        purple: 'text-purple-600 bg-purple-600/10 border-purple-600/20 shadow-purple-600/5',
+                    };
+                    
+                    return (
+                        <div key={idx} className="bg-white dark:bg-[#111114] p-5 rounded-[1.5rem] border border-gray-200 dark:border-white/5 shadow-sm hover:shadow-md transition-all group overflow-hidden relative">
+                            <div className={`absolute top-0 right-0 w-24 h-24 bg-${stat.color === 'emerald' ? 'green' : stat.color}-600/5 rounded-full -mr-8 -mt-8 group-hover:scale-150 transition-transform duration-700`} />
+                            <div className="relative z-10">
+                                <div className="flex items-center gap-3 mb-3">
+                                    <div className={`w-10 h-10 ${colors[stat.color]} rounded-xl flex items-center justify-center transition-transform shrink-0 border`}>
+                                        <stat.icon className="w-5 h-5" />
+                                    </div>
+                                    <p className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-wider">{stat.label}</p>
                                 </div>
-                                <span className="text-[8px] font-black uppercase text-gray-500 dark:text-gray-400 tracking-wider truncate">
-                                    {stat.label}
-                                </span>
-                            </div>
-                            <div className="flex items-baseline gap-1">
-                                <div className="text-[15px] font-black text-gray-900 dark:text-white tracking-tight">
-                                    {stat.value}
+                                <div className="flex items-end justify-between">
+                                    <h2 className="text-xl md:text-2xl font-black text-gray-900 dark:text-white leading-none tracking-tight">{stat.value}</h2>
+                                    <span className="text-[8px] font-bold text-gray-400 dark:text-gray-500 uppercase opacity-60 leading-none">{stat.detail}</span>
                                 </div>
                             </div>
-                            <p className="text-[7.5px] font-bold text-gray-400 dark:text-gray-500 mt-0.5 italic">
-                                {stat.detail}
-                            </p>
                         </div>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
 
             {/* Filters Bar */}

@@ -292,6 +292,10 @@ const PublicLayout = () => {
                                 <Wallet className="w-4.5 h-4.5 text-gray-400" />
                                 <span>{i18n.language.startsWith('vi') ? 'Quản lý nguồn thu' : 'Revenue Management'}</span>
                               </Link>
+                              <Link to="/blog" state={{ activeTab: 'profile' }} onClick={() => setMobileDropdownOpen(false)} className="flex items-center space-x-3 px-4 py-2.5 rounded-2xl text-[13px] font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/5 transition-all">
+                                <FileText className="w-4.5 h-4.5 text-gray-400" />
+                                <span>{i18n.language.startsWith('vi') ? 'Bài viết của tôi' : 'My Posts'}</span>
+                              </Link>
                               <button onClick={handleLogout} className="flex items-center space-x-3 w-full px-4 py-2.5 rounded-2xl text-[13px] font-medium text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all mt-1">
                                 <LogOut className="w-4.5 h-4.5" />
                                 <span>{i18n.language.startsWith('vi') ? 'Đăng xuất' : 'Sign Out'}</span>
@@ -367,6 +371,10 @@ const PublicLayout = () => {
                           <Link to="/my-revenue" onClick={() => setDropdownOpen(false)} className="flex items-center space-x-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
                             <Wallet className="w-4 h-4" />
                             <span>{i18n.language.startsWith('vi') ? 'Quản lý nguồn thu' : 'Revenue Management'}</span>
+                          </Link>
+                          <Link to="/blog" state={{ activeTab: 'profile' }} onClick={() => setDropdownOpen(false)} className="flex items-center space-x-2 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+                            <FileText className="w-4 h-4" />
+                            <span>{i18n.language.startsWith('vi') ? 'Bài viết của tôi' : 'My Posts'}</span>
                           </Link>
                           <div className="border-t border-gray-100 dark:border-dark-border mt-1">
                             <button onClick={handleLogout} className="flex items-center space-x-2 w-full px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors text-left">

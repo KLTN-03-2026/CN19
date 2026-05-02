@@ -46,11 +46,17 @@ const getStats = async (req, res) => {
 
     const fillRate = totalCapacity > 0 ? Math.round((totalTicketsSold / totalCapacity) * 100) : 0;
 
-    // 2. Fetch Total Revenue
-    const payouts = await prisma.escrowPayout.findMany({
-      where: { event: { organizer_id: organizer.id }, status: 'settled' }
+    // 2. Fetch Total Revenue (Sum of organizer_revenue from all paid orders)
+    const revenueSum = await prisma.order.aggregate({
+      where: { 
+        event: { organizer_id: organizer.id },
+        status: { in: ['paid', 'completed', 'success'] }
+      },
+      _sum: {
+        organizer_revenue: true
+      }
     });
-    const totalRevenue = payouts.reduce((acc, curr) => acc + Number(curr.net_payout), 0);
+    const totalRevenue = Number(revenueSum._sum.organizer_revenue || 0);
 
     // 3. Fetch Recent Notifications (Orders / Alerts)
     const recentOrders = await prisma.order.findMany({

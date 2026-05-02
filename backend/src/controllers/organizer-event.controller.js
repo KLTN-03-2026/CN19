@@ -334,7 +334,7 @@ const requestCancelOrReschedule = async (req, res) => {
 const updateResalePolicy = async (req, res) => {
   try {
     const { id } = req.params;
-    const { allow_resale, price_ceiling, royalty_fee_percent } = req.body;
+    const { allow_resale, price_ceiling, royalty_fee_percent, resale_price_limit_percent } = req.body;
 
     const event = await verifyEventOwnership(id, req.user.userId);
     
@@ -347,11 +347,37 @@ const updateResalePolicy = async (req, res) => {
       data: {
         allow_resale,
         price_ceiling: price_ceiling ? price_ceiling : null,
-        royalty_fee_percent: royalty_fee_percent ? royalty_fee_percent : 5.0
+        royalty_fee_percent: royalty_fee_percent ? royalty_fee_percent : 5.0,
+        resale_price_limit_percent: resale_price_limit_percent ? resale_price_limit_percent : 108.0
       }
     });
 
     res.status(200).json({ message: 'Cập nhật chính sách Marketplace thành công.' });
+  } catch (error) {
+    res.status(400).json({ error: error.message || 'Lỗi server.' });
+  }
+};
+
+// [NEW] Cập nhật chính sách chuyển nhượng vé (Transfer Policy)
+const updateTransferPolicy = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { allow_transfer } = req.body;
+
+    const event = await verifyEventOwnership(id, req.user.userId);
+    
+    // Transfer có thể được bật/tắt mọi lúc hoặc chỉ khi chưa diễn ra? 
+    // Tạm thời cho phép cập nhật khi event chưa kết thúc.
+    if (event.status === 'ended') {
+      return res.status(400).json({ error: 'Sự kiện đã kết thúc, không thể cấu hình chuyển nhượng.' });
+    }
+
+    await prisma.event.update({
+      where: { id },
+      data: { allow_transfer }
+    });
+
+    res.status(200).json({ message: 'Cập nhật trạng thái Chuyển nhượng vé thành công.' });
   } catch (error) {
     res.status(400).json({ error: error.message || 'Lỗi server.' });
   }
@@ -391,14 +417,7 @@ const getAttendees = async (req, res) => {
             avatar_url: true
           } 
         },
-        original_buyer: {
-          select: {
-            id: true,
-            full_name: true, 
-            email: true,
-            avatar_url: true
-          }
-        },
+        order: true,
         ticket_tier: { select: { tier_name: true } },
         event: { select: { title: true } },
         scan_history: {
@@ -589,7 +608,7 @@ const getEventById = async (req, res) => {
     const marketplaceTransactions = await prisma.marketplaceTransaction.findMany({
       where: { 
         ticket: { event_id: id },
-        status: 'completed'
+        status: { in: ['paid', 'completed', 'success'] }
       }
     });
 
@@ -610,13 +629,35 @@ const getEventById = async (req, res) => {
                                   resaleRoyalties;
 
     // 7. Recent Orders List
-    const recentOrders = await prisma.order.findMany({
-      where: { event_id: id },
+    const recentOrdersRaw = await prisma.order.findMany({
+      where: { 
+        event_id: id,
+        order_type: 'TICKET_PURCHASE'
+      },
       take: 200,
       orderBy: { created_at: 'desc' },
       include: {
-        customer: { select: { full_name: true, email: true } }
+        customer: { select: { full_name: true, email: true, avatar_url: true } },
+        items: true,
+        merchandise_items: true
       }
+    });
+
+    const recentOrders = recentOrdersRaw.map(order => {
+      const ticketSub = order.items.reduce((s, i) => s + Number(i.subtotal), 0);
+      const ticketCount = order.items.reduce((s, i) => s + i.quantity, 0);
+      const merchSub = order.merchandise_items.reduce((s, i) => s + Number(i.subtotal), 0);
+      const merchCount = order.merchandise_items.reduce((s, i) => s + i.quantity, 0);
+      
+      const fees = (ticketSub * 0.08) + (ticketCount * 10000) + (merchSub * 0.08);
+      const net_revenue = Number(order.total_amount) - fees;
+
+      return {
+        ...order,
+        net_revenue: Math.round(net_revenue),
+        ticket_count: ticketCount,
+        merch_count: merchCount
+      };
     });
 
     // 8. Statistics for Charts
@@ -629,16 +670,29 @@ const getEventById = async (req, res) => {
         const dayOrders = successfulOrders.filter(o => o.created_at.toISOString().split('T')[0] === dateStr);
         const daySecondary = marketplaceTransactions.filter(t => t.created_at.toISOString().split('T')[0] === dateStr);
 
-        const tRev = dayOrders.filter(o => o.order_type === 'TICKET_PURCHASE').reduce((sum, o) => sum + o.items.reduce((s, i) => s + Number(i.subtotal), 0), 0);
-        const mRev = dayOrders.filter(o => o.order_type === 'TICKET_PURCHASE').reduce((sum, o) => sum + o.merchandise_items.reduce((s, i) => s + Number(i.subtotal), 0), 0);
-        const rVol = daySecondary.reduce((sum, t) => sum + Number(t.buyer_pay_amount), 0);
+        // Calculate Net Revenue for the day
+        let tNet = 0;
+        let mNet = 0;
+        dayOrders.forEach(order => {
+          if (order.order_type === 'TICKET_PURCHASE') {
+            const ticketSub = order.items.reduce((s, item) => s + Number(item.subtotal), 0);
+            const ticketCount = order.items.reduce((s, item) => s + item.quantity, 0);
+            const merchSub = order.merchandise_items.reduce((s, item) => s + Number(item.subtotal), 0);
+
+            // Subtract fees (8% + 10k per ticket)
+            tNet += ticketSub - ((ticketSub * 0.08) + (ticketCount * 10000));
+            mNet += merchSub - (merchSub * 0.08);
+          }
+        });
+
+        const rRoyalties = daySecondary.reduce((sum, t) => sum + Number(t.organizer_royalty || 0), 0);
 
         return {
           date: dateStr.split('-').reverse().slice(0, 2).join('/'),
-          revenue: tRev + mRev + rVol,
-          tickets: tRev,
-          merch: mRev,
-          resale: rVol
+          revenue: Math.round(tNet + mNet + rRoyalties),
+          tickets: Math.round(tNet),
+          merch: Math.round(mNet),
+          resale: Math.round(rRoyalties)
         };
       });
     };
@@ -677,9 +731,9 @@ const getEventById = async (req, res) => {
             value: tier._count.tickets
           })),
           revenue_mix: [
-            { name: 'Vé sơ cấp', value: primaryTicketRevenue },
-            { name: 'Sản phẩm', value: primaryMerchRevenue },
-            { name: 'Phí bản quyền Resale', value: resaleRoyalties }
+            { name: 'Vé sơ cấp', value: primaryTicketRevenue - primaryTicketPlatformFee },
+            { name: 'Sản phẩm', value: primaryMerchRevenue - primaryMerchPlatformFee },
+            { name: 'Hoa hồng bán lại', value: resaleRoyalties }
           ].filter(d => d.value > 0)
         }
       } 
@@ -731,6 +785,9 @@ const getTierTransactions = async (req, res) => {
     }
     
     // Let's use a simpler approach: get all orders of event, filter in JS or use complex OR
+
+
+    // 1. Fetch Primary Orders & Transfers (TICKET_PURCHASE & TICKET_TRANSFER)
     const [orders, marketplaceTx] = await Promise.all([
       prisma.order.findMany({
         where: {
@@ -757,7 +814,7 @@ const getTierTransactions = async (req, res) => {
             event_id: id,
             ticket_tier_id: (tier_id && tier_id !== 'all') ? tier_id : undefined
           },
-          status: status === 'all' ? undefined : (status === 'success' ? 'completed' : 'cancelled'),
+          status: status === 'all' ? undefined : (status === 'success' ? { in: ['paid', 'completed', 'success'] } : 'cancelled'),
           ...(search ? {
             OR: [
               { buyer: { full_name: { contains: search, mode: 'insensitive' } } },
@@ -772,25 +829,30 @@ const getTierTransactions = async (req, res) => {
               ticket_tier: { select: { tier_name: true } } 
             } 
           },
-          listing: { select: { listing_number: true } }
+          listing: { select: { listing_number: true } },
+          payments: {
+            where: { status: { in: ['paid', 'success', 'completed'] } },
+            take: 1
+          }
         },
         orderBy: { created_at: 'desc' }
       })
     ]);
 
-    // 2. Unify transactions
+    // 2. Map basic transactions
     let unifiedTransactions = [
       ...orders.map(o => ({
         id: o.id,
         order_number: o.order_number,
         type: o.order_type === 'TICKET_TRANSFER' ? 'transfer' : 'primary',
         customer: o.customer,
-        quantity: o.items.reduce((sum, item) => sum + item.quantity, 0) || 1, // Default 1 for transfers
-        total_amount: o.total_amount,
+        quantity: o.items.reduce((sum, item) => sum + item.quantity, 0) || 1,
+        total_amount: Number(o.total_amount),
         payment_method: o.payment_method,
         status: o.status,
         created_at: o.created_at,
-        tier_name: o.items[0]?.ticket_tier?.tier_name || 'N/A'
+        tier_name: o.items[0]?.ticket_tier?.tier_name || 'N/A',
+        ticket_id: o.metadata?.ticket_id // For transfer filtering
       })),
       ...marketplaceTx.map(m => ({
         id: m.id,
@@ -798,22 +860,56 @@ const getTierTransactions = async (req, res) => {
         type: 'resale',
         customer: m.buyer,
         quantity: 1,
-        total_amount: m.buyer_pay_amount,
-        payment_method: 'blockchain', // Market transactions are usually blockchain or handled via system
+        total_amount: Number(m.buyer_pay_amount),
+        payment_method: m.payments[0]?.method || 'vnpay',
         status: m.status,
         created_at: m.created_at,
         tier_name: m.ticket?.ticket_tier?.tier_name || 'N/A'
       }))
     ];
 
-    // Filter by tier_id if needed (since transfer order might not have been filtered perfectly)
+    // 3. Handle Transfer Tier Names & Filtering
+    const transferOrders = unifiedTransactions.filter(tx => tx.type === 'transfer' && tx.ticket_id);
+    if (transferOrders.length > 0) {
+      const ticketIds = transferOrders.map(tx => tx.ticket_id);
+      const tickets = await prisma.ticket.findMany({
+        where: { id: { in: ticketIds } },
+        include: { ticket_tier: { select: { tier_name: true, id: true } } }
+      });
+
+      const ticketMap = {};
+      tickets.forEach(t => { ticketMap[t.id] = t; });
+
+      unifiedTransactions = unifiedTransactions.map(tx => {
+        if (tx.type === 'transfer' && tx.ticket_id && ticketMap[tx.ticket_id]) {
+          return {
+            ...tx,
+            tier_name: ticketMap[tx.ticket_id].ticket_tier?.tier_name || 'N/A',
+            tier_id_internal: ticketMap[tx.ticket_id].ticket_tier?.id
+          };
+        }
+        return tx;
+      });
+    }
+
+    // 4. Final Tier Filtering in JS
     if (tier_id && tier_id !== 'all') {
-      // Logic for transfer orders using ticket_id in metadata
-      // But for simplicity, we assume primary orders were already filtered by Prisma
-      // and Marketplace too. We just need to check if we missed anything.
+      unifiedTransactions = unifiedTransactions.filter(tx => {
+        if (tx.type === 'primary') {
+          const originalOrder = orders.find(o => o.id === tx.id);
+          return originalOrder?.items.some(i => i.ticket_tier_id === tier_id);
+        } else if (tx.type === 'resale') {
+          const originalTx = marketplaceTx.find(m => m.id === tx.id);
+          return originalTx?.ticket?.ticket_tier_id === tier_id;
+        } else if (tx.type === 'transfer') {
+          return tx.tier_id_internal === tier_id;
+        }
+        return true;
+      });
     }
 
     // Sort by created_at desc
+
     unifiedTransactions.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
     // Pagination in JS
@@ -856,7 +952,7 @@ const getEventSecondaryActivity = async (req, res) => {
       results.marketplace = await prisma.marketplaceTransaction.findMany({
         where: {
           ticket: ticketWhere,
-          status: 'completed'
+          status: { in: ['paid', 'completed', 'success'] }
         },
         include: {
           buyer: { select: { full_name: true, email: true, avatar_url: true } },
@@ -876,7 +972,7 @@ const getEventSecondaryActivity = async (req, res) => {
         where: {
           event_id: id,
           ticket: tier_id && tier_id !== 'all' ? { ticket_tier_id: tier_id } : undefined,
-          status: 'completed'
+          status: { in: ['completed', 'success'] }
         },
         include: {
           sender: { select: { full_name: true, email: true, avatar_url: true } },
@@ -903,6 +999,7 @@ module.exports = {
   updateEvent,
   requestCancelOrReschedule,
   updateResalePolicy,
+  updateTransferPolicy,
   getAttendees,
   getAllOrganizerAttendees,
   getOrganizerEvents,

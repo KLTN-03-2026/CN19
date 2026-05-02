@@ -94,15 +94,15 @@ const MyEvents = () => {
 
     const getStatusInfo = (status, event) => {
         const isEnded = status === 'ended' || (event && new Date(event.end_date || event.event_date) < new Date());
-        if (isEnded) return { label: 'Đã kết thúc', color: 'bg-red-500/10 text-red-500', icon: Calendar };
+        if (isEnded) return { label: 'Đã kết thúc', color: 'bg-red-600 text-white', icon: Calendar };
 
         switch (status) {
-            case 'draft': return { label: 'Bản nháp', color: 'bg-gray-500/10 text-gray-500', icon: Clock };
-            case 'pending': return { label: 'Chờ duyệt', color: 'bg-yellow-500/10 text-yellow-500', icon: AlertCircle };
-            case 'active': return { label: 'Đang bán', color: 'bg-green-500/10 text-green-500', icon: CheckCircle2 };
-            case 'pending_cancel': return { label: 'Chờ hủy', color: 'bg-red-500/10 text-red-600', icon: AlertCircle };
-            case 'pending_reschedule': return { label: 'Chờ dời lịch', color: 'bg-blue-500/10 text-blue-600', icon: Calendar };
-            default: return { label: status, color: 'bg-gray-500/10 text-gray-500', icon: Clock };
+            case 'draft': return { label: 'Bản nháp', color: 'bg-gray-700 text-white', icon: Clock };
+            case 'pending': return { label: 'Chờ duyệt', color: 'bg-amber-500 text-black', icon: AlertCircle };
+            case 'active': return { label: 'Đang bán', color: 'bg-green-600 text-white', icon: CheckCircle2 };
+            case 'pending_cancel': return { label: 'Chờ hủy', color: 'bg-red-600 text-white', icon: AlertCircle };
+            case 'pending_reschedule': return { label: 'Chờ dời lịch', color: 'bg-blue-600 text-white', icon: Calendar };
+            default: return { label: status, color: 'bg-gray-600 text-white', icon: Clock };
         }
     };
 
@@ -130,10 +130,10 @@ const MyEvents = () => {
             {/* Header Section - More Compact & Professional */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
                 <div>
-                    <h1 className="text-lg font-black text-gray-900 dark:text-white tracking-tight uppercase border-l-4 border-blue-600 pl-4 leading-none">
+                    <h1 className="text-xl font-black text-gray-900 dark:text-white tracking-tight uppercase leading-none">
                         Quản lý sự kiện
                     </h1>
-                    <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-2 font-medium italic opacity-80">
+                    <p className="text-[13px] text-gray-700 dark:text-gray-400 mt-1 font-medium opacity-80">
                         Theo dõi tiến độ và quản lý các show diễn của bạn.
                     </p>
                 </div>
@@ -147,23 +147,23 @@ const MyEvents = () => {
             </div>
 
             {/* Controls Section - Sleeker & More Compact */}
-            <div className="py-2 mb-4">
-                <div className="bg-white dark:bg-[#111114] p-3 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm space-y-3">
-                    <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-                        <div className="md:col-span-12 lg:col-span-5 relative group">
+            <div className="py-2 mb-1">
+                <div className="bg-white dark:bg-[#111114] p-3 rounded-2xl border border-gray-200 dark:border-white/5 shadow-sm space-y-3">
+                    <div className="grid grid-cols-2 md:grid-cols-12 gap-3">
+                        <div className="col-span-2 md:col-span-5 lg:col-span-5 relative group">
                             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-blue-600 transition-colors" />
                             <input 
                                 type="text"
                                 placeholder="Tìm kiếm sự kiện..."
-                                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-white/5 border border-transparent focus:bg-white dark:focus:bg-[#111114] border-gray-100 dark:border-white/5 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600/10 focus:border-blue-600/50 transition-all font-bold text-xs"
+                                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/5 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600/10 focus:border-blue-600/50 transition-all font-bold text-xs"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                             />
                         </div>
                         
-                        <div className="md:col-span-4 lg:col-span-3">
+                        <div className="col-span-1 md:col-span-3 lg:col-span-3">
                             <select 
-                                className="w-full px-3 py-2.5 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600/10 transition-all font-bold text-xs dark:text-white appearance-none cursor-pointer"
+                                className="w-full px-3 py-2.5 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/5 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600/10 transition-all font-bold text-xs dark:text-white appearance-none cursor-pointer"
                                 value={filterCategory}
                                 onChange={(e) => setFilterCategory(e.target.value)}
                             >
@@ -174,7 +174,7 @@ const MyEvents = () => {
                             </select>
                         </div>
 
-                        <div className="md:col-span-4 lg:col-span-3 relative flex items-center bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-xl px-3 py-2.5 focus-within:ring-2 focus-within:ring-blue-600/10 transition-all">
+                        <div className="col-span-1 md:col-span-3 lg:col-span-3 relative flex items-center bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/5 rounded-xl px-3 py-2.5 focus-within:ring-2 focus-within:ring-blue-600/10 focus-within:border-blue-600/50 transition-all">
                             <Calendar className="w-3.5 h-3.5 text-gray-400 mr-2 shrink-0" />
                             <input 
                                 type="date"
@@ -184,11 +184,11 @@ const MyEvents = () => {
                             />
                         </div>
 
-                        <div className="md:col-span-4 lg:col-span-1 flex items-center justify-end">
+                        <div className="col-span-2 md:col-span-1 lg:col-span-1 flex items-center justify-end">
                             {(searchQuery || filterStatus !== 'all' || filterCategory !== 'all' || filterDate !== '') && (
                                 <button 
                                     onClick={handleClearFilters}
-                                    className="p-2.5 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-xl transition-all border border-red-500/10 group"
+                                    className="w-full md:w-auto flex justify-center p-2.5 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-xl transition-all border border-red-500/10 group"
                                     title="Xóa bộ lọc"
                                 >
                                     <Trash2 className="w-4 h-4 group-hover:rotate-12 transition-transform" />
@@ -198,13 +198,13 @@ const MyEvents = () => {
                     </div>
 
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
-                        <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-1 sm:pb-0">
+                        <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] pb-1 sm:pb-0">
                             <span className="text-[9px] font-black uppercase text-gray-400 mr-1 shrink-0">Trạng thái:</span>
                             {['all', 'draft', 'pending', 'active', 'ended'].map((s) => (
                                 <button
                                     key={s}
                                     onClick={() => setFilterStatus(s)}
-                                    className={`px-4 py-1.5 rounded-lg text-[9px] font-black tracking-widest transition-all whitespace-nowrap border ${
+                                    className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-[9px] font-black transition-all whitespace-nowrap border ${
                                         filterStatus === s 
                                         ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-600/20' 
                                         : 'bg-gray-50 dark:bg-white/5 text-gray-500 hover:text-blue-600 border-transparent hover:border-blue-600/20'
@@ -215,7 +215,7 @@ const MyEvents = () => {
                             ))}
                         </div>
 
-                        <div className="flex items-center bg-gray-50 dark:bg-white/5 p-1 rounded-xl border border-gray-100 dark:border-white/5 self-end">
+                        <div className="flex items-center bg-gray-50 dark:bg-white/5 p-1 rounded-xl border border-gray-200 dark:border-white/5 self-end">
                             <button 
                                 onClick={() => setViewMode('grid')}
                                 className={`p-1.5 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-white dark:bg-blue-600 text-blue-600 dark:text-white shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
@@ -234,58 +234,57 @@ const MyEvents = () => {
             </div>
 
             {/* Content Section - More Densed & Professional */}
-            <div className="bg-white/50 dark:bg-white/5 -mx-4 px-4 py-4 rounded-t-3xl border-t border-gray-100 dark:border-white/5 min-h-[500px]">
+            <div className="bg-white/50 dark:bg-white/5 -mx-4 px-4 py-4 rounded-t-3xl border-t border-gray-200 dark:border-white/5 min-h-[500px]">
             {isLoading ? (
                 <div className="flex flex-col items-center justify-center py-20 space-y-4">
                     <Loader2 className="w-10 h-10 text-blue-600 animate-spin opacity-50" />
-                    <p className="text-gray-400 font-black uppercase tracking-widest text-[10px]">Đang tải dữ liệu...</p>
+                    <p className="text-gray-400 font-black uppercase text-[10px]">Đang tải dữ liệu...</p>
                 </div>
             ) : filteredEvents.length > 0 ? (
                 viewMode === 'grid' ? (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                         {filteredEvents.map((event) => {
                             const statusInfo = getStatusInfo(event.status, event);
-                            const totalTickets = event.ticket_tiers?.reduce((sum, t) => sum + t.quantity_total, 0) || 0;
-                            const availableTickets = event.ticket_tiers?.reduce((sum, t) => sum + t.quantity_available, 0) || 0;
-                            const soldTickets = totalTickets - availableTickets;
-                            const progress = totalTickets > 0 ? Math.round((soldTickets / totalTickets) * 100) : 0;
+                            const totalTickets = event.ticket_tiers?.reduce((sum, t) => sum + (t.quantity_total || 0), 0) || 0;
+                            const soldTickets = event.total_sold || 0;
+                            const progress = totalTickets > 0 ? Math.min(100, Math.round((soldTickets / totalTickets) * 100)) : 0;
 
                             return (
-                                <div key={event.id} className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 overflow-hidden group hover:shadow-xl hover:shadow-blue-600/5 transition-all duration-300 relative flex flex-col h-full border-b-2 hover:border-b-blue-600">
+                                <div key={event.id} className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-200 dark:border-white/5 overflow-hidden group hover:shadow-xl hover:shadow-blue-600/5 transition-all duration-300 relative flex flex-col h-full border-b-2 hover:border-b-blue-600">
                                     <div className="aspect-[16/10] relative overflow-hidden bg-gray-100 dark:bg-white/5 shrink-0">
                                         {event.image_url ? (
-                                            <img src={event.image_url} alt={event.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                            <img src={event.image_url} alt={event.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 z-0 relative" />
                                         ) : (
-                                            <div className="w-full h-full flex items-center justify-center text-gray-300"><Calendar className="w-8 h-8 opacity-20" /></div>
+                                            <div className="w-full h-full flex items-center justify-center text-gray-300 z-0 relative"><Calendar className="w-8 h-8 opacity-20" /></div>
                                         )}
-                                        <div className="absolute top-2 right-2">
-                                            <span className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-wider backdrop-blur-md shadow-lg ${statusInfo.color} border border-white/10`}>
+                                        <div className="absolute top-2 right-2 z-10">
+                                            <span className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg text-[7px] sm:text-[8px] font-black uppercase shadow-2xl ${statusInfo.color} border border-white/20 ring-1 ring-black/5`}>
                                                 <statusInfo.icon className="w-2.5 h-2.5" />
-                                                {statusInfo.label}
+                                                <span className="hidden sm:inline">{statusInfo.label}</span>
                                             </span>
                                         </div>
                                     </div>
 
-                                    <div className="p-4 flex flex-col flex-1">
-                                        <div className="flex-1 space-y-2.5">
+                                    <div className="p-3 sm:p-4 flex flex-col flex-1">
+                                        <div className="flex-1 space-y-2 sm:space-y-2.5">
                                             <div className="flex items-center justify-between gap-1">
-                                                <span className="text-[9px] font-black text-blue-600 uppercase tracking-widest truncate">{event.category?.name}</span>
-                                                <div className="flex items-center text-[9px] font-bold text-gray-400">
+                                                <span className="text-[8px] sm:text-[9px] font-black text-blue-600 uppercase truncate">{event.category?.name}</span>
+                                                <div className="flex items-center text-[8px] sm:text-[9px] font-bold text-gray-600 dark:text-gray-400">
                                                     <Users className="w-2.5 h-2.5 mr-1 text-blue-600" />
                                                     {soldTickets}
                                                 </div>
                                             </div>
-                                            <h3 className="text-sm font-black text-gray-900 dark:text-white line-clamp-2 uppercase leading-tight group-hover:text-blue-600 transition-colors min-h-[2.5rem]">{event.title}</h3>
+                                            <h3 className="text-xs sm:text-sm font-black text-gray-900 dark:text-white line-clamp-2 uppercase leading-tight group-hover:text-blue-600 transition-colors min-h-[2rem] sm:min-h-[2.5rem]">{event.title}</h3>
                                             
-                                            <div className="space-y-1.5 text-[10px] text-gray-500 dark:text-gray-400 font-bold">
-                                                <div className="flex items-center"><Calendar className="w-3 h-3 mr-2 text-blue-600 opacity-70" /> {new Date(event.event_date).toLocaleDateString('vi-VN')}</div>
-                                                <div className="flex items-center line-clamp-1"><MapPin className="w-3 h-3 mr-2 text-blue-600 opacity-70" /> {event.location_address}</div>
+                                            <div className="space-y-1 sm:space-y-1.5 text-[9px] sm:text-[10px] text-gray-600 dark:text-gray-400 font-bold">
+                                                <div className="flex items-center"><Calendar className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-1.5 sm:mr-2 text-blue-600 opacity-70 shrink-0" /> <span className="truncate">{new Date(event.event_date).toLocaleDateString('vi-VN')}</span></div>
+                                                <div className="flex items-center"><MapPin className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-1.5 sm:mr-2 text-blue-600 opacity-70 shrink-0" /> <span className="truncate">{event.location_address}</span></div>
                                             </div>
 
                                             {/* Progress Bar - Slim & Elegant */}
                                             <div className="pt-2 space-y-1.5">
-                                                <div className="flex items-center justify-between text-[9px] font-black uppercase tracking-tighter">
-                                                    <span className="text-gray-400">Vé đã bán</span>
+                                                <div className="flex items-center justify-between text-[9px] font-black uppercase">
+                                                    <span className="text-gray-600 dark:text-gray-500">Vé đã bán</span>
                                                     <span className="text-blue-600">{progress}%</span>
                                                 </div>
                                                 <div className="h-1 w-full bg-gray-100 dark:bg-white/5 rounded-full overflow-hidden">
@@ -297,19 +296,21 @@ const MyEvents = () => {
                                             </div>
                                         </div>
 
-                                        <div className="pt-4 mt-auto flex items-center justify-between gap-2 border-t border-gray-100 dark:border-white/5">
+                                        <div className="pt-4 mt-auto flex items-center justify-between gap-2 border-t border-gray-200 dark:border-white/5">
                                             <button 
                                                 onClick={() => navigate(`/organizer/events/${event.id}`)} 
-                                                className="flex-1 py-2 bg-gray-50 dark:bg-white/5 rounded-lg text-[9px] font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all flex items-center justify-center gap-1 group/btn border border-transparent hover:border-blue-600/30"
+                                                className="flex-1 py-2 bg-blue-50 dark:bg-white/5 rounded-lg text-[9px] font-black uppercase text-blue-600 dark:text-blue-400 hover:bg-blue-600 hover:text-white transition-all flex items-center justify-center gap-1 group/btn border border-blue-100 dark:border-white/5"
                                             >
                                                 Quản lý <ChevronRight className="w-2.5 h-2.5 group-hover/btn:translate-x-0.5 transition-transform" />
                                             </button>
                                             
                                             <div className="flex items-center gap-1.5">
-                                                {(event.status === 'draft' || event.status === 'pending') && (
+                                                {(event.status === 'draft' || event.status === 'pending' || event.status === 'active') && (
                                                     <>
                                                         <button onClick={() => navigate(`/organizer/events/${event.id}/edit`)} className="p-2 bg-blue-500/10 text-blue-500 hover:bg-blue-500 hover:text-white rounded-lg transition-all" title="Sửa"><Edit className="w-3.5 h-3.5" /></button>
-                                                        <button onClick={() => handleDelete(event.id)} className="p-2 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-lg transition-all" title="Xóa"><Trash2 className="w-3.5 h-3.5" /></button>
+                                                        {(event.status === 'draft' || event.status === 'pending') && (
+                                                            <button onClick={() => handleDelete(event.id)} className="p-2 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-lg transition-all" title="Xóa"><Trash2 className="w-3.5 h-3.5" /></button>
+                                                        )}
                                                     </>
                                                 )}
                                                 {event.status === 'active' && (
@@ -326,13 +327,12 @@ const MyEvents = () => {
                     <div className="space-y-2">
                         {filteredEvents.map((event) => {
                             const statusInfo = getStatusInfo(event.status, event);
-                            const totalTickets = event.ticket_tiers?.reduce((sum, t) => sum + t.quantity_total, 0) || 0;
-                            const availableTickets = event.ticket_tiers?.reduce((sum, t) => sum + t.quantity_available, 0) || 0;
-                            const soldTickets = totalTickets - availableTickets;
-                            const progress = totalTickets > 0 ? Math.round((soldTickets / totalTickets) * 100) : 0;
+                            const totalTickets = event.ticket_tiers?.reduce((sum, t) => sum + (t.quantity_total || 0), 0) || 0;
+                            const soldTickets = event.total_sold || 0;
+                            const progress = totalTickets > 0 ? Math.min(100, Math.round((soldTickets / totalTickets) * 100)) : 0;
 
                             return (
-                                <div key={event.id} className="bg-white dark:bg-[#111114] rounded-xl border border-gray-100 dark:border-white/5 p-3 flex items-center gap-4 group hover:border-blue-600/30 transition-all duration-300">
+                                <div key={event.id} className="bg-white dark:bg-[#111114] rounded-xl border border-gray-200 dark:border-white/5 p-3 flex items-center gap-4 group hover:border-blue-600/30 transition-all duration-300">
                                     {/* Small Thumbnail */}
                                     <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 dark:bg-white/5 shrink-0">
                                         {event.image_url ? (
@@ -345,8 +345,8 @@ const MyEvents = () => {
                                     {/* Title & Category */}
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2 mb-0.5">
-                                            <span className="text-[8px] font-black text-blue-600 uppercase tracking-widest truncate">{event.category?.name}</span>
-                                            <span className={`px-1.5 py-0.5 rounded-md text-[7px] font-black uppercase tracking-wider ${statusInfo.color} border border-white/5`}>
+                                            <span className="text-[8px] font-black text-blue-600 uppercase truncate">{event.category?.name}</span>
+                                            <span className={`px-2 py-0.5 rounded-md text-[7px] font-black uppercase ${statusInfo.color} shadow-sm`}>
                                                 {statusInfo.label}
                                             </span>
                                         </div>
@@ -354,7 +354,7 @@ const MyEvents = () => {
                                     </div>
 
                                     {/* Date & Location - Hidden on small screens for density */}
-                                    <div className="hidden lg:flex items-center gap-6 shrink-0 text-[10px] font-bold text-gray-400">
+                                    <div className="hidden lg:flex items-center gap-6 shrink-0 text-[10px] font-bold text-gray-600 dark:text-gray-400">
                                         <div className="flex items-center w-32"><Calendar className="w-3 h-3 mr-2 text-blue-600 opacity-60" /> {new Date(event.event_date).toLocaleDateString('vi-VN')}</div>
                                         <div className="flex items-center w-40 truncate"><MapPin className="w-3 h-3 mr-2 text-blue-600 opacity-60" /> {event.location_address}</div>
                                     </div>
@@ -362,7 +362,7 @@ const MyEvents = () => {
                                     {/* Progress - List View */}
                                     <div className="hidden md:block w-48 shrink-0 px-4">
                                         <div className="flex items-center justify-between text-[9px] font-black uppercase mb-1.5">
-                                            <span className="text-gray-400">P: {soldTickets}/{totalTickets}</span>
+                                            <span className="text-gray-600 dark:text-gray-500">P: {soldTickets}/{totalTickets}</span>
                                             <span className="text-blue-600">{progress}%</span>
                                         </div>
                                         <div className="h-1 w-full bg-gray-100 dark:bg-white/5 rounded-full overflow-hidden">
@@ -374,10 +374,12 @@ const MyEvents = () => {
                                     <div className="flex items-center gap-1 shrink-0 ml-auto">
                                         <button onClick={() => navigate(`/organizer/events/${event.id}`)} className="p-2 bg-gray-50 dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:bg-blue-600 hover:text-white rounded-lg transition-all border border-transparent hover:border-blue-600/30" title="Chi tiết"><ExternalLink className="w-3.5 h-3.5" /></button>
                                         
-                                        {(event.status === 'draft' || event.status === 'pending') && (
+                                        {(event.status === 'draft' || event.status === 'pending' || event.status === 'active') && (
                                             <>
                                                 <button onClick={() => navigate(`/organizer/events/${event.id}/edit`)} className="p-2 bg-blue-500/10 text-blue-500 hover:bg-blue-500 hover:text-white rounded-lg transition-all" title="Sửa"><Edit className="w-3.5 h-3.5" /></button>
-                                                <button onClick={() => handleDelete(event.id)} className="p-2 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-lg transition-all" title="Xóa"><Trash2 className="w-3.5 h-3.5" /></button>
+                                                {(event.status === 'draft' || event.status === 'pending') && (
+                                                    <button onClick={() => handleDelete(event.id)} className="p-2 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-lg transition-all" title="Xóa"><Trash2 className="w-3.5 h-3.5" /></button>
+                                                )}
                                             </>
                                         )}
                                         {event.status === 'active' && (

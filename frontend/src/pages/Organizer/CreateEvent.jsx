@@ -299,7 +299,7 @@ const CreateEvent = () => {
     ];
 
     return (
-      <div className="flex items-center justify-between mb-12 relative">
+      <div className="flex items-center justify-between mb-16 relative px-2">
         <div className="absolute top-1/2 left-0 w-full h-0.5 bg-gray-100 dark:bg-white/5 -translate-y-1/2 z-0"></div>
         {steps.map((s, i) => (
           <div key={s.id} className="relative z-10 flex flex-col items-center group">
@@ -308,11 +308,26 @@ const CreateEvent = () => {
             }`}>
               <s.icon className="w-5 h-5" />
             </div>
-            <span className={`absolute -bottom-8 whitespace-nowrap text-[10px] font-bold uppercase  transition-colors ${
+            {/* Desktop Label */}
+            <span className={`absolute -bottom-10 whitespace-nowrap text-[10px] font-bold uppercase transition-colors hidden md:block ${
               step >= s.id ? 'text-blue-600' : 'text-gray-600 dark:text-gray-500'
             }`}>
               {s.name}
             </span>
+
+            {/* Mobile Label (Active only) */}
+            <div className={`md:hidden absolute -bottom-12 w-20 text-center flex flex-col items-center transition-all duration-300 ${
+                step === s.id ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2 pointer-events-none'
+            }`}>
+                <span className="text-[8px] font-black leading-[1.1] text-blue-600 uppercase">
+                    {s.name.split(' & ').map((part, idx, arr) => (
+                        <span key={idx}>
+                            {part}
+                            {idx < arr.length - 1 && <><br />& </>}
+                        </span>
+                    ))}
+                </span>
+            </div>
           </div>
         ))}
       </div>
@@ -324,14 +339,14 @@ const CreateEvent = () => {
       
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white  uppercase">TẠO SỰ KIỆN MỚI</h1>
+          <h1 className="text-xl font-black text-gray-900 dark:text-white  uppercase">TẠO SỰ KIỆN MỚI</h1>
           <p className="text-gray-600 dark:text-gray-400 font-medium mt-1">Hoàn thành các bước dưới đây để gửi yêu cầu phê duyệt sự kiện.</p>
         </div>
       </div>
 
       {renderStepHeader()}
 
-      <form onSubmit={handleSubmit(onSubmit)} className="bg-white dark:bg-[#111114] rounded-3xl border border-gray-200 dark:border-white/5 shadow-2xl p-8 lg:p-12 relative overflow-hidden transition-colors">
+      <form onSubmit={handleSubmit(onSubmit)} className="bg-white dark:bg-[#111114] rounded-3xl border border-gray-200 dark:border-white/5 shadow-2xl p-5 md:p-12 relative overflow-hidden transition-colors">
         {/* Hidden Registered Fields for Validation */}
         <input type="hidden" {...register('image_url', { required: true })} />
         <input type="hidden" {...register('location_address', { required: true })} />
@@ -548,7 +563,17 @@ const CreateEvent = () => {
                     </label>
                     <input 
                         type="date"
-                        {...register('event_date', { required: 'Vui lòng chọn ngày diễn ra' })}
+                        min={new Date().toISOString().split('T')[0]}
+                        {...register('event_date', { 
+                            required: 'Vui lòng chọn ngày diễn ra',
+                            validate: (value) => {
+                                const selected = new Date(value);
+                                const today = new Date();
+                                today.setHours(0,0,0,0);
+                                if (selected < today) return 'Ngày diễn ra không được ở quá khứ';
+                                return true;
+                            }
+                        })}
                         className={`w-full bg-gray-50 dark:bg-white/5 border ${errors.event_date ? 'border-red-500' : 'border-gray-200 dark:border-white/20'} rounded-xl px-4 py-3 text-sm font-bold placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:outline-none focus:border-blue-600 transition-all text-gray-900 dark:text-white`}
                     />
                     {errors.event_date && <p className="text-[10px] text-red-500 font-bold italic mt-1">{errors.event_date.message}</p>}
@@ -560,9 +585,20 @@ const CreateEvent = () => {
                     </label>
                     <input 
                         type="time"
-                        {...register('event_time')}
+                        {...register('event_time', {
+                            validate: (value) => {
+                                if (!value) return true;
+                                const eventDate = watch('event_date');
+                                if (!eventDate) return true;
+                                
+                                const combined = new Date(`${eventDate}T${value}`);
+                                if (combined <= new Date()) return 'Thời gian bắt đầu phải ở tương lai';
+                                return true;
+                            }
+                        })}
                         className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm font-bold placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:outline-none focus:border-blue-600 transition-all text-gray-900 dark:text-white"
                     />
+                    {errors.event_time && <p className="text-[10px] text-red-500 font-bold italic mt-1">{errors.event_time.message}</p>}
                 </div>
              </div>
 
@@ -574,16 +610,15 @@ const CreateEvent = () => {
                     </label>
                     <input 
                         type="date"
+                        min={watch('event_date') || new Date().toISOString().split('T')[0]}
                         {...register('end_date', { 
                             required: 'Vui lòng chọn ngày kết thúc',
                             validate: (value) => {
-                                const event_date = watch('event_date');
-                                if (!event_date) return true;
-                                const startObj = new Date(event_date);
+                                const startDate = watch('event_date');
+                                if (!startDate) return true;
+                                const startObj = new Date(startDate);
                                 const endObj = new Date(value);
-                                startObj.setHours(0,0,0,0);
-                                endObj.setHours(0,0,0,0);
-                                if (startObj > endObj) return 'Không được trước ngày diễn ra sự kiện';
+                                if (startObj > endObj) return 'Ngày kết thúc không được trước ngày diễn ra';
                                 return true;
                             }
                         })}
@@ -870,43 +905,54 @@ const CreateEvent = () => {
         )}
 
         {/* Footer Navigation */}
-        <div className="mt-12 pt-8 border-t border-gray-200 dark:border-white/5 flex items-center justify-between">
-          {step > 1 ? (
-            <button 
-                type="button"
-                onClick={(e) => prevStep(e)}
-                className="flex items-center text-xs font-bold uppercase  text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all border border-transparent hover:border-gray-200 dark:hover:border-white/10 px-6 py-3 rounded-xl"
-            >
-              <ChevronLeft className="w-4 h-4 mr-2" />
-              Quay lại
-            </button>
-          ) : <div></div>}
-
+        <div className="mt-12 pt-8 border-t border-gray-200 dark:border-white/5 flex flex-col md:flex-row items-center justify-between gap-4">
           {step < 4 ? (
-            <button 
-                type="button"
-                onClick={(e) => nextStep(e)}
-                className="flex items-center bg-blue-600 text-white px-8 py-3.5 rounded-xl font-bold text-xs uppercase  shadow-[0_0_20px_rgba(37,99,235,0.4)] hover:brightness-110 transition-all active:scale-95 group"
-            >
-              Tiếp theo
-              <ChevronRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-            </button>
-          ) : (
-            <div className="flex items-center gap-4">
+            <>
+              {step > 1 ? (
+                <button 
+                    type="button"
+                    onClick={(e) => prevStep(e)}
+                    className="w-full md:w-auto flex items-center justify-center text-xs font-bold uppercase text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all border border-gray-200 dark:border-white/10 md:border-transparent px-6 py-4 md:py-3 rounded-xl"
+                >
+                  <ChevronLeft className="w-4 h-4 mr-2" />
+                  Quay lại
+                </button>
+              ) : <div className="hidden md:block"></div>}
+
               <button 
-                  type="submit"
-                  disabled={isSubmitting}
-                  onClick={() => setTargetStatus('draft')}
-                  className="flex items-center bg-gray-100 dark:bg-white/5 text-gray-900 dark:text-white px-8 py-4 rounded-xl font-bold text-sm uppercase  hover:bg-gray-200 dark:hover:bg-white/10 transition-all active:scale-95 disabled:opacity-50 border border-gray-200 dark:border-white/20"
+                  type="button"
+                  onClick={(e) => nextStep(e)}
+                  className="w-full md:w-auto flex items-center justify-center bg-blue-600 text-white px-10 py-4 rounded-xl font-bold text-xs uppercase shadow-[0_0_20px_rgba(37,99,235,0.4)] hover:brightness-110 transition-all active:scale-95 group"
               >
-                {isSubmitting && targetStatus === 'draft' ? 'Đang lưu...' : 'Lưu bản nháp'}
+                Tiếp theo
+                <ChevronRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
               </button>
+            </>
+          ) : (
+            <div className="flex flex-col-reverse md:flex-row items-center gap-4 w-full justify-between">
+              <div className="flex items-center gap-4 w-full md:w-auto">
+                <button 
+                    type="button"
+                    onClick={(e) => prevStep(e)}
+                    className="flex-1 md:flex-none flex items-center justify-center text-xs font-bold uppercase text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-white/10 px-6 py-4 rounded-xl"
+                >
+                  <ChevronLeft className="w-4 h-4 mr-2" /> Quay lại
+                </button>
+                <button 
+                    type="submit"
+                    disabled={isSubmitting}
+                    onClick={() => setTargetStatus('draft')}
+                    className="flex-1 md:flex-none flex items-center justify-center bg-gray-100 dark:bg-white/5 text-gray-900 dark:text-white px-6 py-4 rounded-xl font-bold text-xs uppercase hover:bg-gray-200 dark:hover:bg-white/10 transition-all active:scale-95 disabled:opacity-50 border border-gray-200 dark:border-white/10"
+                >
+                  {isSubmitting && targetStatus === 'draft' ? 'Đang lưu...' : 'Lưu bản nháp'}
+                </button>
+              </div>
               
               <button 
                   type="submit"
                   disabled={isSubmitting}
                   onClick={() => setTargetStatus('pending')}
-                  className={`flex items-center bg-blue-600 text-white px-10 py-4 rounded-xl font-bold text-sm uppercase  shadow-[0_0_30px_rgba(37,99,235,0.4)] hover:shadow-blue-600/60 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed`}
+                  className="w-full md:w-auto flex items-center justify-center bg-blue-600 text-white px-10 py-4 rounded-xl font-bold text-xs uppercase shadow-[0_0_30px_rgba(37,99,235,0.4)] hover:shadow-blue-600/60 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSubmitting && targetStatus === 'pending' ? 'Đang gửi...' : 'Gửi yêu cầu phê duyệt'}
                 {!isSubmitting && <CheckCircle2 className="w-5 h-5 ml-2" />}

@@ -17,6 +17,9 @@ router.post('/:id/cancel-request', controller.requestCancelOrReschedule);
 // [PUT] /api/organizer/events/:id/resale-policy
 router.put('/:id/resale-policy', controller.updateResalePolicy);
 
+// [PUT] /api/organizer/events/:id/transfer-policy
+router.put('/:id/transfer-policy', controller.updateTransferPolicy);
+
 // [GET] /api/organizer/events/all-attendees (Tất cả người tham gia của BTC)
 router.get('/all-attendees', controller.getAllOrganizerAttendees);
 
