@@ -1,6 +1,19 @@
 import api from './api';
 
 export const organizerService = {
+  // Lấy thống kê dashboard
+  getDashboardStats: async (days = 7) => {
+    const res = await api.get(`/organizer/stats?days=${days}`);
+    return res.data;
+  },
+
+  // Lấy báo cáo chi tiết
+  getReports: async (eventId = null) => {
+    const url = eventId ? `/organizer/stats/reports?eventId=${eventId}` : '/organizer/stats/reports';
+    const res = await api.get(url);
+    return res.data;
+  },
+
   // Lấy danh sách danh mục (dùng cho dropdown)
   getCategories: async () => {
     const res = await api.get('/categories');
@@ -40,6 +53,18 @@ export const organizerService = {
   // Xóa sự kiện
   deleteEvent: async (id) => {
     const res = await api.delete(`/organizer/events/${id}`);
+    return res.data;
+  },
+
+  // Cập nhật chính sách bán lại
+  updateResalePolicy: async (id, data) => {
+    const res = await api.put(`/organizer/events/${id}/resale-policy`, data);
+    return res.data;
+  },
+
+  // Cập nhật chính sách chuyển nhượng
+  updateTransferPolicy: async (id, data) => {
+    const res = await api.put(`/organizer/events/${id}/transfer-policy`, data);
     return res.data;
   },
 

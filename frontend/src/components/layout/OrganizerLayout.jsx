@@ -20,7 +20,9 @@ import {
   Users,
   Package,
   FileText,
-  ClipboardList
+  ClipboardList,
+  Tag,
+  BarChart3
 } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import toast from 'react-hot-toast';
@@ -77,6 +79,7 @@ const OrganizerLayout = () => {
     { path: '/organizer/create-event', icon: PlusCircle, label: 'Tạo sự kiện' },
     { path: '/organizer/tickets', icon: Ticket, label: 'Quản lý vé' },
     { path: '/organizer/orders', icon: ClipboardList, label: 'Quản lý đơn hàng' },
+    { path: '/organizer/marketplace', icon: Tag, label: 'Quản lý Marketplace' },
     { path: '/organizer/revenue', icon: Wallet, label: 'Doanh thu & Rút tiền' },
     { path: '/organizer/settlements', icon: ClipboardList, label: 'Quyết toán sự kiện' },
 
@@ -84,6 +87,7 @@ const OrganizerLayout = () => {
     { path: '/organizer/participants', icon: Users, label: 'Danh sách tham gia' },
     { path: '/organizer/products', icon: Package, label: 'Quản lý sản phẩm' },
     { path: '/organizer/blog', icon: FileText, label: 'Blog' },
+    { path: '/organizer/reports', icon: BarChart3, label: 'Thống kê & Báo cáo' },
   ];
 
   return (
@@ -104,7 +108,7 @@ const OrganizerLayout = () => {
           isSidebarOpen ? 'translate-x-0 w-64' : '-translate-x-full lg:translate-x-0 w-64 lg:w-20'
         } bg-gray-50 dark:bg-[#111114] border-r border-gray-200 dark:border-white/5 transition-all duration-300 flex flex-col z-[50] fixed h-full lg:sticky lg:top-0 lg:h-screen`}
       >
-        <div className="p-6 flex items-center justify-between">
+        <div className="px-6 py-3 flex items-center justify-between">
           <div className={`flex items-center space-x-3 ${!isSidebarOpen && 'hidden'}`}>
             <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
               <UserCircle className="w-5 h-5 text-white" />

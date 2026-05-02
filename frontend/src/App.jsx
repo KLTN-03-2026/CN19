@@ -56,6 +56,9 @@ import Revenue from './pages/Organizer/Revenue';
 import OrderManagement from './pages/Organizer/OrderManagement';
 import OrderDetail from './pages/Organizer/OrderDetail';
 import OrganizerSettlement from './pages/Organizer/OrganizerSettlement';
+import MarketplaceManagement from './pages/Organizer/MarketplaceManagement';
+import MarketplaceDetail from './pages/Organizer/MarketplaceDetail';
+import Reports from './pages/Organizer/Reports';
 
 // Admin Pages
 import AdminLayout from './components/layout/AdminLayout';
@@ -258,9 +261,11 @@ const router = createBrowserRouter([
       { path: 'tickets', element: <TicketManagement /> },
       { path: 'settlements', element: <OrganizerSettlement /> },
       { path: 'revenue', element: <Revenue /> },
-      { path: 'orders', element: <OrderManagement /> },
-      { path: 'orders/:id', element: <OrderDetail /> },
-      { path: 'staff', element: <StaffManagement /> },
+      {path: 'orders', element: <OrderManagement /> },
+      {path: 'orders/:id', element: <OrderDetail /> },
+      {path: 'marketplace', element: <MarketplaceManagement /> },
+      {path: 'marketplace/:type/:id', element: <MarketplaceDetail /> },
+      {path: 'staff', element: <StaffManagement /> },
       { path: 'staff/:id', element: <StaffDetail /> },
       { path: 'staff/:id/history/:eventId', element: <StaffScanHistory /> },
       { path: 'products', element: <MerchandiseManagement /> },
@@ -270,6 +275,7 @@ const router = createBrowserRouter([
       { path: 'blog', element: <BlogManagement /> },
       { path: 'blog/create', element: <CreateBlog /> },
       { path: 'blog/:id/edit', element: <CreateBlog /> },
+      { path: 'reports', element: <Reports /> },
       { path: 'settings', element: <div className="p-8 text-2xl font-bold">Cài đặt (Coming Soon)</div> },
       { path: '', element: <Navigate to="dashboard" replace /> }
     ]

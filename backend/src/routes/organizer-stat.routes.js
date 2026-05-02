@@ -5,6 +5,9 @@ const { authenticate, authorize } = require('../middlewares/auth.middleware');
 
 router.use(authenticate, authorize('organizer'));
 
+// [GET] /api/organizer/stats/reports
+router.get('/reports', controller.getReports);
+
 // [GET] /api/organizer/stats
 router.get('/', controller.getStats);
 
