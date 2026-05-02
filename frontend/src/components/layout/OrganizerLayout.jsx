@@ -22,7 +22,9 @@ import {
   FileText,
   ClipboardList,
   Tag,
-  BarChart3
+  BarChart3,
+  History,
+  ShoppingBag
 } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import toast from 'react-hot-toast';
@@ -34,6 +36,7 @@ const OrganizerLayout = () => {
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
   const [isDark, setIsDark] = React.useState(localStorage.getItem('theme') !== 'light');
+  const [isProfileOpen, setIsProfileOpen] = React.useState(false);
 
   React.useEffect(() => {
     if (isDark) {
@@ -192,18 +195,77 @@ const OrganizerLayout = () => {
               <Bell className="w-5 h-5" />
               <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-[#111114]"></span>
             </button>
-            <div className="flex items-center space-x-3 pl-4 border-l border-gray-200 dark:border-white/5">
-              <div className="text-right flex flex-col hidden sm:flex">
-                <span className="text-sm font-bold text-gray-900 dark:text-white">{user?.full_name || 'Organizer'}</span>
-                <span className="text-[10px] text-blue-600 uppercase font-black tracking-tighter">Ban Tổ Chức</span>
-              </div>
-              <div className="w-10 h-10 bg-gray-200 dark:bg-white/10 rounded-full border border-gray-300 dark:border-white/10 flex items-center justify-center text-blue-600 font-bold overflow-hidden">
-                {user?.avatar_url ? (
-                  <img src={user.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
-                ) : (
-                  user?.full_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'O'
-                )}
-              </div>
+            <div className="relative profile-dropdown-container pl-4 border-l border-gray-200 dark:border-white/5">
+              <button 
+                onClick={() => setIsProfileOpen(!isProfileOpen)}
+                className="flex items-center space-x-3 cursor-pointer hover:bg-gray-100 dark:hover:bg-white/5 p-1 rounded-2xl transition-all"
+              >
+                <div className="text-right flex flex-col hidden sm:flex">
+                  <span className="text-sm font-bold text-gray-900 dark:text-white">{user?.full_name || 'Organizer'}</span>
+                  <span className="text-[10px] text-blue-600 uppercase font-black tracking-tighter">Ban Tổ Chức</span>
+                </div>
+                <div className="w-10 h-10 bg-gray-200 dark:bg-white/10 rounded-full border border-gray-300 dark:border-white/10 flex items-center justify-center text-blue-600 font-bold overflow-hidden">
+                  {user?.avatar_url ? (
+                    <img src={user.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                  ) : (
+                    user?.full_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'O'
+                  )}
+                </div>
+              </button>
+
+              {/* Dropdown Menu */}
+              {isProfileOpen && (
+                <>
+                  <div className="fixed inset-0 z-[50]" onClick={() => setIsProfileOpen(false)}></div>
+                  <div className="absolute right-0 mt-3 w-56 bg-white dark:bg-[#1a1a1e] border border-gray-100 dark:border-white/10 rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.1)] z-[51] overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                    {/* Header: User Info */}
+                    <div className="px-5 py-5 border-b border-gray-50 dark:border-white/5">
+                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Đã đăng nhập</p>
+                      <p className="text-sm font-black text-gray-900 dark:text-white truncate mb-3" title={user?.email}>
+                        {user?.email}
+                      </p>
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 uppercase tracking-tighter">
+                        Organizer
+                      </span>
+                    </div>
+                    
+                    {/* Menu Items */}
+                    <div className="py-2">
+                      <Link 
+                        to="/organizer/profile" 
+                        className="flex items-center space-x-3 px-5 py-2.5 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors text-gray-600 dark:text-gray-300 group"
+                        onClick={() => setIsProfileOpen(false)}
+                      >
+                        <UserCircle className="w-5 h-5 text-gray-400 group-hover:text-blue-600" />
+                        <span className="text-sm font-medium">Hồ sơ tổ chức</span>
+                      </Link>
+
+                      <Link 
+                        to="/organizer/profile" 
+                        className={`flex items-center space-x-3 px-5 py-2.5 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors text-gray-600 dark:text-gray-300 group`}
+                        onClick={() => setIsProfileOpen(false)}
+                      >
+                        <Settings className="w-5 h-5 text-gray-400 group-hover:text-blue-600" />
+                        <span className="text-sm font-medium">Cài đặt hệ thống</span>
+                      </Link>
+                    </div>
+
+                    <div className="px-2 pb-2">
+                      <div className="h-px bg-gray-50 dark:bg-white/5 mb-2 mx-3"></div>
+                      <button 
+                        onClick={() => {
+                          setIsProfileOpen(false);
+                          handleLogout();
+                        }}
+                        className="flex items-center space-x-3 px-4 py-2.5 w-full rounded-xl hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors group text-red-500"
+                      >
+                        <LogOut className="w-5 h-5" />
+                        <span className="text-sm font-bold">Đăng xuất</span>
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </header>

@@ -59,6 +59,7 @@ import OrganizerSettlement from './pages/Organizer/OrganizerSettlement';
 import MarketplaceManagement from './pages/Organizer/MarketplaceManagement';
 import MarketplaceDetail from './pages/Organizer/MarketplaceDetail';
 import Reports from './pages/Organizer/Reports';
+import OrganizerProfile from './pages/Organizer/OrganizerProfile';
 
 // Admin Pages
 import AdminLayout from './components/layout/AdminLayout';
@@ -276,7 +277,7 @@ const router = createBrowserRouter([
       { path: 'blog/create', element: <CreateBlog /> },
       { path: 'blog/:id/edit', element: <CreateBlog /> },
       { path: 'reports', element: <Reports /> },
-      { path: 'settings', element: <div className="p-8 text-2xl font-bold">Cài đặt (Coming Soon)</div> },
+      { path: 'profile', element: <OrganizerProfile /> },
       { path: '', element: <Navigate to="dashboard" replace /> }
     ]
   }
