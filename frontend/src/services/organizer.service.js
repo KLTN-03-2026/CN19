@@ -165,5 +165,16 @@ export const organizerService = {
   getEventSecondaryActivity: async (id, params) => {
     const res = await api.get(`/organizer/events/${id}/secondary-activity`, { params });
     return res.data;
+  },
+
+  // ======= Profile & Settings =======
+  getSelfProfile: async () => {
+    const res = await api.get('/organizers/me');
+    return res.data;
+  },
+
+  updateProfile: async (data) => {
+    const res = await api.put('/organizers/me', data);
+    return res.data;
   }
 };

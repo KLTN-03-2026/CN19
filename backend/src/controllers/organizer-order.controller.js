@@ -87,6 +87,7 @@ const OrganizerOrderController = {
 
             // 2. Tìm các giao dịch Marketplace liên quan đến sự kiện của BTC này
             const whereClause = {
+                status: 'paid',
                 ticket: {
                     event: {
                         organizer_id: organizer.id
@@ -109,7 +110,17 @@ const OrganizerOrderController = {
                             event: { select: { title: true, id: true } }
                         } 
                     },
-                    listing: { select: { listing_number: true, asking_price: true } }
+                    listing: { 
+                        include: { 
+                            merchandise_items: {
+                                include: {
+                                    merchandise: {
+                                        select: { name: true, image_url: true }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 },
                 orderBy: { created_at: 'desc' }
             });
@@ -128,7 +139,12 @@ const OrganizerOrderController = {
                 created_at: tx.created_at,
                 buyer: tx.buyer,
                 seller: tx.seller,
-                ticket_number: tx.ticket?.ticket_number
+                ticket_number: tx.ticket?.ticket_number,
+                merchandise_items: [
+                    ...(tx.listing?.merchandise_items || []),
+                    ...(tx.listing?.metadata?.selected_merchandise || [])
+                ],
+                nft_transfer_tx_hash: tx.nft_transfer_tx_hash
             }));
 
             res.status(200).json(mappedData);
@@ -161,45 +177,172 @@ const OrganizerOrderController = {
                 }
             });
 
-            // 2. If not found, try finding in MarketplaceTransaction table
-            if (!order) {
-                const mktTx = await prisma.marketplaceTransaction.findUnique({
-                    where: { id },
+            // 2. If not found in Order table, or if it is a resale order, try finding in MarketplaceTransaction table
+            // Marketplace transactions can sometimes be found in both tables, but the Transaction table has the listing/royalty info
+            let mktTx = await prisma.marketplaceTransaction.findUnique({
+                where: { id },
+                include: {
+                    buyer: { select: { id: true, full_name: true, email: true, avatar_url: true } },
+                    seller: { select: { id: true, full_name: true, email: true, avatar_url: true } },
+                    ticket: { 
+                        include: { 
+                            ticket_tier: { select: { tier_name: true, price: true } },
+                            event: { include: { organizer: true } }
+                        } 
+                    },
+                    listing: {
+                        include: {
+                            merchandise_items: {
+                                include: {
+                                    merchandise: {
+                                        select: { name: true, image_url: true }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    payments: { orderBy: { created_at: 'desc' }, take: 1 }
+                }
+            });
+
+            // If found in marketplace transaction table, use that as it's more complete for resale
+            if (mktTx) {
+                order = {
+                    id: mktTx.id,
+                    transaction_number: mktTx.transaction_number || mktTx.listing?.listing_number || 'RESALE',
+                    order_number: mktTx.listing?.listing_number || 'RESALE',
+                    status: mktTx.status === 'completed' ? 'paid' : mktTx.status,
+                    total_amount: mktTx.buyer_pay_amount,
+                    payment_method: mktTx.payment_method || 'marketplace',
+                    created_at: mktTx.created_at,
+                    customer: mktTx.buyer,
+                    buyer: mktTx.buyer,
+                    seller: mktTx.seller,
+                    event: mktTx.ticket?.event,
+                    event_title: mktTx.ticket?.event?.title,
+                    order_type: 'TICKET_RESALE',
+                    tickets: [mktTx.ticket],
+                    ticket_number: mktTx.ticket?.ticket_number,
+                    tier_name: mktTx.ticket?.ticket_tier?.tier_name,
+                    original_price: mktTx.ticket?.ticket_tier?.price,
+                    resale_price: mktTx.buyer_pay_amount,
+                    royalty_amount: mktTx.organizer_royalty,
+                    platform_fee: mktTx.platform_fee,
+                    payment_method: (mktTx.payments?.[0]?.method || 'VNPAY').toUpperCase(),
+                    merchandise_total: mktTx.listing?.metadata?.merchandise_total || 0,
+                    original_ticket_price: mktTx.listing?.metadata?.ticket_price || mktTx.ticket?.ticket_tier?.price,
+                    merchandise_items: [
+                        ...(mktTx.listing?.merchandise_items || []),
+                        ...(mktTx.listing?.metadata?.selected_merchandise || [])
+                    ],
+                    nft_transfer_tx_hash: mktTx.nft_transfer_tx_hash,
+                    is_resale: true
+                };
+            } else if (order && order.order_type === 'TICKET_RESALE') {
+                // If it's in Order table as TICKET_RESALE but mktTx findUnique failed by ID, 
+                // it might be using the Order ID. Try to find the mktTx by ticket_id or similar?
+                // Actually, for consistency, marketplace details should use the Transaction ID.
+                const relatedTx = await prisma.marketplaceTransaction.findFirst({
+                    where: { 
+                        listing: { ticket_id: order.items?.[0]?.ticket_id },
+                        buyer_id: order.customer_id,
+                        status: { in: ['paid', 'completed', 'success'] }
+                    },
                     include: {
-                        buyer: { select: { id: true, full_name: true, email: true, avatar_url: true } },
+                        listing: { include: { merchandise_items: { include: { merchandise: true } } } },
                         seller: { select: { id: true, full_name: true, email: true, avatar_url: true } },
-                        ticket: { 
-                            include: { 
-                                ticket_tier: { select: { tier_name: true, price: true } },
-                                event: { include: { organizer: true } }
-                            } 
-                        },
-                        listing: true
+                        ticket: { include: { ticket_tier: true } },
+                        payments: { orderBy: { created_at: 'desc' }, take: 1 }
                     }
                 });
 
-                if (mktTx) {
-                    // Map MarketplaceTransaction to Order-like structure for the frontend
+                if (relatedTx) {
                     order = {
-                        id: mktTx.id,
-                        order_number: mktTx.listing?.listing_number || 'RESALE',
-                        status: mktTx.status === 'completed' ? 'paid' : mktTx.status,
-                        total_amount: mktTx.buyer_pay_amount,
-                        payment_method: 'marketplace',
-                        created_at: mktTx.created_at,
-                        customer: mktTx.buyer,
-                        event: mktTx.ticket?.event,
-                        order_type: 'TICKET_RESALE',
-                        tickets: [mktTx.ticket],
-                        // Additional info for resale
-                        seller: mktTx.seller,
-                        is_resale: true
+                        ...order,
+                        resale_price: relatedTx.buyer_pay_amount,
+                        royalty_amount: relatedTx.organizer_royalty,
+                        platform_fee: relatedTx.platform_fee,
+                        payment_method: (relatedTx.payments?.[0]?.method || 'VNPAY').toUpperCase(),
+                        merchandise_total: relatedTx.listing?.metadata?.merchandise_total || 0,
+                        original_ticket_price: relatedTx.listing?.metadata?.ticket_price || relatedTx.ticket?.ticket_tier?.price,
+                        merchandise_items: [
+                            ...(relatedTx.listing?.merchandise_items || []),
+                            ...(relatedTx.listing?.metadata?.selected_merchandise || [])
+                        ],
+                        nft_transfer_tx_hash: relatedTx.nft_transfer_tx_hash,
+                        is_resale: true,
+                        seller: relatedTx.seller,
+                        transaction_number: relatedTx.transaction_number || order.order_number
                     };
                 }
             }
 
             if (!order || order.event?.organizer?.user_id !== userId) {
                 return res.status(403).json({ error: 'Bạn không có quyền xem đơn hàng này.' });
+            }
+
+            // 3. Post-process for TICKET_TRANSFER to match the structure expected by MarketplaceDetail.jsx
+            if (order.order_type === 'TICKET_TRANSFER') {
+                const metadata = order.metadata || {};
+                const ticketId = metadata.ticket_id;
+                const receiverEmail = metadata.receiver_email;
+                const merchandiseIds = metadata.merchandise_item_ids || [];
+
+                let ticket = null;
+                let receiver = { full_name: 'N/A', email: receiverEmail || 'N/A', avatar_url: null };
+                let merchandiseItems = [];
+
+                if (ticketId) {
+                    ticket = await prisma.ticket.findUnique({
+                        where: { id: ticketId },
+                        include: { ticket_tier: { select: { tier_name: true } } }
+                    });
+                }
+
+                if (receiverEmail) {
+                    const receiverUser = await prisma.user.findUnique({
+                        where: { email: receiverEmail },
+                        select: { full_name: true, email: true, avatar_url: true }
+                    });
+                    if (receiverUser) receiver = receiverUser;
+                }
+
+                if (merchandiseIds.length > 0) {
+                    merchandiseItems = await prisma.merchandiseOrderItem.findMany({
+                        where: { id: { in: merchandiseIds } },
+                        include: { merchandise: { select: { name: true, image_url: true } } }
+                    });
+                }
+
+                // Lấy thông tin TicketTransfer để lấy NFT tx hash
+                let nft_transfer_tx_hash = null;
+                if (ticketId && order.customer) {
+                    const transferRecord = await prisma.ticketTransfer.findFirst({
+                        where: {
+                            ticket_id: ticketId,
+                            from_user_id: order.customer.id
+                        },
+                        orderBy: { completed_at: 'desc' }
+                    });
+                    if (transferRecord) {
+                        nft_transfer_tx_hash = transferRecord.nft_transfer_tx_hash;
+                    }
+                }
+
+                // Override order object with mapped fields for MarketplaceDetail.jsx
+                order = {
+                    ...order,
+                    transaction_number: order.order_number,
+                    event_title: order.event?.title,
+                    tier_name: ticket?.ticket_tier?.tier_name || 'N/A',
+                    ticket_number: ticket?.ticket_number || 'N/A',
+                    sender: order.customer,
+                    receiver: receiver,
+                    status: order.status === 'paid' ? 'completed' : order.status,
+                    fee_amount: Number(order.total_amount),
+                    merchandise_items: merchandiseItems,
+                    nft_transfer_tx_hash: nft_transfer_tx_hash
+                };
             }
 
             res.status(200).json(order);
@@ -228,7 +371,8 @@ const OrganizerOrderController = {
             // 2. Tìm các đơn hàng loại chuyển nhượng (TICKET_TRANSFER)
             const whereClause = {
                 event: { organizer_id: organizer.id },
-                order_type: 'TICKET_TRANSFER'
+                order_type: 'TICKET_TRANSFER',
+                status: 'paid'
             };
 
             if (event_id && event_id.trim() !== '') {
@@ -238,29 +382,75 @@ const OrganizerOrderController = {
             const transfers = await prisma.order.findMany({
                 where: whereClause,
                 include: {
-                    customer: { select: { full_name: true, email: true, avatar_url: true } },
-                    event: { select: { title: true } },
-                    tickets: { 
-                        include: { 
-                            ticket_tier: { select: { tier_name: true } },
-                            original_tickets: { select: { full_name: true, email: true, avatar_url: true } } // Giả sử sender là original owner
-                        } 
-                    }
+                    customer: { select: { id: true, full_name: true, email: true, avatar_url: true } },
+                    event: { select: { title: true } }
                 },
                 orderBy: { created_at: 'desc' }
             });
 
-            const mappedData = transfers.map(t => ({
-                id: t.id,
-                transaction_number: t.order_number,
-                event_title: t.event?.title,
-                tier_name: t.tickets[0]?.ticket_tier?.tier_name,
-                ticket_number: t.tickets[0]?.ticket_number,
-                sender: { full_name: '---', email: 'Người dùng cũ' }, // Cần logic chính xác hơn tùy database của bạn
-                receiver: t.customer,
-                status: t.status === 'paid' ? 'completed' : t.status,
-                created_at: t.created_at,
-                fee_amount: Number(t.total_amount)
+            // 3. Post-process to get Ticket and Receiver details from metadata
+            const mappedData = await Promise.all(transfers.map(async (t) => {
+                const metadata = t.metadata || {};
+                const ticketId = metadata.ticket_id;
+                const receiverEmail = metadata.receiver_email;
+
+                const merchandiseIds = metadata.merchandise_item_ids || [];
+                let merchandiseItems = [];
+
+                let ticket = null;
+                let receiver = { full_name: 'N/A', email: receiverEmail || 'N/A', avatar_url: null };
+
+                if (ticketId) {
+                    ticket = await prisma.ticket.findUnique({
+                        where: { id: ticketId },
+                        include: { ticket_tier: { select: { tier_name: true } } }
+                    });
+                }
+
+                if (receiverEmail) {
+                    const receiverUser = await prisma.user.findUnique({
+                        where: { email: receiverEmail },
+                        select: { full_name: true, email: true, avatar_url: true }
+                    });
+                    if (receiverUser) receiver = receiverUser;
+                }
+
+                if (merchandiseIds.length > 0) {
+                    merchandiseItems = await prisma.merchandiseOrderItem.findMany({
+                        where: { id: { in: merchandiseIds } },
+                        include: { merchandise: { select: { name: true, image_url: true } } }
+                    });
+                }
+
+                // Lấy thông tin TicketTransfer để lấy NFT tx hash
+                let nft_transfer_tx_hash = null;
+                if (ticketId && t.customer) {
+                    const transferRecord = await prisma.ticketTransfer.findFirst({
+                        where: {
+                            ticket_id: ticketId,
+                            from_user_id: t.customer.id
+                        },
+                        orderBy: { completed_at: 'desc' }
+                    });
+                    if (transferRecord) {
+                        nft_transfer_tx_hash = transferRecord.nft_transfer_tx_hash;
+                    }
+                }
+
+                return {
+                    id: t.id,
+                    transaction_number: t.order_number,
+                    event_title: t.event?.title,
+                    tier_name: ticket?.ticket_tier?.tier_name || 'N/A',
+                    ticket_number: ticket?.ticket_number || 'N/A',
+                    sender: t.customer, // Người tạo đơn chuyển nhượng là người gửi
+                    receiver: receiver, // Người thụ hưởng vé
+                    status: t.status === 'paid' ? 'completed' : t.status,
+                    created_at: t.created_at,
+                    fee_amount: Number(t.total_amount),
+                    merchandise_items: merchandiseItems,
+                    nft_transfer_tx_hash: nft_transfer_tx_hash
+                };
             }));
 
             res.status(200).json(mappedData);
