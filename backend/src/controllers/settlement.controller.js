@@ -10,26 +10,32 @@ const SettlementController = {
   getOrganizerEvents: async (req, res) => {
     try {
       const userId = req.user.userId;
+      const { startDate, endDate } = req.query;
       const organizer = await prisma.organizer.findUnique({ where: { user_id: userId } });
       
       if (!organizer) return res.status(403).json({ error: 'Không tìm thấy thông tin Ban tổ chức.' });
 
-      // Lấy tất cả sự kiện đã kết thúc (end_date < now hoặc status = finished)
-      // Trong hệ thống này, status có thể là 'published', 'finished', 'cancelled'
-      // Ta lấy các sự kiện có ngày kết thúc đã qua
-      const now = new Date();
+      // Build filter
+      let dateFilter = {};
+      if (startDate || endDate) {
+        const start = startDate ? new Date(startDate) : null;
+        if (start) start.setHours(0, 0, 0, 0);
+
+        const end = endDate ? new Date(endDate) : null;
+        if (end) end.setHours(23, 59, 59, 999);
+
+        dateFilter = {
+          event_date: {
+            ...(start && { gte: start }),
+            ...(end && { lte: end })
+          }
+        };
+      }
+
       const events = await prisma.event.findMany({
         where: {
           organizer_id: organizer.id,
-          OR: [
-            { end_date: { lte: now } },
-            { 
-              AND: [
-                { end_date: null },
-                { event_date: { lte: now } }
-              ]
-            }
-          ]
+          ...dateFilter
         },
         include: {
           payouts: true, // Lịch sử đối soát
@@ -43,26 +49,38 @@ const SettlementController = {
           where: {
             event_id: event.id,
             status: 'paid',
-            is_settled: false
+            is_settled: false,
+            order_type: 'TICKET_PURCHASE'
           },
           select: {
+            id: true,
             total_amount: true,
             platform_fee: true
           }
         });
 
-        const pendingRevenue = unsettledOrders.reduce((sum, order) => {
-          return sum + (Number(order.total_amount) - Number(order.platform_fee));
-        }, 0);
+        // Tính toán chi tiết doanh thu từ Vé và Vật phẩm
+        let ticketRevenue = 0;
+        let merchRevenue = 0;
+        let totalFees = unsettledOrders.reduce((sum, order) => sum + Number(order.platform_fee), 0);
 
-        const totalRevenue = unsettledOrders.reduce((sum, order) => sum + Number(order.total_amount), 0);
-        const totalFees = unsettledOrders.reduce((sum, order) => sum + Number(order.platform_fee), 0);
+        for (const order of unsettledOrders) {
+          const orderItems = await prisma.orderItem.findMany({
+            where: { order_id: order.id }
+          });
+          const merchItems = await prisma.merchandiseOrderItem.findMany({
+            where: { order_id: order.id }
+          });
+
+          ticketRevenue += orderItems.reduce((s, i) => s + Number(i.subtotal), 0);
+          merchRevenue += merchItems.reduce((s, i) => s + Number(i.subtotal), 0);
+        }
 
         // -- Marketplace Revenue for this event --
         const unsettledMarketplace = await prisma.marketplaceTransaction.findMany({
           where: {
             ticket: { event_id: event.id },
-            status: 'paid', // Or 'completed'
+            status: 'paid',
             is_settled: false
           }
         });
@@ -70,6 +88,8 @@ const SettlementController = {
         const pendingMarketplaceRevenue = unsettledMarketplace.reduce((sum, tx) => {
           return sum + Number(tx.organizer_royalty || 0);
         }, 0);
+
+        const pendingRevenue = (ticketRevenue + merchRevenue + pendingMarketplaceRevenue) - totalFees;
 
         // Tìm yêu cầu quyết toán gần nhất
         const latestPayout = event.payouts.length > 0 ? event.payouts[0] : null;
@@ -79,8 +99,11 @@ const SettlementController = {
           financials: {
             pending_orders_count: unsettledOrders.length,
             pending_marketplace_count: unsettledMarketplace.length,
-            pending_revenue: pendingRevenue + pendingMarketplaceRevenue,
-            total_revenue: totalRevenue,
+            pending_revenue: pendingRevenue,
+            ticket_revenue: ticketRevenue,
+            merch_revenue: merchRevenue,
+            marketplace_royalty: pendingMarketplaceRevenue,
+            total_revenue: ticketRevenue + merchRevenue + pendingMarketplaceRevenue,
             total_fees: totalFees
           },
           settlement_status: latestPayout ? latestPayout.status : ((unsettledOrders.length > 0 || unsettledMarketplace.length > 0) ? 'eligible' : 'no_data')
@@ -113,13 +136,19 @@ const SettlementController = {
         return res.status(403).json({ error: 'Bạn không có quyền yêu cầu quyết toán cho sự kiện này.' });
       }
 
+      // Kiểm tra thời gian kết thúc sự kiện
+      const eventEndDate = event.end_date || event.event_date;
+      if (eventEndDate && new Date(eventEndDate) > new Date()) {
+        return res.status(400).json({ error: 'Sự kiện chưa kết thúc. Bạn chỉ có thể yêu cầu quyết toán sau khi sự kiện hoàn thành.' });
+      }
+
       if (event.payouts.length > 0) {
         return res.status(400).json({ error: 'Sự kiện này đang có yêu cầu quyết toán chờ xử lý.' });
       }
 
       // Tính toán số liệu
       const unsettledOrders = await prisma.order.findMany({
-        where: { event_id: eventId, status: 'paid', is_settled: false }
+        where: { event_id: eventId, status: 'paid', is_settled: false, order_type: 'TICKET_PURCHASE' }
       });
 
       if (unsettledOrders.length === 0) {
@@ -262,7 +291,7 @@ const SettlementController = {
 
           // 4. Đánh dấu các Order là đã đối soát
           await tx.order.updateMany({
-            where: { event_id: payout.event_id, status: 'paid', is_settled: false },
+            where: { event_id: payout.event_id, status: 'paid', is_settled: false, order_type: 'TICKET_PURCHASE' },
             data: { is_settled: true }
           });
 
