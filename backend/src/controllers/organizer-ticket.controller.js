@@ -6,13 +6,11 @@ const getOrganizerTicketStats = async (req, res) => {
     const userId = req.user.userId;
     const { event_id } = req.query;
 
-    // Tìm Organizer của user này
     const organizer = await prisma.organizer.findUnique({ where: { user_id: userId } });
     if (!organizer) return res.status(403).json({ error: 'Không tìm thấy tài khoản BTC.' });
 
     let eventIds;
     if (event_id) {
-      // Xác minh sự kiện này thuộc về organizer này
       const event = await prisma.event.findFirst({
         where: { id: event_id, organizer_id: organizer.id },
         select: { id: true }
@@ -20,7 +18,6 @@ const getOrganizerTicketStats = async (req, res) => {
       if (!event) return res.status(404).json({ error: 'Không tìm thấy sự kiện hoặc bạn không có quyền.' });
       eventIds = [event_id];
     } else {
-      // Lấy tất cả sự kiện của organizer
       const events = await prisma.event.findMany({
         where: { organizer_id: organizer.id },
         select: { id: true }
@@ -28,28 +25,56 @@ const getOrganizerTicketStats = async (req, res) => {
       eventIds = events.map(e => e.id);
     }
 
-    // 1. Tổng doanh thu (Từ các Order đã hoàn thành của các sự kiện này)
-    const totalRevenue = await prisma.order.aggregate({
-      where: { event_id: { in: eventIds }, status: 'completed' },
-      _sum: { total_amount: true }
+    // 1. Doanh thu
+    const primaryOrders = await prisma.order.findMany({
+      where: { event_id: { in: eventIds }, status: 'paid' },
+      select: {
+        id: true,
+        organizer_revenue: true,
+        merchandise_items: { select: { subtotal: true } }
+      }
     });
 
-    // 2. Tổng vé đã bán (Bao gồm cả vé đang rao bán lại)
-    const totalSold = await prisma.ticket.count({
-      where: { event_id: { in: eventIds }, status: { in: ['valid', 'minted', 'used', 'reselling'] } }
+    let totalPrimaryRevenue = 0;
+    let totalTicketRevenue = 0;
+    let totalMerchandiseRevenue = 0;
+
+    primaryOrders.forEach(order => {
+      const orderMerchRevenue = order.merchandise_items.reduce((sum, item) => sum + Number(item.subtotal), 0);
+      totalPrimaryRevenue += Number(order.organizer_revenue || 0);
+      totalMerchandiseRevenue += orderMerchRevenue;
+      totalTicketRevenue += (Number(order.organizer_revenue || 0) - orderMerchRevenue);
     });
 
-    // 3. Tổng lượt tham gia (Tickets is_used = true)
-    const totalCheckins = await prisma.ticket.count({
-      where: { event_id: { in: eventIds }, is_used: true }
+    const royaltyStats = await prisma.marketplaceTransaction.aggregate({
+      where: { 
+        listing: { event_id: { in: eventIds } }, 
+        status: { in: ['paid', 'completed', 'success'] } 
+      },
+      _sum: { organizer_royalty: true }
     });
+    const totalRoyaltyRevenue = Number(royaltyStats._sum.organizer_royalty || 0);
+    const totalRevenue = totalPrimaryRevenue + totalRoyaltyRevenue;
 
-    // 4. Số vé đang rao bán lại
+    // 2. Tổng vé & Check-ins
+    const [totalSold, totalCheckins] = await Promise.all([
+      prisma.ticket.count({
+        where: { event_id: { in: eventIds }, status: { in: ['valid', 'minted', 'used', 'reselling'] } }
+      }),
+      prisma.ticket.count({
+        where: { event_id: { in: eventIds }, is_used: true }
+      })
+    ]);
+
+    // 3. Đếm số vé đang rao bán (Dựa trên MarketplaceListing đang active)
     const totalReselling = await prisma.ticket.count({
-      where: { event_id: { in: eventIds }, status: 'reselling' }
+      where: { 
+        event_id: { in: eventIds },
+        marketplace_listings: { some: { status: 'active' } }
+      }
     });
 
-    // 5. Thống kê theo từng loại vé (Tier) và tính Tổng sức chứa
+    // 4. Thống kê theo Tiers
     const tiers = await prisma.ticketTier.findMany({
       where: { event_id: { in: eventIds } },
       select: {
@@ -58,16 +83,37 @@ const getOrganizerTicketStats = async (req, res) => {
         price: true,
         quantity_total: true,
         _count: {
-          select: { tickets: { where: { status: { in: ['valid', 'minted', 'used', 'reselling'] } } } }
+          select: { 
+            tickets: { where: { status: { in: ['valid', 'minted', 'used', 'reselling'] } } }
+          }
         }
       }
+    });
+
+    // Đếm số vé reselling cho từng tier dựa trên active listings
+    const resellingByTier = await prisma.ticket.groupBy({
+      by: ['ticket_tier_id'],
+      where: { 
+        event_id: { in: eventIds },
+        marketplace_listings: { some: { status: 'active' } }
+      },
+      _count: { id: true }
+    });
+
+    const tierData = tiers.map(t => {
+      const reselling = resellingByTier.find(r => r.ticket_tier_id === t.id)?._count.id || 0;
+      return {
+        ...t,
+        sold_count: t._count.tickets,
+        reselling_count: reselling,
+        remaining: t.quantity_total - t._count.tickets
+      };
     });
 
     const totalCapacity = tiers.reduce((sum, t) => sum + t.quantity_total, 0);
     const soldRate = totalCapacity > 0 ? (totalSold / totalCapacity) * 100 : 0;
     const resaleRate = totalSold > 0 ? (totalReselling / totalSold) * 100 : 0;
 
-    // Phân loại nhu cầu thị trường
     let demandLabel = "Trung bình";
     if (soldRate > 90 || resaleRate > 15) demandLabel = "Rất cao";
     else if (soldRate > 70) demandLabel = "Cao";
@@ -75,7 +121,10 @@ const getOrganizerTicketStats = async (req, res) => {
 
     res.status(200).json({
       data: {
-        total_revenue: totalRevenue._sum.total_amount || 0,
+        total_revenue: totalRevenue,
+        ticket_revenue: totalTicketRevenue,
+        royalty_revenue: totalRoyaltyRevenue,
+        merchandise_revenue: totalMerchandiseRevenue,
         total_sold: totalSold,
         total_checkins: totalCheckins,
         total_reselling: totalReselling,
@@ -85,11 +134,7 @@ const getOrganizerTicketStats = async (req, res) => {
           label: demandLabel,
           resale_rate: resaleRate.toFixed(1)
         },
-        tiers: tiers.map(t => ({
-          ...t,
-          sold_count: t._count.tickets,
-          remaining: t.quantity_total - t._count.tickets
-        }))
+        tiers: tierData
       }
     });
   } catch (error) {
@@ -107,20 +152,44 @@ const getOrganizerTickets = async (req, res) => {
     const organizer = await prisma.organizer.findUnique({ where: { user_id: userId } });
     if (!organizer) return res.status(403).json({ error: 'Không tìm thấy tài khoản BTC.' });
 
-    // Lọc theo các sự kiện của organizer
     const where = {
       event: { organizer_id: organizer.id }
     };
 
     if (event_id) where.event_id = event_id;
     if (ticket_tier_id) where.ticket_tier_id = ticket_tier_id;
-    if (status) where.status = status;
-    if (search) {
+    
+    // Nếu filter là 'reselling', ưu tiên tìm theo active listings
+    if (status === 'reselling') {
       where.OR = [
-        { ticket_number: { contains: search, mode: 'insensitive' } },
-        { current_owner: { full_name: { contains: search, mode: 'insensitive' } } },
-        { current_owner: { email: { contains: search, mode: 'insensitive' } } }
+        { status: 'reselling' },
+        { marketplace_listings: { some: { status: 'active' } } }
       ];
+    } else if (status) {
+      where.status = status;
+    }
+
+    if (search) {
+      const searchCondition = {
+        OR: [
+          { ticket_number: { contains: search, mode: 'insensitive' } },
+          { current_owner: { full_name: { contains: search, mode: 'insensitive' } } },
+          { current_owner: { email: { contains: search, mode: 'insensitive' } } }
+        ]
+      };
+      
+      // Merge search into existing where
+      if (where.OR) {
+        // If we already have an OR (from reselling), we need to wrap both in an AND
+        const originalOR = where.OR;
+        delete where.OR;
+        where.AND = [
+          { OR: originalOR },
+          searchCondition
+        ];
+      } else {
+        where.OR = searchCondition.OR;
+      }
     }
 
     const skip = (page - 1) * limit;
@@ -129,9 +198,19 @@ const getOrganizerTickets = async (req, res) => {
       prisma.ticket.findMany({
         where,
         include: {
-          event: { select: { title: true } },
+          event: { 
+            select: { 
+              title: true,
+              resale_gas_fee: true,
+              resale_platform_fee_percent: true
+            } 
+          },
           ticket_tier: { select: { tier_name: true, price: true } },
-          current_owner: { select: { full_name: true, email: true } }
+          current_owner: { select: { full_name: true, email: true, avatar_url: true } },
+          marketplace_listings: { 
+            where: { status: 'active' },
+            select: { asking_price: true, metadata: true }
+          }
         },
         orderBy: { id: 'desc' },
         skip: Number(skip),
@@ -155,7 +234,76 @@ const getOrganizerTickets = async (req, res) => {
   }
 };
 
+// [GET] /api/organizer/tickets/export
+const exportOrganizerTickets = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { event_id, ticket_tier_id, status, search } = req.query;
+
+    const organizer = await prisma.organizer.findUnique({ where: { user_id: userId } });
+    if (!organizer) return res.status(403).json({ error: 'Không tìm thấy tài khoản BTC.' });
+
+    const where = {
+      event: { organizer_id: organizer.id }
+    };
+
+    if (event_id) where.event_id = event_id;
+    if (ticket_tier_id) where.ticket_tier_id = ticket_tier_id;
+    if (status === 'reselling') {
+      where.OR = [
+        { status: 'reselling' },
+        { marketplace_listings: { some: { status: 'active' } } }
+      ];
+    } else if (status) {
+      where.status = status;
+    }
+
+    if (search) {
+      const searchCondition = {
+        OR: [
+          { ticket_number: { contains: search, mode: 'insensitive' } },
+          { current_owner: { full_name: { contains: search, mode: 'insensitive' } } },
+          { current_owner: { email: { contains: search, mode: 'insensitive' } } }
+        ]
+      };
+      if (where.OR) {
+        const originalOR = where.OR;
+        delete where.OR;
+        where.AND = [{ OR: originalOR }, searchCondition];
+      } else {
+        where.OR = searchCondition.OR;
+      }
+    }
+
+    const tickets = await prisma.ticket.findMany({
+      where,
+      select: {
+        id: true,
+        ticket_number: true,
+        nft_token_id: true,
+        nft_mint_tx_hash: true,
+        status: true,
+        event: { select: { title: true } },
+        ticket_tier: { select: { tier_name: true, price: true } },
+        current_owner: { select: { full_name: true, email: true } },
+        order: { select: { created_at: true } },
+        marketplace_listings: { 
+          where: { status: 'active' },
+          select: { asking_price: true }
+        }
+      },
+      orderBy: { id: 'desc' }
+    });
+
+    res.status(200).json({ data: tickets });
+  } catch (error) {
+    console.error('Export Organizer Tickets Error:', error);
+    res.status(500).json({ error: 'Lỗi server khi xuất danh sách vé.' });
+  }
+};
+
 module.exports = {
   getOrganizerTicketStats,
-  getOrganizerTickets
+  getOrganizerTickets,
+  exportOrganizerTickets
 };

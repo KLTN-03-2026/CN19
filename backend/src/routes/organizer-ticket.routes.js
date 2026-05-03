@@ -8,6 +8,7 @@ router.use(authenticate);
 router.use(authorize('organizer'));
 
 router.get('/stats', controller.getOrganizerTicketStats);
+router.get('/export', controller.exportOrganizerTickets);
 router.get('/', controller.getOrganizerTickets);
 
 module.exports = router;

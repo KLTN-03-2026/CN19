@@ -46,17 +46,26 @@ const getStats = async (req, res) => {
 
     const fillRate = totalCapacity > 0 ? Math.round((totalTicketsSold / totalCapacity) * 100) : 0;
 
-    // 2. Fetch Total Revenue (Sum of organizer_revenue from all paid orders)
-    const revenueSum = await prisma.order.aggregate({
-      where: { 
-        event: { organizer_id: organizer.id },
-        status: { in: ['paid', 'completed', 'success'] }
-      },
-      _sum: {
-        organizer_revenue: true
-      }
-    });
-    const totalRevenue = Number(revenueSum._sum.organizer_revenue || 0);
+    // 2. Fetch Total Revenue (Sum of primary revenue + secondary royalties)
+    const [revenueSum, royaltySum] = await Promise.all([
+      prisma.order.aggregate({
+        where: { 
+          event: { organizer_id: organizer.id },
+          status: { in: ['paid', 'completed', 'success'] }
+        },
+        _sum: { organizer_revenue: true }
+      }),
+      prisma.marketplaceTransaction.aggregate({
+        where: {
+          listing: { event: { organizer_id: organizer.id } },
+          status: { in: ['paid', 'completed', 'success'] }
+        },
+        _sum: { organizer_royalty: true }
+      })
+    ]);
+
+    const totalRevenue = Number(revenueSum._sum.organizer_revenue || 0) + 
+                         Number(royaltySum._sum.organizer_royalty || 0);
 
     // 3. Fetch Recent Notifications (Orders / Alerts)
     const recentOrders = await prisma.order.findMany({
@@ -237,6 +246,32 @@ const getStats = async (req, res) => {
       finalDistribution = top4;
     }
 
+    // 7. Blog Stats
+    const blogs = await prisma.blog.findMany({
+      where: { organizer_id: organizer.id },
+      select: { id: true, title: true, status: true, created_at: true },
+      orderBy: { created_at: 'desc' },
+      take: 5
+    });
+    const totalBlogs = await prisma.blog.count({ where: { organizer_id: organizer.id } });
+    const publishedBlogs = await prisma.blog.count({ where: { organizer_id: organizer.id, status: 'published' } });
+
+    // 8. Participants (people who bought tickets across all events)
+    const participantGroups = await prisma.ticket.groupBy({
+      by: ['event_id'],
+      _count: { id: true },
+      where: { event: { organizer_id: organizer.id } }
+    });
+
+    const eventParticipants = participantGroups.map(g => {
+      const ev = events.find(e => e.id === g.event_id);
+      return {
+        event_name: ev?.title || 'Unknown',
+        participant_count: g._count.id
+      };
+    });
+    const totalParticipants = participantGroups.reduce((sum, g) => sum + g._count.id, 0);
+
     res.status(200).json({
       data: {
         total_events: totalEvents,
@@ -244,12 +279,19 @@ const getStats = async (req, res) => {
         total_tickets_sold: totalTicketsSold,
         fill_rate: fillRate,
         upcoming_events_count: upcomingEventsCount,
-        my_events: myEvents.slice(0, 5), // Only send top 5 to dashboard
+        my_events: myEvents.slice(0, 5),
         notifications,
         revenue_chart: revenueChart,
         top_merchandise: topMerchandise,
         event_revenue_distribution: finalDistribution,
-        total_royalty_revenue: totalRoyaltyRevenue
+        total_royalty_revenue: totalRoyaltyRevenue,
+        // Blog stats
+        total_blogs: totalBlogs,
+        published_blogs: publishedBlogs,
+        recent_blogs: blogs,
+        // Participant stats
+        total_participants: totalParticipants,
+        event_participants: eventParticipants
       }
     });
 
