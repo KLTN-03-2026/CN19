@@ -26,7 +26,8 @@ import {
   FileDown,
   Ticket,
   LifeBuoy,
-  Tag
+  Tag,
+  Banknote
 } from 'lucide-react';
 import { useAuthStore } from '../../store/useAuthStore';
 import toast from 'react-hot-toast';
@@ -86,11 +87,13 @@ const AdminLayout = () => {
     { path: '/admin/fraud', icon: ShieldAlert, label: 'Cảnh báo gian lận', permission: 'fraud' },
     { path: '/admin/transactions', icon: History, label: 'Quản lý giao dịch', permission: 'transactions' },
     { path: '/admin/settlements', icon: CreditCard, label: 'Quyết toán sự kiện', permission: 'settlements' },
+    { path: '/admin/withdrawals', icon: Banknote, label: 'Quản lý rút tiền', permission: 'settlements' },
     { path: '/admin/products', icon: Package, label: 'Quản lý sản phẩm', permission: 'merchandise' },
     { path: '/admin/blog', icon: FileText, label: 'Quản lý blog', permission: 'blogs' },
     { path: '/admin/coupons', icon: Tag, label: 'Mã giảm giá', permission: 'coupons' },
     { path: '/admin/support', icon: LifeBuoy, label: 'Hỗ trợ & Khiếu nại', permission: 'support' },
     { path: '/admin/settings', icon: Settings, label: 'Cấu hình hệ thống', permission: 'system' },
+    { path: '/admin/reports', icon: FileDown, label: 'Thống kê & Báo cáo', permission: 'dashboard' },
   ];
 
   // Lọc menu dựa trên quyền của user
@@ -141,11 +144,11 @@ const AdminLayout = () => {
                 className={`flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all group ${
                   isActive 
                     ? 'bg-neon-green text-black font-bold shadow-[0_0_15px_rgba(82,196,45,0.3)]' 
-                    : 'text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white'
                 }`}
               >
                 <Icon className={`w-4.5 h-4.5 ${isActive ? 'text-black' : 'group-hover:text-neon-green'}`} />
-                {isSidebarOpen && <span className="text-[13px] tracking-tight">{item.label}</span>}
+                {isSidebarOpen && <span className="text-[13px] font-medium tracking-tight">{item.label}</span>}
                 {isSidebarOpen && isActive && <ChevronRight className="ml-auto w-3.5 h-3.5" />}
               </Link>
             );

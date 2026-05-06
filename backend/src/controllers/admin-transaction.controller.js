@@ -135,18 +135,22 @@ const getTransactionStats = async (req, res) => {
     };
 
     // 1. Doanh thu từ Orders
-    const orderRevenue = await prisma.order.aggregate({
+    const orderSum = await prisma.order.aggregate({
       where: orderWhere,
-      _sum: { total_amount: true }
+      _sum: { 
+        total_amount: true,
+        platform_fee: true
+      }
     });
 
     // 2. Doanh thu từ Marketplace
-    const marketplaceRevenue = await prisma.marketplaceTransaction.aggregate({
+    const marketplaceSum = await prisma.marketplaceTransaction.aggregate({
       where: mktWhere,
       _sum: { platform_fee: true }
     });
 
-    const totalRevenue = Number(orderRevenue._sum.total_amount || 0) + Number(marketplaceRevenue._sum.platform_fee || 0);
+    const totalRevenue = Number(orderSum._sum.total_amount || 0) + Number(marketplaceSum._sum.platform_fee || 0);
+    const totalCommission = Number(orderSum._sum.platform_fee || 0) + Number(marketplaceSum._sum.platform_fee || 0);
 
     // Tổng số đơn hàng
     const totalOrdersCount = await prisma.order.count({ where: orderWhere });
@@ -197,6 +201,7 @@ const getTransactionStats = async (req, res) => {
     res.status(200).json({
       data: {
         totalRevenue,
+        totalCommission,
         totalOrders: totalOrdersCount + totalMarketplaceCount,
         successfulOrders: successfulOrders + successfulMarketplace,
         failedOrders,

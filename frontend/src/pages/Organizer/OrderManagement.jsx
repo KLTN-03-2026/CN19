@@ -27,10 +27,21 @@ import api from '../../services/api';
 import { format } from 'date-fns';
 import { toast } from 'react-hot-toast';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useSystemConfig } from '../../hooks/useSystemConfig';
 
 const OrderManagement = () => {
     const navigate = useNavigate();
     const location = useLocation();
+    const { 
+        gasFee: systemGasFee, 
+        eventPlatformFee, 
+        eventTransactionFee, 
+        productPlatformFee, 
+        productTransactionFee 
+    } = useSystemConfig();
+    const totalEventFee = eventPlatformFee + eventTransactionFee;
+    const totalProductFee = productPlatformFee + productTransactionFee;
+
     const [orders, setOrders] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [events, setEvents] = useState([]);
@@ -334,14 +345,7 @@ const OrderManagement = () => {
                                                     </div>
                                                     {order.status === 'paid' && (
                                                         <div className="text-[9px] text-blue-600 font-black ml-5">
-                                                            {(() => {
-                                                                const ticketItems = (order.items || []).filter(i => i.ticket_tier_id);
-                                                                const ticketFee = ticketItems.reduce((s, i) => s + Number(i.subtotal), 0) * 0.08;
-                                                                const gasFee = ticketItems.reduce((s, i) => s + i.quantity, 0) * 10000;
-                                                                const merchFee = (order.merchandise_items || []).reduce((s, i) => s + Number(i.subtotal), 0) * 0.08;
-                                                                const totalFee = ticketFee + gasFee + merchFee;
-                                                                return `Ước tính: ${(Number(order.total_amount) - totalFee).toLocaleString()}đ`;
-                                                            })()}
+                                                                Ước tính: {Number(order.organizer_revenue || 0).toLocaleString()}đ
                                                         </div>
                                                     )}
                                                 </div>

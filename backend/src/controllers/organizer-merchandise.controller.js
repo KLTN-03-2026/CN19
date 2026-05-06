@@ -51,6 +51,21 @@ const create = async (req, res) => {
       }
     }
 
+    // Lấy phí mặc định từ cấu hình hệ thống
+    const settings = await prisma.systemSetting.findMany({
+      where: {
+        key: { in: ['product_platform_fee_percent', 'product_transaction_fee_percent'] }
+      }
+    });
+
+    const config = settings.reduce((acc, s) => {
+      acc[s.key] = s.value;
+      return acc;
+    }, {});
+
+    const platformFeePercent = parseFloat(config.product_platform_fee_percent || 5);
+    const commissionFeePercent = parseFloat(config.product_transaction_fee_percent || 3);
+
     const merchandise = await prisma.merchandise.create({
       data: {
         organizer_id: organizer.id,
@@ -60,7 +75,11 @@ const create = async (req, res) => {
         price: parseFloat(price),
         stock: parseInt(stock) || 0,
         image_url: image_url || null,
-        is_active: is_active !== undefined ? is_active : true
+        is_active: is_active !== undefined ? is_active : true,
+        // Nếu là sản phẩm theo sự kiện -> Chốt phí ngay lúc tạo
+        // Nếu là sản phẩm dùng chung -> Để null để linh hoạt theo Admin
+        platform_fee_percent: event_id ? platformFeePercent : null,
+        commission_fee_percent: event_id ? commissionFeePercent : null
       },
       include: {
         event: { select: { id: true, title: true } }
@@ -90,13 +109,26 @@ const update = async (req, res) => {
     }
 
     // Nếu đổi sự kiện, verify quyền sở hữu
-    if (event_id) {
-      const event = await prisma.event.findUnique({
-        where: { id: event_id },
-        include: { organizer: true }
+    if (event_id !== undefined && event_id !== existing.event_id) {
+      // Kiểm tra xem sản phẩm đã có đơn hàng chưa
+      const orderCount = await prisma.merchandiseOrderItem.count({
+        where: { merchandise_id: id }
       });
-      if (!event || event.organizer.user_id !== userId) {
-        return res.status(403).json({ error: 'Sự kiện không thuộc quyền quản lý của bạn.' });
+      
+      if (orderCount > 0) {
+        return res.status(400).json({ 
+          error: 'Không thể thay đổi sự kiện gắn kết vì sản phẩm này đã có đơn hàng. Vui lòng tạo sản phẩm mới nếu muốn dùng cho sự kiện khác.' 
+        });
+      }
+
+      if (event_id) {
+        const event = await prisma.event.findUnique({
+          where: { id: event_id },
+          include: { organizer: true }
+        });
+        if (!event || event.organizer.user_id !== userId) {
+          return res.status(403).json({ error: 'Sự kiện không thuộc quyền quản lý của bạn.' });
+        }
       }
     }
 

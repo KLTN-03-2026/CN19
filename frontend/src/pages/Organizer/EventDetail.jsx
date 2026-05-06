@@ -51,8 +51,10 @@ import { vi } from 'date-fns/locale';
 import toast from 'react-hot-toast';
 import { organizerService } from '../../services/organizer.service';
 import EmergencyActionModal from '../../components/Organizer/EmergencyActionModal';
+import { useSystemConfig } from '../../hooks/useSystemConfig';
 
 const EventDetail = () => {
+    const { resalePriceCap, royaltyFee, gasFee: systemGasFee } = useSystemConfig();
     const { id } = useParams();
     const navigate = useNavigate();
     const [event, setEvent] = useState(null);
@@ -80,8 +82,8 @@ const EventDetail = () => {
     const [resaleSettings, setResaleSettings] = useState({
         allow_resale: true,
         price_ceiling: '',
-        royalty_fee_percent: 3.0,
-        resale_price_limit_percent: 108.0
+        royalty_fee_percent: royaltyFee || 3.0,
+        resale_price_limit_percent: 100 + (resalePriceCap || 8)
     });
     const [savingResale, setSavingResale] = useState(false);
     const [secondaryActivity, setSecondaryActivity] = useState({ marketplace: [], transfers: [] });
@@ -190,8 +192,8 @@ const EventDetail = () => {
             setResaleSettings({
                 allow_resale: res.data.allow_resale,
                 price_ceiling: res.data.price_ceiling || '',
-                royalty_fee_percent: res.data.royalty_fee_percent || 3.0,
-                resale_price_limit_percent: res.data.resale_price_limit_percent || 108.0
+                royalty_fee_percent: res.data.royalty_fee_percent || royaltyFee || 3.0,
+                resale_price_limit_percent: res.data.resale_price_limit_percent || (100 + (resalePriceCap || 8))
             });
             setTransferSettings({
                 allow_transfer: res.data.allow_transfer !== undefined ? res.data.allow_transfer : true
@@ -603,7 +605,18 @@ const EventDetail = () => {
                                                                         <p className="text-[12px] font-bold text-gray-900 dark:text-white">{new Intl.NumberFormat('vi-VN').format(tx.total_amount)} <span className="text-[9px]">đ</span></p>
                                                                         <p className="text-[8px] font-bold text-gray-500 uppercase opacity-60">{tx.payment_method}</p>
                                                                     </td>
-                                                                    <td className="px-5 py-3 text-center"><button onClick={() => navigate(`/organizer/orders/${tx.id}`)} className="p-2 bg-gray-100/50 dark:bg-white/5 text-gray-500 hover:text-blue-600 hover:bg-blue-600/10 rounded-lg transition-all active:scale-90"><Eye className="w-4 h-4" /></button></td>
+                                                                    <td className="px-5 py-3 text-center">
+                                                                        <button 
+                                                                            onClick={() => {
+                                                                                if (tx.type === 'primary') navigate(`/organizer/orders/${tx.id}`);
+                                                                                else if (tx.type === 'resale') navigate(`/organizer/marketplace/resale/${tx.id}`);
+                                                                                else navigate(`/organizer/marketplace/direct/${tx.id}`);
+                                                                            }} 
+                                                                            className="p-2 bg-gray-100/50 dark:bg-white/5 text-gray-500 hover:text-blue-600 hover:bg-blue-600/10 rounded-lg transition-all active:scale-90"
+                                                                        >
+                                                                            <Eye className="w-4 h-4" />
+                                                                        </button>
+                                                                    </td>
                                                                 </tr>
                                                             ))
                                                         ) : (<tr><td colSpan="5" className="px-5 py-24 text-center text-[11px] font-bold uppercase  text-gray-500">Không có dữ liệu</td></tr>)}
@@ -854,7 +867,7 @@ const EventDetail = () => {
                                                     <input type="number" step="0.1" min="100" max="150" className="w-full pl-3 pr-10 py-2 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-[12px] font-bold focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none transition-all disabled:opacity-50" value={resaleSettings.resale_price_limit_percent} onChange={(e) => setResaleSettings({...resaleSettings, resale_price_limit_percent: e.target.value})} disabled={event.status === 'active'} />
                                                     <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-gray-500">%</span>
                                                 </div>
-                                                <p className="text-[9px] text-gray-500 mt-1.5">Tối đa 108% theo quy định</p>
+                                                <p className="text-[9px] text-gray-500 mt-1.5">Tối đa {100 + (resalePriceCap || 8)}% theo quy định</p>
                                             </div>
                                         </div>
 
@@ -922,12 +935,9 @@ const EventDetail = () => {
                                                                 </td>
                                                                 <td className="px-5 py-3 text-center">
                                                                     <button 
-                                                                        onClick={() => {
-                                                                            if (tx.nft_transfer_tx_hash) window.open(`https://amoy.polygonscan.com/tx/${tx.nft_transfer_tx_hash}`, '_blank');
-                                                                            else toast.error('Giao dịch chưa có mã Hash trên Blockchain');
-                                                                        }}
+                                                                        onClick={() => navigate(`/organizer/marketplace/resale/${tx.id}`)}
                                                                         className="p-1.5 bg-gray-100 dark:bg-white/5 hover:bg-blue-100 dark:hover:bg-blue-500/20 text-gray-500 hover:text-blue-600 rounded-lg transition-colors"
-                                                                        title="Xem chi tiết Hash"
+                                                                        title="Xem chi tiết giao dịch"
                                                                     >
                                                                         <Eye className="w-4 h-4" />
                                                                     </button>
@@ -958,7 +968,7 @@ const EventDetail = () => {
                                 </div>
                                 <div className="p-5 bg-gray-50/50 dark:bg-black/20 border border-gray-200 dark:border-white/5 rounded-2xl">
                                     <div className="flex justify-between items-start mb-2"><h4 className="text-[10px] font-bold text-gray-500 uppercase">Tổng phí chuyển nhượng (Hệ thống thu)</h4><div className="p-1.5 bg-gray-100 dark:bg-white/10 rounded-lg text-gray-500"><Wallet className="w-4 h-4"/></div></div>
-                                    <p className="text-2xl font-black text-gray-900 dark:text-white">{new Intl.NumberFormat('vi-VN').format((secondaryActivity.transfers?.length || 0) * Number(event.resale_gas_fee || 10000))} <span className="text-[12px] font-bold text-gray-500">đ</span></p>
+                                    <p className="text-2xl font-black text-gray-900 dark:text-white">{new Intl.NumberFormat('vi-VN').format((secondaryActivity.transfers?.length || 0) * Number(event.resale_gas_fee || systemGasFee || 10000))} <span className="text-[12px] font-bold text-gray-500">đ</span></p>
                                 </div>
                             </div>
 
@@ -1047,12 +1057,9 @@ const EventDetail = () => {
                                                                 </td>
                                                                 <td className="px-5 py-3 text-center">
                                                                     <button 
-                                                                        onClick={() => {
-                                                                            if (tx.nft_transfer_tx_hash) window.open(`https://amoy.polygonscan.com/tx/${tx.nft_transfer_tx_hash}`, '_blank');
-                                                                            else toast.error('Giao dịch chưa có mã Hash trên Blockchain');
-                                                                        }}
+                                                                        onClick={() => navigate(`/organizer/marketplace/direct/${tx.id}`)}
                                                                         className="p-1.5 bg-gray-100 dark:bg-white/5 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 text-gray-500 hover:text-indigo-600 rounded-lg transition-colors"
-                                                                        title="Xem chi tiết Hash"
+                                                                        title="Xem chi tiết chuyển nhượng"
                                                                     >
                                                                         <Eye className="w-4 h-4" />
                                                                     </button>

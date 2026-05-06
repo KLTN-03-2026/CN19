@@ -135,11 +135,23 @@ const approveEvent = async (req, res) => {
             smartContractAddress = await web3Service.deployEventContract(ownerWallet);
           } catch (web3Error) {
             console.error('❌ [Web3 Deployment Error]:', web3Error.message);
-            // Trả về lỗi cụ thể hơn để Admin biết (vd: RPC Error, Wallet Error)
+            
+            // Phân loại lỗi để phản hồi chính xác cho Admin
+            let errorMessage = 'Triển khai Smart Contract thất bại';
+            let suggestion = 'Hãy đảm bảo Node Blockchain (Hardhat) đang chạy và ví Admin có đủ Gas.';
+            
+            if (web3Error.message.includes('số dư') || web3Error.message.includes('balance') || web3Error.message.includes('funds')) {
+              errorMessage = 'Ví Admin không đủ số dư MATIC';
+              suggestion = 'Vui lòng nạp thêm MATIC vào ví Admin để tiếp tục duyệt sự kiện.';
+            } else if (web3Error.message.includes('network') || web3Error.message.includes('RPC')) {
+              errorMessage = 'Lỗi kết nối mạng Blockchain';
+              suggestion = 'Kiểm tra lại RPC URL hoặc tình trạng mạng Internet.';
+            }
+
             return res.status(500).json({ 
-              error: 'Triển khai Smart Contract thất bại', 
+              error: errorMessage, 
               detail: web3Error.message,
-              suggestion: 'Hãy đảm bảo Node Blockchain (Hardhat) đang chạy và ví Admin có đủ Gas.'
+              suggestion: suggestion
             });
           }
        }
@@ -369,12 +381,15 @@ const getEventById = async (req, res) => {
         primaryMerchRevenue += orderMerchSubtotal;
         totalTicketsSoldCount += orderTicketCount;
 
-        // Rule: Vé (8% + 10k/vé) + Sản phẩm (8%)
-        primaryTicketPlatformFee += (orderTicketSubtotal * 0.08) + (orderTicketCount * 10000);
-        primaryMerchPlatformFee += (orderMerchSubtotal * 0.08);
+        // Sử dụng phí đã snapshot trong đơn hàng để tính toán chính xác
+        const ticketFeeRate = (Number(order.platform_fee_percent || 0) + Number(order.commission_fee_percent || 0)) / 100;
+        primaryTicketPlatformFee += (orderTicketSubtotal * ticketFeeRate) + (orderTicketCount * Number(order.gas_fee || 10000) / orderTicketCount || 0);
+        
+        // Phí vật phẩm lấy trực tiếp từ tổng phí đã lưu trong đơn hàng
+        primaryMerchPlatformFee += (Number(order.merchandise_platform_fee || 0) + Number(order.merchandise_commission_fee || 0));
       } else if (order.order_type === 'TICKET_TRANSFER') {
-        // Rule: Phí gas 10,000đ mỗi lần chuyển
-        transferFeeTotal += 10000;
+        // Rule: Phí gas thực tế đã thu trong đơn hàng
+        transferFeeTotal += Number(order.gas_fee || 10000);
       }
     });
 
@@ -392,12 +407,11 @@ const getEventById = async (req, res) => {
     let resaleRoyalties = 0;
 
     marketplaceTransactions.forEach(tx => {
-      const askingPrice = Number(tx.buyer_pay_amount); // Giả định buyer_pay_amount là giá niêm yết
+      const askingPrice = Number(tx.buyer_pay_amount); 
       resaleVolume += askingPrice;
-      // Rule: 10,000đ + 3% phí giao dịch
-      secondaryPlatformFee += 10000 + (askingPrice * 0.03);
-      // Rule: Phí bản quyền tối đa 3% cho Organizer
-      resaleRoyalties += askingPrice * (Number(event.royalty_fee_percent || 3.0) / 100);
+      // Lấy trực tiếp từ giao dịch đã lưu
+      secondaryPlatformFee += Number(tx.platform_fee || 0);
+      resaleRoyalties += Number(tx.organizer_royalty || 0);
     });
 
     // 4. Tổng hợp chỉ số

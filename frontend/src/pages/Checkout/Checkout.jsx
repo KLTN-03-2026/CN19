@@ -29,6 +29,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useBehaviorTracker } from '../../hooks/useBehaviorTracker';
 import PuzzleCaptcha from '../../components/common/PuzzleCaptcha';
 
+import { useSystemConfig } from '../../hooks/useSystemConfig';
+
 // --- Price Formatter Helper ---
 const formatPrice = (price, locale = 'vi-VN') => {
   return new Intl.NumberFormat(locale, { 
@@ -91,6 +93,7 @@ const Checkout = () => {
   const { t, i18n } = useTranslation();
   const currentLocale = i18n.language === 'en' ? 'en-US' : 'vi-VN';
   
+  const { gasFee } = useSystemConfig();
   const [paymentMethod, setPaymentMethod] = useState('vnpay');
   const { createPaymentUrl, isCreatingPaymentUrl } = useOrder();
   const [timeLeft, setTimeLeft] = useState(null);
@@ -405,11 +408,20 @@ const Checkout = () => {
                                <div className="flex items-center gap-4">
                                   <Shield className="w-4 h-4 text-neon-green/50" />
                                   <div>
-                                     <p className="text-sm font-black uppercase tracking-tight">Phí giao dịch hệ thống</p>
+                                     <p className="text-sm font-black uppercase tracking-tight">
+                                        Phí giao dịch Marketplace {order.platform_fee_percent ? `(${Number(order.platform_fee_percent).toFixed(1)}%)` : ''}
+                                     </p>
                                      <p className="text-[10px] text-gray-400 font-bold">Xác thực giao dịch & Chống gian lận</p>
                                   </div>
                                </div>
-                               <p className="font-black text-sm">+{formatPrice(order.commission_fee || 0, currentLocale)}</p>
+                               <p className="font-black text-sm">
+                                  +{(() => {
+                                    const metadata = order.metadata || {};
+                                    const ticketPrice = Number(metadata.ticket_price || (order.items && order.items[0]?.subtotal) || 0);
+                                    const platformFeePercent = Number(order.platform_fee_percent || 3.0);
+                                    return formatPrice(ticketPrice * platformFeePercent / 100, currentLocale);
+                                  })()}
+                               </p>
                             </div>
                             <div className="flex items-center justify-between">
                                <div className="flex items-center gap-4">
@@ -428,11 +440,11 @@ const Checkout = () => {
                             <div className="flex items-center gap-4">
                                <ArrowRightLeft className="w-4 h-4 text-neon-green" />
                                <div>
-                                  <p className="text-sm font-black uppercase tracking-tight">Phí dịch vụ chuyển nhượng</p>
-                                  <p className="text-[10px] text-gray-400 font-bold">Bao gồm phí Gas & Xác thực AI</p>
+                                  <p className="text-sm font-black uppercase tracking-tight">Phí Gas chuyển nhượng</p>
+                                  <p className="text-[10px] text-gray-400 font-bold">Thanh toán phí mạng lưới & Xác thực AI</p>
                                </div>
                             </div>
-                            <p className="font-black text-sm">{formatPrice(order.gas_fee || 10000, currentLocale)}</p>
+                            <p className="font-black text-sm">{formatPrice(order.gas_fee || gasFee, currentLocale)}</p>
                          </div>
                       )}
                    </div>
@@ -514,8 +526,18 @@ const Checkout = () => {
                    )}
 
                    <div className="flex justify-between items-center text-xs font-bold">
-                      <span className="text-gray-400 font-black uppercase">{t('checkout.serviceFee')}</span>
-                      <span className="text-neon-green">{t('checkout.free')}</span>
+                      <span className="text-gray-400 font-black uppercase">
+                        {t('checkout.serviceFee')} {order.platform_fee_percent ? `${Number(order.platform_fee_percent).toFixed(1)}%` : '3.0%'}
+                      </span>
+                      <span className="text-neon-green">
+                        {(() => {
+                           const metadata = order.metadata || {};
+                           const ticketPrice = Number(metadata.ticket_price || (order.items && order.items[0]?.subtotal) || 0);
+                           const platformFeePercent = Number(order.platform_fee_percent || 3.0);
+                           const smartPlatformFee = order.order_type === 'MARKETPLACE_PURCHASE' ? (ticketPrice * platformFeePercent / 100) : (order.platform_fee || 0);
+                           return `+${formatPrice(smartPlatformFee, currentLocale)}`;
+                        })()}
+                      </span>
                    </div>
 
                    {/* Coupon Input */}

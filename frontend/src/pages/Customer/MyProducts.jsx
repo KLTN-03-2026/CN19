@@ -28,9 +28,11 @@ import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { format } from 'date-fns';
+import { useSystemConfig } from '../../hooks/useSystemConfig';
 
 const MyProducts = () => {
     const { t, i18n } = useTranslation();
+    const { gasFee: systemGasFee, resaleTransactionFee } = useSystemConfig();
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('all'); // 'all', 'pending', 'received'
@@ -628,8 +630,9 @@ const MyProducts = () => {
                                 const totalListingPrice = selectedItem.listing_info.asking_price;
                                 const merchTotal = selectedItem.unit_price * selectedItem.quantity;
                                 const ticketPrice = totalListingPrice - merchTotal;
-                                const gasFee = selectedItem.listing_info.ticket?.event?.resale_gas_fee || 10000;
-                                const platformFeePercent = selectedItem.listing_info.ticket?.event?.resale_platform_fee_percent || 3.0;
+                                const gasFee = selectedItem.listing_info.ticket?.event?.resale_gas_fee || systemGasFee;
+                                // Ưu tiên dùng % phí từ snapshot của bài đăng
+                                const platformFeePercent = selectedItem.listing_info.platform_fee_percent || (selectedItem.listing_info.ticket?.event?.resale_platform_fee_percent || resaleTransactionFee);
                                 const platformFee = ticketPrice * platformFeePercent / 100;
                                 const grandTotal = ticketPrice + platformFee + gasFee + merchTotal;
                                 

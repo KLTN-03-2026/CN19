@@ -24,6 +24,12 @@ router.get(
     authorize('admin'), 
     SettlementController.adminGetSettlements
 );
+router.get(
+    '/admin/eligible-events', 
+    authenticate, 
+    authorize('admin'), 
+    SettlementController.adminGetEligibleEvents
+);
 router.post(
     '/admin/process/:id', 
     authenticate, 

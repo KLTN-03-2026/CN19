@@ -1,6 +1,7 @@
-const prisma = require('../config/prisma');
 const web3Service = require('../services/web3.service');
 const orderService = require('../services/order.service');
+const { getSystemConfig } = require('../utils/systemConfig');
+const prisma = require('../config/prisma');
 
 // [UC_12] Đăng bán lại vé (Marketplace)
 const createListing = async (req, res) => {
@@ -34,9 +35,12 @@ const createListing = async (req, res) => {
     }
 
     // [Business Rule] Không được bán lại quá giới hạn giá gốc niêm yết (mặc định 108%)
+    const sysConfig = await getSystemConfig();
     const ticketAskingPrice = Number(asking_price);
     const originalPrice = Number(ticket.ticket_tier.price);
-    const limitPercent = Number(ticket.event.resale_price_limit_percent || 108.0);
+    
+    // limitPercent = 100 + resale_price_cap (ví dụ 100 + 8 = 108)
+    const limitPercent = 100 + Number(sysConfig.resale_price_cap_percent || 8);
     const maxTicketAskingPrice = (originalPrice * limitPercent) / 100;
     
     if (ticketAskingPrice > maxTicketAskingPrice) {
@@ -85,9 +89,12 @@ const createListing = async (req, res) => {
       });
     }
 
-    const totalAskingPrice = ticketAskingPrice + merchandiseTotal;
+    // [Logic Chuẩn]: Giá niêm yết trên Chợ = Giá vé + Giá vật phẩm
+    const totalAskingPrice = ticketAskingPrice + merchandiseTotal; 
 
     await prisma.$transaction(async (tx) => {
+      const sysConfig = await getSystemConfig();
+      
       // Đăng Listing
       const newListing = await tx.marketplaceListing.create({
         data: {
@@ -97,9 +104,9 @@ const createListing = async (req, res) => {
           listing_number: 'LST-' + Date.now(),
           asking_price: totalAskingPrice,
           status: 'active',
-          platform_fee_percent: ticket.event.royalty_fee_percent || 3.0,
+          platform_fee_percent: ticket.event.royalty_fee_percent || parseFloat(sysConfig.default_royalty_percent || 3.0),
           metadata: {
-            ticket_price: ticketAskingPrice,
+            ticket_price: ticketAskingPrice, // Lưu vết giá gốc người bán đặt
             merchandise_total: merchandiseTotal,
             selected_merchandise: selectedMerchandise,
             merchandise_item_ids: merchandise_item_ids || []
@@ -197,8 +204,17 @@ const getListings = async (req, res) => {
     // Tự động giải phóng các listing pending đã quá hạn
     await orderService.releaseExpiredOrders().catch(e => console.error('Release error:', e));
 
+    const now = new Date();
     const listings = await prisma.marketplaceListing.findMany({
-      where: { status: 'active' },
+      where: { 
+        status: 'active',
+        event: {
+          OR: [
+            { end_date: { gt: now } },
+            { AND: [{ end_date: null }, { event_date: { gt: now } }] }
+          ]
+        }
+      },
       include: {
         ticket: {
           select: {
@@ -302,6 +318,7 @@ const updateListing = async (req, res) => {
       selectedMerchandise = currentMetadata.selected_merchandise || [];
     }
 
+    // [Logic Chuẩn]: Giá cập nhật = Giá vé mới + Giá vật phẩm
     const totalAskingPrice = newTicketPrice + merchandiseTotal;
 
     await prisma.marketplaceListing.update({

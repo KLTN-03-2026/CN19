@@ -28,11 +28,13 @@ import {
 import api from '../../services/api';
 import { format } from 'date-fns';
 import { toast } from 'react-hot-toast';
+import { useSystemConfig } from '../../hooks/useSystemConfig';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 const MarketplaceManagement = () => {
     const navigate = useNavigate();
     const location = useLocation();
+    const { gasFee } = useSystemConfig();
     const [activeTab, setActiveTab] = useState('resale'); // 'resale' or 'direct'
     const [transactions, setTransactions] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -89,7 +91,7 @@ const MarketplaceManagement = () => {
     const stats = {
         totalRoyalty: activeTab === 'resale' 
             ? transactions.reduce((sum, tx) => sum + Number(tx.royalty_amount || 0), 0)
-            : transactions.reduce((sum, tx) => sum + 10000, 0), // Phí 10k mỗi lần chuyển
+            : transactions.reduce((sum, tx) => sum + gasFee, 0), // Phí gas mỗi lần chuyển
         totalVolume: activeTab === 'resale'
             ? transactions.reduce((sum, tx) => sum + Number(tx.resale_price || 0), 0)
             : 0,

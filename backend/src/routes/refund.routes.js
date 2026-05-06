@@ -1,11 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const refundController = require('../controllers/refund.controller');
-const { authenticate } = require('../middlewares/auth.middleware');
+const { authenticate, authorize } = require('../middlewares/auth.middleware');
 
 router.use(authenticate);
 
-// [POST] /api/refunds/request
+// [USER] Yêu cầu hoàn tiền
 router.post('/request', refundController.requestRefund);
+
+// [ADMIN] Quản lý hoàn tiền
+router.get('/admin/list', authorize('admin'), refundController.getAdminRefunds);
+router.post('/admin/:id/process', authorize('admin'), refundController.processRefund);
 
 module.exports = router;

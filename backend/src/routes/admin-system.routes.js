@@ -20,4 +20,7 @@ router.put('/fraud-alerts/:id/process', controller.processFraudAlert);
 // [GET] /api/admin/stats
 router.get('/stats', controller.getPlatformStats);
 
+// [GET] /api/admin/analytics
+router.get('/analytics', controller.getAnalytics);
+
 module.exports = router;

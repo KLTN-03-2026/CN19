@@ -192,7 +192,7 @@ const getStats = async (req, res) => {
         image_url: detail?.image_url,
         price: detail?.price,
         sold_quantity: m._sum.quantity,
-        revenue: m._sum.subtotal
+        revenue: Number(m._sum.subtotal || 0)
       };
     });
 
@@ -248,13 +248,13 @@ const getStats = async (req, res) => {
 
     // 7. Blog Stats
     const blogs = await prisma.blog.findMany({
-      where: { organizer_id: organizer.id },
+      where: { author_id: organizer.user_id },
       select: { id: true, title: true, status: true, created_at: true },
       orderBy: { created_at: 'desc' },
       take: 5
     });
-    const totalBlogs = await prisma.blog.count({ where: { organizer_id: organizer.id } });
-    const publishedBlogs = await prisma.blog.count({ where: { organizer_id: organizer.id, status: 'published' } });
+    const totalBlogs = await prisma.blog.count({ where: { author_id: organizer.user_id } });
+    const publishedBlogs = await prisma.blog.count({ where: { author_id: organizer.user_id, status: 'published' } });
 
     // 8. Participants (people who bought tickets across all events)
     const participantGroups = await prisma.ticket.groupBy({
@@ -297,7 +297,7 @@ const getStats = async (req, res) => {
 
   } catch (error) {
     console.error('getStats error:', error);
-    res.status(500).json({ error: 'Lỗi server.' });
+    res.status(500).json({ error: 'Lỗi server khi tải thống kê.', message: error.message });
   }
 };
 

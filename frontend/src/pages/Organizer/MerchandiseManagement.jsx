@@ -11,10 +11,13 @@ import {
 import toast from 'react-hot-toast';
 import axios from 'axios';
 import { organizerService } from '../../services/organizer.service';
+import { useSystemConfig } from '../../hooks/useSystemConfig';
 
 const MerchandiseManagement = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { productPlatformFee, productTransactionFee } = useSystemConfig();
+  const totalProductFeePercent = productPlatformFee + productTransactionFee;
 
   // Hàm xuất Excel (.xlsx) chuyên nghiệp
   const exportToExcel = () => {
@@ -28,9 +31,13 @@ const MerchandiseManagement = () => {
 
       // Chuẩn bị dữ liệu cho Excel
       const dataToExport = items.map((item, index) => {
+        const mPlatformFee = Number(item.platform_fee_percent || productPlatformFee);
+        const mTransFee = Number(item.commission_fee_percent || productTransactionFee);
+        const mTotalFee = mPlatformFee + mTransFee;
+
         const soldCount = item._count?.order_items || 0;
         const actualRevenue = Number(soldCount * item.price);
-        const netRevenue = Number(actualRevenue * 0.92); // Trừ 8% phí
+        const netRevenue = Number(actualRevenue * (1 - mTotalFee / 100));
         const estTotalRevenue = Number((soldCount + item.stock) * item.price);
 
         return {
@@ -41,7 +48,7 @@ const MerchandiseManagement = () => {
           'Kho hiện tại': item.stock,
           'Đã bán': soldCount,
           'Doanh thu thực tế': actualRevenue,
-          'Thực nhận BTC (92%)': netRevenue,
+          [`Thực nhận BTC (${100 - mTotalFee}%)`]: netRevenue,
           'Tổng doanh thu dự tính': estTotalRevenue,
           'Trạng thái': item.is_active ? 'Đang bán' : 'Đã tắt',
           'Ngày tạo': item.created_at ? format(new Date(item.created_at), 'dd/MM/yyyy') : '---'
@@ -707,16 +714,27 @@ const MerchandiseManagement = () => {
               {/* Event */}
               <div>
                 <label className="text-[10px] font-black text-gray-700 dark:text-gray-500 uppercase mb-2 block">Gắn sự kiện</label>
-                <select
-                  className="w-full px-4 py-3 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-600/20 transition-all font-bold text-xs md:text-sm text-gray-900 dark:text-white appearance-none cursor-pointer"
-                  value={formData.event_id}
-                  onChange={(e) => setFormData({...formData, event_id: e.target.value})}
-                >
-                  <option value="" className="dark:bg-[#16161a]">🌐 Bán chung (tất cả sự kiện)</option>
-                  {events.filter(e => e.status === 'active' || e.status === 'draft' || e.status === 'pending').map(e => (
-                    <option key={e.id} value={e.id} className="dark:bg-[#16161a]">{e.title}</option>
-                  ))}
-                </select>
+                <div className="relative group/select">
+                  <select
+                    disabled={editingItem && (editingItem._count?.order_items > 0)}
+                    className={`w-full px-4 py-3 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-600/20 transition-all font-bold text-xs md:text-sm text-gray-900 dark:text-white appearance-none cursor-pointer ${
+                      editingItem && (editingItem._count?.order_items > 0) ? 'opacity-60 cursor-not-allowed bg-gray-100' : ''
+                    }`}
+                    value={formData.event_id}
+                    onChange={(e) => setFormData({...formData, event_id: e.target.value})}
+                  >
+                    <option value="" className="dark:bg-[#16161a]">🌐 Bán chung (tất cả sự kiện)</option>
+                    {events.filter(e => e.status === 'active' || e.status === 'draft' || e.status === 'pending').map(e => (
+                      <option key={e.id} value={e.id} className="dark:bg-[#16161a]">{e.title}</option>
+                    ))}
+                  </select>
+                  {editingItem && (editingItem._count?.order_items > 0) && (
+                    <div className="mt-2 flex items-center gap-1.5 text-[9px] font-bold text-amber-600 dark:text-amber-500 bg-amber-500/10 p-2 rounded-xl border border-amber-500/20">
+                      <AlertCircle className="w-3 h-3" />
+                      Sản phẩm đã có đơn hàng, không thể thay đổi sự kiện gắn kết.
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Price + Stock */}
@@ -736,17 +754,17 @@ const MerchandiseManagement = () => {
                   </div>
                   {formData.price && parseFloat(formData.price) > 0 && (
                     <div className="mt-2 p-3 bg-blue-500/5 dark:bg-blue-500/10 rounded-xl border border-blue-500/10 space-y-1">
-                      <div className="flex justify-between text-[10px] font-bold text-gray-700 dark:text-gray-500">
-                        <span>Phí hệ thống (5%)</span>
-                        <span className="text-red-500">-{formatPrice(parseFloat(formData.price) * 0.05)}</span>
+                      <div className="flex justify-between text-[10px] font-bold text-gray-700 dark:text-gray-400">
+                        <span>Phí hệ thống ({editingItem ? Number(editingItem.platform_fee_percent || productPlatformFee) : productPlatformFee}%)</span>
+                        <span className="text-red-500">-{formatPrice(parseFloat(formData.price) * ((editingItem ? Number(editingItem.platform_fee_percent || productPlatformFee) : productPlatformFee) / 100))}</span>
                       </div>
-                      <div className="flex justify-between text-[10px] font-bold text-gray-700 dark:text-gray-500">
-                        <span>Phí cổng thanh toán (3%)</span>
-                        <span className="text-red-500">-{formatPrice(parseFloat(formData.price) * 0.03)}</span>
+                      <div className="flex justify-between text-[10px] font-bold text-gray-700 dark:text-gray-400">
+                        <span>Phí cổng thanh toán ({editingItem ? Number(editingItem.commission_fee_percent || productTransactionFee) : productTransactionFee}%)</span>
+                        <span className="text-red-500">-{formatPrice(parseFloat(formData.price) * ((editingItem ? Number(editingItem.commission_fee_percent || productTransactionFee) : productTransactionFee) / 100))}</span>
                       </div>
                       <div className="flex justify-between text-xs font-black text-blue-600 border-t border-blue-500/10 pt-1.5">
                         <span className="uppercase">Thực nhận / SP</span>
-                        <span>{formatPrice(parseFloat(formData.price) * 0.92)}</span>
+                        <span>{formatPrice(parseFloat(formData.price) * (1 - ((editingItem ? (Number(editingItem.platform_fee_percent || productPlatformFee) + Number(editingItem.commission_fee_percent || productTransactionFee)) : totalProductFeePercent)) / 100))}</span>
                       </div>
                     </div>
                   )}

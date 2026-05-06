@@ -326,7 +326,7 @@ const OrganizerPublicProfile = () => {
                 )}
 
                 {activeTab === 'blog' && (
-                  <div className="animate-in px-20 fade-in slide-in-from-bottom-4 duration-500 space-y-4">
+                  <div className="animate-in sm:px-15 fade-in slide-in-from-bottom-4 duration-500 space-y-4">
                     {isBlogsLoading ? (
                       <div className="space-y-4">
                         {[1,2,3].map(i => (

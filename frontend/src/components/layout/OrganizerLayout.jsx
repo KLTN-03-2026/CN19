@@ -29,6 +29,7 @@ import {
 import { useAuthStore } from '../../store/useAuthStore';
 import toast from 'react-hot-toast';
 import ScrollToTop from './ScrollToTop';
+import AIAssistant from '../ai/AIAssistant';
 
 const OrganizerLayout = () => {
   const { user, logout } = useAuthStore();
@@ -277,6 +278,7 @@ const OrganizerLayout = () => {
           </div>
         </div>
       </main>
+      <AIAssistant />
     </div>
   );
 };

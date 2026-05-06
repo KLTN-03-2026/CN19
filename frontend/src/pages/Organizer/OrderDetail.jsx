@@ -17,10 +17,21 @@ import {
 import api from '../../services/api';
 import { format } from 'date-fns';
 import { toast } from 'react-hot-toast';
+import { useSystemConfig } from '../../hooks/useSystemConfig';
 
 const OrderDetail = () => {
     const { id } = useParams();
     const navigate = useNavigate();
+    const { 
+        gasFee: systemGasFee,
+        eventPlatformFee,
+        eventTransactionFee,
+        productPlatformFee,
+        productTransactionFee
+    } = useSystemConfig();
+
+    const totalEventFee = eventPlatformFee + eventTransactionFee;
+    const totalProductFee = productPlatformFee + productTransactionFee;
     const [order, setOrder] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
 
@@ -95,11 +106,22 @@ const OrderDetail = () => {
             {/* Top Row: Overview Grid (3 Columns) */}
             {(() => {
                 const ticketItems = (order.items || []).filter(i => i.ticket_tier_id);
-                const ticketCommission = ticketItems.reduce((s, i) => s + Number(i.subtotal), 0) * 0.08;
-                const gasFee = ticketItems.reduce((s, i) => s + i.quantity, 0) * 10000;
-                const merchCommission = (order.merchandise_items || []).reduce((s, i) => s + Number(i.subtotal), 0) * 0.08;
-                const totalFees = ticketCommission + gasFee + merchCommission;
-                const netRevenue = Number(order.total_amount) - totalFees;
+                
+                // Ưu tiên sử dụng phí đã chốt trong database (Snapshots)
+                // Đơn hàng cũ lưu tổng phí vào platform_fee, đơn hàng mới tách ra commission_fee
+                const hasSnapshots = Number(order.platform_fee) > 0 || Number(order.commission_fee) > 0 || Number(order.gas_fee) > 0;
+                
+                const gasFeeSnapshot = hasSnapshots 
+                    ? Number(order.gas_fee || 0) 
+                    : ticketItems.reduce((s, i) => s + i.quantity, 0) * (order.event?.resale_gas_fee || systemGasFee);
+                
+                const totalCommissionSnapshot = hasSnapshots 
+                    ? (Number(order.platform_fee || 0) + Number(order.commission_fee || 0))
+                    : (ticketItems.reduce((s, i) => s + Number(i.subtotal), 0) * (totalEventFee / 100)) + 
+                      ((order.merchandise_items || []).reduce((s, i) => s + Number(i.subtotal), 0) * (totalProductFee / 100));
+
+                const totalFees = totalCommissionSnapshot + gasFeeSnapshot;
+                const netRevenue = Number(order.organizer_revenue || 0);
 
                 return (
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-4">
@@ -154,23 +176,83 @@ const OrderDetail = () => {
                                 </div>
 
                                 {/* Chi tiết các loại phí */}
-                                <div className="space-y-2 py-3 border-y border-white/5 dark:border-white/5 mt-2">
-                                    <div className="flex justify-between items-center text-[10px]">
-                                        <span className="text-slate-400 dark:text-gray-500 font-bold tracking-tight">Phí dịch vụ vé (8%)</span>
-                                        <span className="text-slate-200 dark:text-gray-300 font-bold font-mono">-{ticketCommission.toLocaleString()}đ</span>
-                                    </div>
-                                    <div className="flex justify-between items-center text-[10px]">
-                                        <span className="text-slate-400 dark:text-gray-500 font-bold tracking-tight">Phí hệ thống (Gas fee)</span>
-                                        <span className="text-slate-200 dark:text-gray-300 font-bold font-mono">-{gasFee.toLocaleString()}đ</span>
-                                    </div>
-                                    {merchCommission > 0 && (
-                                        <div className="flex justify-between items-center text-[10px]">
-                                            <span className="text-slate-400 dark:text-gray-500 font-bold tracking-tight">Phí dịch vụ vật phẩm (8%)</span>
-                                            <span className="text-slate-200 dark:text-gray-300 font-bold font-mono">-{merchCommission.toLocaleString()}đ</span>
-                                        </div>
-                                    )}
-                                </div>
+                                {hasSnapshots ? (
+                                    <div className="space-y-2 py-3 border-y border-white/5 dark:border-white/5 mt-2">
+                                        {/* Phí dịch vụ VÉ */}
+                                        {(Number(order.ticket_platform_fee || 0) > 0 || Number(order.ticket_commission_fee || 0) > 0) ? (
+                                            <div className="flex justify-between items-center text-[10px]">
+                                                <span className="text-slate-400 dark:text-gray-500 font-bold tracking-tight">
+                                                    Phí dịch vụ vé ({
+                                                        (Number(order.platform_fee_percent || 0) + Number(order.commission_fee_percent || 0)).toFixed(1)
+                                                    }%)
+                                                </span>
+                                                <span className="text-slate-200 dark:text-gray-300 font-bold font-mono">
+                                                    -{(Number(order.ticket_platform_fee || 0) + Number(order.ticket_commission_fee || 0)).toLocaleString()}đ
+                                                </span>
+                                            </div>
+                                        ) : (ticketItems.length > 0 && (
+                                            <div className="flex justify-between items-center text-[10px]">
+                                                <span className="text-slate-400 dark:text-gray-500 font-bold tracking-tight">
+                                                    Phí dịch vụ vé ({
+                                                        (Number(order.platform_fee_percent || 0) + Number(order.commission_fee_percent || 0)).toFixed(1)
+                                                    }%)
+                                                </span>
+                                                <span className="text-slate-200 dark:text-gray-300 font-bold font-mono">
+                                                    -{((ticketItems.reduce((s, i) => s + Number(i.subtotal), 0) * (Number(order.platform_fee_percent || 0) + Number(order.commission_fee_percent || 0)) / 100)).toLocaleString()}đ
+                                                </span>
+                                            </div>
+                                        ))}
 
+                                        {(Number(order.merchandise_platform_fee || 0) > 0 || Number(order.merchandise_commission_fee || 0) > 0) ? (
+                                            <div className="flex justify-between items-center text-[10px]">
+                                                <span className="text-slate-400 dark:text-gray-500 font-bold tracking-tight">
+                                                    Phí dịch vụ vật phẩm ({
+                                                        (() => {
+                                                            const merchSubtotal = (order.merchandise_items || []).reduce((s, i) => s + Number(i.subtotal), 0);
+                                                            if (merchSubtotal === 0) return "0.0";
+                                                            const totalMerchFee = Number(order.merchandise_platform_fee || 0) + Number(order.merchandise_commission_fee || 0);
+                                                            return ((totalMerchFee / merchSubtotal) * 100).toFixed(1);
+                                                        })()
+                                                    }%)
+                                                </span>
+                                                <span className="text-slate-200 dark:text-gray-300 font-bold font-mono">
+                                                    -{(Number(order.merchandise_platform_fee || 0) + Number(order.merchandise_commission_fee || 0)).toLocaleString()}đ
+                                                </span>
+                                            </div>
+                                        ) : ((order.merchandise_items || []).length > 0 && (
+                                            <div className="flex justify-between items-center text-[10px]">
+                                                <span className="text-slate-400 dark:text-gray-500 font-bold tracking-tight">
+                                                    Phí dịch vụ vật phẩm ({totalProductFee.toFixed(1)}%)
+                                                </span>
+                                                <span className="text-slate-200 dark:text-gray-300 font-bold font-mono">
+                                                    -{(((order.merchandise_items || []).reduce((s, i) => s + Number(i.subtotal), 0) * (totalProductFee / 100))).toLocaleString()}đ
+                                                </span>
+                                            </div>
+                                        ))}
+
+                                        <div className="flex justify-between items-center text-[10px]">
+                                            <span className="text-slate-400 dark:text-gray-500 font-bold tracking-tight">Phí hệ thống (Gas fee)</span>
+                                            <span className="text-slate-200 dark:text-gray-300 font-bold font-mono">-{gasFeeSnapshot.toLocaleString()}đ</span>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-2 py-3 border-y border-white/5 dark:border-white/5 mt-2">
+                                        <div className="flex justify-between items-center text-[10px]">
+                                            <span className="text-slate-400 dark:text-gray-500 font-bold tracking-tight">Phí dịch vụ vé ({totalEventFee}%)</span>
+                                            <span className="text-slate-200 dark:text-gray-300 font-bold font-mono">-{((ticketItems.reduce((s, i) => s + Number(i.subtotal), 0) * (totalEventFee / 100))).toLocaleString()}đ</span>
+                                        </div>
+                                        <div className="flex justify-between items-center text-[10px]">
+                                            <span className="text-slate-400 dark:text-gray-500 font-bold tracking-tight">Phí hệ thống (Gas fee)</span>
+                                            <span className="text-slate-200 dark:text-gray-300 font-bold font-mono">-{gasFeeSnapshot.toLocaleString()}đ</span>
+                                        </div>
+                                        {(order.merchandise_items || []).length > 0 && (
+                                            <div className="flex justify-between items-center text-[10px]">
+                                                <span className="text-slate-400 dark:text-gray-500 font-bold tracking-tight">Phí dịch vụ vật phẩm ({totalProductFee}%)</span>
+                                                <span className="text-slate-200 dark:text-gray-300 font-bold font-mono">-{(((order.merchandise_items || []).reduce((s, i) => s + Number(i.subtotal), 0) * (totalProductFee / 100))).toLocaleString()}đ</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                                 <div className="pt-2 bg-blue-500/10 -mx-6 px-6 py-3 -mb-6 border-t border-white/5">
                                     <div className="flex justify-between items-center">
                                         <div>

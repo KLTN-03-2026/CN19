@@ -80,7 +80,11 @@ import CouponDetail from './pages/Admin/CouponDetail';
 import TransactionManagement from './pages/Admin/TransactionManagement';
 import TransactionDetail from './pages/Admin/TransactionDetail';
 import AdminSettlementManagement from './pages/Admin/AdminSettlementManagement';
+import AdminWithdrawalManagement from './pages/Admin/AdminWithdrawalManagement';
+import AdminRefundManagement from './pages/Admin/AdminRefundManagement';
+import AdminReports from './pages/Admin/AdminReports';
 import FraudAlerts from './pages/Admin/FraudAlerts';
+import AdminSystemSettings from './pages/Admin/AdminSystemSettings';
 
 
 // Component Bảo vệ Route theo Role
@@ -219,6 +223,7 @@ const router = createBrowserRouter([
       </ProtectedRoute>
     ),
     children: [
+      { path: 'withdrawals', element: <ProtectedRoute allowedRoles={['admin']} requiredPermission="settlements"><AdminWithdrawalManagement /></ProtectedRoute> },
       { path: 'dashboard', element: <ProtectedRoute requiredPermission="dashboard"><Dashboard /></ProtectedRoute> },
       { path: 'users', element: <ProtectedRoute requiredPermission="users"><UserManagement /></ProtectedRoute> },
       { path: 'admins', element: <ProtectedRoute requiredPermission="admins"><UserManagement /></ProtectedRoute> }, 
@@ -235,14 +240,14 @@ const router = createBrowserRouter([
       { path: 'coupons/create', element: <ProtectedRoute requiredPermission="coupons"><CreateCoupon /></ProtectedRoute> },
       { path: 'coupons/edit/:id', element: <ProtectedRoute requiredPermission="coupons"><CreateCoupon /></ProtectedRoute> },
       { path: 'coupons/:id', element: <ProtectedRoute requiredPermission="coupons"><CouponDetail /></ProtectedRoute> },
-      { path: 'refunds', element: <ProtectedRoute requiredPermission="refunds"><div className="text-2xl font-black">Yêu cầu Hoàn tiền (Coming Soon)</div></ProtectedRoute> },
+      { path: 'refunds', element: <ProtectedRoute requiredPermission="refunds"><AdminRefundManagement /></ProtectedRoute> },
       { path: 'fraud', element: <ProtectedRoute requiredPermission="fraud"><FraudAlerts /></ProtectedRoute> },
       { path: 'transactions', element: <ProtectedRoute requiredPermission="transactions"><TransactionManagement /></ProtectedRoute> },
       { path: 'transactions/:type/:id', element: <ProtectedRoute requiredPermission="transactions"><TransactionDetail /></ProtectedRoute> },
       { path: 'settlements', element: <ProtectedRoute requiredPermission="settlements"><AdminSettlementManagement /></ProtectedRoute> },
-      { path: 'settings', element: <ProtectedRoute requiredPermission="system"><div className="text-2xl font-black">Cấu hình Hệ thống (Coming Soon)</div></ProtectedRoute> },
+      { path: 'settings', element: <ProtectedRoute requiredPermission="system"><AdminSystemSettings /></ProtectedRoute> },
       { path: 'support', element: <ProtectedRoute requiredPermission="support"><div className="text-2xl font-black">Hỗ trợ & Khiếu nại (Coming Soon)</div></ProtectedRoute> },
-      { path: 'reports', element: <ProtectedRoute requiredPermission="dashboard"><div className="text-2xl font-black">Thống kê & Báo cáo (Coming Soon)</div></ProtectedRoute> },
+      { path: 'reports', element: <ProtectedRoute requiredPermission="dashboard"><AdminReports /></ProtectedRoute> },
       { path: '', element: <Navigate to="dashboard" replace /> }
     ]
   },

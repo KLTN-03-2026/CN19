@@ -2035,7 +2035,7 @@ const UserDetail = () => {
                   </h2>
                 </div>
                 <button 
-                  onClick={() => window.open(`/event/${selectedEvent.id}`, '_blank')}
+                  onClick={() => window.open(`/events/${selectedEvent.id}`, '_blank')}
                   className="flex items-center space-x-2 px-6 py-3 bg-neon-green/10 text-neon-green border border-neon-green/20 rounded-2xl hover:bg-neon-green hover:text-black transition-all font-black text-xs uppercase"
                 >
                   <ExternalLink className="w-4 h-4" />

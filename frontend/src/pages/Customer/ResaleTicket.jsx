@@ -18,9 +18,18 @@ import { ticketService } from '../../services/ticket.service';
 import { marketplaceService } from '../../services/marketplace.service';
 import toast from 'react-hot-toast';
 
+import { useSystemConfig } from '../../hooks/useSystemConfig';
+
 const ResaleTicket = () => {
     const { id } = useParams();
     const navigate = useNavigate();
+    const { 
+        royaltyFee: royaltyPercent, 
+        resaleTransactionFee: transactionFeePercent, 
+        resalePriceCap,
+        gasFee,
+        loading: configLoading
+    } = useSystemConfig();
     const [ticket, setTicket] = useState(null);
     const [loading, setLoading] = useState(true);
     const [resalePrice, setResalePrice] = useState('');
@@ -76,11 +85,11 @@ const ResaleTicket = () => {
         }
 
         const originalPrice = Number(ticket.ticket_tier.price);
-        const limitPercent = Number(ticket.event.resale_price_limit_percent || 108.0);
-        const maxResalePrice = (originalPrice * limitPercent) / 100;
+        const priceLimit = Number(ticket.event.resale_price_limit_percent || 107);
+        const maxResalePrice = originalPrice * (priceLimit / 100);
 
         if (resalePrice > maxResalePrice) {
-            toast.error(`Giá bán không được vượt quá ${limitPercent}% giá gốc: ${maxResalePrice.toLocaleString()} VND`);
+            toast.error(`Giá bán không được vượt quá ${priceLimit}% giá gốc: ${maxResalePrice.toLocaleString()} VND`);
             return;
         }
 
@@ -131,25 +140,37 @@ const ResaleTicket = () => {
     if (!ticket) return null;
 
     const event = ticket.event;
-    const profit = Math.max(0, resalePrice - ticket.ticket_tier.price);
     
-    // Phí từ database
-    const royaltyPercent = Number(event.royalty_fee_percent || 3.0);
-    const platformPercent = Number(event.resale_platform_fee_percent || 3.0);
-    const gasFee = Number(event.resale_gas_fee || 10000);
+    // Calculations based on dynamic system config
 
     const merchandiseTotal = ticket.order?.merchandise_items
         ?.filter(item => selectedMerchandise.includes(item.id))
         ?.reduce((acc, item) => acc + (Number(item.unit_price) * item.quantity), 0) || 0;
 
-    const royaltyFee = resalePrice > ticket.ticket_tier.price ? (ticket.ticket_tier.price * royaltyPercent) / 100 : 0; 
-    const systemFee = (resalePrice * platformPercent) / 100 + gasFee; 
+    // Lấy phí từ Sự kiện (Ưu tiên) hoặc Hệ thống (Fallback)
+    const eventResalePlatformFee = ticket.event.resale_platform_fee_percent !== null 
+        ? Number(ticket.event.resale_platform_fee_percent) 
+        : transactionFeePercent;
     
-    // Tổng số tiền người mua phải trả (Vé + Sản phẩm + Phí)
+    const eventResaleGasFee = ticket.event.resale_gas_fee !== null 
+        ? Number(ticket.event.resale_gas_fee) 
+        : gasFee;
+
+    const eventRoyaltyPercent = ticket.event.royalty_fee_percent !== null
+        ? Number(ticket.event.royalty_fee_percent)
+        : royaltyPercent;
+
+    // Phí hệ thống (Người mua trả đã bao gồm - Hệ thống thu từ tổng tiền)
+    const systemFee = (parseFloat(resalePrice || 0) * eventResalePlatformFee) / 100 + eventResaleGasFee; 
+    
+    // Phí bản quyền (Trả cho BTC) = % Bản quyền * Giá niêm yết
+    const royaltyFee = (parseFloat(resalePrice || 0) * eventRoyaltyPercent) / 100;
+    
+    // Tổng số tiền người mua phải trả (Vé + Sản phẩm + Phí hệ thống cộng thêm)
     const buyerPays = parseFloat(resalePrice || 0) + merchandiseTotal + systemFee; 
     
-    // Số tiền người bán thực nhận (Vé + Sản phẩm - Phí bản quyền)
-    const netProfit = parseFloat(resalePrice || 0) + merchandiseTotal - royaltyFee; 
+    // Số tiền người bán thực nhận (Giá vé - Phí bản quyền + Giá trị sản phẩm)
+    const netProfit = (parseFloat(resalePrice || 0) - royaltyFee) + merchandiseTotal; 
 
 
     return (
@@ -245,11 +266,11 @@ const ResaleTicket = () => {
                                     {ticket.ticket_tier.price.toLocaleString('vi-VN')} <span className="text-[10px] text-neon-green">VND</span>
                                 </p>
                             </div>
-                            <div className="p-4 bg-white dark:bg-[#0c0c0d] border border-gray-200 dark:border-white/5 rounded-2xl space-y-1">
-                                <p className="text-[9px] font-black text-gray-500 dark:text-gray-400 uppercase">Giá trần (+8%)</p>
-                                <p className="text-lg font-black text-red-500 tracking-tight">
-                                    {(ticket.ticket_tier.price * 1.08).toLocaleString()} <span className="text-[10px] text-red-500/50">VND</span>
-                                </p>
+                             <div className="p-4 bg-white dark:bg-[#0c0c0d] border border-gray-200 dark:border-white/5 rounded-2xl space-y-1">
+                                <p className="text-[9px] font-black text-gray-500 dark:text-gray-400 uppercase">Giá trần (+{Number(ticket.event.resale_price_limit_percent || 107) - 100}%)</p>
+                                 <p className="text-lg font-black text-red-500 tracking-tight">
+                                    {(ticket.ticket_tier.price * (Number(ticket.event.resale_price_limit_percent || 107) / 100)).toLocaleString()} <span className="text-[10px] text-red-500/50">VND</span>
+                                 </p>
                             </div>
                         </div>
 
@@ -378,14 +399,14 @@ const ResaleTicket = () => {
                                                 <span className="text-blue-500">+{merchandiseTotal.toLocaleString()} VND</span>
                                             </div>
                                         )}
-                                        <div className="flex items-center justify-between text-[10px] font-black text-gray-500 dark:text-gray-400 ">
-                                            <span>Phí hệ thống ({event.resale_platform_fee_percent}% + {Number(event.resale_gas_fee).toLocaleString()})</span>
-                                            <span className="text-red-500">+{systemFee.toLocaleString()}</span>
-                                        </div>
-                                        <div className="flex items-center justify-between text-[10px] font-black text-gray-500 dark:text-gray-400 ">
-                                            <span className="text-orange-500">Phí bản quyền BTC ({royaltyFee > 0 ? `${event.royalty_fee_percent}%` : '0đ'})</span>
-                                            <span className="text-orange-500">-{royaltyFee.toLocaleString()}</span>
-                                        </div>
+                                         <div className="flex items-center justify-between text-[10px] font-black text-gray-500 dark:text-gray-400 ">
+                                             <span>Phí hệ thống ({eventResalePlatformFee}% Giao dịch + {eventResaleGasFee.toLocaleString()}đ Gas)</span>
+                                             <span className="text-red-500">+{systemFee.toLocaleString()}</span>
+                                         </div>
+                                         <div className="flex items-center justify-between text-[10px] font-black text-gray-500 dark:text-gray-400 ">
+                                             <span className="text-orange-500">Phí bản quyền ({eventRoyaltyPercent}% trả BTC)</span>
+                                             <span className="text-orange-500">-{royaltyFee.toLocaleString()}</span>
+                                         </div>
                                     </div>
                                     <div className="p-4 bg-gray-50 dark:bg-white/[0.02] rounded-2xl space-y-1 border border-gray-100 dark:border-white/5">
                                         <div className="flex items-center gap-1.5 text-[10px] font-black text-gray-500 dark:text-gray-400">
@@ -397,7 +418,7 @@ const ResaleTicket = () => {
                                 
                                 <div className="p-4 bg-neon-green/5 rounded-3xl border border-neon-green/20 flex items-center justify-between gap-6 shadow-inner">
                                     <div className="space-y-1">
-                                        <p className="text-[11px] font-black text-neon-green">Số tiền bạn nhận về (Vé + Sản phẩm - Phí BTC)</p>
+                                        <p className="text-[11px] font-black text-neon-green">Số tiền bạn nhận về (Sau khi trừ phí sàn, phí gas & phí BTC {eventRoyaltyPercent}%)</p>
                                         <p className="text-2xl font-black text-gray-900 dark:text-white tracking-tighter">
                                             {Number(netProfit).toLocaleString('vi-VN')} <span className="text-sm text-neon-green">VND</span>
                                         </p>

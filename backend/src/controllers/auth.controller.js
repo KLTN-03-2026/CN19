@@ -203,6 +203,12 @@ const login = async (req, res) => {
       return res.status(403).json({ error: 'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ Admin.' });
     }
 
+    // 3. Kiểm tra mật khẩu
+    const isMatch = await bcrypt.compare(password, user.password_hash);
+    if (!isMatch) {
+      return res.status(401).json({ error: 'Email hoặc mật khẩu không chính xác.' });
+    }
+
     // 4. Tự động cấp ví nếu user chưa có (Just-in-Time Wallet)
     if (!user.wallet_address) {
       const { ethers } = require('ethers');

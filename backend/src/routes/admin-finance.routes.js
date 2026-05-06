@@ -17,4 +17,10 @@ router.get('/payouts', controller.getPayouts);
 // [POST] /api/admin/payouts/:id/execute
 router.post('/payouts/:id/execute', controller.executePayout);
 
+// [GET] /api/admin/withdrawals
+router.get('/withdrawals', controller.getWithdrawals);
+
+// [POST] /api/admin/withdrawals/:id/process
+router.post('/withdrawals/:id/process', controller.processWithdrawal);
+
 module.exports = router;

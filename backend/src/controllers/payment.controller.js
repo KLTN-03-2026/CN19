@@ -583,12 +583,13 @@ async function processOrderSuccess(orderNumber, transactionId, method, payload) 
                         }
                     });
 
-                    // Cập nhật Ticket Owner
+                    // Cập nhật Ticket Owner & Transfer Count
                     await tx.ticket.update({
                         where: { id: ticket.id },
                         data: {
                             current_owner_id: receiver.id,
-                            is_transferred: true
+                            is_transferred: true,
+                            transfer_count: { increment: 1 }
                         }
                     });
 

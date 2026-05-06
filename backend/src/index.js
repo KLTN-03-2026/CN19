@@ -57,6 +57,9 @@ const metadataRoutes = require('./routes/metadata.routes');
 const utilsRoutes = require('./routes/utils.routes');
 
 const settlementRoutes = require('./routes/settlement.routes');
+const { startAutoSettlementJob } = require('./jobs/auto-settlement.job');
+const { startMarketplaceCleanupJob } = require('./jobs/marketplace-cleanup.job');
+const systemRoutes = require('./routes/system.routes');
 
 const app = express();
 
@@ -120,6 +123,7 @@ app.use('/api/ai', aiRoutes);
 app.use('/api/metadata', metadataRoutes);
 app.use('/api/utils', utilsRoutes);
 app.use('/api/settlements', settlementRoutes);
+app.use('/api/system', systemRoutes);
 
 // Test Route
 app.get('/', (req, res) => {
@@ -130,6 +134,9 @@ app.get('/', (req, res) => {
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
+  // Khởi động các Cronjob định kỳ
+  startAutoSettlementJob();
+  startMarketplaceCleanupJob();
 });
 
 // Chặn server bị sập khi gặp lỗi không mong muốn

@@ -28,6 +28,8 @@ import { RefreshCcw } from 'lucide-react';
 import { useBehaviorTracker } from '../../hooks/useBehaviorTracker';
 import { useTranslation } from 'react-i18next';
 import EventCard from '../../components/events/EventCard';
+import { useSystemConfig } from '../../hooks/useSystemConfig';
+
 import PuzzleCaptcha from '../../components/common/PuzzleCaptcha';
 
 const formatImageUrl = (url) => {
@@ -37,10 +39,12 @@ const formatImageUrl = (url) => {
     return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`;
 };
 
+
 const Marketplace = () => {
     const navigate = useNavigate();
     const { t, i18n } = useTranslation();
     const { user } = useAuthStore();
+    const { config } = useSystemConfig();
     const [listings, setListings] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
@@ -285,11 +289,18 @@ const Marketplace = () => {
                                     <div className="absolute top-4 right-4 px-3 py-1.5 bg-black/60 backdrop-blur-md border border-white/10 rounded-xl">
                                         <p className="text-[8px] font-black text-neon-green uppercase tracking-tight leading-none mb-0.5">{t('marketplace.listing.asking_price')}</p>
                                         <p className="text-sm font-black text-white tracking-tight">
-                                            {(
-                                                Number(listing.asking_price) + 
-                                                Number(listing.event.resale_gas_fee || 10000) + 
-                                                (Number(listing.metadata?.ticket_price || listing.asking_price) * Number(listing.event.resale_platform_fee_percent || 3.0) / 100)
-                                            ).toLocaleString()} <span className="text-[9px] text-gray-400">{i18n.language === 'vi' ? 'VNĐ' : 'VND'}</span>
+                                            {(() => {
+                                                const resaleGasFee = Number(listing.event.resale_gas_fee || config.system_gas_fee || 10000);
+                                                const platformFeePercent = Number(listing.event.resale_platform_fee_percent || config.resale_transaction_fee_percent || 3.0);
+                                                const totalAskingPrice = Number(listing.asking_price);
+                                                
+                                                // [Smart Fee Calculation]: Chỉ tính phí trên phần vé
+                                                const metadata = listing.metadata || {};
+                                                const ticketPrice = Number(metadata.ticket_price || totalAskingPrice);
+                                                
+                                                const systemFee = resaleGasFee + (ticketPrice * platformFeePercent / 100);
+                                                return (totalAskingPrice + systemFee).toLocaleString();
+                                            })()} <span className="text-[9px] text-gray-400">{i18n.language === 'vi' ? 'VNĐ' : 'VND'}</span>
                                         </p>
                                     </div>
 
@@ -562,11 +573,17 @@ const Marketplace = () => {
                                 <div>
                                     <p className="text-[9px] font-black text-neon-green uppercase ">{t('checkout.totalToPay')}</p>
                                     <p className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">
-                                        {(
-                                            Number(selectedListing.asking_price) + 
-                                            Number(selectedListing.event.resale_gas_fee || 10000) + 
-                                            (Number(selectedListing.metadata?.ticket_price || selectedListing.asking_price) * Number(selectedListing.event.resale_platform_fee_percent || 3.0) / 100)
-                                        ).toLocaleString()} <span className="text-xs text-gray-500">{i18n.language === 'vi' ? 'VNĐ' : 'VND'}</span>
+                                        {(() => {
+                                            const resaleGasFee = Number(selectedListing.event.resale_gas_fee || config.system_gas_fee || 10000);
+                                            const platformFeePercent = Number(selectedListing.event.resale_platform_fee_percent || config.resale_transaction_fee_percent || 3.0);
+                                            const totalAskingPrice = Number(selectedListing.asking_price);
+                                            
+                                            const metadata = selectedListing.metadata || {};
+                                            const ticketPrice = Number(metadata.ticket_price || totalAskingPrice);
+                                            
+                                            const systemFee = resaleGasFee + (ticketPrice * platformFeePercent / 100);
+                                            return (totalAskingPrice + systemFee).toLocaleString();
+                                        })()} <span className="text-xs text-gray-500">{i18n.language === 'vi' ? 'VNĐ' : 'VND'}</span>
                                     </p>
                                 </div>
                                 <button 

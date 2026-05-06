@@ -157,5 +157,17 @@ export const adminService = {
   processFraudAlert: async (id, action) => {
     const response = await api.put(`/admin/fraud-alerts/${id}/process`, { action });
     return response.data;
+  },
+
+  // Cấu hình Hệ thống (System Settings)
+  getSystemConfig: async () => {
+    const response = await api.get('/admin/system/config');
+    return response.data;
+  },
+  updateSystemConfig: async (data, otp) => {
+    const response = await api.put('/admin/system/config', data, {
+      headers: { 'x-otp': otp }
+    });
+    return response.data;
   }
 };

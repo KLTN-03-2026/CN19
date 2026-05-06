@@ -26,10 +26,13 @@ import {
 } from 'recharts';
 import toast from 'react-hot-toast';
 import { organizerService } from '../../services/organizer.service';
+import { useSystemConfig } from '../../hooks/useSystemConfig';
 
 const MerchandiseDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { productPlatformFee, productTransactionFee } = useSystemConfig();
+  const totalProductFeePercent = productPlatformFee + productTransactionFee;
   const [item, setItem] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   
@@ -403,29 +406,73 @@ const MerchandiseDetail = () => {
           {/* Settlement Breakdown */}
           {item.totalRevenue > 0 && (
             <div className="bg-white dark:bg-[#16161a] rounded-2xl border border-gray-200 dark:border-white/5 px-6 py-4 animate-in fade-in slide-in-from-top-2 duration-500">
-              <h3 className="text-[10px] font-black text-gray-600 dark:text-gray-300 uppercase mb-4 flex items-center gap-2">
-                <TrendingUp className="w-3.5 h-3.5" /> Chi tiết quyết toán (Dự kiến)
-              </h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-[10px] font-black text-gray-600 dark:text-gray-300 uppercase flex items-center gap-2">
+                  <TrendingUp className="w-3.5 h-3.5" /> Chi tiết quyết toán {item.event_id ? '(Dự kiến)' : '(Thực tế lịch sử)'}
+                </h3>
+                {!item.event_id && (
+                   <span className="text-[8px] font-bold text-blue-500 bg-blue-500/10 px-2 py-0.5 rounded-full border border-blue-500/20 uppercase">
+                     Sản phẩm dùng chung
+                   </span>
+                )}
+              </div>
               <div className="space-y-2">
                 <div className="flex justify-between items-center text-[13px]">
                   <span className="text-gray-700 dark:text-gray-400 font-medium">Tổng doanh thu bán sản phẩm</span>
                   <span className="text-gray-900 dark:text-white font-black">{formatPrice(item.totalRevenue)}</span>
                 </div>
-                <div className="flex justify-between items-center  text-[13px]">
-                  <span className="text-gray-700 dark:text-gray-400 font-medium">Phí hệ thống (5%)</span>
-                  <span className="text-red-500 font-bold">-{formatPrice(item.totalRevenue * 0.05)}</span>
-                </div>
-                <div className="flex justify-between items-center text-[13px]">
-                  <span className="text-gray-700 dark:text-gray-400 font-medium">Phí cổng thanh toán (3%)</span>
-                  <span className="text-red-500 font-bold">-{formatPrice(item.totalRevenue * 0.03)}</span>
-                </div>
-                <div className="pt-3 border-t border-dashed border-gray-200 dark:border-white/10 flex justify-between items-center">
-                  <span className="text-blue-600 text-xs font-black uppercase">Thực nhận cuối cùng</span>
-                  <div className="text-right">
-                    <span className="text-xl font-black text-blue-600 leading-none block">{formatPrice(item.totalRevenue * 0.92)}</span>
-                    <span className="text-[9px] text-gray-500 font-bold mt-1 block">Đã khấu trừ tất cả chi phí</span>
-                  </div>
-                </div>
+                
+                {/* 
+                  Logic tính toán:
+                  1. Nếu là sản phẩm gắn sự kiện: Dùng phí đã chốt tại Merchandise (Snapshot lúc tạo)
+                  2. Nếu là sản phẩm dùng chung: Cộng dồn từ các OrderItem thực tế (đảm bảo tính đúng nếu Admin đổi phí hệ thống)
+                */}
+                {(() => {
+                  let totalPlatformFeeAmount = 0;
+                  let totalCommissionFeeAmount = 0;
+                  let displayPlatformRate = 0;
+                  let displayCommissionRate = 0;
+
+                  if (item.event_id) {
+                    // Sản phẩm gắn sự kiện -> Tính dựa trên tỷ lệ cố định
+                    displayPlatformRate = Number(item.platform_fee_percent || productPlatformFee);
+                    displayCommissionRate = Number(item.commission_fee_percent || productTransactionFee);
+                    totalPlatformFeeAmount = item.totalRevenue * (displayPlatformRate / 100);
+                    totalCommissionFeeAmount = item.totalRevenue * (displayCommissionRate / 100);
+                  } else {
+                    // Sản phẩm dùng chung -> Cộng dồn từ lịch sử (Granular Fee Tracking)
+                    totalPlatformFeeAmount = item.order_items?.reduce((sum, oi) => sum + Number(oi.platform_fee || 0), 0) || 0;
+                    totalCommissionFeeAmount = item.order_items?.reduce((sum, oi) => sum + Number(oi.commission_fee || 0), 0) || 0;
+                  }
+
+                  return (
+                    <>
+                      <div className="flex justify-between items-center text-[13px]">
+                        <span className="text-gray-700 dark:text-gray-400 font-medium">
+                          Phí hệ thống {item.event_id ? `(${displayPlatformRate}%)` : ''}
+                        </span>
+                        <span className="text-red-500 font-bold">-{formatPrice(totalPlatformFeeAmount)}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-[13px]">
+                        <span className="text-gray-700 dark:text-gray-400 font-medium">
+                          Phí cổng thanh toán {item.event_id ? `(${displayCommissionRate}%)` : ''}
+                        </span>
+                        <span className="text-red-500 font-bold">-{formatPrice(totalCommissionFeeAmount)}</span>
+                      </div>
+                      <div className="pt-3 border-t border-dashed border-gray-200 dark:border-white/10 flex justify-between items-center">
+                        <span className="text-blue-600 text-xs font-black uppercase">Thực nhận {item.event_id ? 'dự kiến' : 'thực tế'}</span>
+                        <div className="text-right">
+                          <span className="text-xl font-black text-blue-600 leading-none block">
+                            {formatPrice(item.totalRevenue - totalPlatformFeeAmount - totalCommissionFeeAmount)}
+                          </span>
+                          <span className="text-[9px] text-gray-500 font-bold mt-1 block">
+                            {item.event_id ? 'Đã khấu trừ theo tỷ lệ sản phẩm' : 'Tính toán từ lịch sử đơn hàng'}
+                          </span>
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             </div>
           )}
@@ -711,6 +758,7 @@ const MerchandiseDetail = () => {
                       <th className="px-6 py-3 text-center text-[10px] font-black text-gray-600 dark:text-gray-300 uppercase">SL</th>
                       <th className="px-6 py-3 text-right text-[10px] font-black text-gray-600 dark:text-gray-300 uppercase">Đơn giá</th>
                       <th className="px-6 py-3 text-right text-[10px] font-black text-gray-600 dark:text-gray-300 uppercase">Thành tiền</th>
+                      <th className="px-6 py-3 text-right text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase">Thực nhận</th>
                       <th className="px-6 py-3 text-center text-[10px] font-black text-gray-600 dark:text-gray-300 uppercase">Trạng thái</th>
                       <th className="px-6 py-3 text-right text-[10px] font-black text-gray-600 dark:text-gray-300 uppercase">Ngày mua</th>
                       <th className="px-6 py-3 text-center text-[10px] font-black text-gray-600 dark:text-gray-300 uppercase">Thao tác</th>
@@ -744,7 +792,10 @@ const MerchandiseDetail = () => {
                           <span className="text-xs font-black text-gray-600 dark:text-gray-300">{formatPrice(orderItem.unit_price)}</span>
                         </td>
                         <td className="px-6 py-4 text-right">
-                          <span className="text-xs font-black text-blue-600">{formatPrice(orderItem.subtotal)}</span>
+                          <span className="text-xs font-black text-gray-900 dark:text-white">{formatPrice(orderItem.subtotal)}</span>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <span className="text-xs font-black text-blue-600">{formatPrice(Number(orderItem.subtotal) - Number(orderItem.platform_fee || 0) - Number(orderItem.commission_fee || 0))}</span>
                         </td>
                         <td className="px-6 py-4 text-center">
                           <span className={`px-2 py-1 rounded-full text-[8px] font-black uppercase ${getStatusColor(orderItem.order?.status)}`}>

@@ -17,17 +17,21 @@ import {
   CreditCard,
   TrendingUp,
   Download,
-  RotateCcw
+  RotateCcw,
+  ShieldCheck
 } from 'lucide-react';
 import { adminService } from '../../services/admin.service';
 import { exportToExcel } from '../../utils/excel';
 import toast from 'react-hot-toast';
+import { format } from 'date-fns';
+import { vi } from 'date-fns/locale';
 
 const TransactionManagement = () => {
   const navigate = useNavigate();
   const [transactions, setTransactions] = useState([]);
   const [stats, setStats] = useState({
     totalRevenue: 0,
+    totalCommission: 0,
     totalOrders: 0,
     successfulOrders: 0,
     failedOrders: 0
@@ -227,7 +231,7 @@ const TransactionManagement = () => {
       </div>
 
       {/* Stats Cards - Standardized Density */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <div className="p-5 bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 flex items-center space-x-4 shadow-sm relative overflow-hidden group">
            <div className="absolute top-0 right-0 w-16 h-16 bg-blue-500/5 blur-2xl -mr-4 -mt-4"></div>
            <div className="w-11 h-11 rounded-xl bg-blue-500/10 flex items-center justify-center border border-blue-500/10 relative z-10">
@@ -236,6 +240,17 @@ const TransactionManagement = () => {
            <div className="relative z-10">
               <div className="text-[10px] uppercase font-black text-gray-400 tracking-widest">Doanh thu</div>
               <div className="text-xl font-black dark:text-white leading-none mt-1 tracking-tighter">{formatCurrency(stats.totalRevenue)}</div>
+           </div>
+        </div>
+
+        <div className="p-5 bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 flex items-center space-x-4 shadow-sm relative overflow-hidden group">
+           <div className="absolute top-0 right-0 w-16 h-16 bg-orange-500/5 blur-2xl -mr-4 -mt-4"></div>
+           <div className="w-11 h-11 rounded-xl bg-orange-500/10 flex items-center justify-center border border-orange-500/10 relative z-10">
+              <ShieldCheck className="w-5 h-5 text-orange-500" />
+           </div>
+           <div className="relative z-10">
+              <div className="text-[10px] uppercase font-black text-gray-400 tracking-widest">Hoa hồng HT</div>
+              <div className="text-xl font-black dark:text-white leading-none mt-1 tracking-tighter">{formatCurrency(stats.totalCommission || 0)}</div>
            </div>
         </div>
 
@@ -452,8 +467,5 @@ const TransactionManagement = () => {
     </div>
   );
 };
-
-export default TransactionManagement;
-
 
 export default TransactionManagement;

@@ -128,6 +128,8 @@ model Event {
   resale_price_limit_percent    Decimal                @default(108.0)
   resale_platform_fee_percent   Decimal                @default(3.0)
   resale_gas_fee               Decimal                @default(10000.0)
+  platform_fee_percent          Decimal                @default(5.0)
+  commission_fee_percent        Decimal                @default(3.0)
   is_featured                   Boolean                @default(false)
   blogs                      Blog[]
   coupons                    Coupon[]
@@ -181,7 +183,8 @@ model Order {
   order_number      String                 @unique
   status            String
   subtotal          Decimal
-  platform_fee      Decimal
+  platform_fee      Decimal                @default(0)
+  platform_fee_percent   Decimal?          @default(0)
   total_amount      Decimal
   payment_method    String
   transaction_id    String?
@@ -196,9 +199,17 @@ model Order {
   metadata          Json?
   order_type        String                 @default("TICKET_PURCHASE")
   ip_address        String?
-  commission_fee    Decimal?               @default(0)
-  gas_fee           Decimal?               @default(0)
-  organizer_revenue Decimal?               @default(0)
+  commission_fee         Decimal?               @default(0)
+  commission_fee_percent Decimal?               @default(0)
+  gas_fee                Decimal?               @default(0)
+  
+  // Separated Fees for Reporting
+  ticket_platform_fee      Decimal?               @default(0)
+  ticket_commission_fee    Decimal?               @default(0)
+  merchandise_platform_fee   Decimal?               @default(0)
+  merchandise_commission_fee Decimal?               @default(0)
+
+  organizer_revenue      Decimal?               @default(0)
   bot_logs          BotDetectionLog[]
   merchandise_items MerchandiseOrderItem[]
   coupon            Coupon?                @relation(fields: [coupon_id], references: [id])
@@ -249,6 +260,7 @@ model Ticket {
   original_buyer_id    String
   is_on_marketplace    Boolean                  @default(false)
   is_transferred       Boolean                  @default(false)
+  transfer_count       Int                      @default(0)
   is_used              Boolean                  @default(false)
   checked_in_at        DateTime?
   qr_code_hash         String?
@@ -293,17 +305,19 @@ model MarketplaceTransaction {
   ticket_id             String
   seller_id             String
   buyer_id              String
-  seller_receive_amount Decimal
-  platform_fee          Decimal
-  buyer_pay_amount      Decimal
-  status                String
+  seller_receive_amount    Decimal
+  platform_fee             Decimal
+  platform_fee_percent     Decimal            @default(0)
+  organizer_royalty        Decimal            @default(0)
+  organizer_royalty_percent Decimal           @default(0)
+  buyer_pay_amount         Decimal
+  status                   String
   is_settled            Boolean            @default(false)
   nft_transfer_tx_hash  String?
   ip_address            String?
   created_at            DateTime           @default(now())
   commission_fee        Decimal?           @default(0)
   gas_fee               Decimal?           @default(0)
-  organizer_royalty     Decimal?           @default(0)
   resale_profit         Decimal?           @default(0)
   buyer                 User               @relation("Buyer", fields: [buyer_id], references: [id])
   listing               MarketplaceListing @relation(fields: [listing_id], references: [id])
@@ -381,6 +395,9 @@ model EscrowPayout {
   created_at      DateTime  @default(now())
   evidence_url    String?
   platform_fee    Decimal   @default(0)
+  commission_fee  Decimal   @default(0)
+  gas_fee         Decimal   @default(0)
+  marketplace_royalty Decimal @default(0)
   processed_at    DateTime?
   requested_at    DateTime?
   updated_at      DateTime  @updatedAt
@@ -433,6 +450,10 @@ model Merchandise {
   is_active    Boolean                @default(true)
   created_at   DateTime               @default(now())
   updated_at   DateTime               @updatedAt
+  
+  platform_fee_percent   Decimal?     @default(0)
+  commission_fee_percent Decimal?     @default(0)
+
   event        Event?                 @relation(fields: [event_id], references: [id])
   organizer    Organizer              @relation(fields: [organizer_id], references: [id])
   order_items  MerchandiseOrderItem[]
@@ -445,6 +466,8 @@ model MerchandiseOrderItem {
   quantity       Int
   unit_price     Decimal
   subtotal       Decimal
+  platform_fee   Decimal?    @default(0)
+  commission_fee Decimal?    @default(0)
   owner_id       String?     // Chủ sở hữu hiện tại của vật phẩm
   is_redeemed    Boolean     @default(false) // Trạng thái đã nhận hàng
   listing_id     String?     // Nếu vật phẩm đang được đăng bán kèm vé
@@ -542,6 +565,8 @@ model WithdrawalRequest {
   id              String    @id @default(uuid())
   user_id         String?
   amount          Decimal
+  fee_amount      Decimal   @default(0)
+  net_amount      Decimal   @default(0)
   bank_name       String
   account_number  String
   account_holder  String
@@ -550,6 +575,14 @@ model WithdrawalRequest {
   processed_at    DateTime?
   created_at      DateTime  @default(now())
   user            User?     @relation(fields: [user_id], references: [id])
+}
+
+model SystemSetting {
+  id          String   @id @default(uuid())
+  key         String   @unique // e.g., "withdrawal_fee_percent", "min_withdrawal_amount"
+  value       String
+  description String?
+  updated_at  DateTime @updatedAt
 }
 
 model MerchandiseScanHistory {

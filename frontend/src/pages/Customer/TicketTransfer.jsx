@@ -19,12 +19,15 @@ import { userService } from '../../services/user.service';
 import orderService from '../../services/order.service';
 import { useAuthStore } from '../../store/useAuthStore';
 import toast from 'react-hot-toast';
+import { useSystemConfig } from '../../hooks/useSystemConfig';
 
 const TicketTransfer = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const { user: authUser } = useAuthStore();
+    const { gasFee } = useSystemConfig();
     const [ticket, setTicket] = useState(null);
+    const eventResaleGasFee = ticket?.event?.resale_gas_fee || gasFee || 10000;
     const [loading, setLoading] = useState(true);
     const [receiverEmail, setReceiverEmail] = useState('');
     const [receiverInfo, setReceiverInfo] = useState(null);
@@ -356,7 +359,7 @@ const TicketTransfer = () => {
                                                     <Info className="w-3 h-3 text-neon-hover dark:text-neon-green" />
                                                 </div>
                                                 <p className="text-2xl font-black text-gray-900 dark:text-white  leading-none">
-                                                    10.000 <span className="text-[10px] text-neon-hover dark:text-neon-green">VND</span>
+                                                    {eventResaleGasFee.toLocaleString()} <span className="text-[10px] text-neon-hover dark:text-neon-green">VND</span>
                                                 </p>
                                             </div>
 

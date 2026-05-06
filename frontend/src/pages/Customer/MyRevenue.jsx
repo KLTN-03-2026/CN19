@@ -21,7 +21,8 @@ import {
   Loader2,
   DollarSign,
   Eye,
-  ArrowRight
+  ArrowRight,
+  Search
 } from 'lucide-react';
 import { revenueService } from '../../services/revenue.service';
 import { format } from 'date-fns';
@@ -36,12 +37,31 @@ import {
     Legend
 } from 'recharts';
 import { useTranslation } from 'react-i18next';
+import { useSystemConfig } from '../../hooks/useSystemConfig';
 
 const MyRevenue = () => {
     const { t } = useTranslation();
     const [activeTab, setActiveTab] = useState('overview');
     const [selectedOrder, setSelectedOrder] = useState(null);
     const queryClient = useQueryClient();
+    const { minWithdrawal } = useSystemConfig();
+    const [allBanks, setAllBanks] = useState([]);
+
+    const fetchBanks = async () => {
+        try {
+            const response = await fetch('https://api.vietqr.io/v2/banks');
+            const data = await response.json();
+            if (data.code === '00') {
+                setAllBanks(data.data);
+            }
+        } catch (error) {
+            console.error('Error fetching banks:', error);
+        }
+    };
+
+    React.useEffect(() => {
+        fetchBanks();
+    }, []);
 
     const { data: summary, isLoading: isSummaryLoading } = useQuery({
         queryKey: ['revenue-summary'],
@@ -327,7 +347,7 @@ const MyRevenue = () => {
                         </div>
                     </motion.div>
                 ) : (
-                    <motion.div
+<motion.div
                         key="withdraw"
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -343,11 +363,15 @@ const MyRevenue = () => {
                         </div>
 
                         {/* Bank Info */}
-                        <div className="bg-white dark:bg-dark-card border border-gray-100 dark:border-dark-border rounded-3xl p-8 shadow-sm">
+                        <div key="bank" className="lg:col-span-1 p-6 md:p-8 rounded-[2.5rem] bg-white dark:bg-dark-card border border-gray-100 dark:border-white/5">
                             <div className="flex items-center gap-3 mb-4">
                                 <h3 className="text-lg font-black text-gray-900 dark:text-white uppercase">{t('revenue.bank.title')}</h3>
                             </div>
-                            <BankInfoForm initialData={summary?.bankInfo} onComplete={() => queryClient.invalidateQueries(['revenue-summary'])} />
+                            <BankInfoForm 
+                                initialData={summary?.bankInfo} 
+                                allBanks={allBanks} 
+                                onComplete={() => queryClient.invalidateQueries(['revenue-summary'])} 
+                            />
                         </div>
                     </motion.div>
                 )}
@@ -414,7 +438,7 @@ const WithdrawalForm = ({ balance, onComplete }) => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!amount || amount < 100000) return toast.error(t('revenue.messages.min_withdrawal'));
+        if (!amount || amount < minWithdrawal) return toast.error(`${t('revenue.messages.min_withdrawal')} (${new Intl.NumberFormat('vi-VN').format(minWithdrawal)}đ)`);
         if (amount > balance) return toast.error(t('revenue.messages.insufficient_balance'));
 
         setIsSubmitting(true);
@@ -470,7 +494,7 @@ const WithdrawalForm = ({ balance, onComplete }) => {
     );
 };
 
-const BankInfoForm = ({ initialData, onComplete }) => {
+const BankInfoForm = ({ initialData, onComplete, allBanks }) => {
     const { t } = useTranslation();
     const [formData, setFormData] = useState({
         bank_name: initialData?.bank_name || '',
@@ -479,6 +503,7 @@ const BankInfoForm = ({ initialData, onComplete }) => {
     });
     const [isEditing, setIsEditing] = useState(!initialData?.account_number);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -522,9 +547,73 @@ const BankInfoForm = ({ initialData, onComplete }) => {
 
     return (
         <form onSubmit={handleSubmit} className="space-y-5">
-            <InputRow label={t('revenue.bank.label_bank')} value={formData.bank_name} onChange={(v) => setFormData({...formData, bank_name: v})} placeholder={t('revenue.bank.bank_name_placeholder')} />
+            <div className="space-y-2">
+                <label className="text-[10px] font-black text-gray-500 uppercase ml-1 tracking-wider">{t('revenue.bank.label_bank')}</label>
+                
+                {/* Bank Search & Selector */}
+                <div className="space-y-3">
+                    <div className="relative">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input 
+                            type="text" 
+                            placeholder={t('revenue.bank.bank_name_placeholder') || "Tìm tên ngân hàng..."}
+                            className="w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-2xl pl-11 pr-5 py-3.5 font-medium text-sm outline-none focus:border-neon-green/50 transition-all"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                    </div>
+
+                    <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 max-h-[180px] overflow-y-auto p-3 border border-gray-100 dark:border-white/5 rounded-2xl bg-gray-50/50 dark:bg-white/[0.01] custom-scrollbar shadow-inner">
+                        {allBanks
+                            .filter(b => 
+                                b.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                                b.shortName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                b.code.toLowerCase().includes(searchQuery.toLowerCase())
+                            )
+                            .map(bank => (
+                                <button
+                                    key={bank.id}
+                                    type="button"
+                                    onClick={() => {
+                                        setFormData({...formData, bank_name: bank.shortName + ' (' + bank.code + ')'});
+                                        setSearchQuery('');
+                                    }}
+                                    className={`flex flex-col items-center justify-center p-1.5 rounded-xl border transition-all relative h-14 ${
+                                        formData.bank_name?.includes(bank.code)
+                                            ? 'bg-neon-green/10 border-neon-green shadow-md scale-[1.05] z-10'
+                                            : 'bg-white dark:bg-white/5 border-gray-100 dark:border-transparent hover:border-neon-green/30'
+                                    }`}
+                                >
+                                    {formData.bank_name?.includes(bank.code) && (
+                                        <div className="absolute -top-1 -right-1 bg-neon-green text-black rounded-full p-0.5 shadow-lg z-20 border-2 border-white dark:border-dark-card">
+                                            <CheckCircle2 className="w-2.5 h-2.5 stroke-[3px]" />
+                                        </div>
+                                    )}
+                                    <div className="w-full h-full flex items-center justify-center overflow-hidden bg-white rounded-lg p-1 shadow-sm group-hover:scale-105 transition-transform">
+                                        <img 
+                                            src={bank.logo} 
+                                            alt={bank.shortName} 
+                                            className="w-full h-full object-contain" 
+                                        />
+                                    </div>
+                                </button>
+                            ))
+                        }
+                    </div>
+
+                    {formData.bank_name && (
+                        <div className="px-4 py-2 bg-neon-green/5 border border-neon-green/10 rounded-xl flex items-center gap-2 animate-in fade-in slide-in-from-top-1">
+                            <Building2 className="w-3.5 h-3.5 text-neon-green" />
+                            <span className="text-[10px] font-black text-neon-green uppercase tracking-tight">
+                                {formData.bank_name}
+                            </span>
+                        </div>
+                    )}
+                </div>
+            </div>
+
             <InputRow label={t('revenue.bank.label_account')} value={formData.account_number} onChange={(v) => setFormData({...formData, account_number: v})} placeholder={t('revenue.bank.account_placeholder')} />
-            <InputRow label={t('revenue.bank.label_holder')} value={formData.account_holder} onChange={(v) => setFormData({...formData, account_holder: v})} placeholder={t('revenue.bank.holder_placeholder')} />
+            <InputRow label={t('revenue.bank.label_holder')} value={formData.account_holder} onChange={(v) => setFormData({...formData, account_holder: v.toUpperCase()})} placeholder={t('revenue.bank.holder_placeholder')} />
             
             <div className="flex gap-3 pt-2">
                 {initialData?.account_number && (
@@ -663,12 +752,22 @@ const TransactionDetailModal = ({ order, onClose, formatCurrency }) => {
                     <div className="bg-gray-50 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 rounded-2xl p-4 space-y-1">
                         <div className="flex justify-between items-center py-2 text-xs font-bold text-gray-600 dark:text-gray-400">
                             <span>{t('revenue.modal.buyer_pay')}</span>
-                            <span>{formatCurrency(Number(order?.seller_receive_amount || 0) + Number(order?.platform_fee || 0) + Number(order?.organizer_royalty || 0))}</span>
+                            <span className="text-gray-900 dark:text-white">{formatCurrency(order?.buyer_pay_amount)}</span>
                         </div>
+                        
+                        {/* Phí sàn = Tổng trả - (Lợi nhuận + Bản quyền) - Gas */}
                         <div className="flex justify-between items-center py-2 text-xs font-bold text-red-500/80">
                             <span>{t('revenue.modal.platform_fee')}</span>
-                            <span>-{formatCurrency(order?.platform_fee)}</span>
+                            <span>-{formatCurrency(Math.max(0, Number(order?.buyer_pay_amount || 0) - (Number(order?.seller_receive_amount || 0) + Number(order?.organizer_royalty || 0)) - Number(order?.gas_fee || 0)))}</span>
                         </div>
+
+                        {Number(order?.gas_fee) > 0 && (
+                            <div className="flex justify-between items-center py-2 text-xs font-bold text-red-500/80">
+                                <span>Phí Gas hệ thống</span>
+                                <span>-{formatCurrency(order?.gas_fee)}</span>
+                            </div>
+                        )}
+                        
                         <div className="flex justify-between items-center py-2 text-xs font-bold text-red-500/80 border-b border-dashed border-gray-100 dark:border-white/5 pb-4">
                             <span>{t('revenue.modal.royalty_fee')}</span>
                             <span>-{formatCurrency(order?.organizer_royalty)}</span>

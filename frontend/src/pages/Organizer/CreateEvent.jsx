@@ -20,8 +20,10 @@ import toast from 'react-hot-toast';
 import { organizerService } from '../../services/organizer.service';
 import AddressMapModal from '../../components/AddressMapModal';
 import axios from 'axios';
+import { useSystemConfig } from '../../hooks/useSystemConfig';
 
 const CreateEvent = () => {
+  const { eventPlatformFee, eventTransactionFee, gasFee, resaleTransactionFee, resalePriceCap, royaltyFee } = useSystemConfig();
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [categories, setCategories] = useState([]);
@@ -37,7 +39,7 @@ const CreateEvent = () => {
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const [targetStatus, setTargetStatus] = useState('pending');
 
-  const { register, control, handleSubmit, watch, setValue, trigger, formState: { errors } } = useForm({
+  const { register, control, handleSubmit, watch, setValue, reset, trigger, formState: { errors } } = useForm({
     defaultValues: {
       title: '',
       category_id: '',
@@ -48,7 +50,7 @@ const CreateEvent = () => {
       event_time: '',
       end_date: '',
       end_time: '',
-      location_address: '', // Địa điểm chi tiết
+      location_address: '',
       latitude: '',
       longitude: '',
       allow_resale: true,
@@ -59,6 +61,14 @@ const CreateEvent = () => {
       ticket_tiers: [{ tier_name: 'Vé Thường', price: '', quantity_total: '', section_name: 'Khán đài A', benefits: '' }]
     }
   });
+
+  // Cập nhật giá trị mặc định từ database khi config load xong
+  useEffect(() => {
+    if (royaltyFee && resalePriceCap) {
+      setValue('royalty_fee_percent', royaltyFee);
+      setValue('resale_price_limit_percent', 100 + resalePriceCap);
+    }
+  }, [royaltyFee, resalePriceCap, setValue]);
 
   const { fields, append, remove } = useFieldArray({
     control,
@@ -747,7 +757,7 @@ const CreateEvent = () => {
                                     placeholder="VD: 500000"
                                 />
                                 <p className="text-[10px] text-blue-600 dark:text-blue-400 font-medium mt-1 leading-relaxed">
-                                    * BTC nhận về: {Math.max(0, watch(`ticket_tiers.${index}.price`) * 0.92 - 10000).toLocaleString()} VNĐ (Đã trừ: 5% phí sàn & 3% phí cổng giao dịch & 10,000đ phí Blockchain/AI)
+                                    * BTC nhận về: {Math.max(0, watch(`ticket_tiers.${index}.price`) * (1 - (eventPlatformFee + eventTransactionFee) / 100) - gasFee).toLocaleString()} VNĐ (Đã trừ: {eventPlatformFee}% phí sàn & {eventTransactionFee}% phí giao dịch & {gasFee.toLocaleString()}đ phí Blockchain/AI)
                                 </p>
                             </div>
                             <div className="space-y-1">
@@ -844,7 +854,7 @@ const CreateEvent = () => {
                                     type="number"
                                     {...register('resale_price_limit_percent', { 
                                         required: 'Vui lòng nhập giới hạn giá',
-                                        max: { value: 108, message: 'Tối đa 108% để tránh đầu cơ' },
+                                        max: { value: 100 + resalePriceCap, message: `Tối đa ${100 + resalePriceCap}% để tránh đầu cơ` },
                                         min: { value: 100, message: 'Tối thiểu 100% (bằng giá gốc)' },
                                         valueAsNumber: true
                                     })}
@@ -856,7 +866,7 @@ const CreateEvent = () => {
                                 <p className="text-[10px] text-red-500 font-bold italic">{errors.resale_price_limit_percent.message}</p>
                             )}
                             <p className="text-[10px] text-gray-600 dark:text-gray-400 font-medium leading-relaxed">
-                                * Luật Smart Contract: Giá bán lại không được vượt quá {watch('resale_price_limit_percent')}% giá gốc để ngăn chặn đầu cơ.
+                                * Luật Smart Contract: Giá bán lại không được vượt quá {100 + (resalePriceCap || 8)}% giá gốc để ngăn chặn đầu cơ.
                             </p>
                         </div>
                     )}
@@ -869,7 +879,7 @@ const CreateEvent = () => {
                         <div className="space-y-2">
                              <div className="flex justify-between items-center text-[10px]">
                                 <span className="text-gray-700 dark:text-white">Người mua trả:</span>
-                                <span className="font-bold dark:text-white">Giá niêm yết + Phí sàn + Phí Gas (10k)</span>
+                                <span className="font-bold dark:text-white">Giá niêm yết + Phí sàn ({resaleTransactionFee}%) + Phí Gas ({gasFee.toLocaleString()}đ)</span>
                              </div>
                              <div className="flex justify-between items-center text-[10px]">
                                 <span className="text-gray-700 dark:text-white">Người bán nhận:</span>
@@ -881,7 +891,7 @@ const CreateEvent = () => {
                              </div>
                              <div className="flex justify-between items-center text-[10px]">
                                 <span className="text-gray-700 dark:text-white">Hệ thống nhận:</span>
-                                <span className="font-bold text-purple-600">Phí sàn (3%) + Phí Blockchain/AI (10k)</span>
+                                <span className="font-bold text-purple-600">Phí sàn ({resaleTransactionFee}%) + Phí Blockchain/AI ({gasFee.toLocaleString()}đ)</span>
                              </div>
                         </div>
                     </div>

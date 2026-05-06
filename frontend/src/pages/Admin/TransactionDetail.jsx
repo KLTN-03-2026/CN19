@@ -25,10 +25,24 @@ import { adminService } from '../../services/admin.service';
 import { userService } from '../../services/user.service';
 import { exportToExcel } from '../../utils/excel';
 import { toast } from 'react-hot-toast';
+import { useSystemConfig } from '../../hooks/useSystemConfig';
 
 const TransactionDetail = () => {
   const { type, id } = useParams();
   const navigate = useNavigate();
+  const { 
+    eventPlatformFee, 
+    eventTransactionFee, 
+    productPlatformFee, 
+    productTransactionFee, 
+    gasFee, 
+    royaltyFee, 
+    resaleTransactionFee 
+  } = useSystemConfig();
+  
+  const totalEventFee = eventPlatformFee + eventTransactionFee;
+  const totalProductFee = productPlatformFee + productTransactionFee;
+
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState(null);
   const [receiverUser, setReceiverUser] = useState(null);
@@ -131,37 +145,45 @@ const TransactionDetail = () => {
     if (!data) return { systemCommission: 0, btcRevenue: 0, resaleProfit: 0 };
     
     if (isMarketplace) {
-      if (Number(data.commission_fee) > 0 || Number(data.organizer_royalty) > 0) {
+      // Ưu tiên snapshot nếu có (platform_fee, organizer_royalty, resale_profit)
+      const hasSnapshots = Number(data.platform_fee) > 0 || Number(data.organizer_royalty) > 0;
+      
+      if (hasSnapshots) {
         return {
           systemCommission: Number(data.platform_fee || 0),
-          btcRevenue: Number(data.organizer_royalty || 0),
+          btcRevenue: Number(data.organizer_royalty || data.organizer_revenue || 0),
           resaleProfit: Number(data.resale_profit || 0)
         };
       }
 
+      // Fallback cho dữ liệu cũ không có snapshot
       const platformFee = Number(data.platform_fee || 0);
       const buyerPay = Number(data.buyer_pay_amount || 0);
-      const royalty = (buyerPay - platformFee) * 0.03;
+      const royalty = (buyerPay - platformFee) * (royaltyFee / 100);
       return { 
         systemCommission: platformFee, 
         btcRevenue: royalty,
         resaleProfit: (Number(data.seller_receive_amount || 0) - (buyerPay - platformFee))
       };
     } else {
-      if (Number(data.commission_fee) > 0 || Number(data.organizer_revenue) > 0) {
+      // Ưu tiên snapshot cho đơn hàng sơ cấp (commission_fee, gas_fee, organizer_revenue)
+      const hasSnapshots = Number(data.commission_fee) > 0 || Number(data.gas_fee) > 0 || Number(data.organizer_revenue) > 0;
+      
+      if (hasSnapshots) {
         return {
-          systemCommission: Number(data.platform_fee || 0),
+          systemCommission: Number(data.commission_fee || 0) + Number(data.gas_fee || 0),
           btcRevenue: Number(data.organizer_revenue || 0),
           resaleProfit: 0
         };
       }
 
+      // Fallback cho dữ liệu cũ không có snapshot
       const ticketItems = data.items || [];
       const ticketPrice = ticketItems.reduce((sum, item) => sum + Number(item.subtotal || 0), 0);
       const ticketQty = ticketItems.reduce((sum, item) => sum + (item.quantity || 0), 0);
       const merchPrice = (data.merchandise_items || []).reduce((sum, item) => sum + Number(item.subtotal || 0), 0);
       
-      const commission = (ticketPrice * 0.08) + (ticketQty * 10000) + (merchPrice * 0.08);
+      const commission = (ticketPrice * (totalEventFee / 100)) + (ticketQty * gasFee) + (merchPrice * (totalProductFee / 100));
       const totalAmount = Number(data.total_amount || 0);
       
       return { 
@@ -245,7 +267,7 @@ const TransactionDetail = () => {
           <div className="bg-white dark:bg-[#111114] p-4 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-16 h-16 bg-red-500/5 blur-2xl -mr-3 -mt-3"></div>
             <p className="text-[11px] font-bold text-gray-400">
-              Phí hệ thống {isMarketplace ? '(3%+10k)' : '(8%)'}
+              Phí hệ thống {isMarketplace ? `(${resaleTransactionFee}%+${gasFee / 1000}k)` : `(${totalEventFee}%)`}
             </p>
             <h3 className="text-xl font-bold text-red-500 mt-1">
               {formatCurrency(systemCommission)}
@@ -471,16 +493,26 @@ const TransactionDetail = () => {
                     <div className="flex justify-between items-center text-xs">
                        <span className="text-gray-400 font-bold">Copyright Royalties</span>
                        <span className="text-red-500 font-bold">
-                          -3% ({formatCurrency((Number(data.buyer_pay_amount) - Number(data.platform_fee)) * 0.03)})
+                          -{data.organizer_royalty_percent || royaltyFee}% ({formatCurrency(data.organizer_royalty || (Number(data.buyer_pay_amount) - Number(data.platform_fee)) * (royaltyFee / 100))})
                        </span>
                     </div>
                   )}
-                  <div className="flex justify-between items-center text-xs">
-                     <span className="text-gray-400 font-bold">Phí hệ thống & Gas</span>
-                     <span className="text-neon-green font-bold">
-                        +{formatCurrency(isMarketplace ? data.platform_fee : 0)}
-                     </span>
-                  </div>
+                   <div className="flex justify-between items-center text-xs">
+                      <span className="text-gray-400 font-bold">
+                         Phí hệ thống {isMarketplace 
+                            ? `(${data.platform_fee_percent || '3.0'}%)` 
+                            : ( (Number(data.platform_fee_percent || 0) > 0 || Number(data.commission_fee_percent || 0) > 0)
+                               ? `(${(Number(data.platform_fee_percent || 0) + Number(data.commission_fee_percent || 0)).toFixed(1)}%)` 
+                               : (data.subtotal > 0 ? `(${( (Number(data.platform_fee || 0) + Number(data.commission_fee || 0)) / Number(data.subtotal) * 100 ).toFixed(1)}%)` : '(8.0%)')
+                              )} & Gas
+                      </span>
+                      <span className="text-neon-green font-bold">
+                         +{formatCurrency(isMarketplace 
+                            ? data.platform_fee 
+                            : (Number(data.platform_fee || 0) + Number(data.commission_fee || 0) + Number(data.gas_fee || 0))
+                         )}
+                      </span>
+                   </div>
                    <div className="flex flex-col sm:flex-row sm:items-center justify-between pt-4 border-t border-gray-100 dark:border-white/5 mt-4 gap-2">
                       <span className="text-gray-900 dark:text-white font-bold text-[11px] opacity-80">
                          {isMarketplace ? 'Total checkout value' : 'Total system revenue'}

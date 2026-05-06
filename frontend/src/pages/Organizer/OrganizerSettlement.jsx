@@ -114,7 +114,7 @@ const OrganizerSettlement = () => {
 
     const stats = {
         totalEligible: events.filter(e => e.settlement_status === 'eligible').reduce((s, e) => s + (e.financials?.pending_revenue || 0), 0),
-        totalSettled: events.filter(e => e.settlement_status === 'settled').reduce((s, e) => s + ((e.financials?.total_revenue || 0) - (e.financials?.total_fees || 0)), 0),
+        totalSettled: events.filter(e => e.settlement_status === 'settled').reduce((s, e) => s + (e.financials?.pending_revenue || 0), 0),
         pendingRequests: events.filter(e => ['pending', 'processing'].includes(e.settlement_status)).length
     };
 
@@ -249,7 +249,9 @@ const OrganizerSettlement = () => {
                                             </div>
                                             <div className="text-right shrink-0 ml-4">
                                                 <p className="text-[10px] font-bold text-gray-700 dark:text-gray-500 mb-0.5">Thực nhận (Net)</p>
-                                                <p className="text-lg font-black text-gray-900 dark:text-white tracking-tighter leading-none">{formatCurrency(fin.pending_revenue)}</p>
+                                                <p className={`text-lg font-black tracking-tighter leading-none ${event.settlement_status === 'settled' ? 'text-green-600' : 'text-gray-900 dark:text-white'}`}>
+                                                    {formatCurrency(fin.pending_revenue)}
+                                                </p>
                                             </div>
                                         </div>
 
@@ -284,15 +286,17 @@ const OrganizerSettlement = () => {
                                         <div className="mt-auto flex items-center justify-between">
                                             <div className="flex items-center gap-1.5 group/eye">
                                                 <div className="text-[10px] font-bold text-gray-600 dark:text-gray-500">
-                                                    {fin.pending_orders_count} đơn hàng • 100% Sẵn sàng
+                                                    {event.settlement_status === 'settled' ? 'Quyết toán hoàn tất' : `${fin.pending_orders_count} đơn hàng • 100% Sẵn sàng`}
                                                 </div>
-                                                <button 
-                                                    onClick={() => navigate(`/organizer/orders?event_id=${event.id}&is_settled=false`)}
-                                                    className="p-1 hover:bg-gray-100 dark:hover:bg-white/5 rounded-md transition-colors text-gray-400 hover:text-blue-600 flex items-center gap-1"
-                                                    title="Xem chi tiết các đơn hàng này"
-                                                >
-                                                    <Eye className="w-3 h-3" />
-                                                </button>
+                                                {event.settlement_status !== 'settled' && (
+                                                    <button 
+                                                        onClick={() => navigate(`/organizer/orders?event_id=${event.id}&is_settled=false`)}
+                                                        className="p-1 hover:bg-gray-100 dark:hover:bg-white/5 rounded-md transition-colors text-gray-400 hover:text-blue-600 flex items-center gap-1"
+                                                        title="Xem chi tiết các đơn hàng này"
+                                                    >
+                                                        <Eye className="w-3 h-3" />
+                                                    </button>
+                                                )}
                                             </div>
 
                                             <div className="flex items-center gap-2">

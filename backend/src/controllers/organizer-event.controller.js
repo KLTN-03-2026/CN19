@@ -1,5 +1,6 @@
 const prisma = require('../config/prisma');
 const sendEmail = require('../utils/sendEmail');
+const { getSystemConfig } = require('../utils/systemConfig');
 
 // Utils: Kiểm tra quyền sở hữu sự kiện
 const verifyEventOwnership = async (eventId, userId) => {
@@ -80,13 +81,23 @@ const createEvent = async (req, res) => {
       }
     }
 
-    // Validate Resale & Royalty
+    // Lấy cấu hình hệ thống để gán phí mặc định và làm mức chặn (Cap)
+    const sysConfig = await getSystemConfig();
+
+    const maxRoyaltyCap = parseFloat(sysConfig.default_royalty_percent || 3.0);
+    const resalePriceCapMargin = Number(sysConfig.resale_price_cap_percent || 8);
+    const maxResaleLimitPercent = 100 + resalePriceCapMargin;
+
+    // Validate Resale & Royalty theo mức chặn của Hệ thống
     if (allow_resale) {
-      if (parseFloat(resale_price_limit_percent) > 108) {
-        return res.status(400).json({ error: 'Giới hạn giá bán lại tối đa không được vượt quá 108%.' });
+      const inputResaleLimit = resale_price_limit_percent ? parseFloat(resale_price_limit_percent) : maxResaleLimitPercent;
+      const inputRoyaltyFee = royalty_fee_percent ? parseFloat(royalty_fee_percent) : maxRoyaltyCap;
+
+      if (inputResaleLimit > maxResaleLimitPercent) {
+        return res.status(400).json({ error: `Giới hạn giá bán lại tối đa không được vượt quá ${maxResaleLimitPercent}% theo quy định hệ thống.` });
       }
-      if (parseFloat(royalty_fee_percent) > 10) {
-        return res.status(400).json({ error: 'Phí bản quyền không được vượt quá 10%.' });
+      if (inputRoyaltyFee > maxRoyaltyCap) {
+        return res.status(400).json({ error: `Phí bản quyền không được vượt quá mức tối đa ${maxRoyaltyCap}% của hệ thống.` });
       }
     }
 
@@ -106,12 +117,18 @@ const createEvent = async (req, res) => {
         location_address,
         latitude: latitude ? parseFloat(latitude) : null,
         longitude: longitude ? parseFloat(longitude) : null,
-        status: status || 'pending', // Mặc định là pending nếu không có status
+        status: status || 'pending', 
         allow_resale: allow_resale !== undefined ? allow_resale : true,
         allow_transfer: allow_transfer !== undefined ? allow_transfer : true,
         allow_refund: allow_refund !== undefined ? allow_refund : true,
-        royalty_fee_percent: royalty_fee_percent ? parseFloat(royalty_fee_percent) : 3.0,
-        resale_price_limit_percent: resale_price_limit_percent ? parseFloat(resale_price_limit_percent) : 108.0,
+        
+        // Chốt cứng các loại phí tại thời điểm tạo
+        royalty_fee_percent: royalty_fee_percent ? parseFloat(royalty_fee_percent) : maxRoyaltyCap,
+        resale_price_limit_percent: resale_price_limit_percent ? parseFloat(resale_price_limit_percent) : maxResaleLimitPercent,
+        resale_platform_fee_percent: parseFloat(sysConfig.resale_transaction_fee_percent || 3.0),
+        resale_gas_fee: parseFloat(sysConfig.system_gas_fee || 10000.0),
+        platform_fee_percent: parseFloat(sysConfig.event_platform_fee_percent || 5.0),
+        commission_fee_percent: parseFloat(sysConfig.event_transaction_fee_percent || 3.0),
         refund_deadline_days: refund_deadline_days ? parseInt(refund_deadline_days) : 0,
         ticket_tiers: {
           create: ticket_tiers.map(tier => ({
@@ -224,11 +241,15 @@ const updateEvent = async (req, res) => {
 
     // Validate Resale & Royalty
     if (allow_resale !== false) {
-        if (resale_price_limit_percent && parseFloat(resale_price_limit_percent) > 108) {
-            return res.status(400).json({ error: 'Giới hạn giá bán lại tối đa không được vượt quá 108%.' });
+        const sysConfig = await getSystemConfig();
+        const maxResaleLimitPercent = 100 + Number(sysConfig.resale_price_cap_percent || 8);
+        const maxRoyaltyCap = parseFloat(sysConfig.default_royalty_percent || 3.0);
+        
+        if (resale_price_limit_percent && parseFloat(resale_price_limit_percent) > maxResaleLimitPercent) {
+            return res.status(400).json({ error: `Giới hạn giá bán lại tối đa không được vượt quá ${maxResaleLimitPercent}% theo quy định hệ thống.` });
         }
-        if (royalty_fee_percent && parseFloat(royalty_fee_percent) > 10) {
-            return res.status(400).json({ error: 'Phí bản quyền không được vượt quá 10%.' });
+        if (royalty_fee_percent && parseFloat(royalty_fee_percent) > maxRoyaltyCap) {
+            return res.status(400).json({ error: `Phí bản quyền không được vượt quá mức tối đa ${maxRoyaltyCap}% của hệ thống.` });
         }
     }
 
@@ -476,6 +497,7 @@ const getAllOrganizerAttendees = async (req, res) => {
 
     res.status(200).json({ data: tickets });
   } catch (error) {
+    console.error('Lỗi lấy tất cả người tham gia (Chi tiết):', error);
     res.status(500).json({ error: 'Lỗi lấy tất cả người tham gia: ' + error.message });
   }
 };
@@ -515,8 +537,8 @@ const getOrganizerEvents = async (req, res) => {
 
     res.status(200).json({ data: mappedEvents });
   } catch (error) {
-    console.error('Lỗi lấy danh sách sự kiện:', error);
-    res.status(500).json({ error: 'Lỗi server khi lấy danh sách sự kiện.' });
+    console.error('Lỗi lấy danh sách sự kiện (Chi tiết):', error);
+    res.status(500).json({ error: 'Lỗi server khi lấy danh sách sự kiện: ' + error.message });
   }
 };
 
@@ -581,26 +603,24 @@ const getEventById = async (req, res) => {
     // 4. Calculate Financials (Primary Market)
     let primaryTicketRevenue = 0;
     let primaryMerchRevenue = 0;
-    let primaryTicketPlatformFee = 0;
-    let primaryMerchPlatformFee = 0;
+    let primaryTotalFees = 0;
     let transferFeeTotal = 0;
 
     successfulOrders.forEach(order => {
+      const subtotal = Number(order.subtotal || 0);
+      const platFee = Number(order.platform_fee || 0);
+      const commFee = Number(order.commission_fee || 0);
+      const gasFee = Number(order.gas_fee || 0);
+
       if (order.order_type === 'TICKET_PURCHASE') {
-        const orderTicketSubtotal = order.items.reduce((sum, item) => sum + Number(item.subtotal), 0);
-        const orderTicketCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
-        const orderMerchSubtotal = order.merchandise_items.reduce((sum, item) => sum + Number(item.subtotal), 0);
-
-        primaryTicketRevenue += orderTicketSubtotal;
-        primaryMerchRevenue += orderMerchSubtotal;
-
-        // Platform Fee Calculation:
-        // Rule match Admin: (TicketSubtotal * 0.08) + (TicketCount * 10000)
-        // Rule match Admin: Merch (8%)
-        primaryTicketPlatformFee += (orderTicketSubtotal * 0.08) + (orderTicketCount * 10000);
-        primaryMerchPlatformFee += (orderMerchSubtotal * 0.08);
+        primaryTicketRevenue += order.items.reduce((sum, item) => sum + Number(item.subtotal), 0);
+        primaryMerchRevenue += order.merchandise_items.reduce((sum, item) => sum + Number(item.subtotal), 0);
+        
+        // Accumulate all fees deducted from organizer for the primary market
+        primaryTotalFees += (platFee + commFee + gasFee);
       } else if (order.order_type === 'TICKET_TRANSFER') {
-        transferFeeTotal += 10000;
+        // Transfer fees are paid by users and don't affect organizer revenue
+        transferFeeTotal += (platFee + commFee + gasFee);
       }
     });
 
@@ -622,11 +642,7 @@ const getEventById = async (req, res) => {
 
     // 6. Summary Totals
     const total_gross_revenue = primaryTicketRevenue + primaryMerchRevenue + resaleVolume;
-    const system_commission = primaryTicketPlatformFee + primaryMerchPlatformFee + transferFeeTotal; // Primary only, marketplace fees belong to system
-    // For Organizer: Net = (Primary Gross - Fees) + Royalties
-    const estimated_net_revenue = (primaryTicketRevenue - primaryTicketPlatformFee) + 
-                                  (primaryMerchRevenue - primaryMerchPlatformFee) + 
-                                  resaleRoyalties;
+    const estimated_net_revenue = (primaryTicketRevenue + primaryMerchRevenue - primaryTotalFees) + resaleRoyalties;
 
     // 7. Recent Orders List
     const recentOrdersRaw = await prisma.order.findMany({
@@ -649,8 +665,7 @@ const getEventById = async (req, res) => {
       const merchSub = order.merchandise_items.reduce((s, i) => s + Number(i.subtotal), 0);
       const merchCount = order.merchandise_items.reduce((s, i) => s + i.quantity, 0);
       
-      const fees = (ticketSub * 0.08) + (ticketCount * 10000) + (merchSub * 0.08);
-      const net_revenue = Number(order.total_amount) - fees;
+      const net_revenue = Number(order.organizer_revenue || (Number(order.total_amount) - Number(order.platform_fee || 0)));
 
       return {
         ...order,
@@ -667,31 +682,24 @@ const getEventById = async (req, res) => {
         d.setDate(d.getDate() - (days - 1 - i));
         const dateStr = d.toISOString().split('T')[0];
         
-        const dayOrders = successfulOrders.filter(o => o.created_at.toISOString().split('T')[0] === dateStr);
+        const dayOrders = successfulOrders.filter(o => 
+          o.created_at.toISOString().split('T')[0] === dateStr && 
+          o.order_type === 'TICKET_PURCHASE'
+        );
         const daySecondary = marketplaceTransactions.filter(t => t.created_at.toISOString().split('T')[0] === dateStr);
 
         // Calculate Net Revenue for the day
         let tNet = 0;
-        let mNet = 0;
         dayOrders.forEach(order => {
-          if (order.order_type === 'TICKET_PURCHASE') {
-            const ticketSub = order.items.reduce((s, item) => s + Number(item.subtotal), 0);
-            const ticketCount = order.items.reduce((s, item) => s + item.quantity, 0);
-            const merchSub = order.merchandise_items.reduce((s, item) => s + Number(item.subtotal), 0);
-
-            // Subtract fees (8% + 10k per ticket)
-            tNet += ticketSub - ((ticketSub * 0.08) + (ticketCount * 10000));
-            mNet += merchSub - (merchSub * 0.08);
-          }
+            tNet += Number(order.organizer_revenue || 0);
         });
 
         const rRoyalties = daySecondary.reduce((sum, t) => sum + Number(t.organizer_royalty || 0), 0);
 
         return {
           date: dateStr.split('-').reverse().slice(0, 2).join('/'),
-          revenue: Math.round(tNet + mNet + rRoyalties),
+          revenue: Math.round(tNet + rRoyalties),
           tickets: Math.round(tNet),
-          merch: Math.round(mNet),
           resale: Math.round(rRoyalties)
         };
       });
@@ -721,7 +729,7 @@ const getEventById = async (req, res) => {
           merch_revenue_gross: primaryMerchRevenue,
           resale_volume: resaleVolume,
           resale_royalties: resaleRoyalties,
-          primary_fees_deducted: primaryTicketPlatformFee + primaryMerchPlatformFee
+          primary_fees_deducted: primaryTotalFees
         },
         statistics: {
           timeline7d: generateTimeline(7),
@@ -731,8 +739,7 @@ const getEventById = async (req, res) => {
             value: tier._count.tickets
           })),
           revenue_mix: [
-            { name: 'Vé sơ cấp', value: primaryTicketRevenue - primaryTicketPlatformFee },
-            { name: 'Sản phẩm', value: primaryMerchRevenue - primaryMerchPlatformFee },
+            { name: 'Doanh thu sơ cấp (Net)', value: primaryTicketRevenue + primaryMerchRevenue - primaryTotalFees },
             { name: 'Hoa hồng bán lại', value: resaleRoyalties }
           ].filter(d => d.value > 0)
         }

@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
+const prisma = require('../config/prisma');
 
-const authenticate = (req, res, next) => {
+const authenticate = async (req, res, next) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'Không tìm thấy Token. Vui lòng đăng nhập.' });
@@ -10,6 +11,21 @@ const authenticate = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret_key');
+    
+    // Kiểm tra trạng thái người dùng trong database
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      select: { status: true }
+    });
+
+    if (!user) {
+      return res.status(401).json({ error: 'Người dùng không tồn tại.' });
+    }
+
+    if (user.status === 'banned') {
+      return res.status(403).json({ error: 'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.' });
+    }
+
     req.user = decoded; // { userId, email, role }
     next();
   } catch (err) {

@@ -26,34 +26,49 @@ const RevenueController = {
             let pendingRevenue = 0;
 
             if (organizer) {
-                // Tính toán doanh thu đang chờ xử lý (Pending) cho BTC
+                // 1. Tính từ Orders của BTC (Chưa đối soát)
                 const pendingOrders = await prisma.order.findMany({
                     where: {
                         event: { organizer_id: organizer.id },
                         status: 'paid',
-                        is_settled: false
+                        is_settled: false,
+                        order_type: { in: ['TICKET_PURCHASE', 'MERCHANDISE_PURCHASE'] }
                     },
-                    select: {
-                        total_amount: true,
-                        platform_fee: true
-                    }
+                    select: { organizer_revenue: true }
                 });
 
-                pendingRevenue = pendingOrders.reduce((sum, order) => {
-                    return sum + (Number(order.total_amount) - Number(order.platform_fee));
+                const ordersRevenue = pendingOrders.reduce((sum, order) => {
+                    return sum + Number(order.organizer_revenue || 0);
                 }, 0);
+
+                // 2. Tính từ Marketplace Royalties của BTC (Chưa đối soát)
+                const pendingRoyalties = await prisma.marketplaceTransaction.findMany({
+                    where: {
+                        ticket: { event: { organizer_id: organizer.id } },
+                        status: 'paid',
+                        is_settled: false
+                    },
+                    select: { organizer_royalty: true }
+                });
+
+                const royaltiesRevenue = pendingRoyalties.reduce((sum, tx) => {
+                    return sum + Number(tx.organizer_royalty || 0);
+                }, 0);
+
+                // 3. Tính doanh thu từ Merchandise (Vật phẩm) chưa đối soát
+                // Lưu ý: Nếu có merch, cần cộng thêm ở đây. Hiện tại giả định nằm trong order.total_amount
+                
+                pendingRevenue = ordersRevenue + royaltiesRevenue;
             }
 
-            // --- BỔ SUNG: Tính doanh thu chờ xử lý cho Khách hàng bán vé trên Marketplace ---
+            // 4. Tính doanh thu chờ xử lý cho User này nếu họ cũng là người bán vé (Seller) trên Marketplace
             const pendingMktSales = await prisma.marketplaceTransaction.findMany({
                 where: {
                     seller_id: userId,
                     status: { in: ['paid', 'completed', 'success'] },
                     is_settled: false
                 },
-                select: {
-                    seller_receive_amount: true
-                }
+                select: { seller_receive_amount: true }
             });
 
             const mktPendingRevenue = pendingMktSales.reduce((sum, tx) => {
@@ -114,48 +129,58 @@ const RevenueController = {
         }
     },
 
-    /**
-     * Yêu cầu rút tiền
-     */
     requestWithdrawal: async (req, res) => {
         try {
             const userId = req.user.userId;
             const { amount } = req.body;
             const withdrawAmount = Number(amount);
 
-            // Kiểm tra thông tin ngân hàng & số dư
+            // 1. Lấy cấu hình hệ thống từ DB
+            const settings = await prisma.systemSetting.findMany({
+                where: {
+                    key: { in: ['withdrawal_fee_percent', 'min_withdrawal_amount'] }
+                }
+            });
+
+            const feePercent = Number(settings.find(s => s.key === 'withdrawal_fee_percent')?.value || 2);
+            const minWithdrawal = Number(settings.find(s => s.key === 'min_withdrawal_amount')?.value || 100000);
+
+            // 2. Kiểm tra thông tin ngân hàng & số dư
             const user = await prisma.user.findUnique({ where: { id: userId } });
             
             if (!user.bank_name || !user.account_number) {
                 return res.status(400).json({ error: 'Vui lòng cập nhật thông tin ngân hàng trước khi rút tiền.' });
             }
 
-            // Kiểm tra hạn mức (100k - 100m)
-            if (withdrawAmount < 100000) {
-                return res.status(400).json({ error: 'Số tiền rút tối thiểu là 100,000đ.' });
-            }
-            if (withdrawAmount > 100000000) {
-                return res.status(400).json({ error: 'Số tiền rút tối đa cho mỗi giao dịch là 100,000,000đ.' });
+            // 3. Kiểm tra hạn mức tối thiểu từ DB
+            if (withdrawAmount < minWithdrawal) {
+                return res.status(400).json({ error: `Số tiền rút tối thiểu là ${minWithdrawal.toLocaleString()}đ.` });
             }
 
-            // Kiểm tra số dư
+            // 4. Kiểm tra số dư
             if (Number(user.balance) < withdrawAmount) {
                 return res.status(400).json({ error: 'Số dư khả dụng không đủ.' });
             }
 
-            // Thực hiện rút tiền trong một Transaction
+            // 5. Tính toán phí
+            const feeAmount = (withdrawAmount * feePercent) / 100;
+            const netAmount = withdrawAmount - feeAmount;
+
+            // 6. Thực hiện rút tiền trong một Transaction
             const result = await prisma.$transaction(async (tx) => {
-                // 1. Trừ số dư User
-                const updatedUser = await tx.user.update({
+                // a. Trừ số dư User (Trừ toàn bộ số tiền rút)
+                await tx.user.update({
                     where: { id: userId },
                     data: { balance: { decrement: withdrawAmount } }
                 });
 
-                // 2. Tạo yêu cầu rút tiền (trạng thái chờ duyệt)
+                // b. Tạo yêu cầu rút tiền
                 const request = await tx.withdrawalRequest.create({
                     data: {
                         user_id: userId,
                         amount: withdrawAmount,
+                        fee_amount: feeAmount,
+                        net_amount: netAmount,
                         bank_name: user.bank_name,
                         account_number: user.account_number,
                         account_holder: user.account_holder,
@@ -163,14 +188,13 @@ const RevenueController = {
                     }
                 });
 
-                // 3. Tạo bản ghi giao dịch (với trạng thái pending?) 
-                // Thường giao dịch ví sẽ ghi ngay để trừ tiền tạm giữ
+                // c. Tạo bản ghi giao dịch ví
                 await tx.walletTransaction.create({
                     data: {
                         user_id: userId,
                         amount: -withdrawAmount,
                         type: 'WITHDRAWAL',
-                        description: `Yêu cầu rút tiền: ${withdrawAmount.toLocaleString()}đ`,
+                        description: `Rút tiền: -${withdrawAmount.toLocaleString()}đ (Phí ${feePercent}%: ${feeAmount.toLocaleString()}đ)`,
                         status: 'pending'
                     }
                 });
@@ -178,7 +202,15 @@ const RevenueController = {
                 return request;
             });
 
-            res.status(200).json({ message: 'Yêu cầu rút tiền đã được gửi thành công.', request: result });
+            res.status(200).json({ 
+                message: 'Yêu cầu rút tiền đã được gửi thành công.', 
+                data: {
+                    requestId: result.id,
+                    amount: withdrawAmount,
+                    fee: feeAmount,
+                    netAmount: netAmount
+                } 
+            });
         } catch (error) {
             console.error('Request Withdrawal Error:', error);
             res.status(500).json({ error: error.message || 'Lỗi khi gửi yêu cầu rút tiền.' });

@@ -3,6 +3,7 @@ const axios = require('axios');
 const orderService = require('../services/order.service');
 const botService = require('../services/bot.service');
 const utilsController = require('./utils.controller');
+const { getSystemConfig } = require('../utils/systemConfig');
 
 // logic previously here moved to bot.service.js
 const generatePickupCode = () => {
@@ -106,12 +107,23 @@ const createPrimaryOrder = async (req, res) => {
         });
       }
 
-      // platform_fee: (8% Doanh thu) + (Số lượng vé * 10.000đ phí Gas)
+      // [Smart Fee Snapshot]: Ưu tiên lấy phí đã chốt của Sự kiện, fallback mới lấy System Settings
+      const sysConfig = await getSystemConfig();
+      
+      const platformFeeRate = Number(event.platform_fee_percent !== null ? event.platform_fee_percent : (sysConfig.event_platform_fee_percent || 5));
+      const transactionFeeRate = Number(event.commission_fee_percent !== null ? event.commission_fee_percent : (sysConfig.event_transaction_fee_percent || 3));
+      const sysGasFee = Number(event.resale_gas_fee !== null ? event.resale_gas_fee : (sysConfig.system_gas_fee || 10000));
+
+      const platformFeePercent = platformFeeRate / 100;
+      const transactionFeePercent = transactionFeeRate / 100;
+
+      // Tách bạch các khoản phí (Ban tổ chức chịu toàn bộ)
       const totalTickets = items.reduce((sum, item) => sum + item.quantity, 0);
-      const commission_fee = subtotal * 0.08;
-      const gas_fee = totalTickets * 10000;
-      const platform_fee = commission_fee + gas_fee;
-      const organizer_revenue = subtotal - platform_fee;
+      
+      const platform_fee = subtotal * (platformFeeRate / 100);
+      const commission_fee = subtotal * (transactionFeeRate / 100);
+      const gas_fee = totalTickets * sysGasFee;
+      const organizer_revenue = subtotal - platform_fee - commission_fee - gas_fee;
       const total_amount = subtotal; // Khách hàng trả đúng giá vé niêm yết
 
       // Hạn giữ chỗ = hiện tại + 10 phút
@@ -126,8 +138,17 @@ const createPrimaryOrder = async (req, res) => {
           status: 'pending',
           subtotal,
           platform_fee,
+          platform_fee_percent: platformFeeRate,
           commission_fee,
+          commission_fee_percent: transactionFeeRate,
           gas_fee,
+
+          // Separated Fees
+          ticket_platform_fee: platform_fee,
+          ticket_commission_fee: commission_fee,
+          merchandise_platform_fee: 0,
+          merchandise_commission_fee: 0,
+
           organizer_revenue,
           total_amount,
           payment_method: 'unselected',
@@ -211,48 +232,47 @@ const createMarketplaceOrder = async (req, res) => {
         }
       });
 
-      // [Business Rule] Luồng tiền Bán lại (Resale) lấy từ Database Event:
+      // [Business Rule] Luồng tiền Bán lại (Resale) ưu tiên lấy từ Event, fallback System Settings:
+      const sysConfig = await getSystemConfig();
       const event = listing.ticket.event;
-      const askingPrice = Number(listing.asking_price);
-      const ticketPriceOnly = Number(listing.metadata?.ticket_price || askingPrice);
+      const askingPrice = Number(listing.asking_price); // Tổng tiền (Vé + Merch)
       
-      const resale_gas_fee = Number(event.resale_gas_fee || 10000);
-      const platform_fee_percent = Number(event.resale_platform_fee_percent || 3.0) / 100;
-      const royalty_fee_percent = Number(event.royalty_fee_percent || 3.0) / 100;
-
-      // 1. Phí hệ thống (Cộng vào người mua) = Phí Gas + (Giá vé niêm yết * % Phí sàn)
-      // Chỉ tính 3% trên giá vé, không tính trên giá sản phẩm đi kèm
-      const system_fee = resale_gas_fee + (ticketPriceOnly * platform_fee_percent);
+      // [Smart Fee Base]: Chỉ tính phí trên phần Giá vé, không tính trên vật phẩm tặng kèm
+      const metadata = listing.metadata || {};
+      const feeBasePrice = Number(metadata.ticket_price || askingPrice);
       
-      // 2. Tính toán lợi nhuận bán lại (Resale Profit) để tính phí bản quyền BTC
-      let acquisitionCost = 0;
-      const lastSuccessTx = await tx.marketplaceTransaction.findFirst({
-        where: { 
-          ticket_id: listing.ticket_id, 
-          status: { in: ['paid', 'success', 'completed'] } 
-        },
-        orderBy: { created_at: 'desc' }
-      });
+      const resale_gas_fee = Number(event.resale_gas_fee || sysConfig.system_gas_fee || 10000);
+      const transaction_fee_rate = Number(event.resale_platform_fee_percent || sysConfig.resale_transaction_fee_percent || 3.0);
+      const royalty_fee_rate = Number(event.royalty_fee_percent || sysConfig.default_royalty_percent || 3.0);
 
-      if (lastSuccessTx) {
-        acquisitionCost = Number(lastSuccessTx.buyer_pay_amount);
+      const transaction_fee_percent = transaction_fee_rate / 100;
+      const royalty_fee_percent = royalty_fee_rate / 100;
+
+      // [Smart Fee Logic] Phân loại logic cũ/mới để không làm loạn bài đăng cũ
+      // Thời điểm thay đổi logic: 2026-05-05T00:00:00Z
+      const logicChangeDate = new Date('2026-05-05T00:00:00Z');
+      const isLegacyListing = new Date(listing.created_at) < logicChangeDate;
+
+      // 1. Phí hệ thống = Phí Gas + (Giá vé * % Phí giao dịch)
+      const system_fee = resale_gas_fee + (feeBasePrice * transaction_fee_percent);
+      
+      // 2. Phí bản quyền = % Bản quyền * Giá vé
+      const royalty_fee = feeBasePrice * royalty_fee_percent;
+      
+      let total_buyer_pay, seller_receive_amount;
+
+      if (isLegacyListing) {
+        // LOGIC CŨ: Phí cộng thêm (Đã luôn là cộng thêm từ trước)
+        total_buyer_pay = askingPrice + system_fee;
+        seller_receive_amount = askingPrice - royalty_fee;
       } else {
-        const originalOrder = await tx.order.findUnique({
-          where: { id: listing.ticket.order_id },
-          include: { items: { where: { ticket_tier_id: listing.ticket.ticket_tier_id } } }
-        });
-        acquisitionCost = Number(originalOrder?.items[0]?.unit_price || 0);
+        // LOGIC MỚI: Theo yêu cầu mới nhất, Marketplace vẫn là cộng thêm phí hệ thống cho người mua trả
+        total_buyer_pay = askingPrice + system_fee; 
+        seller_receive_amount = askingPrice - royalty_fee;
       }
+      
+      const resale_profit = seller_receive_amount; 
 
-      const gross_profit = Math.max(0, askingPrice - acquisitionCost);
-      
-      // 3. BTC nhận (Khấu trừ người bán) = % Bản quyền * Giá gốc (Nếu bán cao hơn giá gốc)
-      const royalty_fee = askingPrice > acquisitionCost ? (acquisitionCost * royalty_fee_percent) : 0;
-      
-      const seller_receive_amount = askingPrice - royalty_fee;
-      const total_buyer_pay = askingPrice + system_fee;
-      const resale_profit = seller_receive_amount - acquisitionCost;
-      
       const mTransaction = await tx.marketplaceTransaction.create({
         data: {
           transaction_number: 'MKT' + Date.now(),
@@ -261,10 +281,12 @@ const createMarketplaceOrder = async (req, res) => {
           seller_id: listing.seller_id,
           buyer_id: userId,
           seller_receive_amount: seller_receive_amount,
-          platform_fee: system_fee,
-          commission_fee: ticketPriceOnly * platform_fee_percent,
+          platform_fee: feeBasePrice * transaction_fee_percent,
+          platform_fee_percent: transaction_fee_rate, // Snapshot % phí giao dịch sàn
+          commission_fee: feeBasePrice * transaction_fee_percent, // Legacy field
           gas_fee: resale_gas_fee,
           organizer_royalty: royalty_fee,
+          organizer_royalty_percent: royalty_fee_rate, // Snapshot % bản quyền cho BTC
           resale_profit: resale_profit,
           buyer_pay_amount: total_buyer_pay,
           status: 'pending',
@@ -362,9 +384,11 @@ const getOrderById = async (req, res) => {
             }
           ],
           platform_fee: mktTx.platform_fee,
+          platform_fee_percent: mktTx.platform_fee_percent,
           commission_fee: mktTx.commission_fee,
           gas_fee: mktTx.gas_fee,
           organizer_royalty: mktTx.organizer_royalty,
+          organizer_royalty_percent: mktTx.organizer_royalty_percent,
           merchandise_items: [] 
         };
 
@@ -468,11 +492,25 @@ const updatePendingOrder = async (req, res) => {
         await tx.merchandiseOrderItem.deleteMany({ where: { order_id: id } });
       }
 
+      // D. Cập nhật Order chính - Tính toán lại platform_fee
+      const sysConfig = await getSystemConfig();
+      
+      // Lấy phí Vé (Ưu tiên phí riêng của Sự kiện)
+      const event = await tx.event.findUnique({ where: { id: order.event_id } });
+      const ticketPlatformFeeRate = Number(event?.platform_fee_percent || sysConfig.event_platform_fee_percent || 5);
+      const ticketTransFeeRate = Number(event?.commission_fee_percent || sysConfig.event_transaction_fee_percent || 3);
+      const sysGasFee = Number(event?.resale_gas_fee || sysConfig.system_gas_fee || 10000);
+
       let merchSubtotal = 0;
+      let total_merch_platform_fee = 0;
+      let total_merch_commission_fee = 0;
       const newMerchItems = [];
 
-      // B. Xử lý Merchandise mới
+      // B. Xử lý Merchandise mới (Phải tính phí theo từng sản phẩm vì phí có thể khác nhau)
       if (merchandise_items && merchandise_items.length > 0) {
+        const fallbackMerchPlatformFee = Number(sysConfig.product_platform_fee_percent || 5);
+        const fallbackMerchTransFee = Number(sysConfig.product_transaction_fee_percent || 3);
+
         for (const item of merchandise_items) {
           const m = await tx.merchandise.findUnique({ where: { id: item.merchandise_id } });
           if (!m || !m.is_active || m.stock < item.quantity) {
@@ -488,29 +526,41 @@ const updatePendingOrder = async (req, res) => {
           const lineTotal = Number(m.price) * item.quantity;
           merchSubtotal += lineTotal;
 
+          // Tính phí cho từng sản phẩm (Ưu tiên phí riêng của sản phẩm, fallback về hệ thống)
+          const mPlatformFeeRate = Number(m.platform_fee_percent !== null ? m.platform_fee_percent : fallbackMerchPlatformFee);
+          const mCommissionFeeRate = Number(m.commission_fee_percent !== null ? m.commission_fee_percent : fallbackMerchTransFee);
+
+          const mPlatformFee = (lineTotal * mPlatformFeeRate / 100);
+          const mCommissionFee = (lineTotal * mCommissionFeeRate / 100);
+
+          total_merch_platform_fee += mPlatformFee;
+          total_merch_commission_fee += mCommissionFee;
+
           newMerchItems.push({
             merchandise_id: m.id,
             quantity: item.quantity,
             unit_price: m.price,
             subtotal: lineTotal,
-            pickup_code: generatePickupCode() // Sinh mã nhận hàng duy nhất
+            platform_fee: mPlatformFee,
+            commission_fee: mCommissionFee,
+            pickup_code: generatePickupCode()
           });
         }
       }
 
+      const ticketSubtotal = order.items.reduce((sum, item) => sum + Number(item.subtotal), 0);
+      const currentSubtotal = ticketSubtotal + merchSubtotal;
+
       // C. Xử lý Coupon
       let discountAmount = 0;
       let couponId = null;
-
-      const ticketSubtotal = order.items.reduce((sum, item) => sum + Number(item.subtotal), 0);
-      const currentSubtotal = ticketSubtotal + merchSubtotal;
 
       if (coupon_code) {
         const coupon = await tx.coupon.findUnique({
           where: { code: coupon_code.toUpperCase() }
         });
 
-        if (!coupon || !coupon.is_active) throw new Error('Mã giảm giá không lệ hoặc đã hết hạn.');
+        if (!coupon || !coupon.is_active) throw new Error('Mã giảm giá không hợp lệ hoặc đã hết hạn.');
         
         const now = new Date();
         if (now < coupon.start_date || now > coupon.end_date) throw new Error('Mã giảm giá đã hết hạn.');
@@ -532,12 +582,16 @@ const updatePendingOrder = async (req, res) => {
         couponId = coupon.id;
       }
 
-      // D. Cập nhật Order chính - Tính toán lại platform_fee
       const totalTickets = order.items.reduce((sum, item) => sum + item.quantity, 0);
-      const commission_fee = (ticketSubtotal * 0.08) + (merchSubtotal * 0.08);
-      const gas_fee = totalTickets * 10000;
-      const newPlatformFee = commission_fee + gas_fee;
-      const organizer_revenue = currentSubtotal - newPlatformFee;
+      
+      const ticket_platform_fee = (ticketSubtotal * ticketPlatformFeeRate / 100);
+      const ticket_commission_fee = (ticketSubtotal * ticketTransFeeRate / 100);
+      
+      const total_platform_fee = ticket_platform_fee + total_merch_platform_fee;
+      const total_commission_fee = ticket_commission_fee + total_merch_commission_fee;
+      const gas_fee = totalTickets * sysGasFee;
+      
+      const organizer_revenue = currentSubtotal - total_platform_fee - total_commission_fee - gas_fee;
 
       return await tx.order.update({
         where: { id },
@@ -545,9 +599,16 @@ const updatePendingOrder = async (req, res) => {
           subtotal: currentSubtotal,
           coupon_id: couponId,
           discount_amount: discountAmount,
-          platform_fee: newPlatformFee,
-          commission_fee: commission_fee,
+          platform_fee: total_platform_fee,
+          commission_fee: total_commission_fee,
           gas_fee: gas_fee,
+          
+          // Separated Fees (Snapshot cho báo cáo)
+          ticket_platform_fee,
+          ticket_commission_fee,
+          merchandise_platform_fee: total_merch_platform_fee,
+          merchandise_commission_fee: total_merch_commission_fee,
+
           organizer_revenue: organizer_revenue,
           total_amount: currentSubtotal - discountAmount,
           merchandise_items: {
@@ -586,6 +647,11 @@ const createTransferOrder = async (req, res) => {
       include: { event: true }
     });
 
+    if (!ticket) return res.status(404).json({ error: 'Không tìm thấy vé.' });
+    if (ticket.current_owner_id !== userId) return res.status(403).json({ error: 'Bạn không sở hữu vé này.' });
+    if (ticket.status !== 'valid' && ticket.status !== 'active') return res.status(400).json({ error: 'Vé không khả dụng để chuyển nhượng.' });
+    if (ticket.transfer_count >= 2) return res.status(400).json({ error: 'Vé này đã đạt giới hạn 2 lần chuyển nhượng.' });
+
     if (!ticket || ticket.current_owner_id !== userId) {
       return res.status(403).json({ error: 'Bạn không sở hữu vé này hoặc vé không tồn tại.' });
     }
@@ -595,19 +661,14 @@ const createTransferOrder = async (req, res) => {
     }
 
     // [Business Rule] Mỗi vé chỉ được phép chuyển nhượng tối đa 2 lần
-    const transferCount = await prisma.order.count({
-      where: {
-        metadata: { path: ['ticket_id'], equals: ticket_id },
-        order_type: 'TICKET_TRANSFER',
-        status: { in: ['paid', 'success', 'completed'] }
-      }
-    });
-
-    if (transferCount >= 2) {
+    if (ticket.transfer_count >= 2) {
       return res.status(400).json({ error: 'Vé này đã đạt giới hạn chuyển nhượng tối đa (2 lần).' });
     }
 
-    // 2. Tạo Order với type TRANSFER
+    // [Smart Fee Snapshot]: Chuyển nhượng cũng phải lấy phí Gas của Sự kiện đã chốt
+    const sysConfig = await getSystemConfig();
+    const sysGasFee = Number(ticket.event.resale_gas_fee !== null ? ticket.event.resale_gas_fee : (sysConfig.system_gas_fee || 10000));
+    
     const order_number = 'TRF' + Date.now();
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 phút để thanh toán phí
 
@@ -619,11 +680,11 @@ const createTransferOrder = async (req, res) => {
         order_type: 'TICKET_TRANSFER',
         status: 'pending',
         subtotal: 0,
-        gas_fee: 10000,
-        platform_fee: 10000,
+        gas_fee: sysGasFee,
+        platform_fee: sysGasFee,
         commission_fee: 0,
         organizer_revenue: 0,
-        total_amount: 10000,
+        total_amount: sysGasFee,
         payment_method: 'unselected',
         expires_at: expiresAt,
         ip_address: botService.getClientIp(req),

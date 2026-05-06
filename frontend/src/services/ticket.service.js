@@ -13,6 +13,12 @@ export const ticketService = {
         return res.data;
     },
 
+    // Xuất toàn bộ danh sách vé dành cho Ban tổ chức
+    exportOrganizerTickets: async (params = {}) => {
+        const res = await api.get('/organizer/tickets/export', { params });
+        return res.data;
+    },
+
     // Lấy danh sách vé của chính người dùng (Customer role)
     getMyTickets: async () => {
         const res = await api.get('/tickets');
