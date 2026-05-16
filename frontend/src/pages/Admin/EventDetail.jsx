@@ -137,10 +137,32 @@ const EventDetail = () => {
     }
   };
 
+  const handleForceCancel = async (confirmFeePaid) => {
+    const actionMsg = confirmFeePaid
+      ? 'Bạn có chắc chắn xác nhận BTC đã nộp đủ phí bồi hoàn và CHÍNH THỨC HỦY sự kiện này?\nHệ thống sẽ đóng băng hợp đồng, gửi email thông báo và chuyển toàn bộ đơn hàng sang CHỜ HOÀN TIỀN.'
+      : 'Bạn muốn gửi yêu cầu Ban tổ chức nộp phí bồi hoàn hủy sự kiện (Phí hệ thống, Dịch vụ, Gas)?';
+      
+    if (window.confirm(actionMsg)) {
+      const reason = window.prompt('Nhập lý do hủy sự kiện (sẽ được đính kèm trong email thông báo):', 'Sự kiện không thể tiếp tục diễn ra theo kế hoạch.');
+      if (reason !== null) {
+        try {
+          setIsProcessing(true);
+          const res = await adminService.forceCancelEvent(id, { reason, confirm_fee_paid: confirmFeePaid });
+          toast.success(res.message || 'Xử lý thành công!');
+          fetchEventDetail();
+        } catch (error) {
+          toast.error(error.response?.data?.error || 'Lỗi xử lý hủy sự kiện');
+        } finally {
+          setIsProcessing(false);
+        }
+      }
+    }
+  };
+
   if (loading) return (
     <div className="flex flex-col items-center justify-center min-vh-[400px] space-y-4 pt-20">
       <div className="w-12 h-12 border-4 border-neon-green/20 border-t-neon-green rounded-full animate-spin" />
-      <p className="text-gray-500 font-black animate-pulse uppercase text-[10px] tracking-widest">Đang bóc tách dữ liệu show...</p>
+      <p className="text-gray-600 font-black animate-pulse uppercase text-[10px] tracking-widest">Đang bóc tách dữ liệu show...</p>
     </div>
   );
 
@@ -153,7 +175,7 @@ const EventDetail = () => {
         <div className="flex items-center space-x-3">
           <button 
             onClick={() => navigate('/admin/events')}
-            className="p-2 sm:p-2.5 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl hover:bg-gray-50 dark:hover:bg-white/10 transition-all text-gray-400 group"
+            className="p-2 sm:p-2.5 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl hover:bg-gray-50 dark:hover:bg-white/10 transition-all text-gray-500 group"
           >
             <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
           </button>
@@ -163,21 +185,45 @@ const EventDetail = () => {
               <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase border shrink-0 ${
                 event.status === 'active' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 
                 event.status === 'pending' ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' :
-                'bg-gray-500/10 text-gray-500 border-white/5'
+                event.status === 'pending_cancel' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
+                event.status === 'pending_cancellation_fee' ? 'bg-purple-500/10 text-purple-500 border-purple-500/20' :
+                event.status === 'pending_reschedule' ? 'bg-orange-500/10 text-orange-500 border-orange-500/20' :
+                'bg-gray-500/10 text-gray-600 border-white/5'
               }`}>
                 {event.status === 'active' ? 'ĐANG HOẠT ĐỘNG' : 
                  event.status === 'pending' ? 'CHỜ DUYỆT' :
+                 event.status === 'pending_cancel' ? 'CHỜ HỦY KHẨN CẤP' :
+                 event.status === 'pending_cancellation_fee' ? 'CHỜ NỘP PHÍ HỦY' :
+                 event.status === 'pending_reschedule' ? 'CHỜ DỜI LỊCH' :
                  event.status === 'cancelled' ? 'ĐÃ HỦY' :
                  'BẢN NHÁP'}
               </span>
             </div>
-            <p className="text-[10px] sm:text-[11px] text-gray-500 font-bold font-mono opacity-60 flex items-center mt-0.5 truncate">
+            <p className="text-[10px] sm:text-[11px] text-gray-700 font-bold font-mono opacity-60 flex items-center mt-0.5 truncate">
                ID: {event.id}
             </p>
           </div>
         </div>
 
         <div className="flex items-center space-x-2">
+          {event.status === 'active' && (
+            <button 
+              onClick={() => handleForceCancel(false)}
+              disabled={isProcessing}
+              className="px-4 py-2 bg-red-500/10 text-red-500 border border-red-500/20 rounded-xl font-black text-[10px] uppercase hover:bg-red-500 hover:text-white transition-all disabled:opacity-50"
+            >
+              Hủy Sự kiện
+            </button>
+          )}
+          {event.status === 'pending_cancellation_fee' && (
+            <button 
+              onClick={() => handleForceCancel(true)}
+              disabled={isProcessing}
+              className="px-6 py-2 bg-purple-600 text-white rounded-xl font-black text-[10px] uppercase hover:bg-purple-700 transition-all shadow-lg shadow-purple-600/20 disabled:opacity-50 animate-pulse"
+            >
+              Xác nhận Đã Nộp Phí & Hủy
+            </button>
+          )}
           {event.status === 'pending' && (
             <>
               <button 
@@ -198,7 +244,7 @@ const EventDetail = () => {
           )}
           <button 
             onClick={() => window.open(`${window.location.origin}/events/${event.id}`, '_blank')}
-            className="p-2 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-gray-400 hover:text-neon-green transition-all"
+            className="p-2 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-gray-500 hover:text-neon-green transition-all"
             title="Xem trang công khai"
           >
             <Globe className="w-5 h-5" />
@@ -240,7 +286,7 @@ const EventDetail = () => {
                        <Building2 className="w-5 h-5" />
                     </div>
                     <div className="text-left min-w-0">
-                       <p className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Ban Tổ Chức</p>
+                       <p className="text-[11px] font-black text-gray-600 uppercase tracking-widest mb-0.5">Ban Tổ Chức</p>
                        <p className="text-sm font-bold text-gray-800 dark:text-gray-200 truncate group-hover:text-neon-green transition-colors">
                          {event.organizer?.organization_name}
                        </p>
@@ -250,28 +296,28 @@ const EventDetail = () => {
 
                <div className="grid grid-cols-2 gap-3">
                   <div className="p-4 bg-gray-50 dark:bg-white/5 rounded-2xl border border-gray-100 dark:border-white/5 text-center transition-all hover:border-neon-green/30">
-                     <p className="text-[10px] font-black text-gray-400 uppercase mb-1 flex items-center justify-center">
+                     <p className="text-[10px] font-black text-gray-600 uppercase mb-1 flex items-center justify-center">
                         <Ticket className="w-3 h-3 mr-1 text-neon-green" />
                         Đã bán
                      </p>
                      <p className="text-xl font-black text-neon-green">{event._count.tickets}</p>
                   </div>
                   <div className="p-4 bg-gray-50 dark:bg-white/5 rounded-2xl border border-gray-100 dark:border-white/5 text-center transition-all hover:border-blue-500/30">
-                     <p className="text-[10px] font-black text-gray-400 uppercase mb-1 flex items-center justify-center">
+                     <p className="text-[10px] font-black text-gray-600 uppercase mb-1 flex items-center justify-center">
                         <ShoppingBag className="w-3 h-3 mr-1 text-blue-500" />
                         Số lượng Đơn
                      </p>
                      <p className="text-xl font-black text-blue-500">{event._count.orders}</p>
                   </div>
                   <div className="p-4 bg-gray-50 dark:bg-white/5 rounded-2xl border border-gray-100 dark:border-white/5 text-center transition-all hover:border-orange-500/30">
-                     <p className="text-[10px] font-black text-gray-400 uppercase mb-1 flex items-center justify-center">
+                     <p className="text-[10px] font-black text-gray-600 uppercase mb-1 flex items-center justify-center">
                         <TrendingUp className="w-3 h-3 mr-1 text-orange-500" />
                         Thực thu BTC
                      </p>
                      <p className="text-base font-black text-orange-500 truncate">{parseFloat(event.financials?.net_revenue || 0).toLocaleString()}đ</p>
                   </div>
                   <div className="p-4 bg-gray-50 dark:bg-white/5 rounded-2xl border border-gray-100 dark:border-white/5 text-center transition-all hover:border-purple-500/30">
-                     <p className="text-[10px] font-black text-gray-400 uppercase mb-1 flex items-center justify-center">
+                     <p className="text-[10px] font-black text-gray-600 uppercase mb-1 flex items-center justify-center">
                         <ShieldCheck className="w-3 h-3 mr-1 text-purple-500" />
                         Hoa hồng HT
                      </p>
@@ -281,7 +327,7 @@ const EventDetail = () => {
 
                <div className="space-y-3 pt-3 border-t border-gray-100 dark:border-white/5">
                   <div className="flex items-center justify-between text-[11px] font-bold">
-                    <span className="text-gray-400 uppercase tracking-widest">Phí Bản quyền:</span>
+                    <span className="text-gray-600 uppercase tracking-widest">Phí Bản quyền:</span>
                     <span className="text-gray-900 dark:text-gray-100">{event.royalty_fee_percent}%</span>
                   </div>
                   <div className="flex items-center justify-between text-[11px] font-bold">
@@ -296,7 +342,7 @@ const EventDetail = () => {
 
           {/* Infrastructure Stats */}
           <div className="bg-white dark:bg-[#111114] border border-gray-200 dark:border-white/5 rounded-3xl p-6 shadow-sm">
-             <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4 flex items-center space-x-2">
+             <h4 className="text-[10px] font-black text-gray-600 uppercase tracking-widest mb-4 flex items-center space-x-2">
                 <Shield className="w-3.5 h-3.5 text-blue-500" />
                 <span>Số liệu Hạ tầng</span>
              </h4>
@@ -378,6 +424,136 @@ const EventDetail = () => {
            <div className="bg-white dark:bg-[#111114] border border-gray-200 dark:border-white/5 rounded-3xl p-8 shadow-sm min-h-[600px]">
               {activeTab === 'overview' && (
                 <div className="space-y-8 animate-in fade-in duration-300">
+                   {/* Emergency Request Section */}
+                   {['pending_cancel', 'pending_cancellation_fee', 'pending_reschedule'].includes(event.status) && event.emergency_requests?.length > 0 && (
+                     <div className="bg-red-500/5 dark:bg-red-500/10 border-2 border-red-500/20 rounded-[2rem] p-8 space-y-6 relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/10 blur-[60px] -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-1000" />
+                        
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative">
+                          <div className="flex items-center space-x-4">
+                            <div className="w-14 h-14 bg-red-500 rounded-2xl flex items-center justify-center shadow-lg shadow-red-500/30">
+                              <AlertTriangle className="w-8 h-8 text-white animate-pulse" />
+                            </div>
+                            <div>
+                              <h3 className="text-xl font-black text-red-600 dark:text-red-400 uppercase tracking-tight">Yêu cầu xử lý khẩn cấp</h3>
+                              <p className="text-sm text-gray-500 font-bold uppercase italic">Loại yêu cầu: {['pending_cancel', 'pending_cancellation_fee'].includes(event.status) ? 'Hủy bỏ sự kiện' : 'Thay đổi lịch diễn'}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                             <span className="text-[10px] font-black text-gray-400 uppercase">Ngày gửi: {format(new Date(event.emergency_requests[0].created_at), 'dd/MM/yyyy HH:mm')}</span>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative">
+                          <div className="space-y-4">
+                            <div>
+                              <label className="text-[10px] font-black text-red-500 uppercase mb-2 block ml-1 tracking-widest">Lý do từ BTC</label>
+                              <div className="bg-white dark:bg-black/40 border border-red-500/20 p-5 rounded-2xl text-sm font-medium text-gray-700 dark:text-gray-300 italic leading-relaxed">
+                                "{event.emergency_requests[0].reason}"
+                              </div>
+                            </div>
+                            {event.status === 'pending_reschedule' && (
+                              <div className="space-y-3">
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div className="p-4 bg-orange-500/10 border border-orange-500/20 rounded-2xl">
+                                    <p className="text-[9px] font-black text-orange-500 uppercase mb-1">Bắt đầu mới</p>
+                                    <p className="text-sm font-black text-gray-900 dark:text-white">
+                                      {event.emergency_requests[0].new_date ? format(new Date(event.emergency_requests[0].new_date), 'dd/MM/yyyy') : 'N/A'}
+                                    </p>
+                                    <p className="text-[11px] font-bold text-orange-600 mt-1">{event.emergency_requests[0].new_time || 'N/A'}</p>
+                                  </div>
+                                  <div className="p-4 bg-purple-500/10 border border-purple-500/20 rounded-2xl">
+                                    <p className="text-[9px] font-black text-purple-500 uppercase mb-1">Kết thúc mới</p>
+                                    <p className="text-sm font-black text-gray-900 dark:text-white">
+                                      {event.emergency_requests[0].new_end_date ? format(new Date(event.emergency_requests[0].new_end_date), 'dd/MM/yyyy') : 'N/A'}
+                                    </p>
+                                    <p className="text-[11px] font-bold text-purple-600 mt-1">{event.emergency_requests[0].new_end_time || 'N/A'}</p>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                          
+                          <div className="space-y-4">
+                            <div>
+                              <label className="text-[10px] font-black text-gray-500 uppercase mb-2 block ml-1 tracking-widest">Minh chứng đính kèm ({event.emergency_requests[0].evidence_urls?.length || 0})</label>
+                              {event.emergency_requests[0].evidence_urls && event.emergency_requests[0].evidence_urls.length > 0 ? (
+                                <div className="grid grid-cols-2 gap-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                                  {event.emergency_requests[0].evidence_urls.map((url, idx) => (
+                                    <div 
+                                      key={idx}
+                                      className="group/evidence relative aspect-[16/9] rounded-2xl overflow-hidden border border-gray-200 dark:border-white/10 bg-black cursor-pointer shadow-sm" 
+                                      onClick={() => window.open(url, '_blank')}
+                                    >
+                                      <img src={url} alt={`Evidence ${idx + 1}`} className="w-full h-full object-cover group-hover/evidence:scale-105 transition-transform" />
+                                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/evidence:opacity-100 transition-opacity flex items-center justify-center">
+                                        <ExternalLink className="w-5 h-5 text-white" />
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="aspect-[16/9] bg-gray-100 dark:bg-white/5 rounded-2xl flex items-center justify-center border border-dashed border-gray-300 dark:border-white/10">
+                                  <p className="text-xs text-gray-400 italic font-medium">Không đính kèm minh chứng</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {event.status === 'pending_cancellation_fee' && (
+                          <div className="p-4 bg-purple-500/10 border border-purple-500/20 rounded-2xl flex items-center space-x-3">
+                            <Info className="w-5 h-5 text-purple-500 shrink-0" />
+                            <p className="text-xs font-semibold text-purple-600 dark:text-purple-400 leading-relaxed">
+                              Đã gửi thông báo yêu cầu BTC nộp phí bồi hoàn hủy sự kiện. Sau khi kiểm tra đối soát BTC đã thanh toán đủ, bấm nút xác nhận dưới đây để chính thức đóng băng hợp đồng và gửi thông báo hoàn tiền đến toàn bộ khách hàng.
+                            </p>
+                          </div>
+                        )}
+
+                        <div className="pt-4 border-t border-red-500/10 flex flex-col sm:flex-row items-center gap-3 relative">
+                           <div className="flex-1 text-[11px] text-gray-500 font-bold italic leading-tight">
+                              <Info className="w-3.5 h-3.5 inline-block mr-1 text-red-500" />
+                              Hãy kiểm tra kỹ minh chứng trước khi đưa ra quyết định. Nếu duyệt, thông báo sẽ được gửi cho toàn bộ khách hàng đã mua vé.
+                           </div>
+                           <div className="flex flex-wrap gap-2 w-full sm:w-auto justify-end">
+                              <button 
+                                onClick={handleReject}
+                                disabled={isProcessing}
+                                className="flex-1 sm:flex-none px-6 py-3 bg-white dark:bg-white/5 border border-red-500/30 text-red-500 rounded-xl font-black text-[10px] uppercase hover:bg-red-500 hover:text-white transition-all shadow-sm disabled:opacity-50"
+                              >
+                                Từ chối
+                              </button>
+                              {event.status === 'pending_cancel' && (
+                                <button 
+                                  onClick={() => handleForceCancel(false)}
+                                  disabled={isProcessing}
+                                  className="flex-1 sm:flex-none px-8 py-3 bg-red-500 text-white rounded-xl font-black text-[10px] uppercase hover:bg-red-600 transition-all shadow-lg shadow-red-500/20 disabled:opacity-50"
+                                >
+                                  Yêu cầu BTC Nộp phí Hủy
+                                </button>
+                              )}
+                              {event.status === 'pending_cancellation_fee' && (
+                                <button 
+                                  onClick={() => handleForceCancel(true)}
+                                  disabled={isProcessing}
+                                  className="flex-1 sm:flex-none px-8 py-3 bg-purple-600 text-white rounded-xl font-black text-[10px] uppercase hover:bg-purple-700 transition-all shadow-lg shadow-purple-600/20 disabled:opacity-50 animate-pulse"
+                                >
+                                  Xác nhận Đã Nộp & Hủy Chính thức
+                                </button>
+                              )}
+                              {event.status === 'pending_reschedule' && (
+                                <button 
+                                  onClick={handleApprove}
+                                  disabled={isProcessing}
+                                  className="flex-1 sm:flex-none px-10 py-3 bg-neon-green text-black rounded-xl font-black text-[10px] uppercase hover:bg-neon-hover transition-all shadow-lg shadow-neon-green/20 disabled:opacity-50"
+                                >
+                                  Duyệt Dời lịch
+                                </button>
+                              )}
+                           </div>
+                        </div>
+                     </div>
+                   )}
                    {/* Financial Stats Grid */}
 
 

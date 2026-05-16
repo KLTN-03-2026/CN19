@@ -10,6 +10,7 @@ import { auth, googleProvider } from '../../config/firebase';
 import { signInWithPopup } from 'firebase/auth';
 import { Turnstile } from '@marsidev/react-turnstile';
 import useBotBehavior from '../../hooks/useBotBehavior';
+import Logo from '../../components/common/Logo';
 
 const Login = () => {
   const { register, handleSubmit, watch } = useForm();
@@ -87,7 +88,7 @@ const Login = () => {
         
         {/* Header Dark Mode */}
         <div className="border-b border-gray-100 dark:border-dark-border pt-10 pb-6 px-8 flex flex-col items-center justify-center">
-          <Shield className="w-12 h-12 text-neon-green mb-4" />
+          <Logo variant="icon" size="lg" className="mb-4" />
           <h2 className="text-3xl font-bold text-gray-900 dark:text-white tracking-wide text-center">
             {t('auth.welcome')}
           </h2>
@@ -136,12 +137,11 @@ const Login = () => {
             </div>
           </div>
 
-          <div className="w-full my-2 overflow-hidden rounded-xl">
+          <div className="w-full my-2 rounded-xl">
             <Turnstile 
-              siteKey="1x00000000000000000000AA"
+              siteKey="0x4AAAAAADLUD-rkZ6wNFnY3"
               onSuccess={(token) => setTurnstileToken(token)}
               options={{ theme: 'auto', size: 'flexible' }}
-              style={{ width: '100%' }}
             />
           </div>
 

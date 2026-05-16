@@ -24,7 +24,7 @@ const getSystemConfig = async () => {
       product_transaction_fee_percent: '3',
 
       // Phí chợ bán lại (Resale)
-      resale_transaction_fee_percent: '3',
+      resale_transaction_fee_percent: '1',
       resale_price_cap_percent: '8',
       default_royalty_percent: '3',
 

@@ -373,7 +373,7 @@ const BlogDetail = () => {
                             <button
                                 key={item.id}
                                 onClick={() => handleNavToBlog(item.id)}
-                                className="shrink-0 flex items-center gap-2 px-3.5 py-2 rounded-full text-[11px] font-black uppercase transition-all bg-white dark:bg-[#111114] text-gray-500 border border-gray-100 dark:border-white/5 shadow-sm"
+                                className="shrink-0 flex items-center gap-2 px-3.5 py-2 rounded-full text-[11px] font-black uppercase transition-all bg-white dark:bg-[#111114] text-gray-700 border border-gray-100 dark:border-white/5 shadow-sm"
                             >
                                 <item.icon className="w-3.5 h-3.5" />
                                 {item.label}
@@ -386,7 +386,7 @@ const BlogDetail = () => {
 
                     <div className="bg-white dark:bg-[#111114] rounded-2xl p-3 border border-gray-100 dark:border-white/5 shadow-sm">
                         <div className="relative">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" />
                             <input 
                                 type="text"
                                 value={searchQuery}
@@ -402,7 +402,7 @@ const BlogDetail = () => {
                 <div className="flex items-center justify-between mb-4 px-1">
                     <button 
                         onClick={() => navigate(-1)}
-                        className="flex items-center mt-2 gap-2 text-gray-900 dark:text-gray-400 hover:text-neon-green transition-all text-[13px] font-bold group"
+                        className="flex items-center mt-2 gap-2 text-gray-700 dark:text-gray-400 hover:text-neon-green transition-all text-[13px] font-bold group"
                     >
                         <ArrowLeft className="w-4 h-4 transform group-hover:-translate-x-1 transition-transform" />
                         {t('blog.nav.back', 'Quay lại')}
@@ -429,7 +429,7 @@ const BlogDetail = () => {
                                         {blog.title}
                                     </h1>
                                     
-                                    <div className="flex flex-wrap items-center gap-4 md:gap-8 py-4 border-y border-gray-50 dark:border-white/5 text-gray-400">
+                                    <div className="flex flex-wrap items-center gap-4 md:gap-8 py-4 border-y border-gray-50 dark:border-white/5 text-gray-600 dark:text-gray-400">
                                         <div className="flex items-center gap-3">
                                             <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-gray-100 dark:bg-white/5 flex items-center justify-center border border-gray-200 dark:border-white/10 overflow-hidden shrink-0 shadow-sm">
                                                 {blog.author?.avatar_url ? (
@@ -439,13 +439,13 @@ const BlogDetail = () => {
                                                 )}
                                             </div>
                                             <div>
-                                                <p className="text-[9px] font-black text-gray-500 leading-none mb-1">{t('blog.profile.author')}</p>
+                                                <p className="text-[9px] font-black text-gray-700 leading-none mb-1">{t('blog.profile.author')}</p>
                                                 <p className="text-[12px] md:text-[13px] font-black text-gray-900 dark:text-white leading-none">{blog.author?.full_name || 'BASTICKET'}</p>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-6 md:gap-8 ml-auto md:ml-0">
                                             <div>
-                                                <p className="text-[9px] font-black text-gray-500 leading-none mb-1">{t('blog.profile.published')}</p>
+                                                <p className="text-[9px] font-black text-gray-700 leading-none mb-1">{t('blog.profile.published')}</p>
                                                 <p className="text-[11px] md:text-[12px] font-black text-gray-900 dark:text-gray-300 leading-none">
                                                     {new Date(blog.created_at).toLocaleDateString(i18n.language === 'en' ? 'en-US' : 'vi-VN', { 
                                                         day: 'numeric', month: 'long', year: 'numeric' 
@@ -488,7 +488,7 @@ const BlogDetail = () => {
                                                 className={`flex items-center gap-2 px-6 py-2.5 rounded-full font-black uppercase text-[10px] transition-all active:scale-95 border ${
                                                     isLiked 
                                                     ? ' border-rose-500/50 text-rose-500' 
-                                                    : 'bg-gray-50 dark:bg-white/5 border-gray-100 dark:border-white/5 text-gray-800 hover:text-rose-500 hover:bg-rose-500/5'
+                                                    : 'bg-gray-50 dark:bg-white/5 border-gray-100 dark:border-white/5 text-gray-700 hover:text-rose-500 hover:bg-rose-500/5'
                                                 }`}
                                             >
                                                 <Heart className={`w-3.5 h-3.5 md:w-4 md:h-4 ${isLiked ? 'fill-current' : ''}`} />
@@ -500,19 +500,19 @@ const BlogDetail = () => {
                                                 className={`w-10 h-10 rounded-full flex items-center justify-center transition-all shadow-sm ${
                                                     isSaved 
                                                     ? 'bg-neon-green text-black shadow-neon-green/20' 
-                                                    : 'bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 text-gray-800 dark:text-gray-400 hover:text-neon-green hover:bg-neon-green/5'
+                                                    : 'bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 text-gray-700 dark:text-gray-400 hover:text-neon-green hover:bg-neon-green/5'
                                                 }`}
                                             >
                                                 <Bookmark className={`w-4 h-4 ${isSaved ? 'fill-current' : ''}`} />
                                             </button>
 
-                                            <button className="w-10 h-10 rounded-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 flex items-center justify-center text-gray-800 dark:text-gray-400 hover:text-neon-green hover:bg-neon-green/5 transition-all shadow-sm">
+                                            <button className="w-10 h-10 rounded-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5 flex items-center justify-center text-gray-700 dark:text-gray-400 hover:text-neon-green hover:bg-neon-green/5 transition-all shadow-sm">
                                                 <Share2 className="w-4 h-4" />
                                             </button>
                                         </div>
                                     </div>
                                     
-                                    <div className="flex items-center gap-3 text-[10px] md:text-[11px] font-black text-gray-800 dark:text-gray-400 uppercase bg-gray-50 dark:bg-white/[0.03] px-4 py-2 rounded-full border border-gray-100 dark:border-white/5">
+                                    <div className="flex items-center gap-3 text-[10px] md:text-[11px] font-black text-gray-700 dark:text-gray-400 uppercase bg-gray-50 dark:bg-white/[0.03] px-4 py-2 rounded-full border border-gray-100 dark:border-white/5">
                                         <Eye className="w-3.5 h-3.5 md:w-4 md:h-4 text-neon-green" />
                                         {blog.views || 0} {t('blog.post.views') || 'lượt xem'}
                                     </div>
@@ -526,7 +526,7 @@ const BlogDetail = () => {
                                     <MessageSquare className="w-4 h-4 md:w-5 md:h-5 text-neon-green" /> 
                                     {t('blog.post.comment') || 'Bình luận'} ({comments.length})
                                 </h3>
-                                <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-800 dark:text-gray-400">
+                                <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-700 dark:text-gray-400">
                                     <div className="w-1.5 h-1.5 rounded-full bg-neon-green animate-pulse"></div>
                                     {t('blog.post.active_now') || 'Hoạt động ngay'}
                                 </div>
@@ -538,7 +538,7 @@ const BlogDetail = () => {
                                 {isCommentsLoading ? (
                                     <div className="flex flex-col items-center justify-center py-8 gap-3">
                                         <Loader2 className="w-6 h-6 animate-spin text-neon-green" />
-                                        <p className="text-[10px] font-black text-gray-800 dark:text-gray-400 uppercase tracking-widest">{t('blog.post.loading') || 'Đang tải...'}</p>
+                                        <p className="text-[10px] font-black text-gray-700 dark:text-gray-400 uppercase tracking-widest">{t('blog.post.loading') || 'Đang tải...'}</p>
                                     </div>
                                 ) : comments.length > 0 ? (
                                     comments.filter(c => !c.parent_id).map((cmt) => (
@@ -561,7 +561,7 @@ const BlogDetail = () => {
                                                                     <div className="relative">
                                                                         <button 
                                                                             onClick={() => setShowActionMenu(showActionMenu === cmt.id ? null : cmt.id)}
-                                                                            className="p-1 text-gray-800 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all opacity-0 group-hover/comment:opacity-100"
+                                                                            className="p-1 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all opacity-0 group-hover/comment:opacity-100"
                                                                         >
                                                                             <MoreHorizontal className="w-4 h-4" />
                                                                         </button>
@@ -574,7 +574,7 @@ const BlogDetail = () => {
                                                                                         setEditText(cmt.content);
                                                                                         setShowActionMenu(null);
                                                                                     }}
-                                                                                    className="w-full px-3 py-1.5 text-[11px] font-bold text-gray-800 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 flex items-center gap-2"
+                                                                                    className="w-full px-3 py-1.5 text-[11px] font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 flex items-center gap-2"
                                                                                 >
                                                                                     <Edit2 className="w-3.5 h-3.5" /> {t('blog.post.edit')}
                                                                                 </button>
@@ -602,7 +602,7 @@ const BlogDetail = () => {
                                                                         rows={2}
                                                                     />
                                                                     <div className="flex justify-end gap-1.5">
-                                                                        <button onClick={() => setEditingCommentId(null)} className="px-2 py-1 text-[9px] font-black text-gray-800 dark:text-gray-400 hover:text-gray-600 uppercase transition-colors">{t('blog.post.cancel')}</button>
+                                                                        <button onClick={() => setEditingCommentId(null)} className="px-2 py-1 text-[9px] font-black text-gray-600 dark:text-gray-400 hover:text-gray-600 uppercase transition-colors">{t('blog.post.cancel')}</button>
                                                                         <button onClick={() => handleUpdateComment(cmt.id)} className="px-3 py-1 bg-neon-green text-black text-[9px] font-black rounded-lg uppercase transition-transform active:scale-95">{t('blog.post.save')}</button>
                                                                     </div>
                                                                 </div>
@@ -628,7 +628,7 @@ const BlogDetail = () => {
                                                     <div className="flex items-center gap-4 px-2 text-[10px] md:text-[11px] font-black uppercase tracking-tight">
                                                         <button 
                                                             onClick={() => handleToggleCommentLike(cmt.id)}
-                                                            className={`transition-all active:scale-90 ${cmt.is_liked ? 'text-rose-500' : 'text-gray-800 dark:text-gray-400 hover:text-rose-500'}`}
+                                                            className={`transition-all active:scale-90 ${cmt.is_liked ? 'text-rose-500' : 'text-gray-700 dark:text-gray-400 hover:text-rose-500'}`}
                                                         >
                                                             {cmt.is_liked ? t('blog.post.liked') : t('blog.post.like')}
                                                         </button>
@@ -647,7 +647,7 @@ const BlogDetail = () => {
                                                         >
                                                             {t('blog.post.reply')}
                                                         </button>
-                                                        <span className="text-[10px] font-bold text-gray-800/60 dark:text-gray-400/60 lowercase font-sans">
+                                                        <span className="text-[10px] font-bold text-gray-600 dark:text-gray-400/60 lowercase font-sans">
                                                             {formatDistanceToNow(new Date(cmt.created_at), { addSuffix: true, locale: i18n.language === 'en' ? enUS : vi })}
                                                         </span>
                                                     </div>
@@ -677,7 +677,7 @@ const BlogDetail = () => {
                                                                                         rows={2}
                                                                                     />
                                                                                     <div className="flex justify-end gap-2">
-                                                                                        <button onClick={() => setEditingCommentId(null)} className="px-2 py-1 text-[9px] font-black text-gray-800 dark:text-gray-400 uppercase">{t('blog.post.cancel')}</button>
+                                                                                        <button onClick={() => setEditingCommentId(null)} className="px-2 py-1 text-[9px] font-black text-gray-700 dark:text-gray-400 uppercase">{t('blog.post.cancel')}</button>
                                                                                         <button onClick={() => handleUpdateComment(reply.id)} className="px-3 py-1 bg-neon-green text-black text-[9px] font-black rounded-lg uppercase">{t('blog.post.save')}</button>
                                                                                     </div>
                                                                                 </div>
@@ -707,7 +707,7 @@ const BlogDetail = () => {
                                                                     <div className="flex items-center gap-4 px-2 text-[10px] font-black uppercase tracking-tight">
                                                                         <button 
                                                                             onClick={() => handleToggleCommentLike(reply.id)}
-                                                                            className={`transition-all ${reply.is_liked ? 'text-rose-500' : 'text-gray-800 dark:text-gray-400 hover:text-rose-500'}`}
+                                                                            className={`transition-all ${reply.is_liked ? 'text-rose-500' : 'text-gray-700 dark:text-gray-400 hover:text-rose-500'}`}
                                                                         >
                                                                             {reply.is_liked ? t('blog.post.liked') : t('blog.post.like')}
                                                                         </button>
@@ -722,11 +722,11 @@ const BlogDetail = () => {
                                                                         )}
                                                                         <button 
                                                                             onClick={() => handleReplyAction(cmt)}
-                                                                            className="text-gray-800 dark:text-gray-400 hover:text-neon-green transition-all"
+                                                                            className="text-gray-700 dark:text-gray-400 hover:text-neon-green transition-all"
                                                                         >
                                                                             {t('blog.post.reply')}
                                                                         </button>
-                                                                        <span className="text-[9px] font-bold text-gray-800/60 dark:text-gray-400/60 lowercase">
+                                                                        <span className="text-[9px] font-bold text-gray-600 dark:text-gray-400/60 lowercase">
                                                                             {formatDistanceToNow(new Date(reply.created_at), { addSuffix: true, locale: i18n.language === 'en' ? enUS : vi })}
                                                                         </span>
                                                                     </div>
@@ -773,7 +773,7 @@ const BlogDetail = () => {
                                                                            }}
                                                                         />
                                                                         <div className="flex items-center gap-2 ml-2 border-l border-gray-200 dark:border-white/10 pl-3">
-                                                                            <label className="text-gray-400 hover:text-neon-green cursor-pointer transition-colors">
+                                                                            <label className="text-gray-600 dark:text-gray-400 hover:text-neon-green cursor-pointer transition-colors">
                                                                                 {isUploadingReplyImage ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ImageIcon className="w-3.5 h-3.5" />}
                                                                                 <input type="file" hidden accept="image/*" onChange={handleReplyImageUpload} />
                                                                             </label>
@@ -797,7 +797,7 @@ const BlogDetail = () => {
                                 ) : (
                                     <div className="text-center py-16 opacity-30">
                                         <MessageSquare className="w-16 h-16 text-gray-300 mx-auto mb-4 stroke-[1.5]" />
-                                        <p className="text-[12px] font-black text-gray-400 uppercase tracking-[0.2em]">{t('blog.post.no_comments_yet') || 'Chưa có thảo luận'}</p>
+                                        <p className="text-[12px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-[0.2em]">{t('blog.post.no_comments_yet') || 'Chưa có thảo luận'}</p>
                                     </div>
                                 )}
                             </div>

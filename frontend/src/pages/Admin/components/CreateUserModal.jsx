@@ -52,7 +52,6 @@ const CreateUserModal = ({ isOpen, onClose, onSuccess }) => {
     { id: 'settlements', label: 'Quyết toán Sự kiện', icon: Building2, color: 'text-emerald-500' },
     { id: 'merchandise', icon: Layers, label: 'Quản lý Sản phẩm', color: 'text-blue-400' },
     { id: 'blogs', label: 'Quản lý Blog', icon: FileText, color: 'text-orange-400' },
-    { id: 'coupons', label: 'Mã giảm giá', icon: ShieldCheck, color: 'text-pink-500' },
     { id: 'support', label: 'Hỗ trợ & Khiếu nại', icon: MessageSquare, color: 'text-amber-500' },
     { id: 'system', label: 'Cấu hình Hệ thống', icon: Settings, color: 'text-gray-400' }
   ];

@@ -50,6 +50,18 @@ export const organizerService = {
     return res.data;
   },
 
+  // Hủy yêu cầu khẩn cấp
+  cancelEmergencyAction: async (id) => {
+    const res = await api.post(`/organizer/events/${id}/cancel-emergency`);
+    return res.data;
+  },
+
+  // [NEW] Nộp phí hủy sự kiện
+  payCancellationFee: async (id, paymentMethod) => {
+    const res = await api.post(`/organizer/events/${id}/pay-cancellation-fee`, { paymentMethod });
+    return res.data;
+  },
+
   // Xóa sự kiện
   deleteEvent: async (id) => {
     const res = await api.delete(`/organizer/events/${id}`);

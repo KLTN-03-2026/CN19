@@ -44,7 +44,7 @@ const StatCard = ({ title, value, change, icon: Icon, isPositive, color, subtitl
       <div className="flex items-start justify-between relative z-10">
         <div className="space-y-3">
           <div className="space-y-1">
-              <p className="text-[10px] font-black text-slate-600 dark:text-zinc-500 uppercase tracking-tight">{title}</p>
+              <p className="text-[10px] font-black text-slate-700 dark:text-zinc-500 uppercase tracking-tight">{title}</p>
               <h3 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight tabular-nums">{value}</h3>
           </div>
           <div className="flex items-center space-x-2">
@@ -52,7 +52,7 @@ const StatCard = ({ title, value, change, icon: Icon, isPositive, color, subtitl
               {isPositive ? <ArrowUpRight className="w-3 h-3 mr-1" /> : <ArrowDownRight className="w-3 h-3 mr-1" />}
               {change}
             </div>
-            <span className="text-[9px] text-slate-500 font-bold uppercase tracking-tight opacity-90">{subtitle || 'so với tuần trước'}</span>
+            <span className="text-[9px] text-slate-700 font-bold uppercase tracking-tight opacity-90">{subtitle || 'so với tuần trước'}</span>
           </div>
         </div>
         <div className={`p-3 bg-gradient-to-br from-${color}-500/10 to-transparent rounded-xl group-hover:scale-110 transition-all duration-500 border border-gray-200 dark:border-white/10 shadow-sm`}>
@@ -66,11 +66,12 @@ const StatCard = ({ title, value, change, icon: Icon, isPositive, color, subtitl
 const Dashboard = () => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [period, setPeriod] = useState('day'); // 'day' or 'month'
 
-  const fetchStats = async () => {
+  const fetchStats = async (currentPeriod = period) => {
     try {
       setLoading(true);
-      const res = await api.get('/admin/stats');
+      const res = await api.get(`/admin/stats?period=${currentPeriod}`);
       setStats(res.data.data);
     } catch (error) {
       toast.error('Không thể tải dữ liệu thống kê');
@@ -83,6 +84,12 @@ const Dashboard = () => {
     fetchStats();
   }, []);
 
+  const handlePeriodChange = (newPeriod) => {
+    if (newPeriod === period) return;
+    setPeriod(newPeriod);
+    fetchStats(newPeriod);
+  };
+
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount || 0);
   };
@@ -94,16 +101,48 @@ const Dashboard = () => {
               <div className="w-12 h-12 border-4 border-neon-green/10 border-t-neon-green rounded-full animate-spin"></div>
               <div className="absolute inset-0 bg-neon-green/20 blur-xl rounded-full"></div>
             </div>
-            <p className="text-[10px] font-black text-slate-600 uppercase tracking-tight animate-pulse">Đang khởi tạo hệ thống...</p>
+            <p className="text-[10px] font-black text-slate-700 uppercase tracking-tight animate-pulse">Đang khởi tạo hệ thống...</p>
         </div>
     );
   }
 
   const statCards = [
-    { title: 'TỔNG DOANH THU SÀN', value: formatCurrency(stats?.total_revenue), change: '+15.4%', icon: Wallet, isPositive: true, color: 'blue', subtitle: 'Phí dịch vụ & Hoa hồng' },
-    { title: 'VÉ BÁN THÀNH CÔNG', value: stats?.total_successful_orders?.toLocaleString(), change: '+8.2%', icon: Ticket, isPositive: true, color: 'green', subtitle: 'Giao dịch đã xác thực' },
-    { title: 'NGƯỜI DÙNG HỆ THỐNG', value: stats?.total_users?.toLocaleString(), change: '+24', icon: Users, isPositive: true, color: 'purple', subtitle: 'Tài khoản hoạt động' },
-    { title: 'SỰ KIỆN ĐANG CHẠY', value: stats?.total_events?.toLocaleString(), change: '+4', icon: Calendar, isPositive: true, color: 'orange', subtitle: 'Hệ thống vận hành' },
+    { 
+      title: 'TỔNG DOANH THU SÀN', 
+      value: formatCurrency(stats?.total_revenue), 
+      change: `${stats?.growth?.revenue > 0 ? '+' : ''}${stats?.growth?.revenue}%`, 
+      icon: Wallet, 
+      isPositive: Number(stats?.growth?.revenue) >= 0, 
+      color: 'blue', 
+      subtitle: 'So với 7 ngày trước' 
+    },
+    { 
+      title: 'VÉ BÁN THÀNH CÔNG', 
+      value: stats?.total_successful_orders?.toLocaleString(), 
+      change: `${stats?.growth?.orders > 0 ? '+' : ''}${stats?.growth?.orders}%`, 
+      icon: Ticket, 
+      isPositive: Number(stats?.growth?.orders) >= 0, 
+      color: 'green', 
+      subtitle: 'So với 7 ngày trước' 
+    },
+    { 
+      title: 'NGƯỜI DÙNG HỆ THỐNG', 
+      value: stats?.total_users?.toLocaleString(), 
+      change: `${stats?.growth?.users > 0 ? '+' : ''}${stats?.growth?.users}%`, 
+      icon: Users, 
+      isPositive: Number(stats?.growth?.users) >= 0, 
+      color: 'purple', 
+      subtitle: 'So với 7 ngày trước' 
+    },
+    { 
+      title: 'SỰ KIỆN ĐANG CHẠY', 
+      value: stats?.total_events?.toLocaleString(), 
+      change: `${stats?.growth?.events > 0 ? '+' : ''}${stats?.growth?.events}%`, 
+      icon: Calendar, 
+      isPositive: Number(stats?.growth?.events) >= 0, 
+      color: 'orange', 
+      subtitle: 'So với 7 ngày trước' 
+    },
   ];
 
   return (
@@ -130,7 +169,7 @@ const Dashboard = () => {
             <h1 className="text-4xl font-black text-gray-900 dark:text-white tracking-tight uppercase leading-none">
               TRUNG TÂM <span className="text-neon-green drop-shadow-[0_0_10px_rgba(57,255,20,0.2)]">ĐIỀU HÀNH</span>
             </h1>
-            <p className="text-slate-600 dark:text-zinc-500 font-bold text-[10px] uppercase tracking-tight opacity-90">Quản trị tài chính & vận hành nền tảng BASTICKET v2.4.0</p>
+            <p className="text-slate-700 dark:text-zinc-500 font-bold text-[10px] uppercase tracking-tight opacity-90">Quản trị tài chính & vận hành nền tảng BASTICKET v2.4.0</p>
           </div>
         </div>
 
@@ -141,7 +180,10 @@ const Dashboard = () => {
                 <Bell className="w-3 h-3" /> Thông báo hệ thống:
               </span>
               <span className="text-[9px] font-bold text-slate-700 dark:text-zinc-400 uppercase tracking-tight">
-                Phát hiện 12 yêu cầu rút tiền mới chờ xử lý • Doanh thu tăng trưởng 12% so với hôm qua • Hệ thống AI vừa ngăn chặn 2 giao dịch nghi vấn • Sự kiện "Music Festival 2024" vừa bán hết vé...
+                Phát hiện {stats?.pending_withdrawals || 0} yêu cầu rút tiền mới chờ xử lý • 
+                Doanh thu {stats?.growth?.revenue >= 0 ? 'tăng trưởng' : 'giảm'} {Math.abs(stats?.growth?.revenue || 0)}% so với tuần trước • 
+                Hệ thống đang có {stats?.event_stats?.pending || 0} sự kiện mới chờ duyệt • 
+                Tổng cộng {stats?.total_users?.toLocaleString()} người dùng đang hoạt động trên nền tảng...
               </span>
            </div>
            <div className="absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-gray-100 dark:from-[#0a0a0c] to-transparent z-10"></div>
@@ -179,11 +221,21 @@ const Dashboard = () => {
                     </div>
                     Thống kê doanh thu
                 </h3>
-                <p className="text-[9px] text-slate-600 dark:text-zinc-500 font-black uppercase tracking-tight opacity-90">Đồng bộ dữ liệu thời gian thực • Chỉ số tài chính</p>
+                <p className="text-[9px] text-slate-700 dark:text-zinc-500 font-black uppercase tracking-tight opacity-90">Đồng bộ dữ liệu thời gian thực • Chỉ số tài chính</p>
               </div>
               <div className="flex bg-gray-100 dark:bg-white/5 p-1 rounded-lg border border-gray-300 dark:border-white/10 backdrop-blur-md">
-                <button className="px-4 py-1 text-[9px] font-black uppercase rounded-md bg-white dark:bg-white/10 shadow-sm transition-all text-neon-green tracking-tight">Ngày</button>
-                <button className="px-4 py-1 text-[9px] font-black uppercase rounded-md text-slate-500 hover:text-gray-900 dark:hover:text-white transition-all tracking-tight">Tháng</button>
+                <button 
+                  onClick={() => handlePeriodChange('day')}
+                  className={`px-4 py-1 text-[9px] font-black uppercase rounded-md transition-all tracking-tight ${period === 'day' ? 'bg-white dark:bg-white/10 shadow-sm text-neon-green' : 'text-slate-500 hover:text-gray-900 dark:hover:text-white'}`}
+                >
+                  Ngày
+                </button>
+                <button 
+                  onClick={() => handlePeriodChange('month')}
+                  className={`px-4 py-1 text-[9px] font-black uppercase rounded-md transition-all tracking-tight ${period === 'month' ? 'bg-white dark:bg-white/10 shadow-sm text-neon-green' : 'text-slate-500 hover:text-gray-900 dark:hover:text-white'}`}
+                >
+                  Tháng
+                </button>
               </div>
             </div>
             
@@ -207,7 +259,7 @@ const Dashboard = () => {
                         {formatCurrency(item.revenue)}
                       </div>
                     </div>
-                    <span className="text-[9px] font-black text-slate-600 dark:text-zinc-500 mt-3 uppercase tracking-tight group-hover/bar:text-neon-green transition-all">{item.label}</span>
+                    <span className="text-[9px] font-black text-slate-700 dark:text-zinc-500 mt-3 uppercase tracking-tight group-hover/bar:text-neon-green transition-all">{item.label}</span>
                   </div>
                 );
               })}
@@ -222,7 +274,7 @@ const Dashboard = () => {
                       <Zap className="w-5 h-5 text-yellow-600" />
                       Giao dịch trực tuyến
                   </h3>
-                  <p className="text-[9px] text-slate-600 dark:text-zinc-500 font-black uppercase tracking-tight opacity-90">Giám sát luồng giao dịch hệ thống</p>
+                  <p className="text-[9px] text-slate-700 dark:text-zinc-500 font-black uppercase tracking-tight opacity-90">Giám sát luồng giao dịch hệ thống</p>
                 </div>
                 <Link to="/admin/transactions" className="text-neon-green text-[9px] font-black uppercase hover:underline transition-all tracking-tight flex items-center gap-2">
                     Xem tất cả <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
@@ -249,12 +301,16 @@ const Dashboard = () => {
                       </td>
                       <td className="px-5 py-4">
                         <div className="flex items-center space-x-3">
-                            <div className="w-8 h-8 rounded-lg bg-gray-200 dark:bg-zinc-800 flex items-center justify-center text-neon-green font-black text-[10px] border border-gray-300 dark:border-white/5 shadow-sm">
-                                {tx.customer?.full_name?.charAt(0) || 'U'}
+                            <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200 dark:bg-zinc-800 flex items-center justify-center text-neon-green font-black text-[10px] border border-gray-300 dark:border-white/5 shadow-sm shrink-0">
+                                {tx.customer?.avatar_url ? (
+                                  <img src={tx.customer.avatar_url} alt="" className="w-full h-full object-cover" />
+                                ) : (
+                                  tx.customer?.full_name?.charAt(0) || 'U'
+                                )}
                             </div>
                             <div className="flex flex-col">
                                 <span className="text-xs font-black text-gray-900 dark:text-white tracking-tight leading-none mb-1">{tx.customer?.full_name}</span>
-                                <span className="text-[9px] text-slate-600 dark:text-zinc-500 font-bold leading-none">{tx.customer?.email}</span>
+                                <span className="text-[9px] text-slate-700 dark:text-zinc-500 font-bold leading-none">{tx.customer?.email}</span>
                             </div>
                         </div>
                       </td>
@@ -265,7 +321,7 @@ const Dashboard = () => {
                           Thành công
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-right text-[10px] text-slate-600 dark:text-zinc-500 font-black uppercase opacity-90 font-mono">
+                      <td className="px-6 py-4 text-right text-[10px] text-slate-700 dark:text-zinc-500 font-black uppercase opacity-90 font-mono">
                          {format(new Date(tx.created_at), 'HH:mm:ss • dd/MM')}
                       </td>
                     </tr>
@@ -321,7 +377,7 @@ const Dashboard = () => {
                  <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/5">
                    <div className="flex items-center gap-2">
                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }}></div>
-                     <span className="text-[10px] font-black text-slate-600 dark:text-zinc-400 uppercase tracking-tight">{item.name}</span>
+                     <span className="text-[10px] font-black text-slate-700 dark:text-zinc-400 uppercase tracking-tight">{item.name}</span>
                    </div>
                    <span className="text-[11px] font-black text-gray-900 dark:text-white tracking-tight">{formatCurrency(item.value)}</span>
                  </div>
@@ -353,7 +409,7 @@ const Dashboard = () => {
               ))}
             </div>
 
-            <Link to="/admin/events" className="w-full mt-6 py-3.5 bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-[9px] font-black text-slate-600 dark:text-zinc-500 uppercase tracking-tight hover:bg-neon-green hover:text-black hover:border-neon-green transition-all text-center flex items-center justify-center gap-2 group/link shadow-sm">
+            <Link to="/admin/events" className="w-full mt-6 py-3.5 bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-[9px] font-black text-slate-700 dark:text-zinc-500 uppercase tracking-tight hover:bg-neon-green hover:text-black hover:border-neon-green transition-all text-center flex items-center justify-center gap-2 group/link shadow-sm">
                 Quản lý sự kiện
                 <ChevronRight className="w-3 h-3 group-hover/link:translate-x-1 transition-transform" />
             </Link>

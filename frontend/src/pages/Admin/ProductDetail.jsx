@@ -82,7 +82,7 @@ const ProductDetail = () => {
       case 'cancelled':
         return <span className="px-2.5 py-1 bg-red-500/10 text-red-500 rounded-lg text-[9px] font-black uppercase border border-red-500/20 shadow-sm whitespace-nowrap">Bị hủy</span>
       default:
-        return <span className="px-2.5 py-1 bg-gray-500/10 text-gray-500 rounded-lg text-[9px] font-black uppercase border border-gray-100 dark:border-white/10 shadow-sm whitespace-nowrap uppercase tracking-widest">{status}</span>;
+        return <span className="px-2.5 py-1 bg-gray-500/10 text-gray-600 rounded-lg text-[9px] font-black uppercase border border-gray-100 dark:border-white/10 shadow-sm whitespace-nowrap uppercase tracking-widest">{status}</span>;
     }
   };
 
@@ -105,7 +105,7 @@ const ProductDetail = () => {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px]">
         <Loader2 className="w-10 h-10 text-neon-green animate-spin mb-4" />
-        <p className="text-gray-500 animate-pulse uppercase text-xs font-black tracking-widest">Đang tải dữ liệu sản phẩm...</p>
+        <p className="text-gray-600 animate-pulse uppercase text-xs font-black tracking-widest">Đang tải dữ liệu sản phẩm...</p>
       </div>
     );
   }
@@ -133,7 +133,7 @@ const ProductDetail = () => {
             <ChevronLeft className="w-6 h-6 transition-transform group-hover:-translate-x-0.5" />
           </button>
           <div>
-            <div className="flex items-center space-x-2 text-sm text-gray-500 mb-1">
+            <div className="flex items-center space-x-2 text-sm text-gray-600 mb-1">
               <Package className="w-4 h-4" />
               <span>Chi tiết Sản phẩm</span>
             </div>
@@ -163,7 +163,7 @@ const ProductDetail = () => {
               <ShoppingBag className="w-5 h-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] uppercase font-black text-gray-400">Đã bán</p>
+              <p className="text-[10px] uppercase font-black text-gray-600">Đã bán</p>
               <p className="text-xl font-black text-gray-900 dark:text-white leading-none mt-0.5">{product.totalSold || 0}</p>
             </div>
           </div>
@@ -176,7 +176,7 @@ const ProductDetail = () => {
               <DollarSign className="w-5 h-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] uppercase font-black text-gray-400">Doanh thu</p>
+              <p className="text-[10px] uppercase font-black text-gray-600">Doanh thu</p>
               <p className="text-xl font-black text-gray-900 dark:text-white leading-none mt-0.5 whitespace-nowrap overflow-hidden text-ellipsis" title={new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(product.totalRevenue || 0)}>
                  {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(product.totalRevenue || 0)}
               </p>
@@ -192,7 +192,7 @@ const ProductDetail = () => {
               <Wallet className="w-5 h-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] uppercase font-black text-gray-400">Doanh thu (Về BTC)</p>
+              <p className="text-[10px] uppercase font-black text-gray-600">Doanh thu (Về BTC)</p>
               <p className="text-xl font-black text-gray-900 dark:text-white leading-none mt-0.5 whitespace-nowrap overflow-hidden text-ellipsis" title={new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(product.netRevenue || 0)}>
                  {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(product.netRevenue || 0)}
               </p>
@@ -208,7 +208,7 @@ const ProductDetail = () => {
               <BarChart3 className="w-5 h-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] uppercase font-black text-gray-400">Hoa hồng hệ thống</p>
+              <p className="text-[10px] uppercase font-black text-gray-600">Hoa hồng hệ thống</p>
               <p className="text-xl font-black text-gray-900 dark:text-white leading-none mt-0.5 whitespace-nowrap overflow-hidden text-ellipsis" title={new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(product.systemCommission ?? (product.totalRevenue * 0.08 || 0))}>
                  {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(
                    product.systemCommission ?? (product.totalRevenue * 0.08 || 0)
@@ -225,7 +225,7 @@ const ProductDetail = () => {
               <Tag className="w-5 h-5" />
             </div>
             <div className="min-w-0">
-              <p className="text-[10px] uppercase font-black text-gray-400">Tồn kho</p>
+              <p className="text-[10px] uppercase font-black text-gray-600">Tồn kho</p>
               <p className="text-xl font-black text-gray-900 dark:text-white leading-none mt-0.5">{product.stock}</p>
             </div>
           </div>
@@ -233,9 +233,9 @@ const ProductDetail = () => {
 
         <div className="bg-white dark:bg-[#111114] border border-gray-200 dark:border-white/5 p-3 rounded-2xl flex flex-col justify-center relative group shadow-sm transition-all hover:border-neon-green/30 font-bold">
           <div className="relative z-10 overflow-hidden ml-1">
-             <p className="text-[10px] uppercase font-black text-gray-400 mb-0.5">Ban tổ chức</p>
+             <p className="text-[10px] uppercase font-black text-gray-600 mb-0.5">Ban tổ chức</p>
              <p className="text-[11px] font-black text-neon-green uppercase truncate leading-none" title={product.organizer?.organization_name}>{product.organizer?.organization_name}</p>
-             <p className="text-[9px] text-gray-500 mt-0.5 font-bold truncate opacity-70">{product.organizer?.user?.email}</p>
+             <p className="text-[9px] text-gray-600 mt-0.5 font-bold truncate opacity-70">{product.organizer?.user?.email}</p>
           </div>
         </div>
       </div>
@@ -245,7 +245,7 @@ const ProductDetail = () => {
           <div className="lg:col-span-2 p-6 bg-white dark:bg-[#111114] border border-gray-200 dark:border-white/5 rounded-[32px] shadow-sm flex flex-col h-[350px]">
              <div className="mb-6 flex justify-between items-start">
                 <div>
-                   <h3 className="text-[10px] font-black uppercase text-gray-400 mb-1 tracking-widest">Xu hướng tiêu thụ</h3>
+                   <h3 className="text-[10px] font-black uppercase text-gray-600 mb-1 tracking-widest">Xu hướng tiêu thụ</h3>
                    <p className="text-sm font-bold text-gray-900 dark:text-white">Doanh thu {chartRange} ngày gần nhất</p>
                 </div>
                 <div className="flex items-center space-x-3">
@@ -316,7 +316,7 @@ const ProductDetail = () => {
          {/* Stock Composition PieChart */}
          <div className="p-6 bg-white dark:bg-[#111114] border border-gray-200 dark:border-white/5 rounded-[32px] shadow-sm flex flex-col h-[350px]">
             <div className="mb-6">
-               <h3 className="text-[10px] font-black uppercase text-gray-400 mb-1 tracking-widest">Tình trạng kho</h3>
+               <h3 className="text-[10px] font-black uppercase text-gray-600 mb-1 tracking-widest">Tình trạng kho</h3>
                <p className="text-sm font-bold text-gray-900 dark:text-white">Phân bổ nguồn lực</p>
             </div>
             <div className="flex-1 w-full relative">
@@ -351,7 +351,7 @@ const ProductDetail = () => {
                   </PieChart>
                </ResponsiveContainer>
                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                  <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Tổng nhập</p>
+                  <p className="text-[9px] font-black text-gray-600 uppercase tracking-widest">Tổng nhập</p>
                   <p className="text-2xl font-black text-gray-900 dark:text-white leading-none mt-1">
                      {(product.totalSold || 0) + (product.stock || 0)}
                   </p>
@@ -398,7 +398,7 @@ const ProductDetail = () => {
                       className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
                     />
                  ) : (
-                   <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 opacity-30">
+                   <div className="w-full h-full flex flex-col items-center justify-center text-gray-600 opacity-30">
                       <Package className="w-12 h-12 mb-2" />
                       <p className="text-[10px] uppercase font-black">No Image</p>
                    </div>
@@ -407,11 +407,11 @@ const ProductDetail = () => {
 
               <div className="space-y-4">
                 <div>
-                  <label className="text-[10px] uppercase font-black text-gray-400 tracking-widest">Tên sản phẩm</label>
+                  <label className="text-[10px] uppercase font-black text-gray-600 tracking-widest">Tên sản phẩm</label>
                   <p className="text-sm font-bold text-gray-700 dark:text-gray-300 mt-1">{product.name}</p>
                 </div>
                 <div>
-                  <label className="text-[10px] uppercase font-black text-gray-400 tracking-widest">Sự kiện liên kết</label>
+                  <label className="text-[10px] uppercase font-black text-gray-600 tracking-widest">Sự kiện liên kết</label>
                   {product.event ? (
                     <div className="flex items-center space-x-2 mt-1 p-2 bg-gray-50 dark:bg-white/5 rounded-xl border border-gray-100 dark:border-white/10">
                       <div className="w-8 h-8 rounded-lg bg-gray-200 dark:bg-white/10 overflow-hidden">
@@ -424,14 +424,14 @@ const ProductDetail = () => {
                   )}
                 </div>
                 <div>
-                  <label className="text-[10px] uppercase font-black text-gray-400 tracking-widest">Mô tả</label>
-                  <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+                  <label className="text-[10px] uppercase font-black text-gray-600 tracking-widest">Mô tả</label>
+                  <p className="text-xs text-gray-700 dark:text-gray-400 mt-1 leading-relaxed">
                     {product.description || 'Chưa có mô tả cho sản phẩm này.'}
                   </p>
                 </div>
                 <div>
-                  <label className="text-[10px] uppercase font-black text-gray-400 tracking-widest">Ngày tạo</label>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <label className="text-[10px] uppercase font-black text-gray-600 tracking-widest">Ngày tạo</label>
+                  <p className="text-xs text-gray-700 dark:text-gray-400 mt-1">
                     {format(new Date(product.created_at), 'dd/MM/yyyy HH:mm', { locale: vi })}
                   </p>
                 </div>
@@ -449,7 +449,7 @@ const ProductDetail = () => {
                     <ShoppingBag className="w-5 h-5 text-neon-green" />
                   </div>
                   <span>Lịch sử Bán hàng</span>
-                  <span className="text-[10px] font-bold text-gray-400 bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 px-2.5 py-1 rounded-full uppercase tracking-widest ml-2">
+                  <span className="text-[10px] font-bold text-gray-600 bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 px-2.5 py-1 rounded-full uppercase tracking-widest ml-2">
                     {filteredOrders.length} giao dịch
                   </span>
                 </h2>
@@ -481,7 +481,7 @@ const ProductDetail = () => {
                 </div>
 
                 <div className="relative w-full sm:w-64">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" />
                   <input 
                     type="text" 
                     placeholder="Tìm theo mã đơn, khách hàng..." 
@@ -499,7 +499,7 @@ const ProductDetail = () => {
             <div className="overflow-x-auto no-scrollbar">
               <table className="w-full">
                 <thead>
-                  <tr className="bg-gray-50 dark:bg-white/[0.02] text-left text-[10px] text-gray-500 uppercase font-black border-b border-gray-100 dark:border-white/5">
+                  <tr className="bg-gray-50 dark:bg-white/[0.02] text-left text-[10px] text-gray-600 uppercase font-black border-b border-gray-100 dark:border-white/5">
                     <th className="px-6 py-4">Đơn hàng</th>
                     <th className="px-6 py-4">Khách hàng</th>
                     <th className="px-6 py-4 text-center">Số lượng</th>
@@ -515,7 +515,7 @@ const ProductDetail = () => {
                         <td className="px-6 py-4">
                           <div className="flex flex-col">
                             <span className="font-mono text-xs font-black text-neon-green">#{item.order.order_number.slice(-8)}</span>
-                            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-tight mt-1">
+                            <span className="text-[10px] text-gray-600 font-bold uppercase tracking-tight mt-1">
                                {format(new Date(item.order.created_at), 'dd/MM/yyyy HH:mm')}
                             </span>
                           </div>
@@ -540,7 +540,7 @@ const ProductDetail = () => {
                             </div>
                             <div className="flex flex-col min-w-0">
                                <span className="text-xs font-black text-gray-900 dark:text-white truncate">{item.order.customer.full_name}</span>
-                               <span className="text-[10px] text-gray-500 font-bold truncate opacity-60 tracking-tight">{item.order.customer.email}</span>
+                               <span className="text-[10px] text-gray-600 font-bold truncate opacity-60 tracking-tight">{item.order.customer.email}</span>
                             </div>
                           </div>
                         </td>
@@ -558,7 +558,7 @@ const ProductDetail = () => {
                         <td className="px-6 py-4 text-right pr-6">
                           <button 
                             onClick={() => window.open(`http://localhost:5173/admin/transactions/ORDER/${item.order.id}`, '_blank')}
-                            className="p-1.5 bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl hover:bg-neon-green hover:text-black transition-all text-gray-400 group shadow-sm active:scale-95"
+                            className="p-1.5 bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl hover:bg-neon-green hover:text-black transition-all text-gray-600 group shadow-sm active:scale-95"
                           >
                             <Eye className="w-3 h-3" />
                           </button>
@@ -570,7 +570,7 @@ const ProductDetail = () => {
                       <td colSpan="6" className="px-6 py-12 text-center text-gray-500">
                         <div className="flex flex-col items-center">
                            <AlertCircle className="w-8 h-8 text-gray-300 mb-2" />
-                           <p className="text-[10px] font-black uppercase tracking-widest text-gray-400">Không có dữ liệu giao dịch</p>
+                           <p className="text-[10px] font-black uppercase tracking-widest text-gray-600">Không có dữ liệu giao dịch</p>
                         </div>
                       </td>
                     </tr>

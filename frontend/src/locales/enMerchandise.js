@@ -12,6 +12,7 @@ const enMerchandise = {
         received: "Received",
         sold: "Sold",
         listing: "On Sale",
+        transferred: "Transferred",
         cancelled: "Cancelled"
     },
     labels: {
@@ -42,6 +43,8 @@ const enMerchandise = {
         pickup_success: "Pickup Successful",
         staff_name: "Scanning Staff",
         pickup_date: "Pickup Date",
+        recipient: "Recipient",
+        transfer_success: "NFT Transfer Successful",
         thank_you: "Thank you for choosing BASTICKET. We hope you have a great experience at the event!",
         order_number: "Order Number",
         close_btn: "Close"

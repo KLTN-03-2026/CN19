@@ -4,8 +4,9 @@ pragma solidity ^0.8.24;
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/token/common/ERC2981.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 
-contract BASTicketNFT is ERC721URIStorage, ERC2981, Ownable {
+contract BASTicketNFT is ERC721URIStorage, ERC2981, Ownable, Pausable {
     uint256 private _nextTokenId;
 
     // Mapping để khóa vé khi đang đăng bán trên Marketplace nội bộ
@@ -15,6 +16,19 @@ contract BASTicketNFT is ERC721URIStorage, ERC2981, Ownable {
     event TicketMinted(address indexed to, uint256 indexed tokenId, string uri);
     event TicketLocked(uint256 indexed tokenId);
     event TicketUnlocked(uint256 indexed tokenId);
+    event FinancialLog(
+        string indexed orderId, 
+        uint256 totalAmount, 
+        uint256 ticketPlatformFee,
+        uint256 ticketCommissionFee,
+        uint256 merchPlatformFee,
+        uint256 merchCommissionFee,
+        uint256 gasFee,
+        uint256 royaltyFee,
+        string transactionType, 
+        address indexed payer, 
+        uint256 timestamp
+    );
 
     constructor(address initialOwner) 
         ERC721("BAS Ticket", "BAST") 
@@ -55,6 +69,20 @@ contract BASTicketNFT is ERC721URIStorage, ERC2981, Ownable {
     }
 
     /**
+     * @dev Tạm dừng toàn bộ các giao dịch của contract (Admin/Platform)
+     */
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    /**
+     * @dev Kích hoạt lại các giao dịch
+     */
+    function unpause() external onlyOwner {
+        _unpause();
+    }
+
+    /**
      * @dev Cập nhật lại phí bản quyền
      */
     function setTokenRoyalty(uint256 tokenId, address receiver, uint96 feeNumerator) external onlyOwner {
@@ -64,7 +92,7 @@ contract BASTicketNFT is ERC721URIStorage, ERC2981, Ownable {
     /**
      * @dev Ghi đè hàm _update của OZ v5.0 để chặn giao dịch nếu vé đang bị khóa
      */
-    function _update(address to, uint256 tokenId, address auth) internal override(ERC721) returns (address) {
+    function _update(address to, uint256 tokenId, address auth) internal override(ERC721) whenNotPaused returns (address) {
         address from = _ownerOf(tokenId);
         // Chỉ chặn nếu là giao dịch chuyển nhượng (không phải mint hay burn)
         if (from != address(0) && to != address(0)) {
@@ -89,6 +117,37 @@ contract BASTicketNFT is ERC721URIStorage, ERC2981, Ownable {
      */
     function burn(uint256 tokenId) external onlyOwner {
         _burn(tokenId);
+    }
+
+    /**
+     * @dev Ghi lại thông tin tài chính siêu chi tiết lên Blockchain để đối soát.
+     * Tách biệt rõ ràng phí vé và phí vật phẩm mua kèm.
+     */
+    function logFinancialTransaction(
+        string memory orderId, 
+        uint256 totalAmount, 
+        uint256 ticketPlatformFee,
+        uint256 ticketCommissionFee,
+        uint256 merchPlatformFee,
+        uint256 merchCommissionFee,
+        uint256 gasFee,
+        uint256 royaltyFee,
+        string memory transactionType, 
+        address payer
+    ) public onlyOwner {
+        emit FinancialLog(
+            orderId, 
+            totalAmount, 
+            ticketPlatformFee, 
+            ticketCommissionFee, 
+            merchPlatformFee, 
+            merchCommissionFee, 
+            gasFee, 
+            royaltyFee, 
+            transactionType, 
+            payer, 
+            block.timestamp
+        );
     }
 
     // Các hàm yêu cầu ghi đè do đa kế thừa từ ERC721URIStorage và ERC2981

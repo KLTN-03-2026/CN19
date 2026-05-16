@@ -78,6 +78,11 @@ const MyRevenue = () => {
         return revenueService.getResaleOrders();
     }
 
+    const { data: transactionsData, isLoading: isTransactionsLoading } = useQuery({
+        queryKey: ['revenue-transactions'],
+        queryFn: revenueService.getTransactions
+    });
+
     const formatCurrency = (amount) => {
         return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount || 0);
     };
@@ -227,6 +232,11 @@ const MyRevenue = () => {
                     onClick={() => setActiveTab('withdraw')} 
                     label={t('revenue.tabs.withdraw_bank')} 
                 />
+                <TabButton 
+                    active={activeTab === 'transactions'} 
+                    onClick={() => setActiveTab('transactions')} 
+                    label="Biến động số dư" 
+                />
             </div>
 
             {/* Content Area */}
@@ -305,11 +315,13 @@ const MyRevenue = () => {
                                                     <td className="px-6 py-5">
                                                         <div className="flex justify-center">
                                                             <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-tight ${
-                                                                tx.is_settled
+                                                                tx.status === 'cancelled' || tx.ticket?.event?.status === 'cancelled'
+                                                                ? 'bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-400'
+                                                                : (tx.is_settled
                                                                 ? 'bg-green-100 text-green-700 dark:bg-green-500/10 dark:text-green-400'
-                                                                : 'bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400'
+                                                                : 'bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400')
                                                             }`}>
-                                                                {tx.is_settled ? t('revenue.table.status_settled') : t('revenue.table.status_pending')}
+                                                                {tx.status === 'cancelled' || tx.ticket?.event?.status === 'cancelled' ? '🔴 Đã hủy' : (tx.is_settled ? t('revenue.table.status_settled') : t('revenue.table.status_pending'))}
                                                             </span>
                                                         </div>
                                                     </td>
@@ -346,8 +358,87 @@ const MyRevenue = () => {
                             </div>
                         </div>
                     </motion.div>
+                ) : activeTab === 'transactions' ? (
+                    <motion.div
+                        key="transactions"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        className="space-y-4"
+                    >
+                        <div className="bg-white dark:bg-dark-card border border-gray-100 dark:border-dark-border rounded-3xl overflow-hidden shadow-sm">
+                            <div className="pl-8 py-4 border-b border-gray-50 dark:border-dark-border flex items-center justify-between">
+                                <h3 className="font-black text-gray-900 dark:text-white uppercase text-sm">Lịch sử biến động số dư ví</h3>
+                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mr-8">
+                                    {transactionsData?.transactions?.length || 0} giao dịch
+                                </span>
+                            </div>
+
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="bg-gray-50/50 dark:bg-white/[0.02] text-[11px] font-black text-gray-600 uppercase">
+                                            <th className="px-8 py-4 text-[10px] font-black text-gray-400 uppercase">Mã GD & Thời gian</th>
+                                            <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase">Số tiền</th>
+                                            <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase">Loại GD</th>
+                                            <th className="px-6 py-4 text-[10px] font-black text-gray-400 uppercase">Nội dung</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-50 dark:divide-dark-border">
+                                        {isTransactionsLoading ? (
+                                            [1, 2, 3].map(i => (
+                                                <tr key={i} className="animate-pulse">
+                                                    <td colSpan="4" className="px-6 py-8">
+                                                        <div className="h-12 bg-gray-100 dark:bg-white/5 rounded-2xl w-full"></div>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        ) : transactionsData?.transactions?.length > 0 ? (
+                                            transactionsData.transactions.map((tx) => (
+                                                <tr key={tx.id} className="group hover:bg-gray-50/50 dark:hover:bg-white/[0.01] transition-colors">
+                                                    <td className="px-8 py-5">
+                                                        <div className="flex flex-col">
+                                                            <span className="text-xs font-mono font-black text-gray-400 uppercase">#{tx.id.substring(0, 8)}</span>
+                                                            <span className="text-[11px] text-gray-600 dark:text-gray-400 mt-0.5">
+                                                                {format(new Date(tx.created_at), 'dd/MM/yyyy HH:mm', { locale: vi })}
+                                                            </span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-5">
+                                                        <span className={`text-sm font-black ${tx.amount >= 0 ? 'text-neon-green' : 'text-red-500'}`}>
+                                                            {tx.amount >= 0 ? '+' : ''}{formatCurrency(tx.amount)}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-5">
+                                                        <span className={`inline-flex px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-tight ${
+                                                            tx.type === 'REFUND' ? 'bg-green-500/10 text-green-500' :
+                                                            tx.type === 'DEPOSIT' ? 'bg-blue-500/10 text-blue-500' :
+                                                            'bg-orange-500/10 text-orange-500'
+                                                        }`}>
+                                                            {tx.type === 'REFUND' ? 'Hoàn tiền' : tx.type === 'DEPOSIT' ? 'Nạp tiền' : 'Rút tiền'}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-5">
+                                                        <p className="text-xs text-gray-600 dark:text-gray-300 italic line-clamp-2 max-w-md">
+                                                            {tx.description || 'Giao dịch ví'}
+                                                        </p>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        ) : (
+                                            <tr>
+                                                <td colSpan="4" className="px-6 py-20 text-center text-gray-500 font-bold uppercase text-xs">
+                                                    Chưa có phát sinh biến động số dư
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </motion.div>
                 ) : (
-<motion.div
+                    <motion.div
                         key="withdraw"
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -359,7 +450,11 @@ const MyRevenue = () => {
                             <div className="flex items-center gap-3 mb-4">
                                 <h3 className="text-lg font-black text-gray-900 dark:text-white uppercase">{t('revenue.withdrawal.title')}</h3>
                             </div>
-                            <WithdrawalForm balance={summary?.balance} onComplete={() => queryClient.invalidateQueries(['revenue-summary'])} />
+                            <WithdrawalForm 
+                                balance={summary?.balance} 
+                                systemSettings={summary?.systemSettings}
+                                onComplete={() => queryClient.invalidateQueries(['revenue-summary'])} 
+                            />
                         </div>
 
                         {/* Bank Info */}
@@ -431,15 +526,23 @@ const TabButton = ({ active, onClick, label }) => (
     </button>
 );
 
-const WithdrawalForm = ({ balance, onComplete }) => {
+const WithdrawalForm = ({ balance, systemSettings, onComplete }) => {
     const { t } = useTranslation();
     const [amount, setAmount] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    
+    const feePercent = systemSettings?.withdrawal_fee_percent || 0;
+    const minWithdrawalValue = systemSettings?.min_withdrawal_amount || 100000;
+    
+    const feeAmount = (Number(amount) * feePercent) / 100;
+    const netAmount = Number(amount) - feeAmount;
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!amount || amount < minWithdrawal) return toast.error(`${t('revenue.messages.min_withdrawal')} (${new Intl.NumberFormat('vi-VN').format(minWithdrawal)}đ)`);
-        if (amount > balance) return toast.error(t('revenue.messages.insufficient_balance'));
+        if (!amount || Number(amount) < minWithdrawalValue) {
+            return toast.error(`${t('revenue.messages.min_withdrawal')} (${new Intl.NumberFormat('vi-VN').format(minWithdrawalValue)}đ)`);
+        }
+        if (Number(amount) > balance) return toast.error(t('revenue.messages.insufficient_balance'));
 
         setIsSubmitting(true);
         try {
@@ -478,9 +581,15 @@ const WithdrawalForm = ({ balance, onComplete }) => {
                     <span className="text-sm font-black text-neon-green">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(balance || 0)}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-gray-600">Phí giao dịch:</span>
-                    <span className="text-sm font-black text-gray-500">0đ (Miễn phí)</span>
+                    <span className="text-xs font-bold text-gray-600">Phí giao dịch ({feePercent}%):</span>
+                    <span className="text-sm font-black text-red-500">-{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(feeAmount)}</span>
                 </div>
+                {amount > 0 && (
+                    <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-white/5">
+                        <span className="text-xs font-bold text-gray-600">Thực nhận:</span>
+                        <span className="text-sm font-black text-neon-green">{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(netAmount)}</span>
+                    </div>
+                )}
             </div>
 
             <button 
@@ -738,7 +847,9 @@ const TransactionDetailModal = ({ order, onClose, formatCurrency }) => {
                             <div className="space-y-1">
                                 <div>
                                     <p className="text-[9px] font-black text-gray-600 uppercase mb-0.5">{t('revenue.modal.status_label')}</p>
-                                    {order.is_settled ? (
+                                    {order.status === 'cancelled' || order.ticket?.event?.status === 'cancelled' ? (
+                                        <span className="text-[10px] font-black text-red-500 bg-red-500/10 px-2 py-0.5 rounded">🔴 Đã hủy</span>
+                                    ) : order.is_settled ? (
                                         <span className="text-[10px] font-black text-neon-green bg-neon-green/10 px-2 py-0.5 rounded">{t('revenue.table.status_settled')}</span>
                                     ) : (
                                         <span className="text-[10px] font-black text-blue-500 bg-blue-500/10 px-2 py-0.5 rounded">{t('revenue.table.status_pending')}</span>

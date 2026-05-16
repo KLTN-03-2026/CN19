@@ -1,6 +1,7 @@
 const { ethers } = require('ethers');
 const fs = require('fs');
 const path = require('path');
+const SystemConfigService = require('./system-config.service');
 
 // Đọc ABI và Bytecode từ Artifacts của Hardhat
 const artifactPath = path.join(__dirname, '../../../smart-contracts/artifacts/contracts/BASTicketNFT.sol/BASTicketNFT.json');
@@ -10,20 +11,33 @@ const contractBytecode = artifact.bytecode;
 
 class Web3Service {
     constructor() {
-        if (!process.env.RPC_URL || !process.env.ADMIN_PRIVATE_KEY) {
-            console.warn("⚠️ Web3Service: Thiếu cấu hình biến môi trường Web3 (RPC_URL hoặc ADMIN_PRIVATE_KEY)");
+        this.initialized = false;
+    }
+
+    async ensureInitialized() {
+        const config = await SystemConfigService.getConfig();
+        const rpcUrl = config.rpc_url || process.env.RPC_URL;
+        const contractAddress = config.smart_contract_address || process.env.CONTRACT_ADDRESS;
+
+        if (!rpcUrl || !process.env.ADMIN_PRIVATE_KEY) {
+            console.warn("⚠️ Web3Service: Thiếu cấu hình Web3 (RPC_URL hoặc ADMIN_PRIVATE_KEY)");
+            return;
+        }
+
+        // Nếu RPC URL thay đổi, khởi tạo lại provider
+        if (!this.provider || this.currentRpcUrl !== rpcUrl) {
+            this.currentRpcUrl = rpcUrl;
+            this.provider = new ethers.JsonRpcProvider(rpcUrl);
+            this.signer = new ethers.Wallet(process.env.ADMIN_PRIVATE_KEY, this.provider);
+        }
+
+        // Nếu Contract Address thay đổi, khởi tạo lại contract instance
+        if (contractAddress && (!this.contract || this.currentContractAddress !== contractAddress)) {
+            this.currentContractAddress = contractAddress;
+            this.contract = new ethers.Contract(contractAddress, contractABI, this.signer);
         }
         
-        // Khởi tạo Provider từ RPC URL
-        this.provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
-        
-        // Khởi tạo Signer (Ví Admin/Platform) từ Private Key
-        this.signer = new ethers.Wallet(process.env.ADMIN_PRIVATE_KEY, this.provider);
-        
-        // Khởi tạo Smart Contract Instance (Dùng cho các hàm mint/lock chung nếu cần)
-        if (process.env.CONTRACT_ADDRESS) {
-            this.contract = new ethers.Contract(process.env.CONTRACT_ADDRESS, contractABI, this.signer);
-        }
+        this.initialized = true;
     }
 
     /**
@@ -33,6 +47,10 @@ class Web3Service {
      */
     async deployEventContract(initialOwner) {
         try {
+            await this.ensureInitialized();
+            const config = await SystemConfigService.getConfig();
+            const rpcUrl = config.rpc_url || process.env.RPC_URL;
+
             console.log('----------------------------------------------------');
             console.log(`📡 [Web3] Bắt đầu triển khai Smart Contract...`);
             console.log(`👤 Chủ sở hữu dự kiến: ${initialOwner}`);
@@ -42,7 +60,7 @@ class Web3Service {
                 throw new Error(`Invalid wallet address: ${initialOwner}`);
             }
 
-            console.log(`🔗 Đang kết nối tới RPC: ${process.env.RPC_URL}`);
+            console.log(`🔗 Đang kết nối tới RPC: ${rpcUrl}`);
             const network = await this.provider.getNetwork();
             console.log(`✅ Đã kết nối tới mạng: ${network.name} (ChainID: ${network.chainId})`);
 
@@ -90,6 +108,7 @@ class Web3Service {
      */
     async mintTicket(contractAddress, toAddress, ticketURI) {
         try {
+            await this.ensureInitialized();
             const eventContract = new ethers.Contract(contractAddress, contractABI, this.signer);
             const tx = await eventContract.mintTicket(toAddress, ticketURI);
             const receipt = await tx.wait();
@@ -124,6 +143,7 @@ class Web3Service {
      */
     async lockTicket(contractAddress, tokenId) {
         try {
+            await this.ensureInitialized();
             const eventContract = new ethers.Contract(contractAddress, contractABI, this.signer);
             const tx = await eventContract.lockTicket(tokenId);
             await tx.wait();
@@ -141,6 +161,7 @@ class Web3Service {
      */
     async unlockTicket(contractAddress, tokenId) {
         try {
+            await this.ensureInitialized();
             const eventContract = new ethers.Contract(contractAddress, contractABI, this.signer);
             const tx = await eventContract.unlockTicket(tokenId);
             await tx.wait();
@@ -160,6 +181,7 @@ class Web3Service {
      */
     async transferTicket(contractAddress, fromAddress, toAddress, tokenId) {
         try {
+            await this.ensureInitialized();
             const eventContract = new ethers.Contract(contractAddress, contractABI, this.signer);
             // Sử dụng forceTransfer (quyền Admin) để chuyển vé giữa các ví custodial
             const tx = await eventContract.forceTransfer(fromAddress, toAddress, tokenId);
@@ -178,6 +200,7 @@ class Web3Service {
      */
     async burnTicket(contractAddress, tokenId) {
         try {
+            await this.ensureInitialized();
             const eventContract = new ethers.Contract(contractAddress, contractABI, this.signer);
             const tx = await eventContract.burn(tokenId);
             await tx.wait();
@@ -195,11 +218,46 @@ class Web3Service {
      */
     async isTicketLocked(contractAddress, tokenId) {
         try {
+            await this.ensureInitialized();
             const eventContract = new ethers.Contract(contractAddress, contractABI, this.signer);
             const isLocked = await eventContract.isLocked(tokenId);
             return isLocked;
         } catch (error) {
             console.error('Error checking lock status:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * @description Tạm dừng Smart Contract (đóng băng mua bán/chuyển nhượng)
+     * @param {string} contractAddress 
+     */
+    async pauseContract(contractAddress) {
+        try {
+            await this.ensureInitialized();
+            const eventContract = new ethers.Contract(contractAddress, contractABI, this.signer);
+            const tx = await eventContract.pause();
+            await tx.wait();
+            return tx.hash;
+        } catch (error) {
+            console.error('Error pausing contract:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * @description Kích hoạt lại Smart Contract
+     * @param {string} contractAddress 
+     */
+    async unpauseContract(contractAddress) {
+        try {
+            await this.ensureInitialized();
+            const eventContract = new ethers.Contract(contractAddress, contractABI, this.signer);
+            const tx = await eventContract.unpause();
+            await tx.wait();
+            return tx.hash;
+        } catch (error) {
+            console.error('Error unpausing contract:', error);
             throw error;
         }
     }

@@ -11,6 +11,9 @@ router.get('/config', controller.getConfig);
 // [PUT] /api/admin/config
 router.put('/config', controller.updateConfig);
 
+// [POST] /api/admin/config/request-otp
+router.post('/config/request-otp', controller.requestConfigOTP);
+
 // [GET] /api/admin/fraud-alerts
 router.get('/fraud-alerts', controller.getFraudAlerts);
 

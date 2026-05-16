@@ -1,4 +1,8 @@
 const prisma = require('../config/prisma');
+const PayoutService = require('../services/payout.service');
+const blockchainService = require('../services/blockchain.service');
+const EmailService = require('../services/email.service');
+const NotificationService = require('../services/notification.service');
 
 // [UC_23] Quản lý yêu cầu hoàn tiền: Lấy danh sách
 const getRefunds = async (req, res) => {
@@ -166,6 +170,15 @@ const processWithdrawal = async (req, res) => {
             });
         }
       });
+      // 4. Thông báo hệ thống
+      NotificationService.create({
+        user_id: request.user_id,
+        type: 'WITHDRAWAL_REJECTED',
+        title: 'Yêu cầu rút tiền bị từ chối',
+        message: `Yêu cầu rút ${request.amount.toLocaleString()}đ của bạn đã bị từ chối. Lý do: ${admin_notes || 'Không có lý do cụ thể'}. Số dư đã được hoàn lại.`,
+        target_id: id
+      });
+
       return res.status(200).json({ message: 'Đã từ chối yêu cầu rút tiền và hoàn trả số dư cho người dùng.' });
     }
 
@@ -213,9 +226,43 @@ const processWithdrawal = async (req, res) => {
                 }
             });
         }
+
+        // 4. GHI LOG LÊN BLOCKCHAIN (Minh bạch tài chính)
+        let txHash = null;
+        try {
+            txHash = await blockchainService.logFinancialTransaction(
+                request.id,
+                Number(request.net_amount),
+                { ticketPlatformFee: Number(request.fee_amount) },
+                'WITHDRAWAL_PAYOUT'
+            );
+        } catch (bcError) {
+            console.error('[Web3 Error] Không thể ghi log rút tiền lên Blockchain:', bcError);
+        }
+
+        // 5. Cập nhật mã giao dịch vào DB
+        if (txHash) {
+            await tx.withdrawalRequest.update({
+                where: { id: request.id },
+                data: { payout_trans_id: txHash }
+            });
+        }
       });
 
-      return res.status(200).json({ message: 'Duyệt yêu cầu rút tiền thành công. Tiền phí đã được chuyển vào ví Admin.' });
+      // 6. Gửi email thông báo cho người dùng
+      // Chúng ta thực hiện ngoài transaction để tránh delay phản hồi API
+      EmailService.sendWithdrawalSuccessEmail(request.user, request, txHash);
+
+      // 7. Thông báo hệ thống
+      NotificationService.create({
+        user_id: request.user_id,
+        type: 'WITHDRAWAL_APPROVED',
+        title: 'Yêu cầu rút tiền thành công',
+        message: `Yêu cầu rút ${request.amount.toLocaleString()}đ của bạn đã được duyệt và chuyển khoản thành công.`,
+        target_id: id
+      });
+
+      return res.status(200).json({ message: 'Duyệt yêu cầu rút tiền thành công. Tiền phí đã được chuyển vào ví Admin và đã ghi log Blockchain.' });
     }
 
     res.status(400).json({ error: 'Hành động không hợp lệ' });
@@ -225,11 +272,57 @@ const processWithdrawal = async (req, res) => {
   }
 };
 
+// [UC_ADMIN_F03] Sinh mã VietQR để Admin quét thanh toán
+const generateWithdrawalQR = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const request = await prisma.withdrawalRequest.findUnique({
+      where: { id },
+      include: { user: { select: { account_holder: true, account_number: true, bank_name: true } } }
+    });
+
+    if (!request) {
+      return res.status(404).json({ error: 'Không tìm thấy yêu cầu rút tiền.' });
+    }
+
+    // Lấy mã BIN ngân hàng
+    const bankBin = PayoutService.getBankBin(request.bank_name);
+
+    // Tạo thông tin QR
+    // Nội dung chuyển khoản: BASTICKET WITHDRAW <ID_RUT_TIEN>
+    const qrUrl = PayoutService.generateVietQR({
+      bankCode: bankBin,
+      accountNo: request.account_number,
+      accountName: request.account_holder,
+      amount: Number(request.net_amount),
+      description: `BASTICKET WITHDRAW ${request.id.split('-')[0]}` // Dùng part đầu của UUID cho gọn
+    });
+
+    res.status(200).json({ 
+      data: {
+        qrUrl,
+        bankInfo: {
+          bankName: request.bank_name,
+          accountNumber: request.account_number,
+          accountHolder: request.account_holder,
+          amount: request.net_amount,
+          reference: request.id
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Generate QR Error:', error);
+    res.status(500).json({ error: 'Lỗi khi tạo mã QR thanh toán.' });
+  }
+};
+
 module.exports = {
   getRefunds,
   processRefund,
   getPayouts,
   executePayout,
   getWithdrawals,
-  processWithdrawal
+  processWithdrawal,
+  generateWithdrawalQR
 };

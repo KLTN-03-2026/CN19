@@ -181,7 +181,7 @@ const ProductManagement = () => {
   };
 
   return (
-    <div className="space-y-4 animate-in fade-in duration-500 max-w-[1600px] mx-auto">
+    <div className="space-y-3 md:space-y-4 animate-in fade-in duration-500 w-full mx-auto">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -191,7 +191,7 @@ const ProductManagement = () => {
             </div>
             <span>Quản lý sản phẩm</span>
           </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1 text-sm font-medium">
+          <p className="text-gray-800 dark:text-gray-400 mt-1 text-sm font-bold">
             Giám sát và quản trị hàng hóa đồng hành cùng sự kiện trên toàn hệ thống.
           </p>
         </div>
@@ -220,7 +220,7 @@ const ProductManagement = () => {
               <stat.icon className={`w-6 h-6 ${stat.color}`} />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase leading-none mb-1.5" style={{ fontFamily: 'Tahoma, Arial, sans-serif' }}>
+              <p className="text-[10px] font-black text-gray-800 dark:text-gray-400 uppercase leading-none mb-1.5" style={{ fontFamily: 'Tahoma, Arial, sans-serif' }}>
                 {stat.label}
               </p>
               <p className="text-xl font-black text-gray-900 dark:text-white leading-none tracking-tight truncate">{stat.value}</p>
@@ -462,7 +462,7 @@ const ProductManagement = () => {
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3">
            {products.map((p) => (
              <div key={p.id} className="bg-white dark:bg-[#111114] rounded-[2.5rem] border border-gray-200 dark:border-white/5 overflow-hidden group hover:shadow-xl hover:shadow-neon-green/10 hover:border-neon-green/40 transition-all duration-500 flex flex-col hover:-translate-y-1">
                 <div className="relative aspect-video overflow-hidden">

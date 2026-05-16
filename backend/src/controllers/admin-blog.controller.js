@@ -158,6 +158,63 @@ const adminBlogController = {
       console.error('deleteBlogAdmin error:', error);
       res.status(500).json({ success: false, message: 'Lỗi hệ thống khi xóa bài viết.' });
     }
+  },
+
+  // Lấy danh sách báo cáo vi phạm
+  getAllReports: async (req, res) => {
+    try {
+      const reports = await prisma.blogReport.findMany({
+        include: {
+          blog: {
+            select: { id: true, title: true, slug: true, status: true }
+          },
+          reporter: {
+            select: { id: true, full_name: true, role: true }
+          }
+        },
+        orderBy: { created_at: 'desc' }
+      });
+
+      res.json({ success: true, data: reports });
+    } catch (error) {
+      console.error('getAllReports error:', error);
+      res.status(500).json({ success: false, message: 'Lỗi hệ thống khi lấy danh sách báo cáo.' });
+    }
+  },
+
+  // Xử lý báo cáo (Giải quyết/Bỏ qua)
+  resolveReport: async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status, action } = req.body; // status: 'resolved' | 'rejected', action: 'hide' | 'keep'
+
+      const report = await prisma.blogReport.findUnique({
+        where: { id },
+        include: { blog: true }
+      });
+
+      if (!report) {
+        return res.status(404).json({ success: false, message: 'Báo cáo không tồn tại.' });
+      }
+
+      // Nếu action là 'hide', ẩn bài viết luôn
+      if (action === 'hide' && report.blog.status === 'published') {
+        await prisma.blog.update({
+          where: { id: report.blog_id },
+          data: { status: 'hidden' }
+        });
+      }
+
+      const updatedReport = await prisma.blogReport.update({
+        where: { id },
+        data: { status: status || 'resolved' }
+      });
+
+      res.json({ success: true, message: 'Xử lý báo cáo thành công.', data: updatedReport });
+    } catch (error) {
+      console.error('resolveReport error:', error);
+      res.status(500).json({ success: false, message: 'Lỗi khi xử lý báo cáo.' });
+    }
   }
 };
 

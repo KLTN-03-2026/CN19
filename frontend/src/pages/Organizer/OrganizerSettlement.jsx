@@ -142,6 +142,13 @@ const OrganizerSettlement = () => {
                     label: 'Sẵn sàng quyết toán',
                     icon: TrendingUp 
                 };
+            case 'cancelled':
+                return {
+                    bg: 'bg-red-500/10 dark:bg-red-500/20',
+                    text: 'text-red-600 dark:text-red-400',
+                    label: 'Sự kiện đã bị hủy',
+                    icon: AlertCircle
+                };
             default:
                 return { 
                     bg: 'bg-gray-100 dark:bg-white/5', 

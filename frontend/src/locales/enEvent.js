@@ -29,6 +29,20 @@ const enEvent = {
             done: "DONE",
             clear: "CLEAR ALL FILTERS"
         }
+    },
+    map: {
+        title: "Location Selection",
+        subtitle: "Please select the event venue on the map",
+        province_label: "Province / City (*)",
+        province_placeholder: "-- Select Province/City --",
+        ward_label: "Ward / Commune / Township",
+        ward_placeholder: "Select or search...",
+        detail_label: "House number, Street name (*)",
+        detail_placeholder: "Ex: 123 Nguyen Sinh Cung...",
+        click_to_pin: "Click to select location on map",
+        debounce_hint: "* The map will automatically update 1.5s after you stop typing.",
+        confirm_btn: "Confirm Address",
+        err_incomplete: "Please fill in Province, Ward and Street address!"
     }
 };
 

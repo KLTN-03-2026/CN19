@@ -60,6 +60,7 @@ import MarketplaceManagement from './pages/Organizer/MarketplaceManagement';
 import MarketplaceDetail from './pages/Organizer/MarketplaceDetail';
 import Reports from './pages/Organizer/Reports';
 import OrganizerProfile from './pages/Organizer/OrganizerProfile';
+import CancellationFeeCheckout from './pages/Organizer/CancellationFeeCheckout';
 
 // Admin Pages
 import AdminLayout from './components/layout/AdminLayout';
@@ -74,9 +75,6 @@ import ProductManagement from './pages/Admin/ProductManagement';
 import ProductDetail from './pages/Admin/ProductDetail';
 import AdminBlogManagement from './pages/Admin/BlogManagement';
 import AdminCreateBlog from './pages/Admin/AdminCreateBlog';
-import CouponManagement from './pages/Admin/CouponManagement';
-import CreateCoupon from './pages/Admin/CreateCoupon';
-import CouponDetail from './pages/Admin/CouponDetail';
 import TransactionManagement from './pages/Admin/TransactionManagement';
 import TransactionDetail from './pages/Admin/TransactionDetail';
 import AdminSettlementManagement from './pages/Admin/AdminSettlementManagement';
@@ -85,6 +83,8 @@ import AdminRefundManagement from './pages/Admin/AdminRefundManagement';
 import AdminReports from './pages/Admin/AdminReports';
 import FraudAlerts from './pages/Admin/FraudAlerts';
 import AdminSystemSettings from './pages/Admin/AdminSystemSettings';
+import { useSystemConfig } from './context/SystemConfigContext';
+import Maintenance from './pages/Public/Maintenance';
 
 
 // Component Bảo vệ Route theo Role
@@ -236,10 +236,6 @@ const router = createBrowserRouter([
       { path: 'products/:id', element: <ProtectedRoute requiredPermission="merchandise"><ProductDetail /></ProtectedRoute> },
       { path: 'blog', element: <ProtectedRoute requiredPermission="blogs"><AdminBlogManagement /></ProtectedRoute> },
       { path: 'blog/create', element: <ProtectedRoute requiredPermission="blogs"><AdminCreateBlog /></ProtectedRoute> },
-      { path: 'coupons', element: <ProtectedRoute requiredPermission="coupons"><CouponManagement /></ProtectedRoute> },
-      { path: 'coupons/create', element: <ProtectedRoute requiredPermission="coupons"><CreateCoupon /></ProtectedRoute> },
-      { path: 'coupons/edit/:id', element: <ProtectedRoute requiredPermission="coupons"><CreateCoupon /></ProtectedRoute> },
-      { path: 'coupons/:id', element: <ProtectedRoute requiredPermission="coupons"><CouponDetail /></ProtectedRoute> },
       { path: 'refunds', element: <ProtectedRoute requiredPermission="refunds"><AdminRefundManagement /></ProtectedRoute> },
       { path: 'fraud', element: <ProtectedRoute requiredPermission="fraud"><FraudAlerts /></ProtectedRoute> },
       { path: 'transactions', element: <ProtectedRoute requiredPermission="transactions"><TransactionManagement /></ProtectedRoute> },
@@ -262,6 +258,7 @@ const router = createBrowserRouter([
       { path: 'dashboard', element: <OrganizerDashboard /> },
       { path: 'my-events', element: <MyEvents /> },
       { path: 'events/:id', element: <EventDetail /> },
+      { path: 'events/:id/cancellation-fee', element: <CancellationFeeCheckout /> },
       { path: 'events/:id/edit', element: <EditEvent /> },
       { path: 'create-event', element: <CreateEvent /> },
       { path: 'tickets', element: <TicketManagement /> },
@@ -288,11 +285,30 @@ const router = createBrowserRouter([
   }
 ]);
 
+const AppContent = () => {
+  const { config, loading } = useSystemConfig();
+  
+  if (loading) return null;
+
+  // Kiểm tra bảo trì: Nếu đang bật và KHÔNG phải ở route Admin/Login
+  const isMaintenance = config.maintenance_mode === 'true';
+  const isAllowedPath = window.location.pathname.startsWith('/admin') || 
+                        window.location.pathname.startsWith('/login') ||
+                        window.location.pathname.startsWith('/forgot-password') ||
+                        window.location.pathname.startsWith('/reset-password');
+
+  if (isMaintenance && !isAllowedPath) {
+    return <Maintenance />;
+  }
+
+  return <RouterProvider router={router} />;
+};
+
 function App() {
   return (
     <>
       <Toaster position="top-right" />
-      <RouterProvider router={router} />
+      <AppContent />
     </>
   );
 }

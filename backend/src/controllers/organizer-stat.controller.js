@@ -38,6 +38,7 @@ const getStats = async (req, res) => {
         id: event.id,
         name: event.title,
         date: event.event_date ? event.event_date.toISOString().split('T')[0] : 'N/A',
+        end_date: event.end_date ? event.end_date.toISOString() : null,
         sold,
         total,
         status: event.status
@@ -50,14 +51,14 @@ const getStats = async (req, res) => {
     const [revenueSum, royaltySum] = await Promise.all([
       prisma.order.aggregate({
         where: { 
-          event: { organizer_id: organizer.id },
+          event: { organizer_id: organizer.id, status: { notIn: ['cancelled', 'pending_cancellation_fee'] } },
           status: { in: ['paid', 'completed', 'success'] }
         },
         _sum: { organizer_revenue: true }
       }),
       prisma.marketplaceTransaction.aggregate({
         where: {
-          listing: { event: { organizer_id: organizer.id } },
+          listing: { event: { organizer_id: organizer.id, status: { notIn: ['cancelled', 'pending_cancellation_fee'] } } },
           status: { in: ['paid', 'completed', 'success'] }
         },
         _sum: { organizer_royalty: true }
@@ -94,7 +95,7 @@ const getStats = async (req, res) => {
     // Primary revenue: ticket + merchandise orders
     const recentPaidOrders = await prisma.order.findMany({
       where: { 
-        event: { organizer_id: organizer.id },
+        event: { organizer_id: organizer.id, status: { notIn: ['cancelled', 'pending_cancellation_fee'] } },
         status: 'paid',
         created_at: { gte: startDate }
       },
@@ -107,7 +108,7 @@ const getStats = async (req, res) => {
     // Secondary revenue: resale royalties from marketplace
     const recentRoyalties = await prisma.marketplaceTransaction.findMany({
       where: {
-        listing: { event: { organizer_id: organizer.id } },
+        listing: { event: { organizer_id: organizer.id, status: { notIn: ['cancelled', 'pending_cancellation_fee'] } } },
         status: { in: ['paid', 'completed', 'success'] },
         created_at: { gte: startDate }
       },
@@ -120,7 +121,7 @@ const getStats = async (req, res) => {
     // All-time royalty total
     const allRoyalties = await prisma.marketplaceTransaction.aggregate({
       where: {
-        listing: { event: { organizer_id: organizer.id } },
+        listing: { event: { organizer_id: organizer.id, status: { notIn: ['cancelled', 'pending_cancellation_fee'] } } },
         status: { in: ['paid', 'completed', 'success'] }
       },
       _sum: { organizer_royalty: true }
@@ -203,7 +204,7 @@ const getStats = async (req, res) => {
         organizer_revenue: true
       },
       where: {
-        event: { organizer_id: organizer.id },
+        event: { organizer_id: organizer.id, status: { notIn: ['cancelled', 'pending_cancellation_fee'] } },
         status: { in: ['paid', 'completed', 'success'] }
       }
     });
@@ -211,7 +212,7 @@ const getStats = async (req, res) => {
     // Royalties per event from marketplace
     const royaltyByEvent = await prisma.marketplaceTransaction.findMany({
       where: {
-        listing: { event: { organizer_id: organizer.id } },
+        listing: { event: { organizer_id: organizer.id, status: { notIn: ['cancelled', 'pending_cancellation_fee'] } } },
         status: { in: ['paid', 'completed', 'success'] }
       },
       select: {
@@ -346,13 +347,20 @@ const getReports = async (req, res) => {
 
     // 1. Overview Financials
     const ticketRevenueRes = await prisma.order.aggregate({
-      where: { event_id: { in: eventIds }, status: 'paid' },
+      where: { 
+        event_id: { in: eventIds }, 
+        status: 'paid',
+        event: { status: { notIn: ['cancelled', 'pending_cancellation_fee'] } }
+      },
       _sum: { organizer_revenue: true }
     });
 
     // Get listing IDs first to avoid nested relation filters in aggregate
     const organizerListings = await prisma.marketplaceListing.findMany({
-      where: { event_id: { in: eventIds } },
+      where: { 
+        event_id: { in: eventIds },
+        event: { status: { notIn: ['cancelled', 'pending_cancellation_fee'] } }
+      },
       select: { id: true }
     });
     const listingIds = organizerListings.map(l => l.id);
@@ -402,7 +410,8 @@ const getReports = async (req, res) => {
       where: { 
         event_id: { in: eventIds },
         status: 'paid',
-        created_at: { gte: sixMonthsAgo }
+        created_at: { gte: sixMonthsAgo },
+        event: { status: { notIn: ['cancelled', 'pending_cancellation_fee'] } }
       },
       select: { created_at: true, organizer_revenue: true }
     });

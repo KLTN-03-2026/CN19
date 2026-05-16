@@ -108,6 +108,14 @@ export const adminService = {
     const response = await api.delete(`/admin/blogs/${id}`);
     return response.data;
   },
+  getBlogReports: async () => {
+    const response = await api.get('/admin/blogs/reports');
+    return response.data;
+  },
+  resolveBlogReport: async (id, data) => {
+    const response = await api.put(`/admin/blogs/reports/${id}/resolve`, data);
+    return response.data;
+  },
 
   // Quản lý Mã giảm giá (Coupons)
   getCoupons: async (params) => {

@@ -20,7 +20,8 @@ import {
     LayoutGrid,
     List,
     Users,
-    Download
+    Download,
+    Send
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useNavigate } from 'react-router-dom';
@@ -42,6 +43,7 @@ const BlogManagement = () => {
     const [filterDate, setFilterDate] = useState('');
     const [viewMode, setViewMode] = useState('grid');
     const [selectedBlogStats, setSelectedBlogStats] = useState(null);
+    const [reportingBlog, setReportingBlog] = useState(null);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -74,6 +76,10 @@ const BlogManagement = () => {
         } catch (error) {
             toast.error('Lỗi khi xóa bài viết.');
         }
+    };
+
+    const handleReport = async (blog) => {
+        setReportingBlog(blog);
     };
 
     const handleModerate = async (id, currentStatus) => {
@@ -341,7 +347,7 @@ const BlogManagement = () => {
                     <p className="text-gray-500 font-bold uppercase text-xs text-gray-900 dark:text-white">Đang tải dữ liệu...</p>
                 </div>
             ) : filteredData.length > 0 ? (
-                <div className={viewMode === 'grid' ? "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4" : "space-y-3"}>
+                <div className={viewMode === 'grid' ? "grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 min-[1920px]:grid-cols-6 gap-3 md:gap-4" : "space-y-3"}>
                     {filteredData.map((item) => {
                         const statusInfo = getStatusInfo(item.status);
                         const isMyBlog = item.type === 'ORGANIZER_NEWS';
@@ -416,13 +422,15 @@ const BlogManagement = () => {
                                                 {item.status === 'draft' ? <Edit className="w-3 h-3" /> : <ExternalLink className="w-3 h-3" />}
                                             </button>
                                             
-                                            <button 
-                                                onClick={() => setSelectedBlogStats(item)}
-                                                className="p-2 bg-gray-50 dark:bg-white/5 text-gray-500 hover:bg-blue-600 hover:text-white rounded-xl transition-all"
-                                                title="Số liệu"
-                                            >
-                                                <Eye className="w-3 h-3" />
-                                            </button>
+                                            {isMyBlog && (
+                                                <button 
+                                                    onClick={() => setSelectedBlogStats(item)}
+                                                    className="p-2 bg-gray-50 dark:bg-white/5 text-gray-500 hover:bg-blue-600 hover:text-white rounded-xl transition-all"
+                                                    title="Số liệu"
+                                                >
+                                                    <Eye className="w-3 h-3" />
+                                                </button>
+                                            )}
 
                                             {isMyBlog ? (
                                                 <>
@@ -443,14 +451,11 @@ const BlogManagement = () => {
                                                 </>
                                             ) : (
                                                 <button 
-                                                    onClick={() => handleModerate(item.id, item.status)}
-                                                    className={`px-3 py-1.5 rounded-lg text-[9px] font-black transition-all ${
-                                                        item.status === 'published'
-                                                        ? 'bg-red-600/10 text-red-600 hover:bg-red-600 hover:text-white'
-                                                        : 'bg-green-600/10 text-green-600 hover:bg-green-600 hover:text-white'
-                                                    }`}
+                                                    onClick={() => handleReport(item)}
+                                                    className="px-3 py-1.5 rounded-lg text-[9px] font-black transition-all bg-red-600/5 text-red-600 hover:bg-red-600 hover:text-white flex items-center gap-1.5"
                                                 >
-                                                    {item.status === 'published' ? 'Ẩn' : 'Hiện'}
+                                                    <AlertCircle className="w-3 h-3" />
+                                                    Báo cáo vi phạm
                                                 </button>
                                             )}
                                         </div>
@@ -494,7 +499,149 @@ const BlogManagement = () => {
                         onClose={() => setSelectedBlogStats(null)} 
                     />
                 )}
+                {reportingBlog && (
+                    <ReportBlogModal 
+                        blog={reportingBlog} 
+                        onClose={() => setReportingBlog(null)} 
+                    />
+                )}
             </AnimatePresence>
+        </div>
+    );
+};
+
+const ReportBlogModal = ({ blog, onClose }) => {
+    const [reason, setReason] = useState('');
+    const [selectedType, setSelectedType] = useState('');
+    const [otherReason, setOtherReason] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const reportTypes = [
+        { id: 'offensive', label: 'Nội dung phản cảm, thù địch' },
+        { id: 'misinformation', label: 'Thông tin sai sự thật, lừa đảo' },
+        { id: 'spam', label: 'Spam hoặc quảng cáo không phép' },
+        { id: 'copyright', label: 'Vi phạm bản quyền' },
+        { id: 'other', label: 'Lý do khác' }
+    ];
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        const finalReason = selectedType === 'other' ? otherReason : reportTypes.find(t => t.id === selectedType)?.label;
+        
+        if (!selectedType) {
+            toast.error('Vui lòng chọn loại vi phạm');
+            return;
+        }
+        if (selectedType === 'other' && !otherReason.trim()) {
+            toast.error('Vui lòng nhập lý do cụ thể');
+            return;
+        }
+
+        try {
+            setIsSubmitting(true);
+            // Mock API call
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            toast.success('Đã gửi báo cáo vi phạm tới quản trị viên. Chúng tôi sẽ xem xét trong thời gian sớm nhất.');
+            onClose();
+        } catch (error) {
+            toast.error('Lỗi khi gửi báo cáo.');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={onClose}
+                className="absolute inset-0 bg-black/60 backdrop-blur-md"
+            />
+            <motion.div 
+                initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                className="relative bg-white dark:bg-[#111114] w-full max-w-md rounded-3xl border border-gray-200 dark:border-white/5 shadow-2xl overflow-hidden"
+            >
+                <div className="p-6 border-b border-gray-100 dark:border-white/5 flex items-center justify-between bg-red-600/5">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-red-600 text-white rounded-xl shadow-lg shadow-red-600/20">
+                            <AlertCircle className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <h2 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tight">Báo cáo vi phạm</h2>
+                            <p className="text-[10px] font-bold text-red-600 uppercase tracking-tight">Bài viết: {blog.title}</p>
+                        </div>
+                    </div>
+                    <button onClick={onClose} className="p-2 hover:bg-gray-100 dark:hover:bg-white/5 rounded-xl transition-all">
+                        <X className="w-5 h-5 text-gray-400" />
+                    </button>
+                </div>
+
+                <form onSubmit={handleSubmit} className="p-6 space-y-5">
+                    <div className="space-y-3">
+                        <label className="text-[10px] font-black uppercase tracking-tight text-gray-500">Loại vi phạm <span className="text-red-500">*</span></label>
+                        <div className="grid grid-cols-1 gap-2">
+                            {reportTypes.map((type) => (
+                                <button
+                                    key={type.id}
+                                    type="button"
+                                    onClick={() => setSelectedType(type.id)}
+                                    className={`w-full flex items-center justify-between px-4 py-3 rounded-xl border text-[11px] font-bold transition-all ${
+                                        selectedType === type.id
+                                        ? 'bg-red-600 border-red-600 text-white shadow-lg shadow-red-600/20'
+                                        : 'bg-white dark:bg-white/5 border-gray-100 dark:border-white/5 text-gray-600 dark:text-gray-400 hover:border-red-600/50'
+                                    }`}
+                                >
+                                    {type.label}
+                                    {selectedType === type.id && <CheckCircle2 className="w-3.5 h-3.5" />}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {selectedType === 'other' && (
+                        <div className="space-y-2 animate-in slide-in-from-top-2">
+                            <label className="text-[10px] font-black uppercase tracking-tight text-gray-500 flex items-center gap-2">
+                                <MessageSquare className="w-3 h-3" /> Lý do chi tiết
+                            </label>
+                            <textarea
+                                value={otherReason}
+                                onChange={(e) => setOtherReason(e.target.value)}
+                                placeholder="Vui lòng nhập lý do cụ thể bài viết này vi phạm..."
+                                className="w-full bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl p-4 text-[11px] font-medium min-h-[100px] focus:ring-2 focus:ring-red-600/20 focus:border-red-600 outline-none transition-all dark:text-white"
+                                required
+                            />
+                        </div>
+                    )}
+
+                    <div className="flex gap-3 pt-2">
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="flex-1 py-3.5 rounded-xl text-[10px] font-black uppercase tracking-tight text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 transition-all"
+                        >
+                            Hủy bỏ
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={isSubmitting}
+                            className="flex-[2] py-3.5 bg-red-600 text-white rounded-xl text-[10px] font-black uppercase tracking-tight shadow-lg shadow-red-600/20 hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                        >
+                            {isSubmitting ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                                <>
+                                    <Send className="w-3.5 h-3.5" />
+                                    Gửi báo cáo
+                                </>
+                            )}
+                        </button>
+                    </div>
+                </form>
+            </motion.div>
         </div>
     );
 };

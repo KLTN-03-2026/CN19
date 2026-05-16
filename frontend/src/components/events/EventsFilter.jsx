@@ -38,7 +38,7 @@ const EventsFilter = ({
                 {/* 🏷️ Categories Column */}
                 <div className="space-y-4">
                     <div className="flex items-center justify-between">
-                        <h3 className="text-[10px] font-black uppercase text-gray-400 flex items-center gap-2">
+                        <h3 className="text-[10px] font-black uppercase text-gray-600 dark:text-gray-400 flex items-center gap-2">
                             <Tag className="w-3 h-3 text-neon-green" /> {t('explore.filter_section.category')}
                         </h3>
                     </div>
@@ -51,7 +51,7 @@ const EventsFilter = ({
                                 <div className="relative flex items-center shrink-0">
                                     <input 
                                         type="checkbox"
-                                        className="peer appearance-none w-4 h-4 rounded-md border border-gray-200 dark:border-white/10 checked:bg-neon-green checked:border-neon-green transition-all"
+                                        className="peer appearance-none w-4 h-4 rounded-md border border-gray-300 dark:border-white/10 checked:bg-neon-green checked:border-neon-green transition-all"
                                         checked={safeSelectedCategories.includes(cat?.id)}
                                         onChange={() => onCategoryChange && onCategoryChange(cat?.id)}
                                     />
@@ -59,7 +59,7 @@ const EventsFilter = ({
                                         <div className="w-1.5 h-1.5 rounded-full bg-white dark:bg-black" />
                                     </div>
                                 </div>
-                                <span className="text-[13px] font-medium text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors truncate">
+                                <span className="text-[13px] font-medium text-gray-700 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors truncate">
                                     {cat?.name}
                                 </span>
                             </label>
@@ -71,7 +71,7 @@ const EventsFilter = ({
 
                 {/* 💰 Price Range Column */}
                 <div className="space-y-4">
-                    <h3 className="text-[10px]  font-black uppercase text-gray-400 flex items-center gap-2">
+                    <h3 className="text-[10px]  font-black uppercase text-gray-600 dark:text-gray-400 flex items-center gap-2">
                         {t('explore.filter_section.price')}
                     </h3>
                     <div className="space-y-6 pt-2">
@@ -82,11 +82,11 @@ const EventsFilter = ({
                             step="100000"
                             value={Array.isArray(priceRange) ? priceRange[1] : 10000000}
                             onChange={(e) => onPriceChange && onPriceChange([0, parseInt(e.target.value)])}
-                            className="w-full h-1.5 bg-gray-200 dark:bg-white/10 rounded-lg appearance-none cursor-pointer accent-neon-green"
+                            className="w-full h-1.5 bg-gray-300 dark:bg-white/10 rounded-lg appearance-none cursor-pointer accent-neon-green"
                         />
                         <div className="flex items-center justify-between">
                             <div className="flex flex-col">
-                                <span className="text-[9px] uppercase font-bold text-gray-400">{t('explore.filter_section.price_up_to')}</span>
+                                <span className="text-[9px] uppercase font-bold text-gray-600 dark:text-gray-400">{t('explore.filter_section.price_up_to')}</span>
                                 <span className="text-sm font-black text-gray-900 dark:text-white">
                                     {formatPrice(Array.isArray(priceRange) ? priceRange[1] : 10000000)}
                                 </span>
@@ -100,7 +100,7 @@ const EventsFilter = ({
 
                 {/* 📅 Date & Actions Column */}
                 <div className="space-y-4">
-                    <h3 className="text-[10px] font-black uppercase text-gray-400 flex items-center gap-2">
+                    <h3 className="text-[10px] font-black uppercase text-gray-600 dark:text-gray-400 flex items-center gap-2">
                          {t('explore.filter_section.time')}
                     </h3>
                     <div className="space-y-4 pt-2">
@@ -110,21 +110,21 @@ const EventsFilter = ({
                                 type="date" 
                                 value={selectedDate || ''}
                                 onChange={(e) => onDateChange && onDateChange(e.target.value)}
-                                className="w-full pl-10 pr-4 py-3 bg-white dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-2xl text-[13px] font-bold text-gray-900 dark:text-white outline-none focus:border-neon-green/30 transition-all shadow-sm"
+                                className="w-full pl-10 pr-4 py-3 bg-white dark:bg-white/5 border border-gray-300 dark:border-white/5 rounded-2xl text-[13px] font-bold text-gray-900 dark:text-white outline-none focus:border-neon-green/30 transition-all shadow-sm"
                             />
                         </div>
 
                         <div className="flex items-center gap-2 pt-2">
                             <button 
                                 onClick={onClearAll}
-                                className="flex-1 py-3 px-4 flex items-center justify-center gap-2 border border-gray-200 dark:border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-red-500 hover:bg-red-500/5 transition-all"
+                                className="flex-1 py-3 px-4 flex items-center justify-center gap-2 border border-gray-300 dark:border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-tight text-gray-600 dark:text-gray-400 hover:text-red-500 hover:bg-red-500/5 transition-all"
                             >
                                 <RefreshCcw className="w-3 h-3" />
                                 {t('explore.filter_section.clear')}
                             </button>
                             <button 
                                 onClick={onClose}
-                                className="px-6 py-3 bg-gray-900 dark:bg-white text-white dark:text-black rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl active:scale-95 transition-all"
+                                className="px-6 py-3 bg-gray-900 dark:bg-white text-white dark:text-black rounded-2xl text-[10px] font-black uppercase tracking-tight shadow-xl active:scale-95 transition-all"
                             >
                                 {t('explore.filter_section.done')}
                             </button>

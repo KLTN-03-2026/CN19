@@ -166,7 +166,7 @@ const UserDetail = () => {
   if (loading) return (
     <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
       <div className="w-12 h-12 border-4 border-neon-green/20 border-t-neon-green rounded-full animate-spin" />
-      <p className="text-gray-500 font-bold animate-pulse">Đang truy xuất hồ sơ 360...</p>
+      <p className="text-gray-600 font-bold animate-pulse">Đang truy xuất hồ sơ 360...</p>
     </div>
   );
 
@@ -187,13 +187,20 @@ const UserDetail = () => {
   };
 
   const allPurchases = [
-    ...(user?.orders || []).map(o => ({ ...o, unifiedType: o.order_type })),
-    ...(user?.buyer_transactions || []).map(t => ({ 
+    ...(user.orders || []).map(o => ({ ...o, unifiedType: 'TICKET_PURCHASE' })),
+    ...(user.buyer_transactions || []).map(t => ({ 
       ...t, 
-      order_number: t.id.split('-')[0].toUpperCase(), // Fake an ID for display if needed
-      total_amount: t.buyer_pay_amount,
       unifiedType: 'RESALE_PURCHASE',
-      event: t.listing?.event
+      total_amount: t.buyer_pay_amount || t.total_amount,
+      event: t.listing?.event || t.ticket?.event || t.event,
+      payment_method: 'Ví BASTICKET'
+    })),
+    ...(user.transfers_received || []).map(t => ({
+      ...t,
+      unifiedType: 'TICKET_TRANSFER',
+      total_amount: t.transfer_fee || 0,
+      event: t.ticket?.event || t.event,
+      payment_method: 'Miễn phí/Internal'
     }))
   ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
@@ -338,12 +345,12 @@ const UserDetail = () => {
                 <span className={`px-2 py-0.5 rounded-lg text-[11px] font-bold uppercase ${
                   user.role === 'admin' ? 'bg-red-500/10 text-red-500 border border-red-500/20' : 
                   user.role === 'organizer' ? 'bg-neon-green/10 text-neon-green border border-neon-green/20' :
-                  'bg-gray-500/10 text-gray-500 border border-white/5'
+                  'bg-gray-500/10 text-gray-600 border border-white/5'
                 }`}>
                   {user.role === 'admin' ? 'Quản trị viên' : user.role === 'organizer' ? 'Ban tổ chức' : user.role === 'staff' ? 'Nhân viên' : 'Khách hàng'}
                 </span>
               </div>
-              <p className="text-gray-500 text-xs flex items-center space-x-2">
+              <p className="text-gray-600 text-xs flex items-center space-x-2">
                 <span className="opacity-60 font-medium">ID:</span>
                 <span className="font-mono text-[10px] bg-gray-100 dark:bg-white/5 px-2 py-0.5 rounded-md">{user.id}</span>
               </p>
@@ -387,16 +394,16 @@ const UserDetail = () => {
             <div className="px-6 pt-12 pb-6 space-y-4">
               <div>
                 <h3 className="text-lg font-black text-gray-900 dark:text-white leading-tight">{user.full_name || 'N/A'}</h3>
-                <p className="text-gray-500 text-xs font-semibold">{user.email}</p>
+                <p className="text-gray-600 text-xs font-semibold">{user.email}</p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="p-3 bg-gray-50 dark:bg-white/5 rounded-xl border border-gray-100 dark:border-white/5 text-center transition-all hover:border-neon-green/30">
-                  <div className="text-[11px] uppercase font-bold text-gray-400 mb-0.5 whitespace-nowrap">Vé đang có</div>
+                  <div className="text-[11px] uppercase font-bold text-gray-600 mb-0.5 whitespace-nowrap">Vé đang có</div>
                   <div className="text-lg font-black text-neon-green leading-none">{ownedTickets.filter(t => t.isCurrentOwner).length}</div>
                 </div>
                 <div className="p-3 bg-gray-50 dark:bg-white/5 rounded-xl border border-gray-100 dark:border-white/5 text-center transition-all hover:border-blue-500/30">
-                  <div className="text-[11px] uppercase font-bold text-gray-400 mb-0.5 whitespace-nowrap">Giao dịch thành công</div>
+                  <div className="text-[11px] uppercase font-bold text-gray-600 mb-0.5 whitespace-nowrap">Giao dịch thành công</div>
                   <div className="text-lg font-black text-blue-500 leading-none">{orders.filter(o => (o.status || '').toLowerCase() !== 'cancelled').length}</div>
                 </div>
               </div>
@@ -428,14 +435,14 @@ const UserDetail = () => {
 
               <div className="space-y-3 pt-3 border-t border-gray-100 dark:border-white/5">
                 <div className="flex items-center justify-between text-xs">
-                  <div className="flex items-center space-x-3 text-gray-500">
+                  <div className="flex items-center space-x-3 text-gray-600">
                     <Clock className="w-4 h-4 opacity-40" />
                     <span className="font-semibold">Ngày tham gia</span>
                   </div>
                   <span className="font-bold dark:text-gray-300">{new Date(user.created_at).toLocaleString('vi-VN')}</span>
                 </div>
                 <div className="flex items-center justify-between text-xs">
-                  <div className="flex items-center space-x-3 text-gray-500">
+                  <div className="flex items-center space-x-3 text-gray-600">
                     <Shield className="w-4 h-4 opacity-40" />
                     <span className="font-semibold">Trạng thái</span>
                   </div>
@@ -461,7 +468,7 @@ const UserDetail = () => {
             </div>
 
             <div className="bg-white/5 border border-white/10 rounded-2xl p-4 font-mono text-[11px] break-all leading-relaxed relative group/wallet">
-              <div className="text-gray-500 mb-2 flex items-center justify-between">
+              <div className="text-gray-600 mb-2 flex items-center justify-between">
                 <span>Địa chỉ Ví (Wallet)</span>
                 <button className="text-neon-green opacity-0 group-hover/wallet:opacity-100 transition-all">Sao chép</button>
               </div>
@@ -516,7 +523,7 @@ const UserDetail = () => {
                     className={`flex-shrink-0 flex items-center justify-center space-x-2 px-4 py-2.5 rounded-xl text-[11px] font-bold transition-all ${
                       activeTab === tab.id 
                         ? 'bg-neon-green text-black shadow-lg shadow-neon-green/20 scale-[1.02]' 
-                        : 'text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5'
+                        : 'text-gray-600 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5'
                     }`}
                   >
                     <tab.icon className={`w-3.5 h-3.5 ${activeTab === tab.id ? 'animate-pulse' : 'opacity-60'}`} />
@@ -548,25 +555,25 @@ const UserDetail = () => {
               <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-[11px] uppercase font-bold text-gray-400 tracking-tight">Họ và Tên</label>
+                    <label className="text-[11px] uppercase font-bold text-gray-600 tracking-tight">Họ và Tên</label>
                     <div className="text-sm font-bold dark:text-white p-3.5 bg-gray-50 dark:bg-white/5 rounded-xl border border-gray-100 dark:border-white/5">
                       {user.full_name || 'N/A'}
                     </div>
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[11px] uppercase font-bold text-gray-400 tracking-tight">Số điện thoại</label>
+                    <label className="text-[11px] uppercase font-bold text-gray-600 tracking-tight">Số điện thoại</label>
                     <div className="text-sm font-bold dark:text-white p-3.5 bg-gray-50 dark:bg-white/5 rounded-xl border border-gray-100 dark:border-white/5">
                       {user.phone_number || 'N/A'}
                     </div>
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[11px] uppercase font-bold text-gray-400 tracking-tight">Email</label>
+                    <label className="text-[11px] uppercase font-bold text-gray-600 tracking-tight">Email</label>
                     <div className="text-sm font-bold dark:text-white p-3.5 bg-gray-50 dark:bg-white/5 rounded-xl border border-gray-100 dark:border-white/5">
                       {user.email}
                     </div>
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[11px] uppercase font-bold text-gray-400 tracking-tight">Ngày sinh</label>
+                    <label className="text-[11px] uppercase font-bold text-gray-600 tracking-tight">Ngày sinh</label>
                     <div className="text-sm font-bold dark:text-white p-3.5 bg-gray-50 dark:bg-white/5 rounded-xl border border-gray-100 dark:border-white/5">
                       {user.role === 'organizer' && user.organizer_profile?.dob_raw 
                         ? user.organizer_profile.dob_raw 
@@ -574,7 +581,7 @@ const UserDetail = () => {
                     </div>
                   </div>
                   <div className="space-y-1.5 md:col-span-2">
-                    <label className="text-[11px] uppercase font-bold text-gray-400 tracking-tight">Phân quyền đặc biệt</label>
+                    <label className="text-[11px] uppercase font-bold text-gray-600 tracking-tight">Phân quyền đặc biệt</label>
                     <div className="flex flex-wrap gap-2">
                       {user.permissions?.length > 0 ? (
                         user.permissions.map(p => (
@@ -583,7 +590,7 @@ const UserDetail = () => {
                           </span>
                         ))
                       ) : (
-                        <span className="text-[11px] text-gray-500 italic px-4 py-2 bg-gray-100 dark:bg-white/5 rounded-xl w-full">Không có phân quyền đặc biệt.</span>
+                        <span className="text-[11px] text-gray-600 italic px-4 py-2 bg-gray-100 dark:bg-white/5 rounded-xl w-full">Không có phân quyền đặc biệt.</span>
                       )}
                     </div>
                   </div>
@@ -591,7 +598,7 @@ const UserDetail = () => {
 
                 {user.organizer_profile && (
                   <div className="pt-6 border-t border-gray-100 dark:border-white/5">
-                    <h4 className="text-[11px] font-bold uppercase tracking-tight text-gray-400 mb-4">Hồ sơ Ban tổ chức</h4>
+                    <h4 className="text-[11px] font-bold uppercase tracking-tight text-gray-600 mb-4">Hồ sơ Ban tổ chức</h4>
                     <div className="bg-neon-green/5 border border-neon-green/10 rounded-2xl p-5 relative overflow-hidden">
                       <Shield className="absolute -right-6 -bottom-6 w-24 h-24 text-neon-green/10" />
                       <div className="flex items-center space-x-4 mb-3">
@@ -612,20 +619,20 @@ const UserDetail = () => {
                           <div className="text-[10px] uppercase font-bold text-neon-green/60 mb-2">Thông tin định danh (OCR)</div>
                           <div className="space-y-2">
                             <div className="flex justify-between items-center text-[11px]">
-                              <span className="text-gray-400">Họ tên ID:</span>
+                              <span className="text-gray-600">Họ tên ID:</span>
                               <span className="font-bold dark:text-white">{user.organizer_profile.full_name_raw || 'N/A'}</span>
                             </div>
                             <div className="flex justify-between items-center text-[11px]">
-                              <span className="text-gray-400">Số CCCD:</span>
+                              <span className="text-gray-600">Số CCCD:</span>
                               <span className="font-mono font-bold dark:text-white">{user.organizer_profile.id_number || 'N/A'}</span>
                             </div>
                             <div className="flex justify-between items-center text-[11px] pt-1.5 border-t border-white/5">
-                              <span className="text-gray-400">Giấy tờ định danh:</span>
+                              <span className="text-gray-600">Giấy tờ định danh:</span>
                               <DocViewer urls={user.organizer_profile.identity_card} label="CCCD" />
                             </div>
                             {(user.organizer_profile.front_image_url || user.organizer_profile.back_image_url || user.organizer_profile.face_image_url) && (
                                <div className="flex justify-between items-center text-[11px] mt-1 pt-1.5 border-t border-white/5">
-                                 <span className="text-gray-400">Ảnh thực tế eKYC:</span>
+                                 <span className="text-gray-700">Ảnh thực tế eKYC:</span>
                                  <div className="flex gap-1">
                                     <DocViewer urls={user.organizer_profile.front_image_url} label="Trước" />
                                     <DocViewer urls={user.organizer_profile.back_image_url} label="Sau" />
@@ -634,7 +641,7 @@ const UserDetail = () => {
                                </div>
                             )}
                             <div className="flex flex-col text-[11px] mt-1.5 pt-1.5 border-t border-white/5">
-                              <span className="text-gray-400 mb-0.5">Địa chỉ thường trú:</span>
+                              <span className="text-gray-700 mb-0.5">Địa chỉ thường trú:</span>
                               <span className="font-medium dark:text-gray-300 leading-relaxed italic">{user.organizer_profile.address_raw || 'N/A'}</span>
                             </div>
                           </div>
@@ -644,15 +651,15 @@ const UserDetail = () => {
                           <div className="text-[10px] uppercase font-bold text-neon-green/60 mb-2">Thông tin doanh nghiệp</div>
                           <div className="space-y-2">
                              <div className="flex justify-between items-center text-[11px]">
-                               <span className="text-gray-400">Mã số thuế:</span>
+                               <span className="text-gray-600">Mã số thuế:</span>
                                <span className="font-bold dark:text-white">{user.organizer_profile.business_license || 'N/A'}</span>
                              </div>
                              <div className="flex justify-between items-center text-[11px]">
-                               <span className="text-gray-400">GP Kinh doanh:</span>
+                               <span className="text-gray-600">GP Kinh doanh:</span>
                                <DocViewer urls={user.organizer_profile.business_license} label="GPKD" />
                              </div>
                              <div className="flex flex-col text-[11px] mt-1 pt-1.5 border-t border-white/5">
-                               <span className="text-gray-400 mb-0.5">Địa chỉ thường trú:</span>
+                               <span className="text-gray-600 mb-0.5">Địa chỉ thường trú:</span>
                                <span className="font-medium dark:text-gray-300 leading-relaxed italic line-clamp-1">{user.organizer_profile.address_raw || 'N/A'}</span>
                              </div>
                           </div>
@@ -673,7 +680,7 @@ const UserDetail = () => {
 
                 {/* Phần thông tin thanh toán dùng chung cho cả Customer và Organizer */}
                 <div className="pt-4 border-t border-gray-100 dark:border-white/5">
-                  <h4 className="text-[11px] font-bold uppercase text-gray-400 mb-4">Thông tin thanh toán & Quyết toán</h4>
+                  <h4 className="text-[11px] font-bold uppercase text-gray-600 mb-4">Thông tin thanh toán & Quyết toán</h4>
                   <div className="bg-orange-500/5 border border-orange-500/10 rounded-2xl p-4 relative overflow-hidden">
                     <CreditCard className="absolute -right-6 -bottom-6 w-24 h-24 text-orange-500/10" />
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 md:gap-8 relative z-10">
@@ -1181,7 +1188,9 @@ const UserDetail = () => {
                                      <ShoppingBag className="w-5 h-5" />
                                 </div>
                                 <div className="min-w-0">
-                                   <div className="text-sm font-bold text-gray-900 dark:text-white">Đơn hàng #{o.order_number}</div>
+                                   <div className="text-sm font-bold text-gray-900 dark:text-white truncate">
+                                     {o.order_number ? `Đơn hàng #${o.order_number}` : `Giao dịch #${o.id?.split('-')[0].toUpperCase()}`}
+                                   </div>
                                      <div className="flex items-center gap-2 text-[10px] text-gray-500">
                                        <span>{new Date(o.created_at).toLocaleString('vi-VN')}</span>
                                        <span className="w-1 h-1 rounded-full bg-gray-300" />
@@ -1239,8 +1248,9 @@ const UserDetail = () => {
                                 <div className="p-2.5 rounded-xl bg-white dark:bg-black/20 border border-gray-100 dark:border-white/5">
                                   <div className="text-[10px] uppercase font-bold text-gray-400 mb-0.5">Số lượng</div>
                                   <div className="font-semibold text-gray-900 dark:text-white">
-                                    {o.items?.reduce((sum, item) => sum + (item.quantity || 0), 0) + 
-                                     o.merchandise_items?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 0} món
+                                    {(o.items?.reduce((sum, item) => sum + (item.quantity || 0), 0) + 
+                                     o.merchandise_items?.reduce((sum, item) => sum + (item.quantity || 0), 0)) || 
+                                     (o.unifiedType === 'RESALE_PURCHASE' || o.unifiedType === 'TICKET_TRANSFER' ? 1 : 0)} món
                                   </div>
                                 </div>
                               </div>

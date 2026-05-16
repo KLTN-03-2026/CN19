@@ -124,7 +124,7 @@ const UserManagement = () => {
             <Users className="w-8 h-8 text-neon-green" />
             <span>Quản lý Người dùng</span>
           </h1>
-          <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Xem, tìm kiếm và quản lý quyền hạn của toàn bộ thành viên.</p>
+          <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">Xem, tìm kiếm và quản lý quyền hạn của toàn bộ thành viên.</p>
         </div>
         
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full md:w-auto">
@@ -133,7 +133,7 @@ const UserManagement = () => {
             className={`p-3 rounded-2xl border flex items-center space-x-4 transition-all ${
               !filters.kyc_status && !filters.from && !filters.to
                 ? 'bg-neon-green/10 border-neon-green/30 text-neon-green' 
-                : 'bg-white dark:bg-white/5 border-gray-200 dark:border-white/5 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/10'
+                : 'bg-white dark:bg-white/5 border-gray-200 dark:border-white/5 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/10'
             }`}
           >
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
@@ -152,7 +152,7 @@ const UserManagement = () => {
             className={`p-3 rounded-2xl border flex items-center space-x-4 transition-all ${
               filters.kyc_status === 'pending' 
                 ? 'bg-yellow-500/10 border-yellow-500/30 text-yellow-500' 
-                : 'bg-white dark:bg-white/5 border-gray-200 dark:border-white/5 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/10'
+                : 'bg-white dark:bg-white/5 border-gray-200 dark:border-white/5 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/10'
             }`}
           >
             <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
@@ -184,7 +184,7 @@ const UserManagement = () => {
       <div className="bg-white dark:bg-[#111114] border border-gray-200 dark:border-white/5 rounded-2xl overflow-hidden shadow-sm dark:shadow-2xl transition-all">
         <div className="bg-white dark:bg-[#111114] p-4 border-b border-gray-200 dark:border-white/5 flex flex-wrap items-center gap-4 shadow-sm transition-all">
           <form onSubmit={handleSearch} className="relative flex-1 min-w-full md:min-w-[300px]">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
             <input 
               type="text"
               placeholder="Tìm theo Email hoặc Số điện thoại..."
@@ -218,7 +218,7 @@ const UserManagement = () => {
 
           <div className="flex items-center space-x-2 bg-gray-50 dark:bg-white/10 border border-gray-200 dark:border-white/20 rounded-xl px-3 py-1.5 focus-within:border-neon-green transition-all">
             <div className="flex flex-col">
-              <label className="text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase ml-1">Từ ngày</label>
+              <label className="text-[10px] text-gray-500 dark:text-gray-500 font-bold uppercase ml-1">Từ ngày</label>
               <input 
                 type="date" 
                 className="bg-transparent text-gray-700 dark:text-gray-300 text-xs focus:outline-none transition-colors"
@@ -228,7 +228,7 @@ const UserManagement = () => {
             </div>
             <div className="h-4 w-px bg-gray-200 dark:bg-white/10" />
             <div className="flex flex-col">
-              <label className="text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase ml-1">Đến ngày</label>
+              <label className="text-[10px] text-gray-500 dark:text-gray-500 font-bold uppercase ml-1">Đến ngày</label>
               <input 
                 type="date" 
                 className="bg-transparent text-gray-700 dark:text-gray-300 text-xs focus:outline-none transition-colors"
@@ -249,7 +249,7 @@ const UserManagement = () => {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-gray-50 dark:bg-white/5 text-gray-500 dark:text-gray-400 text-xs uppercase font-black border-b border-gray-200 dark:border-white/5">
+              <tr className="bg-gray-50 dark:bg-white/5 text-gray-700 dark:text-gray-400 text-xs uppercase font-black border-b border-gray-200 dark:border-white/5">
                 <th className="px-4 py-4">Người dùng</th>
                 <th className="px-4 py-4 whitespace-nowrap">Vai trò</th>
                 <th className="px-4 py-4 whitespace-nowrap">Trạng thái</th>
@@ -267,7 +267,7 @@ const UserManagement = () => {
                 ))
               ) : users.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="px-6 py-20 text-center text-gray-500">Không tìm thấy người dùng nào.</td>
+                  <td colSpan="6" className="px-6 py-20 text-center text-gray-600">Không tìm thấy người dùng nào.</td>
                 </tr>
               ) : (
                 users.map((u) => (
@@ -287,8 +287,8 @@ const UserManagement = () => {
                         )}
                         <div className="flex-1 min-w-0">
                           <div className="text-sm font-bold text-gray-900 dark:text-white mb-0.5 truncate">{u.full_name || u.email}</div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{u.email}</div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center space-x-2">
+                          <div className="text-xs text-gray-600 dark:text-gray-400 truncate">{u.email}</div>
+                          <div className="text-xs text-gray-600 dark:text-gray-400 flex items-center space-x-2">
                              <Phone className="w-3 h-3" />
                              <span>{u.phone_number || 'N/A'}</span>
                           </div>
@@ -350,8 +350,8 @@ const UserManagement = () => {
                       )}
                     </td>
                     <td className="px-4 py-3 hidden lg:table-cell">
-                      <div className="text-xs text-gray-400 flex items-center space-x-2">
-                         <Clock className="w-3.5 h-3.5 text-gray-600" />
+                      <div className="text-xs text-gray-500 flex items-center space-x-2">
+                         <Clock className="w-3.5 h-3.5 text-gray-700" />
                          <span>{new Date(u.created_at).toLocaleString('vi-VN')}</span>
                       </div>
                     </td>
@@ -406,7 +406,7 @@ const UserManagement = () => {
               <XCircle className="w-6 h-6" />
               <h3 className="text-xl font-black uppercase tracking-tighter">Từ chối Hồ sơ BTC</h3>
             </div>
-            <p className="text-gray-500 dark:text-gray-400 text-sm">
+            <p className="text-gray-600 dark:text-gray-400 text-sm">
               Vui lòng nhập lý do từ chối. Lý do này sẽ được gửi tới email của người đăng ký.
             </p>
             <textarea 

@@ -294,12 +294,12 @@ const sendOrganizerOtp = async (req, res) => {
 
     // Nếu là Customer đã đăng nhập nâng cấp thì kiểm tra tồn tại qua existing_user_id
     if (existing_user_id) {
-      const user = await prisma.user.findUnique({ where: { id: existing_user_id } });
+      const user = await prisma.user.findUnique({ where: { id: existing_user_id }, include: { organizer_profile: true } });
       if (user?.role === 'admin') {
         return res.status(400).json({ error: 'Tài khoản Admin không cần đăng ký Ban tổ chức.' });
       }
-      if (user?.role === 'organizer') {
-        return res.status(400).json({ error: 'Tài khoản này đã là Ban tổ chức rồi.' });
+      if (user?.role === 'organizer' || (user?.organizer_profile && user.organizer_profile.kyc_status !== 'rejected')) {
+        return res.status(400).json({ error: 'Tài khoản này đã là Ban tổ chức hoặc đang có hồ sơ chờ duyệt.' });
       }
     } else {
       // Nếu là User mới hoàn toàn thì kiểm tra Email/SĐT
@@ -384,7 +384,10 @@ const verifyOrganizerOtp = async (req, res) => {
           OR: [
             { id_number: kyc_data.id_number },
             { identity_card: kyc_data.id_number }
-          ]
+          ],
+          NOT: {
+            user_id: existing_user_id || undefined
+          }
         }
       });
       if (existingId) return res.status(400).json({ error: 'Số CCCD này đã được sử dụng cho một Ban tổ chức khác.' });
@@ -393,45 +396,81 @@ const verifyOrganizerOtp = async (req, res) => {
     let userId;
 
     if (existing_user_id) {
-      // Kịch bản 2: Customer đã có tài khoản - Chỉ cần thêm Organizer Profile
+      // Kịch bản 2: Customer đã có tài khoản - Chỉ cần thêm hoặc cập nhật Organizer Profile
       const hasProfile = await prisma.organizer.findUnique({ where: { user_id: existing_user_id } });
-      if (hasProfile) return res.status(400).json({ error: 'Tài khoản này đã có hồ sơ Ban Tổ Chức.' });
+      
+      if (hasProfile) {
+        // NẾU LÀ REJECTED: Cho phép cập nhật lại thông tin để nộp lại (Resubmit)
+        await prisma.user.update({
+          where: { id: existing_user_id },
+          data: {
+            address: address || null,
+            latitude: latitude ? parseFloat(latitude) : null,
+            longitude: longitude ? parseFloat(longitude) : null,
+            date_of_birth: kyc_data?.dob ? parseDate(kyc_data.dob) : undefined
+          }
+        });
 
-      // 1. Cập nhật thông tin vị trí, địa chỉ và NGÀY SINH vào bảng User
-      await prisma.user.update({
-        where: { id: existing_user_id },
-        data: {
-          address: address || null,
-          latitude: latitude ? parseFloat(latitude) : null,
-          longitude: longitude ? parseFloat(longitude) : null,
-          date_of_birth: kyc_data?.dob ? parseDate(kyc_data.dob) : undefined
-        }
-      });
+        await prisma.organizer.update({
+          where: { user_id: existing_user_id },
+          data: {
+            organization_name: organization_name || '',
+            business_license: business_license || null,
+            description: description || null,
+            identity_card: kyc_data?.id_number || null,
+            kyc_status: 'pending', // Đưa về trạng thái chờ duyệt
+            is_verified: true, // Ép xác thực luôn cho KLTN
+            kyc_verified_at: new Date(), 
+            // --- Cập nhật lại dữ liệu eKYC mới ---
+            id_number: kyc_data?.id_number || null,
+            full_name_raw: kyc_data?.full_name || null,
+            dob_raw: kyc_data?.dob || null,
+            address_raw: kyc_data?.address || null,
+            front_image_url: kyc_data?.front_image_url || null,
+            back_image_url: kyc_data?.back_image_url || null,
+            face_image_url: kyc_data?.face_image_url || null,
+            facematch_score: kyc_data?.facematch_score || null,
+            liveness_score: kyc_data?.liveness_score || null,
+            kyc_raw_data: kyc_data?.raw || null
+          }
+        });
+      } else {
+        // 1. Cập nhật thông tin vị trí, địa chỉ và NGÀY SINH vào bảng User
+        await prisma.user.update({
+          where: { id: existing_user_id },
+          data: {
+            address: address || null,
+            latitude: latitude ? parseFloat(latitude) : null,
+            longitude: longitude ? parseFloat(longitude) : null,
+            date_of_birth: kyc_data?.dob ? parseDate(kyc_data.dob) : undefined
+          }
+        });
 
-      // 2. Lưu Organizer Profile ở trạng thái pending với đầy đủ dữ liệu KYC
-      await prisma.organizer.create({
-        data: {
-          user_id: existing_user_id,
-          organization_name: organization_name || '',
-          business_license: business_license || null,
-          description: description || null,
-          identity_card: kyc_data?.id_number || null,
-          kyc_status: 'pending',
-          is_verified: true, // Ép xác thực luôn cho KLTN
-          kyc_verified_at: new Date(), 
-          // --- Lưu dữ liệu eKYC ---
-          id_number: kyc_data?.id_number || null,
-          full_name_raw: kyc_data?.full_name || null,
-          dob_raw: kyc_data?.dob || null,
-          address_raw: kyc_data?.address || null,
-          front_image_url: kyc_data?.front_image_url || null,
-          back_image_url: kyc_data?.back_image_url || null,
-          face_image_url: kyc_data?.face_image_url || null,
-          facematch_score: kyc_data?.facematch_score || null,
-          liveness_score: kyc_data?.liveness_score || null,
-          kyc_raw_data: kyc_data?.raw || null
-        }
-      });
+        // 2. Lưu Organizer Profile ở trạng thái pending với đầy đủ dữ liệu KYC
+        await prisma.organizer.create({
+          data: {
+            user_id: existing_user_id,
+            organization_name: organization_name || '',
+            business_license: business_license || null,
+            description: description || null,
+            identity_card: kyc_data?.id_number || null,
+            kyc_status: 'pending',
+            is_verified: true, // Ép xác thực luôn cho KLTN
+            kyc_verified_at: new Date(), 
+            // --- Lưu dữ liệu eKYC ---
+            id_number: kyc_data?.id_number || null,
+            full_name_raw: kyc_data?.full_name || null,
+            dob_raw: kyc_data?.dob || null,
+            address_raw: kyc_data?.address || null,
+            front_image_url: kyc_data?.front_image_url || null,
+            back_image_url: kyc_data?.back_image_url || null,
+            face_image_url: kyc_data?.face_image_url || null,
+            facematch_score: kyc_data?.facematch_score || null,
+            liveness_score: kyc_data?.liveness_score || null,
+            kyc_raw_data: kyc_data?.raw || null
+          }
+        });
+      }
       userId = existing_user_id;
     } else {
       // Kịch bản 1: User hoàn toàn mới - Tạo User mới + Profile BTC

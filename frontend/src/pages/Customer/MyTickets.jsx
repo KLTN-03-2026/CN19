@@ -51,7 +51,48 @@ const MyTickets = () => {
     const [isScanned, setIsScanned] = useState(false);
     const [isCancelling, setIsCancelling] = useState(false);
 
+    // Hoàn tiền state
+    const [refundModalTicket, setRefundModalTicket] = useState(null);
+    const [refundReason, setRefundReason] = useState('');
+    const [refunding, setRefunding] = useState(false);
 
+    const handleRequestRefundSubmit = async (e) => {
+        e.preventDefault();
+        if (!refundReason.trim()) {
+            toast.error('Vui lòng nhập lý do hoàn tiền');
+            return;
+        }
+
+        try {
+            setRefunding(true);
+            await ticketService.requestRefund(refundModalTicket.id, refundReason);
+            toast.success('Đã gửi yêu cầu hoàn tiền thành công! Vui lòng chờ Admin kiểm duyệt.');
+            setRefundModalTicket(null);
+            setRefundReason('');
+            fetchTickets();
+        } catch (error) {
+            toast.error(error.response?.data?.error || 'Lỗi gửi yêu cầu hoàn tiền');
+        } finally {
+            setRefunding(false);
+        }
+    };
+
+    const [isCancellingRefund, setIsCancellingRefund] = useState(false);
+
+    const handleCancelRefund = async (ticketId) => {
+        if (!window.confirm('Bạn có chắc chắn muốn rút lại yêu cầu hoàn tiền? Vé sẽ được mở khóa để sử dụng bình thường.')) return;
+        
+        try {
+            setIsCancellingRefund(true);
+            const res = await ticketService.cancelRefundRequest(ticketId);
+            toast.success(res.message || 'Đã hủy yêu cầu hoàn tiền thành công.');
+            fetchTickets();
+        } catch (error) {
+            toast.error(error.response?.data?.error || 'Lỗi khi hủy yêu cầu hoàn tiền.');
+        } finally {
+            setIsCancellingRefund(false);
+        }
+    };
 
     useEffect(() => {
         fetchTickets();
@@ -182,13 +223,25 @@ const MyTickets = () => {
             case 'cancelled': 
                 return matchesSearch && (ticket.status === 'cancelled' || ticket.event.status === 'cancelled');
             case 'rescheduled': 
-                return matchesSearch && ticket.event.status === 'rescheduled';
+                return matchesSearch && (ticket.event?.status === 'postponed' || ticket.event?.status === 'rescheduled');
             default:
                 return matchesSearch;
         }
     });
 
     const getStatusBadge = (ticket) => {
+        if (ticket.status === 'cancelled' || ticket.event?.status === 'cancelled') {
+            return <span className="bg-red-500/10 text-red-600 dark:text-red-500 px-3 py-1 rounded-full text-[10px] font-black border border-red-500/20 uppercase">{t('myTickets.status.cancelled') || 'Đã hủy'}</span>;
+        }
+
+        if (ticket.status === 'refund_requested') {
+            return <span className="bg-amber-500/10 text-amber-600 dark:text-amber-500 px-3 py-1 rounded-full text-[10px] font-black border border-amber-500/20 uppercase">⏳ Chờ hoàn tiền</span>;
+        }
+
+        if (ticket.event?.status === 'postponed' || ticket.event?.status === 'rescheduled') {
+            return <span className="bg-amber-500/10 text-amber-600 dark:text-amber-500 px-3 py-1 rounded-full text-[10px] font-black border border-amber-500/20 uppercase">⏰ Đã dời lịch</span>;
+        }
+
         if (!ticket.is_current_owner) {
             if (ticket.is_on_marketplace) return <span className="bg-orange-500/10 text-orange-600 dark:text-orange-500 px-3 py-1 rounded-full text-[10px] font-black border border-orange-500/20 uppercase">{t('myTickets.status.sold')}</span>;
             return <span className="bg-indigo-500/10 text-indigo-600 dark:text-indigo-500 px-3 py-1 rounded-full text-[10px] font-black border border-indigo-500/20 uppercase">{t('myTickets.status.transferred')}</span>;
@@ -201,26 +254,48 @@ const MyTickets = () => {
                 return <span className="bg-neon-green/10 text-neon-hover dark:text-neon-green px-3 py-1 rounded-full text-[10px] font-black border border-neon-green/20 uppercase">{t('myTickets.status.available')}</span>;
             case 'used':
                 return <span className="bg-gray-500/10 text-gray-500 dark:text-gray-400 px-3 py-1 rounded-full text-[10px] font-black border border-gray-500/20 uppercase">{t('myTickets.status.scanned')}</span>;
-            case 'cancelled':
-                return <span className="bg-red-500/10 text-red-600 dark:text-red-500 px-3 py-1 rounded-full text-[10px] font-black border border-red-500/20 uppercase">{t('myTickets.status.cancelled')}</span>;
             default:
                 return <span className="bg-neon-green/10 text-neon-hover dark:text-neon-green px-3 py-1 rounded-full text-[10px] font-black border border-neon-green/20 uppercase">{ticket.status}</span>;
         }
     };
 
     const ActionButtons = ({ ticket, view = 'grid' }) => {
-        if (!ticket.is_current_owner || ticket.status === 'cancelled') return null;
+        if (!ticket.is_current_owner || ticket.status === 'cancelled' || ticket.event?.status === 'cancelled') return null;
 
-        const containerClass = view === 'grid' ? "flex gap-2" : "flex flex-col gap-1.5 min-w-[120px]";
-        const buttonBaseClass = "flex items-center justify-center gap-2 p-3.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all duration-300 active:scale-95 border border-transparent";
+        const wrapperClass = view === 'grid' ? "flex flex-col gap-2 w-full" : "flex flex-col gap-1.5 min-w-[120px]";
+        const rowClass = view === 'grid' ? "flex gap-2 w-full" : "flex flex-col gap-1.5 w-full";
+        const buttonBaseClass = "flex items-center justify-center gap-2 p-3 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-300 active:scale-95 border border-transparent";
         
+        if (ticket.status === 'refund_requested') {
+            return (
+                <div className={wrapperClass}>
+                    <button 
+                        type="button"
+                        onClick={() => handleCancelRefund(ticket.id)}
+                        disabled={isCancellingRefund}
+                        className={`${buttonBaseClass} bg-red-500/10 text-red-600 dark:text-red-500 hover:bg-red-500 hover:text-white border-red-500/20 w-full`}
+                    >
+                        <X className="w-3.5 h-3.5" />
+                        {isCancellingRefund ? "Đang xử lý..." : "Hủy yêu cầu hoàn tiền"}
+                    </button>
+                </div>
+            );
+        }
+        
+        // Kiểm tra điều kiện có thể hoàn tiền
+        const now = new Date();
+        const isEmergency = ['postponed', 'rescheduled', 'cancelled'].includes(ticket.event?.status);
+        const canRefund = isEmergency || 
+                          (ticket.event?.allow_refund && ticket.event?.refund_deadline_days && 
+                           new Date(ticket.event?.event_date).getTime() - now.getTime() > ticket.event?.refund_deadline_days * 24 * 60 * 60 * 1000);
+
         // Kiểm tra xem sự kiện đã diễn ra chưa
         const isPastEvent = new Date(ticket.event.event_date) < new Date();
 
         // Nếu vé đã quét HOẶC sự kiện đã qua, hiện nút Viết Blog/Chỉnh sửa Blog
         if (ticket.status === 'used' || isPastEvent) {
             return (
-                <div className={containerClass}>
+                <div className={wrapperClass}>
                     <Link 
                         to={`/blog/create?eventId=${ticket.event.id}${ticket.has_blog ? `&blogId=${ticket.blog_id}` : ''}`}
                         className={`${buttonBaseClass} bg-gray-900 dark:bg-neon-green text-white dark:text-black hover:bg-black dark:hover:bg-neon-hover w-full shadow-lg dark:shadow-neon-green/10`}
@@ -233,7 +308,7 @@ const MyTickets = () => {
         }
 
         return (
-            <div className={containerClass}>
+            <div className={wrapperClass}>
                 {ticket.is_on_marketplace ? (
                     <Link 
                         to={`/my-tickets/${ticket.id}/resale`}
@@ -244,20 +319,34 @@ const MyTickets = () => {
                     </Link>
                 ) : (
                     <>
-                        <Link 
-                            to={(isPastEvent || !ticket.event.allow_transfer) ? '#' : `/my-tickets/${ticket.id}/transfer`}
-                            className={`${buttonBaseClass} bg-gray-900 dark:bg-neon-green/10 text-white dark:text-neon-green hover:bg-black dark:hover:bg-neon-green dark:hover:text-black disabled:opacity-20 transition-all duration-500 border border-transparent dark:border-neon-green/10 ${(isPastEvent || !ticket.event.allow_transfer) ? 'pointer-events-none opacity-20 grayscale' : ''}`}
-                        >
-                            <Send className="w-3.5 h-3.5" />
-                            {t('myTickets.buttons.transfer')}
-                        </Link>
-                        <Link 
-                            to={(isPastEvent || !ticket.event.allow_resale) ? '#' : `/my-tickets/${ticket.id}/resale`}
-                            className={`${buttonBaseClass} bg-gray-100 dark:bg-neon-green/5 text-gray-600 dark:text-neon-green/60 hover:bg-gray-200 dark:hover:bg-neon-green dark:hover:text-black disabled:opacity-20 transition-all duration-500 border border-gray-200 dark:border-neon-green/10 ${(isPastEvent || !ticket.event.allow_resale) ? 'pointer-events-none opacity-20 grayscale' : ''}`}
-                        >
-                            <Tag className="w-3.5 h-3.5" />
-                            {t('myTickets.buttons.resale')}
-                        </Link>
+                        {canRefund && (
+                            <button 
+                                type="button"
+                                onClick={() => { setRefundModalTicket(ticket); setRefundReason(ticket.event?.status === 'postponed' ? `Yêu cầu hoàn tiền do sự kiện dời lịch: ${ticket.event?.title}` : ''); }}
+                                className={`${buttonBaseClass} bg-amber-500/10 text-amber-600 dark:text-amber-500 hover:bg-amber-500 hover:text-white border-amber-500/20 w-full shadow-sm`}
+                            >
+                                <RefreshCcw className="w-3.5 h-3.5" />
+                                Yêu cầu hoàn tiền
+                            </button>
+                        )}
+                        {ticket.event?.status !== 'cancelled' && (
+                            <div className={rowClass}>
+                                <Link 
+                                    to={(isPastEvent || !ticket.event.allow_transfer) ? '#' : `/my-tickets/${ticket.id}/transfer`}
+                                    className={`${buttonBaseClass} bg-gray-900 dark:bg-neon-green/10 text-white dark:text-neon-green hover:bg-black dark:hover:bg-neon-green dark:hover:text-black disabled:opacity-20 transition-all duration-500 border border-transparent dark:border-neon-green/10 flex-1 ${(isPastEvent || !ticket.event.allow_transfer) ? 'pointer-events-none opacity-20 grayscale' : ''}`}
+                                >
+                                    <Send className="w-3.5 h-3.5" />
+                                    {t('myTickets.buttons.transfer')}
+                                </Link>
+                                <Link 
+                                    to={(isPastEvent || !ticket.event.allow_resale) ? '#' : `/my-tickets/${ticket.id}/resale`}
+                                    className={`${buttonBaseClass} bg-gray-100 dark:bg-neon-green/5 text-gray-600 dark:text-neon-green/60 hover:bg-gray-200 dark:hover:bg-neon-green dark:hover:text-black disabled:opacity-20 transition-all duration-500 border border-gray-200 dark:border-neon-green/10 flex-1 ${(isPastEvent || !ticket.event.allow_resale) ? 'pointer-events-none opacity-20 grayscale' : ''}`}
+                                >
+                                    <Tag className="w-3.5 h-3.5" />
+                                    {t('myTickets.buttons.resale')}
+                                </Link>
+                            </div>
+                        )}
                     </>
                 )}
             </div>
@@ -357,6 +446,7 @@ const MyTickets = () => {
                             { id: 'transferred', label: t('myTickets.tabs.transferred') },
                             { id: 'sold', label: t('myTickets.tabs.sold') },
                             { id: 'cancelled', label: t('myTickets.tabs.cancelled') },
+                            { id: 'rescheduled', label: t('myTickets.tabs.rescheduled') || 'Dời lịch' },
                         ].map((tab) => (
                             <button
                                 key={tab.id}
@@ -453,9 +543,9 @@ const MyTickets = () => {
                                                 <ActionButtons ticket={ticket} />
                                                 
                                                 <div className="flex gap-2">
-                                                    {ticket.is_current_owner && (
+                                                    {ticket.is_current_owner ? (
                                                         <button 
-                                                            disabled={(ticket.status !== 'used' && (ticket.status === 'cancelled' || ticket.is_on_marketplace))}
+                                                            disabled={(ticket.status !== 'used' && (ticket.status === 'refund_requested' || ticket.status === 'cancelled' || ticket.event?.status === 'cancelled' || ticket.is_on_marketplace))}
                                                             onClick={() => handleViewQr(ticket)}
                                                             className={`flex-1 h-11 rounded-xl text-[10px] font-black uppercase transition-all duration-300 flex items-center justify-center gap-2 group/qr active:scale-95 disabled:opacity-20 ${
                                                                 ticket.status === 'used' 
@@ -475,9 +565,17 @@ const MyTickets = () => {
                                                                 </>
                                                             )}
                                                         </button>
+                                                    ) : (
+                                                        <Link 
+                                                            to={`/my-transactions/${ticket.was_sold_on_marketplace ? (ticket.mkt_transaction_id || ticket.mkt_transaction_number) : (ticket.latest_transfer_id || ticket.order_id)}`}
+                                                            className="flex-1 h-11 rounded-xl text-[10px] font-black uppercase transition-all duration-300 flex items-center justify-center gap-2 bg-blue-500/10 text-blue-600 border border-blue-500/20 hover:bg-blue-500 hover:text-white active:scale-95"
+                                                        >
+                                                            <Eye className="w-4 h-4" />
+                                                            {ticket.was_sold_on_marketplace ? 'Chi tiết đã bán lại' : 'Chi tiết đã chuyển nhượng'}
+                                                        </Link>
                                                     )}
                                                     <Link 
-                                                        to={`/my-transactions/${ticket.mkt_transaction_id || ticket.mkt_transaction_number || ticket.order_id}`}
+                                                        to={`/my-transactions/${ticket.was_sold_on_marketplace ? (ticket.mkt_transaction_id || ticket.mkt_transaction_number) : (ticket.latest_transfer_id || ticket.order_id)}`}
                                                         className="h-11 px-4 bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/5 text-gray-500 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-gray-100 dark:hover:bg-white/10 rounded-xl flex items-center justify-center transition-all"
                                                         title={t('myTickets.buttons.view_nft')}
                                                     >
@@ -546,7 +644,7 @@ const MyTickets = () => {
                                         <div className="flex flex-row md:flex-col lg:flex-row items-center gap-2.5 md:mt-0 pt-2 md:pt-0 border-t md:border-t-0 border-gray-100 dark:border-white/5">
                                             <ActionButtons ticket={ticket} view="list" />
                                             <div className="flex gap-2">
-                                                {ticket.is_current_owner && (
+                                                {ticket.is_current_owner ? (
                                                     <button 
                                                         onClick={() => handleViewQr(ticket)}
                                                         className={`h-9 px-5 rounded-xl hover:brightness-105 active:scale-95 transition-all disabled:opacity-20 flex items-center justify-center ${
@@ -554,14 +652,21 @@ const MyTickets = () => {
                                                             ? 'bg-blue-500/10 text-blue-500 border border-blue-500/20 hover:bg-blue-500 hover:text-white'
                                                             : 'bg-gray-900 dark:bg-neon-green text-white dark:text-black'
                                                         }`}
-                                                        disabled={(ticket.status !== 'used' && (ticket.status === 'cancelled' || ticket.is_on_marketplace))}
+                                                        disabled={(ticket.status !== 'used' && (ticket.status === 'refund_requested' || ticket.status === 'cancelled' || ticket.event?.status === 'cancelled' || ticket.is_on_marketplace))}
                                                         title={ticket.status === 'used' ? t('myTickets.buttons.view_scan_history') : t('myTickets.buttons.use_ticket')}
                                                     >
                                                         {ticket.status === 'used' ? <Clock className="w-4 h-4" /> : <QrCode className="w-4.5 h-4.5" />}
                                                     </button>
+                                                ) : (
+                                                    <Link 
+                                                        to={`/my-transactions/${ticket.was_sold_on_marketplace ? (ticket.mkt_transaction_id || ticket.mkt_transaction_number) : (ticket.latest_transfer_id || ticket.order_id)}`}
+                                                        className="h-9 px-5 rounded-xl bg-blue-500/10 text-blue-600 border border-blue-500/20 hover:bg-blue-500 hover:text-white flex items-center justify-center text-[10px] font-black uppercase"
+                                                    >
+                                                        {ticket.was_sold_on_marketplace ? 'Chi tiết đã bán lại' : 'Chi tiết đã chuyển nhượng'}
+                                                    </Link>
                                                 )}
                                                 <Link 
-                                                    to={`/my-transactions/${ticket.mkt_transaction_id || ticket.mkt_transaction_number || ticket.order_id}`}
+                                                    to={`/my-transactions/${ticket.was_sold_on_marketplace ? (ticket.mkt_transaction_id || ticket.mkt_transaction_number) : (ticket.latest_transfer_id || ticket.order_id)}`}
                                                     className="h-9 px-5 bg-gray-100 dark:bg-white/[0.03] border border-gray-200 dark:border-white/5 text-gray-500 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 rounded-xl flex items-center justify-center transition-all"
                                                     title="Xem chi tiết vé NFT"
                                                 >
@@ -779,7 +884,71 @@ const MyTickets = () => {
                     </div>
                 </div>
             )}
-            {/* Modal Chỉnh sửa bài đăng đã được thay thế bằng trang ResaleTicket */}
+            
+            {/* Modal Yêu cầu hoàn tiền */}
+            {refundModalTicket && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-gray-900/60 dark:bg-black/80 backdrop-blur-xl transition-all" onClick={() => setRefundModalTicket(null)}></div>
+                    <div className="relative bg-white dark:bg-zinc-950 w-full max-w-lg rounded-[2.5rem] border border-gray-100 dark:border-zinc-800 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+                        <div className="px-10 py-8 border-b border-gray-100 dark:border-zinc-800/50 bg-amber-500/5 dark:bg-zinc-900/30">
+                            <h2 className="text-xl font-black text-gray-900 dark:text-white uppercase tracking-tight flex items-center gap-3">
+                                <div className="p-2 bg-amber-500/10 rounded-xl">
+                                    <RefreshCcw className="w-5 h-5 text-amber-500" />
+                                </div>
+                                GỬI YÊU CẦU HOÀN TIỀN
+                            </h2>
+                            <p className="text-[11px] text-slate-800 dark:text-zinc-400 font-bold uppercase tracking-tight mt-2 ml-12">
+                                Sự kiện: {refundModalTicket.event?.title}
+                            </p>
+                        </div>
+
+                        <form onSubmit={handleRequestRefundSubmit} className="p-10 space-y-6">
+                            <div className="p-5 bg-slate-50 dark:bg-zinc-900/50 rounded-[1.5rem] border border-gray-200 dark:border-zinc-800 space-y-3 font-medium text-sm text-gray-700 dark:text-gray-300">
+                                <div className="flex justify-between text-xs">
+                                    <span className="text-gray-500 uppercase font-black">Loại vé:</span>
+                                    <span className="font-bold">{refundModalTicket.ticket_tier?.tier_name}</span>
+                                </div>
+                                <div className="flex justify-between text-xs">
+                                    <span className="text-gray-500 uppercase font-black">Phương thức hoàn:</span>
+                                    <span className="font-bold text-amber-500">Cộng trực tiếp vào số dư ví</span>
+                                </div>
+                            </div>
+
+                            <div className="space-y-3">
+                                <label className="text-[11px] font-black text-slate-800 dark:text-zinc-400 uppercase tracking-tight block">
+                                    Lý do yêu cầu hoàn tiền <span className="text-red-500">*</span>
+                                </label>
+                                <textarea
+                                    value={refundReason}
+                                    onChange={(e) => setRefundReason(e.target.value)}
+                                    rows="4"
+                                    className="w-full bg-white dark:bg-zinc-900/50 border border-gray-200 dark:border-zinc-800 rounded-[1.5rem] p-5 text-sm font-bold focus:outline-none focus:border-amber-500 transition-all dark:text-white placeholder-slate-400 dark:placeholder-zinc-600 resize-none shadow-sm"
+                                    placeholder="Ví dụ: Lịch mới không phù hợp với thời gian cá nhân của tôi..."
+                                    required
+                                />
+                            </div>
+
+                            <div className="flex items-center gap-4 pt-4 border-t border-gray-100 dark:border-zinc-800">
+                                <button
+                                    type="button"
+                                    onClick={() => setRefundModalTicket(null)}
+                                    className="w-1/2 py-4 text-[11px] font-black uppercase tracking-wider text-slate-700 hover:text-gray-900 dark:hover:text-white bg-gray-100 dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-2xl transition-all shadow-sm active:scale-95"
+                                >
+                                    HỦY BỎ
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={refunding}
+                                    className="w-1/2 py-4 bg-amber-500 hover:bg-amber-600 text-black font-black text-[11px] uppercase tracking-wider rounded-2xl transition-all shadow-xl shadow-amber-500/20 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
+                                >
+                                    {refunding && <Loader2 className="w-4 h-4 animate-spin" />}
+                                    {refunding ? 'ĐANG GỬI...' : 'XÁC NHẬN GỬI'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

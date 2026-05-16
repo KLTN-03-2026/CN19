@@ -14,6 +14,8 @@ async function wipeDatabase() {
 
     // 2. Clear transactional/child data first (Bottom-up)
     console.log('Clearing transactional data...');
+    await prisma.merchandiseScanHistory.deleteMany({});
+    await prisma.merchandiseOrderItem.deleteMany({});
     await prisma.scanHistory.deleteMany({});
     await prisma.dynamicQRToken.deleteMany({});
     await prisma.ticketTransfer.deleteMany({});
@@ -23,7 +25,15 @@ async function wipeDatabase() {
     await prisma.escrowPayout.deleteMany({});
     await prisma.emergencyRequest.deleteMany({});
     await prisma.orderItem.deleteMany({});
+    await prisma.withdrawalRequest.deleteMany({});
+    await prisma.walletTransaction.deleteMany({});
     
+    // Clear blogs and social interactions
+    await prisma.like.deleteMany({});
+    await prisma.comment.deleteMany({});
+    await prisma.blogReport.deleteMany({});
+    await prisma.blog.deleteMany({});
+
     // Clear tickets and orders
     await prisma.ticket.deleteMany({});
     await prisma.order.deleteMany({});
@@ -34,10 +44,11 @@ async function wipeDatabase() {
     // Clear Ticket Tiers (Foreign Key to Event)
     await prisma.ticketTier.deleteMany({});
     
-    // Clear events
+    // Clear merchandise and events
+    await prisma.merchandise.deleteMany({});
     await prisma.event.deleteMany({});
     
-    // Clear organizers (keeping the admin relationship safe if they are also organizers, though usually they aren't)
+    // Clear organizers
     await prisma.organizer.deleteMany({});
     
     // Clear logs and notifications
@@ -54,10 +65,16 @@ async function wipeDatabase() {
     });
     console.log(`Removed ${deleteUsersResult.count} non-admin user accounts.`);
 
-    // 4. Clear categories (Optional, but user said "wipe EVERYTHING")
-    // If you want to keep categories, comment this out.
+    // 4. Clear categories
     await prisma.category.deleteMany({});
     console.log('Removed all event categories.');
+
+    // 5. Re-seed essential categories so Organizer UI works when testing
+    const catNames = ['Âm nhạc', 'Workshop', 'Thể thao', 'Công nghệ'];
+    for (const name of catNames) {
+      await prisma.category.create({ data: { name, is_active: true } });
+    }
+    console.log('✅ Re-seeded 4 essential categories for event creation testing.');
 
     console.log('--- Database Wipe Operation Completed Successfully ---');
     console.log('Status: Only Admin accounts remain.');

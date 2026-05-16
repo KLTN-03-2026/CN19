@@ -87,7 +87,7 @@ const OrganizerOrderController = {
 
             // 2. Tìm các giao dịch Marketplace liên quan đến sự kiện của BTC này
             const whereClause = {
-                status: 'paid',
+                status: { in: ['paid', 'completed', 'cancelled'] },
                 ticket: {
                     event: {
                         organizer_id: organizer.id
@@ -107,7 +107,7 @@ const OrganizerOrderController = {
                     ticket: { 
                         include: { 
                             ticket_tier: { select: { tier_name: true, price: true } },
-                            event: { select: { title: true, id: true } }
+                            event: { select: { title: true, id: true, status: true } }
                         } 
                     },
                     listing: { 
@@ -126,26 +126,29 @@ const OrganizerOrderController = {
             });
 
             // 3. Map dữ liệu để trả về frontend gọn gàng
-            const mappedData = transactions.map(tx => ({
-                id: tx.id,
-                transaction_number: tx.transaction_number || tx.listing?.listing_number || 'MKT-TX',
-                event_title: tx.ticket?.event?.title,
-                tier_name: tx.ticket?.ticket_tier?.tier_name,
-                original_price: tx.ticket?.ticket_tier?.price,
-                resale_price: tx.buyer_pay_amount,
-                royalty_amount: tx.organizer_royalty,
-                platform_fee: tx.platform_fee,
-                status: tx.status,
-                created_at: tx.created_at,
-                buyer: tx.buyer,
-                seller: tx.seller,
-                ticket_number: tx.ticket?.ticket_number,
-                merchandise_items: [
-                    ...(tx.listing?.merchandise_items || []),
-                    ...(tx.listing?.metadata?.selected_merchandise || [])
-                ],
-                nft_transfer_tx_hash: tx.nft_transfer_tx_hash
-            }));
+            const mappedData = transactions.map(tx => {
+                const isCancelled = tx.status === 'cancelled' || ['cancelled', 'pending_cancellation_fee'].includes(tx.ticket?.event?.status);
+                return {
+                    id: tx.id,
+                    transaction_number: tx.transaction_number || tx.listing?.listing_number || 'MKT-TX',
+                    event_title: tx.ticket?.event?.title,
+                    tier_name: tx.ticket?.ticket_tier?.tier_name,
+                    original_price: tx.ticket?.ticket_tier?.price,
+                    resale_price: tx.buyer_pay_amount,
+                    royalty_amount: tx.organizer_royalty,
+                    platform_fee: tx.platform_fee,
+                    status: isCancelled ? 'cancelled' : tx.status,
+                    created_at: tx.created_at,
+                    buyer: tx.buyer,
+                    seller: tx.seller,
+                    ticket_number: tx.ticket?.ticket_number,
+                    merchandise_items: [
+                        ...(tx.listing?.merchandise_items || []),
+                        ...(tx.listing?.metadata?.selected_merchandise || [])
+                    ],
+                    nft_transfer_tx_hash: tx.nft_transfer_tx_hash
+                };
+            });
 
             res.status(200).json(mappedData);
         } catch (error) {
@@ -207,11 +210,12 @@ const OrganizerOrderController = {
 
             // If found in marketplace transaction table, use that as it's more complete for resale
             if (mktTx) {
+                const isCancelled = mktTx.status === 'cancelled' || ['cancelled', 'pending_cancellation_fee'].includes(mktTx.ticket?.event?.status);
                 order = {
                     id: mktTx.id,
                     transaction_number: mktTx.transaction_number || mktTx.listing?.listing_number || 'RESALE',
                     order_number: mktTx.listing?.listing_number || 'RESALE',
-                    status: mktTx.status === 'completed' ? 'paid' : mktTx.status,
+                    status: isCancelled ? 'cancelled' : (mktTx.status === 'completed' ? 'paid' : mktTx.status),
                     total_amount: mktTx.buyer_pay_amount,
                     payment_method: mktTx.payment_method || 'marketplace',
                     created_at: mktTx.created_at,
@@ -329,6 +333,7 @@ const OrganizerOrderController = {
                     }
                 }
 
+                const isTransferCancelled = ['refund_pending', 'cancelled'].includes(order.status) || ['cancelled', 'pending_cancellation_fee'].includes(order.event?.status);
                 // Override order object with mapped fields for MarketplaceDetail.jsx
                 order = {
                     ...order,
@@ -338,7 +343,7 @@ const OrganizerOrderController = {
                     ticket_number: ticket?.ticket_number || 'N/A',
                     sender: order.customer,
                     receiver: receiver,
-                    status: order.status === 'paid' ? 'completed' : order.status,
+                    status: isTransferCancelled ? 'cancelled' : (order.status === 'paid' ? 'completed' : order.status),
                     fee_amount: Number(order.total_amount),
                     merchandise_items: merchandiseItems,
                     nft_transfer_tx_hash: nft_transfer_tx_hash
@@ -372,7 +377,7 @@ const OrganizerOrderController = {
             const whereClause = {
                 event: { organizer_id: organizer.id },
                 order_type: 'TICKET_TRANSFER',
-                status: 'paid'
+                status: { in: ['paid', 'completed', 'refund_pending', 'cancelled'] }
             };
 
             if (event_id && event_id.trim() !== '') {
@@ -383,7 +388,7 @@ const OrganizerOrderController = {
                 where: whereClause,
                 include: {
                     customer: { select: { id: true, full_name: true, email: true, avatar_url: true } },
-                    event: { select: { title: true } }
+                    event: { select: { title: true, status: true } }
                 },
                 orderBy: { created_at: 'desc' }
             });
@@ -437,6 +442,8 @@ const OrganizerOrderController = {
                     }
                 }
 
+                const isCancelled = ['refund_pending', 'cancelled'].includes(t.status) || ['cancelled', 'pending_cancellation_fee'].includes(t.event?.status);
+
                 return {
                     id: t.id,
                     transaction_number: t.order_number,
@@ -445,7 +452,7 @@ const OrganizerOrderController = {
                     ticket_number: ticket?.ticket_number || 'N/A',
                     sender: t.customer, // Người tạo đơn chuyển nhượng là người gửi
                     receiver: receiver, // Người thụ hưởng vé
-                    status: t.status === 'paid' ? 'completed' : t.status,
+                    status: isCancelled ? 'cancelled' : (t.status === 'paid' ? 'completed' : t.status),
                     created_at: t.created_at,
                     fee_amount: Number(t.total_amount),
                     merchandise_items: merchandiseItems,

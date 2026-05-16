@@ -24,6 +24,7 @@ const Profile = () => {
   const [walletBalance, setWalletBalance] = useState('0');
   const [vndBalance, setVndBalance] = useState(0);
   const [withdrawalHistory, setWithdrawalHistory] = useState([]);
+  const [walletTransactions, setWalletTransactions] = useState([]);
   const [loadingFinancial, setLoadingFinancial] = useState(false);
   const fileInputRef = useRef(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -104,6 +105,7 @@ const Profile = () => {
       setWalletBalance(walletRes.data?.balance_matic || '0');
       setVndBalance(revenueRes.balance || 0);
       setWithdrawalHistory(historyRes.withdrawalRequests || []);
+      setWalletTransactions(historyRes.transactions || []);
     } catch (error) {
       console.error('Failed to fetch financial data', error);
     } finally {
@@ -560,6 +562,78 @@ const Profile = () => {
                            </a>
                         </div>
                       </div>
+                    </div>
+                  </div>
+
+                  {/* Wallet Transactions Table (Lịch sử biến động số dư: Hoàn tiền, Rút tiền, Nạp tiền) */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-black text-gray-900 dark:text-white uppercase flex items-center gap-2">
+                         <Wallet className="w-4 h-4 text-neon-green" /> Biến động số dư ví
+                      </h4>
+                      <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{walletTransactions.length} giao dịch</span>
+                    </div>
+
+                    <div className="bg-white dark:bg-white/[0.02] border border-gray-200 dark:border-white/10 rounded-3xl overflow-hidden shadow-sm">
+                       <div className="overflow-x-auto">
+                          <table className="w-full text-left border-collapse">
+                            <thead>
+                              <tr className="bg-gray-50 dark:bg-white/5 border-b border-gray-100 dark:border-white/5">
+                                <th className="px-6 py-3 text-[10px] font-black uppercase text-gray-400">Mã GD & Thời gian</th>
+                                <th className="px-6 py-3 text-[10px] font-black uppercase text-gray-400">Số tiền</th>
+                                <th className="px-6 py-3 text-[10px] font-black uppercase text-gray-400">Loại GD</th>
+                                <th className="px-6 py-3 text-[10px] font-black uppercase text-gray-400">Nội dung</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-50 dark:divide-white/5">
+                               {loadingFinancial ? (
+                                 <tr>
+                                   <td colSpan="4" className="px-6 py-12 text-center text-gray-400 italic text-xs">
+                                     Đang tải dữ liệu...
+                                   </td>
+                                 </tr>
+                               ) : walletTransactions.length === 0 ? (
+                                 <tr>
+                                   <td colSpan="4" className="px-6 py-12 text-center text-gray-400 italic text-xs">
+                                     Chưa có phát sinh biến động số dư
+                                   </td>
+                                 </tr>
+                               ) : (
+                                 walletTransactions.map((tx) => (
+                                   <tr key={tx.id} className="hover:bg-gray-50 dark:hover:bg-white/[0.01] transition-all">
+                                     <td className="px-6 py-4">
+                                       <div className="flex flex-col">
+                                         <span className="text-[10px] font-mono font-black text-gray-400 uppercase max-w-[80px] truncate">#{tx.id.substring(0, 8)}</span>
+                                         <span className="text-[11px] text-gray-600 dark:text-gray-400 mt-0.5">
+                                           {format(new Date(tx.created_at), 'dd/MM/yyyy HH:mm', { locale: i18n.language.startsWith('vi') ? vi : enUS })}
+                                         </span>
+                                       </div>
+                                     </td>
+                                     <td className="px-6 py-4">
+                                       <span className={`text-sm font-black ${tx.amount >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                         {tx.amount >= 0 ? '+' : ''}{new Intl.NumberFormat('vi-VN').format(tx.amount)}đ
+                                       </span>
+                                     </td>
+                                     <td className="px-6 py-4">
+                                       <span className={`inline-flex px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${
+                                         tx.type === 'REFUND' ? 'bg-green-500/10 text-green-500' :
+                                         tx.type === 'DEPOSIT' ? 'bg-blue-500/10 text-blue-500' :
+                                         'bg-orange-500/10 text-orange-500'
+                                       }`}>
+                                         {tx.type === 'REFUND' ? 'Hoàn tiền' : tx.type === 'DEPOSIT' ? 'Nạp tiền' : 'Rút tiền'}
+                                       </span>
+                                     </td>
+                                     <td className="px-6 py-4">
+                                       <p className="text-[11px] text-gray-500 italic line-clamp-2 max-w-[250px]">
+                                         {tx.description || 'Giao dịch ví'}
+                                       </p>
+                                     </td>
+                                   </tr>
+                                 ))
+                               )}
+                            </tbody>
+                          </table>
+                       </div>
                     </div>
                   </div>
 

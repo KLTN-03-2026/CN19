@@ -79,8 +79,9 @@ const ForgotPassword = () => {
           
           <div className="w-full mt-2 mb-1 overflow-hidden rounded-xl">
             <Turnstile 
-              siteKey="1x00000000000000000000AA"
+              siteKey="0x4AAAAAADLUD-rkZ6wNFnY3"
               onSuccess={(token) => setTurnstileToken(token)}
+              options={{ theme: 'auto', size: 'flexible' }}
             />
           </div>
 

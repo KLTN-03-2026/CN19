@@ -74,7 +74,18 @@ const AdminRefundManagement = () => {
             case 'rejected':
                 return <span className="px-3 py-1.5 bg-red-500/10 text-red-600 rounded-xl text-[10px] font-black uppercase tracking-tight flex items-center gap-1.5 w-fit border border-red-500/20"><XCircle className="w-3 h-3" /> Đã từ chối</span>;
             default:
-                return <span className="px-3 py-1.5 bg-gray-100 text-gray-500 rounded-xl text-[10px] font-black uppercase tracking-tight w-fit">{status}</span>;
+                return <span className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-xl text-[10px] font-black uppercase tracking-tight w-fit">{status}</span>;
+        }
+    };
+
+    const getTypeBadge = (type) => {
+        switch (type) {
+            case 'event_cancelled':
+                return <span className="px-2.5 py-1 bg-red-500/10 text-red-600 dark:text-red-400 rounded-lg text-[9px] font-black uppercase tracking-tight border border-red-500/20 flex items-center gap-1"><AlertCircle className="w-2.5 h-2.5" /> Hủy sự kiện</span>;
+            case 'event_postponed':
+                return <span className="px-2.5 py-1 bg-orange-500/10 text-orange-600 dark:text-orange-400 rounded-lg text-[9px] font-black uppercase tracking-tight border border-orange-500/20 flex items-center gap-1"><Clock className="w-2.5 h-2.5" /> Dời lịch</span>;
+            default:
+                return <span className="px-2.5 py-1 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-lg text-[9px] font-black uppercase tracking-tight border border-blue-500/20 flex items-center gap-1"><User className="w-2.5 h-2.5" /> Khách yêu cầu</span>;
         }
     };
 
@@ -105,13 +116,13 @@ const AdminRefundManagement = () => {
                                 <RotateCcw className="w-6 h-6 text-orange-500" />
                                 QUẢN LÝ HOÀN TIỀN (REFUNDS)
                             </h1>
-                            <p className="text-[11px] text-slate-700 dark:text-zinc-500 mt-1 font-bold uppercase tracking-tight">Xử lý các yêu cầu trả vé và hoàn tiền từ người dùng hệ thống</p>
+                            <p className="text-[11px] text-slate-800 dark:text-zinc-400 mt-1 font-bold uppercase tracking-tight">Xử lý các yêu cầu trả vé và hoàn tiền từ người dùng hệ thống</p>
                         </div>
 
                         <div className="flex items-center gap-3">
                             <button 
                                 onClick={fetchRefunds}
-                                className="p-3 bg-white dark:bg-zinc-900 rounded-xl border border-gray-200 dark:border-zinc-800/80 hover:border-orange-500/50 transition-all text-slate-700 hover:text-orange-500 shadow-sm active:scale-95"
+                                className="p-3 bg-white dark:bg-zinc-900 rounded-xl border border-gray-200 dark:border-zinc-800/80 hover:border-orange-500/50 transition-all text-slate-800 hover:text-orange-500 shadow-sm active:scale-95"
                             >
                                 <RefreshCcw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
                             </button>
@@ -125,7 +136,7 @@ const AdminRefundManagement = () => {
                                 <Clock className="w-32 h-32" />
                             </div>
                             <div className="relative">
-                                <div className="text-[10px] font-black text-slate-700 dark:text-gray-400 uppercase tracking-tight flex items-center gap-2 mb-4">
+                                <div className="text-[10px] font-black text-slate-800 dark:text-gray-400 uppercase tracking-tight flex items-center gap-2 mb-4">
                                     <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span>
                                     Chờ xử lý ({stats.pendingCount})
                                 </div>
@@ -140,7 +151,7 @@ const AdminRefundManagement = () => {
                                 <CheckCircle2 className="w-32 h-32" />
                             </div>
                             <div className="relative">
-                                <div className="text-[10px] font-black text-slate-700 dark:text-gray-400 uppercase tracking-tight flex items-center gap-2 mb-4">
+                                <div className="text-[10px] font-black text-slate-800 dark:text-gray-400 uppercase tracking-tight flex items-center gap-2 mb-4">
                                     <span className="w-2 h-2 rounded-full bg-green-500"></span>
                                     Đã hoàn tiền ({stats.approvedCount})
                                 </div>
@@ -162,7 +173,7 @@ const AdminRefundManagement = () => {
                             <button 
                                 key={tab.id}
                                 onClick={() => setActiveTab(tab.id)}
-                                className={`px-6 py-3 text-[10px] font-black uppercase tracking-tight transition-all relative ${activeTab === tab.id ? `text-${tab.color}` : 'text-slate-700 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
+                                className={`px-6 py-3 text-[10px] font-black uppercase tracking-tight transition-all relative ${activeTab === tab.id ? `text-${tab.color}` : 'text-slate-800 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
                             >
                                 {tab.label}
                                 {activeTab === tab.id && <div className={`absolute bottom-0 left-0 right-0 h-0.5 bg-${tab.color} animate-in fade-in zoom-in duration-300`}></div>}
@@ -187,20 +198,21 @@ const AdminRefundManagement = () => {
                                                 <User className="w-6 h-6 text-orange-600" />
                                             </div>
                                             <div>
-                                                <div className="flex items-center gap-2 mb-1">
+                                                <div className="flex items-center gap-2 mb-1 flex-wrap">
                                                     {getStatusBadge(item.status)}
-                                                    <span className="text-[10px] text-slate-700 dark:text-gray-500 font-black uppercase tracking-tight">
+                                                    {getTypeBadge(item.type)}
+                                                    <span className="text-[10px] text-slate-800 dark:text-gray-500 font-black uppercase tracking-tight ml-auto">
                                                         {format(new Date(item.created_at), 'dd/MM/yyyy HH:mm')}
                                                     </span>
                                                 </div>
                                                 <h3 className="text-sm font-black text-gray-900 dark:text-white tracking-tight uppercase">
                                                     {item.customer?.full_name || 'Người dùng ẩn danh'}
                                                 </h3>
-                                                <p className="text-[10px] text-slate-700 dark:text-gray-400 font-black uppercase tracking-tight opacity-80">{item.customer?.email}</p>
+                                                <p className="text-[10px] text-slate-800 dark:text-gray-400 font-black uppercase tracking-tight opacity-80">{item.customer?.email}</p>
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <p className="text-[10px] font-black text-slate-700 dark:text-gray-500 uppercase mb-1">SỐ TIỀN HOÀN</p>
+                                            <p className="text-[10px] font-black text-slate-800 dark:text-gray-500 uppercase mb-1">SỐ TIỀN HOÀN</p>
                                             <p className={`text-xl font-black tracking-tight leading-none ${item.status === 'approved' ? 'text-green-600' : 'text-gray-900 dark:text-white'}`}>
                                                 {formatCurrency(item.refund_amount)}
                                             </p>
@@ -210,17 +222,17 @@ const AdminRefundManagement = () => {
                                     {/* Event & Ticket Info */}
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-slate-50/80 dark:bg-zinc-950/80 rounded-[1.5rem] border border-gray-200 dark:border-zinc-800/80 mb-5">
                                         <div className="space-y-1">
-                                            <div className="text-[9px] font-black text-slate-700 dark:text-gray-400 uppercase flex items-center gap-1.5"><Calendar className="w-3 h-3" /> Sự kiện</div>
+                                            <div className="text-[9px] font-black text-slate-800 dark:text-gray-400 uppercase flex items-center gap-1.5"><Calendar className="w-3 h-3" /> Sự kiện</div>
                                             <p className="text-[11px] font-black text-gray-900 dark:text-white tracking-tight uppercase line-clamp-1">{item.ticket?.event?.title}</p>
                                         </div>
                                         <div className="space-y-1">
-                                            <div className="text-[9px] font-black text-slate-700 dark:text-gray-400 uppercase flex items-center gap-1.5"><Ticket className="w-3 h-3" /> Loại vé</div>
+                                            <div className="text-[9px] font-black text-slate-800 dark:text-gray-400 uppercase flex items-center gap-1.5"><Ticket className="w-3 h-3" /> Loại vé</div>
                                             <p className="text-[11px] font-black text-gray-900 dark:text-white tracking-tight uppercase">{item.ticket?.ticket_tier?.tier_name}</p>
                                         </div>
                                     </div>
 
                                     <div className="mt-auto flex items-center justify-between">
-                                        <div className="flex items-center gap-2 text-slate-600 dark:text-zinc-500">
+                                        <div className="flex items-center gap-2 text-slate-800 dark:text-zinc-500">
                                             <MessageSquare className="w-3.5 h-3.5" />
                                             <span className="text-[10px] font-bold italic line-clamp-1">"{item.reason || 'Không có lý do chi tiết'}"</span>
                                         </div>
@@ -265,7 +277,7 @@ const AdminRefundManagement = () => {
                                   </div>
                                   XÉT DUYỆT HOÀN TIỀN
                              </h2>
-                             <p className="text-[11px] text-slate-700 dark:text-zinc-500 font-black uppercase tracking-tight mt-2 ml-14">Giao dịch vé: #{selectedRefund.ticket_id.slice(0, 12).toUpperCase()}</p>
+                             <p className="text-[11px] text-slate-800 dark:text-zinc-400 font-black uppercase tracking-tight mt-2 ml-14">Giao dịch vé: #{selectedRefund.ticket_id.slice(0, 12).toUpperCase()}</p>
                         </div>
 
                         <div className="p-10 space-y-8">
@@ -282,12 +294,12 @@ const AdminRefundManagement = () => {
                                                 <Wallet className="w-4 h-4 text-orange-500" />
                                             </div>
                                             <div>
-                                                <span className="text-[9px] text-slate-700 font-black uppercase tracking-tight block">Phương thức</span>
+                                                <span className="text-[9px] text-slate-800 font-black uppercase tracking-tight block">Phương thức</span>
                                                 <span className="text-[11px] font-black text-gray-900 dark:text-white uppercase">Cộng vào số dư ví</span>
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <span className="text-[9px] text-slate-700 font-black uppercase tracking-tight block">Ví người nhận</span>
+                                            <span className="text-[9px] text-slate-800 font-black uppercase tracking-tight block">Ví người nhận</span>
                                             <span className="text-[11px] font-black text-gray-900 dark:text-white italic">#{selectedRefund.customer_id.slice(0, 8)}...</span>
                                         </div>
                                     </div>
@@ -295,7 +307,7 @@ const AdminRefundManagement = () => {
                             </div>
 
                             <div className="space-y-3">
-                                <label className="text-[10px] font-black text-slate-700 dark:text-zinc-500 uppercase tracking-tight flex items-center gap-2 ml-1">
+                                <label className="text-[10px] font-black text-slate-800 dark:text-zinc-500 uppercase tracking-tight flex items-center gap-2 ml-1">
                                     <FileText className="w-4 h-4 text-orange-500/60" /> Phản hồi cho khách hàng
                                 </label>
                                 <textarea 

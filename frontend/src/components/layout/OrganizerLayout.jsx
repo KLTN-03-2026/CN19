@@ -30,6 +30,8 @@ import { useAuthStore } from '../../store/useAuthStore';
 import toast from 'react-hot-toast';
 import ScrollToTop from './ScrollToTop';
 import AIAssistant from '../ai/AIAssistant';
+import Logo from '../common/Logo';
+import NotificationDropdown from './NotificationDropdown';
 
 const OrganizerLayout = () => {
   const { user, logout } = useAuthStore();
@@ -114,9 +116,7 @@ const OrganizerLayout = () => {
       >
         <div className="px-6 py-3 flex items-center justify-between">
           <div className={`flex items-center space-x-3 ${!isSidebarOpen && 'hidden'}`}>
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-              <UserCircle className="w-5 h-5 text-white" />
-            </div>
+            <Logo variant="icon" size="md" />
             <span className="font-black text-xl tracking-tight text-gray-900 dark:text-white uppercase">Organizer</span>
           </div>
           <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
@@ -192,10 +192,7 @@ const OrganizerLayout = () => {
               {isDark ? <Moon className="w-5 h-5 text-gray-400" /> : <Sun className="w-5 h-5 text-yellow-500" />}
             </button>
 
-            <button className="relative text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-[#111114]"></span>
-            </button>
+            <NotificationDropdown />
             <div className="relative profile-dropdown-container pl-4 border-l border-gray-200 dark:border-white/5">
               <button 
                 onClick={() => setIsProfileOpen(!isProfileOpen)}
@@ -273,7 +270,7 @@ const OrganizerLayout = () => {
 
         {/* Content Area */}
         <div className="px-4 sm:px-6 md:px-8 lg:px-10 pt-4 sm:pt-6 md:pt-6 lg:pt-6 pb-6 md:pb-8 flex-1 overflow-y-auto text-[14px] leading-relaxed text-gray-700 dark:text-zinc-300">
-          <div className="max-w-screen-2xl mx-auto w-full">
+          <div className="max-w-[1920px] mx-auto w-full">
             <Outlet />
           </div>
         </div>

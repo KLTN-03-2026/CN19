@@ -1,5 +1,7 @@
 const prisma = require('../config/prisma');
 const web3Service = require('../services/web3.service');
+const NotificationService = require('../services/notification.service');
+const emailService = require('../services/email.service');
 
 // [UC_15] Yêu cầu hoàn tiền (Dành cho Người dùng)
 const requestRefund = async (req, res) => {
@@ -9,7 +11,15 @@ const requestRefund = async (req, res) => {
 
     const ticket = await prisma.ticket.findUnique({
       where: { id: ticket_id },
-      include: { event: true, order: true }
+      include: { 
+        event: true, 
+        order: true,
+        transactions: {
+          where: { status: { in: ['paid', 'success', 'completed'] } },
+          orderBy: { created_at: 'desc' },
+          take: 1
+        }
+      }
     });
 
     if (!ticket || ticket.current_owner_id !== userId) {
@@ -43,12 +53,17 @@ const requestRefund = async (req, res) => {
         data: { status: 'refund_requested' } 
       });
 
-      // Tìm giá vé để refund (dựa trên order item)
-      const orderItem = await tx.orderItem.findFirst({
-        where: { order_id: ticket.order_id, ticket_tier_id: ticket.ticket_tier_id }
-      });
-
-      const refundAmount = orderItem ? orderItem.unit_price : 0;
+      let refundAmount = 0;
+      let resaleNote = '';
+      if (ticket.transactions && ticket.transactions.length > 0 && ticket.transactions[0].buyer_id === userId) {
+        refundAmount = Number(ticket.transactions[0].buyer_pay_amount);
+        resaleNote = ` (Hoàn tiền mua lại vé trên Marketplace: ${refundAmount.toLocaleString('vi-VN')}đ)`;
+      } else {
+        const orderItem = await tx.orderItem.findFirst({
+          where: { order_id: ticket.order_id, ticket_tier_id: ticket.ticket_tier_id }
+        });
+        refundAmount = orderItem ? Number(orderItem.unit_price) : 0;
+      }
 
       await tx.refundRequest.create({
         data: {
@@ -56,7 +71,8 @@ const requestRefund = async (req, res) => {
           customer_id: userId,
           status: 'pending',
           refund_amount: refundAmount,
-          reason: reason || 'Yêu cầu từ người dùng'
+          type: ticket.event.status === 'postponed' ? 'event_postponed' : (ticket.event.status === 'cancelled' ? 'event_cancelled' : 'customer_request'),
+          reason: (reason || (ticket.event.status === 'postponed' ? `Yêu cầu hoàn tiền do sự kiện dời lịch: ${ticket.event.title}` : 'Yêu cầu từ người dùng')) + resaleNote
         }
       });
     });
@@ -80,6 +96,109 @@ const requestRefund = async (req, res) => {
 // [ADMIN] Lấy danh sách yêu cầu hoàn tiền
 const getAdminRefunds = async (req, res) => {
     try {
+        // Tự động rà soát tất cả các sự kiện đã hủy để tạo Refund Request nếu còn thiếu
+        const cancelledEvents = await prisma.event.findMany({
+            where: { status: 'cancelled' }
+        });
+
+        for (const ev of cancelledEvents) {
+            const tickets = await prisma.ticket.findMany({
+                where: { event_id: ev.id },
+                include: { 
+                    ticket_tier: true,
+                    transactions: {
+                        where: { status: { in: ['paid', 'success', 'completed'] } },
+                        orderBy: { created_at: 'desc' },
+                        take: 1
+                    }
+                }
+            });
+            for (const t of tickets) {
+                const originalPrice = t.ticket_tier ? Number(t.ticket_tier.price) : 0;
+                
+                if (t.transactions && t.transactions.length > 0) {
+                    const lastTx = t.transactions[0];
+                    const buyerRefundAmount = Number(lastTx.buyer_pay_amount);
+                    const sellerRefundAmount = originalPrice;
+                    
+                    // 1. Hoàn tiền cho Người mua lại (Buyer)
+                    const buyerExist = await prisma.refundRequest.findFirst({
+                        where: { ticket_id: t.id, customer_id: lastTx.buyer_id }
+                    });
+                    if (!buyerExist) {
+                        await prisma.refundRequest.create({
+                            data: {
+                                ticket_id: t.id,
+                                customer_id: lastTx.buyer_id,
+                                status: 'pending',
+                                refund_amount: buyerRefundAmount,
+                                type: 'event_cancelled',
+                                reason: `Tự động hoàn tiền mua vé Marketplace do sự kiện bị hủy: ${ev.title} (Giá mua: ${buyerRefundAmount.toLocaleString('vi-VN')}đ)`
+                            }
+                        });
+                    } else if (buyerExist.status === 'pending') {
+                        await prisma.refundRequest.update({
+                            where: { id: buyerExist.id },
+                            data: { 
+                                refund_amount: buyerRefundAmount,
+                                reason: `Tự động hoàn tiền mua vé Marketplace do sự kiện bị hủy: ${ev.title} (Giá mua: ${buyerRefundAmount.toLocaleString('vi-VN')}đ)`
+                            }
+                        });
+                    }
+
+                    // 2. Hoàn tiền gốc cho Người bán lại (Seller)
+                    const sellerExist = await prisma.refundRequest.findFirst({
+                        where: { ticket_id: t.id, customer_id: lastTx.seller_id }
+                    });
+                    if (!sellerExist) {
+                        await prisma.refundRequest.create({
+                            data: {
+                                ticket_id: t.id,
+                                customer_id: lastTx.seller_id,
+                                status: 'pending',
+                                refund_amount: sellerRefundAmount,
+                                type: 'event_cancelled',
+                                reason: `Tự động hoàn tiền gốc mua vé do sự kiện bị hủy (Vé đã bán lại trên Marketplace): ${ev.title} (Giá gốc: ${sellerRefundAmount.toLocaleString('vi-VN')}đ)`
+                            }
+                        });
+                    } else if (sellerExist.status === 'pending') {
+                        await prisma.refundRequest.update({
+                            where: { id: sellerExist.id },
+                            data: { 
+                                refund_amount: sellerRefundAmount,
+                                reason: `Tự động hoàn tiền gốc mua vé do sự kiện bị hủy (Vé đã bán lại trên Marketplace): ${ev.title} (Giá gốc: ${sellerRefundAmount.toLocaleString('vi-VN')}đ)`
+                            }
+                        });
+                    }
+                } else {
+                    // Vé chưa bán lại trên Marketplace
+                    const exist = await prisma.refundRequest.findFirst({
+                        where: { ticket_id: t.id, customer_id: t.current_owner_id }
+                    });
+                    if (!exist) {
+                        await prisma.refundRequest.create({
+                            data: {
+                                ticket_id: t.id,
+                                customer_id: t.current_owner_id,
+                                status: 'pending',
+                                refund_amount: originalPrice,
+                                type: 'event_cancelled',
+                                reason: `Tự động hoàn tiền do sự kiện bị hủy: ${ev.title}`
+                            }
+                        });
+                    } else if (exist.status === 'pending') {
+                        await prisma.refundRequest.update({
+                            where: { id: exist.id },
+                            data: { 
+                                refund_amount: originalPrice,
+                                reason: `Tự động hoàn tiền do sự kiện bị hủy: ${ev.title}`
+                            }
+                        });
+                    }
+                }
+            }
+        }
+
         const refunds = await prisma.refundRequest.findMany({
             include: {
                 customer: { select: { full_name: true, email: true, avatar_url: true } },
@@ -94,6 +213,7 @@ const getAdminRefunds = async (req, res) => {
         });
         res.status(200).json({ data: refunds });
     } catch (error) {
+        console.error('Lỗi getAdminRefunds:', error);
         res.status(500).json({ error: 'Lỗi server.' });
     }
 };
@@ -186,6 +306,39 @@ const processRefund = async (req, res) => {
             }
         });
 
+        // Gửi thông báo in-app và Email cho khách hàng
+        const customer = await prisma.user.findUnique({
+            where: { id: refund.customer_id }
+        });
+
+        const fullRefundReq = await prisma.refundRequest.findUnique({
+            where: { id },
+            include: {
+                ticket: {
+                    include: { event: true }
+                }
+            }
+        });
+
+        if (customer && fullRefundReq) {
+            const isApprove = action === 'approve';
+            const formattedAmt = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(fullRefundReq.refund_amount);
+            
+            // 1. Tạo in-app Notification
+            await NotificationService.create({
+                user_id: customer.id,
+                type: isApprove ? 'REFUND_APPROVED' : 'REFUND_REJECTED',
+                title: isApprove ? 'Hoàn Tiền Thành Công' : 'Từ Chối Hoàn Tiền',
+                message: isApprove 
+                    ? `Yêu cầu hoàn ${formattedAmt} cho vé #${fullRefundReq.ticket?.ticket_number || fullRefundReq.ticket_id.slice(0,8).toUpperCase()} đã được phê duyệt và cộng vào số dư ví của bạn.`
+                    : `Yêu cầu hoàn tiền vé #${fullRefundReq.ticket?.ticket_number || fullRefundReq.ticket_id.slice(0,8).toUpperCase()} bị từ chối. Lý do: "${admin_notes || 'Không đủ điều kiện'}".`,
+                target_id: fullRefundReq.ticket_id
+            });
+
+            // 2. Gửi Email thông báo
+            await emailService.sendRefundNotificationEmail(customer, fullRefundReq, action, admin_notes);
+        }
+
         res.status(200).json({ message: `Đã ${action === 'approve' ? 'chấp nhận' : 'từ chối'} yêu cầu hoàn tiền.` });
     } catch (error) {
         console.error('Process Refund Error:', error);
@@ -193,8 +346,64 @@ const processRefund = async (req, res) => {
     }
 };
 
+// [UC_16] Hủy yêu cầu hoàn tiền (Dành cho Người dùng khi Admin chưa duyệt)
+const cancelRefundRequest = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { ticket_id } = req.body;
+
+    const ticket = await prisma.ticket.findUnique({
+      where: { id: ticket_id }
+    });
+
+    if (!ticket || ticket.current_owner_id !== userId) {
+      return res.status(403).json({ error: 'Không tìm thấy vé hợp lệ hoặc bạn không phải chủ sở hữu.' });
+    }
+
+    if (ticket.status !== 'refund_requested') {
+      return res.status(400).json({ error: 'Vé này hiện không ở trạng thái chờ hoàn tiền.' });
+    }
+
+    const pendingRefund = await prisma.refundRequest.findFirst({
+      where: { ticket_id: ticket.id, customer_id: userId, status: 'pending' }
+    });
+
+    if (!pendingRefund) {
+      return res.status(400).json({ error: 'Không tìm thấy đơn yêu cầu hoàn tiền đang chờ duyệt cho vé này.' });
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // Đổi trạng thái RefundRequest thành 'cancelled'
+      await tx.refundRequest.update({
+        where: { id: pendingRefund.id },
+        data: { status: 'cancelled' }
+      });
+
+      // Khôi phục trạng thái vé về 'minted'
+      await tx.ticket.update({
+        where: { id: ticket.id },
+        data: { status: 'minted' }
+      });
+    });
+
+    if (ticket.nft_token_id) {
+      try {
+        await web3Service.unlockTicket(parseInt(ticket.nft_token_id));
+      } catch (err) {
+        console.warn('Blockchain Unlock Warning:', err.message);
+      }
+    }
+
+    res.status(200).json({ message: 'Đã rút lại yêu cầu hoàn tiền thành công. Vé của bạn đã được mở khóa và có thể sử dụng bình thường.' });
+  } catch (error) {
+    console.error('Lỗi khi hủy yêu cầu hoàn tiền:', error);
+    res.status(500).json({ error: 'Lỗi server.' });
+  }
+};
+
 module.exports = { 
     requestRefund, 
+    cancelRefundRequest,
     getAdminRefunds, 
     processRefund 
 };

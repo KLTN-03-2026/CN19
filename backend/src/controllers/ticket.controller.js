@@ -56,6 +56,16 @@ const getMyTickets = async (req, res) => {
           },
           orderBy: { created_at: 'desc' }
         },
+        transfers: {
+          where: { from_user_id: userId },
+          orderBy: { requested_at: 'desc' },
+          take: 1,
+          include: {
+            receiver: {
+              select: { id: true, full_name: true, email: true, avatar_url: true }
+            }
+          }
+        },
         scan_history: {
           where: { is_success: true },
           include: {
@@ -86,6 +96,7 @@ const getMyTickets = async (req, res) => {
       const activeListing = t.marketplace_listings.find(l => l.status === 'active');
       const soldListing = t.marketplace_listings.find(l => l.status === 'sold');
       const purchaseTransaction = t.transactions[0];
+      const latestTransfer = t.transfers[0];
       const blogId = blogMap.get(t.event_id);
       
       return {
@@ -99,6 +110,9 @@ const getMyTickets = async (req, res) => {
         mkt_transaction_number: purchaseTransaction ? purchaseTransaction.transaction_number : null,
         mkt_transaction_id: purchaseTransaction ? purchaseTransaction.id : null,
         is_seller_of_mkt: purchaseTransaction ? purchaseTransaction.seller_id === userId : false,
+        // Thông tin chuyển nhượng trực tiếp (Ưu tiên lấy Order ID để xem chi tiết thanh toán)
+        latest_transfer_id: latestTransfer ? (latestTransfer.order_id || latestTransfer.id) : null,
+        latest_transfer_number: latestTransfer ? `TRANSFER-${latestTransfer.id.split('-')[0].toUpperCase()}` : null,
         // ID của bài đăng đang hoạt động (để hủy/sửa)
         active_listing_id: activeListing ? activeListing.id : null,
         // Thông tin blog
@@ -162,9 +176,22 @@ const getTicketDetail = async (req, res) => {
     // 1. User là owner_id trực tiếp
     // 2. owner_id là null VÀ user là người mua đơn hàng đó (order.user_id)
     if (ticket.order && ticket.order.merchandise_items) {
-      ticket.order.merchandise_items = ticket.order.merchandise_items.filter(item => 
-        item.owner_id === userId || (item.owner_id === null && ticket.order.customer_id === userId)
-      );
+      // Lấy ID của listing đang hoạt động của vé này (nếu có)
+      const activeListingId = ticket.marketplace_listings[0]?.id;
+
+      ticket.order.merchandise_items = ticket.order.merchandise_items.filter(item => {
+        // 1. Kiểm tra quyền sở hữu
+        const isOwner = item.owner_id === userId || (item.owner_id === null && ticket.order.customer_id === userId);
+        
+        // 2. Kiểm tra xem sản phẩm đã bị đem đi bán ở đâu chưa
+        // Chỉ hiện nếu: Chưa đăng bán (listing_id null) HOẶC đang đăng bán ở chính bài của vé này
+        const isAvailable = !item.listing_id || (activeListingId && item.listing_id === activeListingId);
+        
+        // 3. Phải chưa nhận hàng (chưa redeemed)
+        const isNotRedeemed = !item.is_redeemed;
+
+        return isOwner && isAvailable && isNotRedeemed;
+      });
     }
 
     res.status(200).json({ 

@@ -8,6 +8,7 @@ import { userService } from '../../services/user.service';
 import toast from 'react-hot-toast';
 import Footer from './Footer';
 import ScrollToTop from './ScrollToTop';
+import Logo from '../common/Logo';
 
 const PublicLayout = () => {
   const { isAuthenticated, user, logout, updateUser } = useAuthStore();
@@ -120,12 +121,7 @@ const PublicLayout = () => {
           <div className="flex justify-between h-20 items-center">
             
             {/* Logo */}
-            <Link to="/" className="flex-shrink-0 flex items-center space-x-2">
-              <Shield className="w-8 h-8 text-neon-green" />
-              <span className="text-2xl font-extrabold text-gray-900 dark:text-white tracking-tight">
-                BASTICKET
-              </span>
-            </Link>
+            <Logo variant="full" size="lg" className="flex-shrink-0" />
 
             {/* Desktop Navigation */}
             <nav className="hidden md:flex space-x-8">
@@ -149,7 +145,7 @@ const PublicLayout = () => {
               )}
 
               {/* BTC Button (Desktop Only) */}
-              {isAuthenticated && (user?.role === 'organizer' || user?.role === 'admin') ? (
+              {isAuthenticated && user?.role === 'organizer' ? (
                 <Link 
                   to="/organizer/dashboard"
                   className="hidden md:flex items-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold transition-all text-sm shadow-[0_0_15px_rgba(37,99,235,0.3)] mr-2"
@@ -172,7 +168,7 @@ const PublicLayout = () => {
                   <Globe className="w-5 h-5 mr-1" />
                   <span className="text-sm font-bold uppercase">{i18n.language.startsWith('vi') ? 'VI' : 'EN'}</span>
                 </button>
-                <button onClick={() => setIsDark(!isDark)} className="p-1.5 rounded-full text-gray-500 hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-white/10 transition-colors">
+                <button onClick={() => setIsDark(!isDark)} className="p-1.5 rounded-full text-gray-500 hover:bg-gray-200 dark:text-gray-400 dark:hover:text-white/10 transition-colors">
                   {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
                 </button>
               </div>
@@ -236,11 +232,18 @@ const PublicLayout = () => {
                         </div>
 
                         {/* Become Organizer */}
-                        {(!isAuthenticated || user?.role === 'customer') && (
+                        {(!isAuthenticated || user?.role === 'customer') ? (
                           <div className="px-2 mb-2">
                              <Link to="/organizer-register" onClick={() => setMobileDropdownOpen(false)} className="flex items-center space-x-3 px-4 py-2.5 rounded-2xl text-[13px] font-medium text-blue-600 bg-blue-50/50 dark:bg-blue-600/5 hover:bg-blue-50 dark:hover:bg-blue-600/10 transition-all">
                                 <Users className="w-4.5 h-4.5" />
-                                <span>{i18n.language.startsWith('vi') ? 'Đăng ký BTC' : 'Become Organizer'}</span>
+                                <span>{i18n.language.startsWith('vi') ? 'Dành cho Ban tổ chức' : 'For Organizers'}</span>
+                             </Link>
+                          </div>
+                        ) : (user?.role === 'organizer' || user?.role === 'admin') && (
+                          <div className="px-2 mb-2">
+                             <Link to="/organizer/dashboard" onClick={() => setMobileDropdownOpen(false)} className="flex items-center space-x-3 px-4 py-2.5 rounded-2xl text-[13px] font-medium text-blue-600 bg-blue-50/50 dark:bg-blue-600/5 hover:bg-blue-50 dark:hover:bg-blue-600/10 transition-all">
+                                <LayoutDashboard className="w-4.5 h-4.5" />
+                                <span>Dashboard BTC</span>
                              </Link>
                           </div>
                         )}
@@ -257,12 +260,14 @@ const PublicLayout = () => {
                           </div>
                         ) : (
                           <div className="px-2 space-y-0.5">
-                            {(user?.role === 'organizer' || user?.role === 'admin') && (
+                            {isAuthenticated && (user?.role === 'organizer' || user?.role === 'admin') && (
                               <div className="mb-1">
-                                <Link to="/organizer/dashboard" onClick={() => setMobileDropdownOpen(false)} className="flex items-center space-x-3 px-4 py-2.5 rounded-2xl text-[13px] font-medium text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-600/10 transition-all">
-                                  <LayoutDashboard className="w-4.5 h-4.5" />
-                                  <span>Dashboard BTC</span>
-                                </Link>
+                                {user?.role === 'organizer' && (
+                                  <Link to="/organizer/dashboard" onClick={() => setMobileDropdownOpen(false)} className="flex items-center space-x-3 px-4 py-2.5 rounded-2xl text-[13px] font-medium text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-600/10 transition-all">
+                                    <LayoutDashboard className="w-4.5 h-4.5" />
+                                    <span>Dashboard BTC</span>
+                                  </Link>
+                                )}
                                 {user?.role === 'admin' && (
                                   <Link to="/admin/dashboard" onClick={() => setMobileDropdownOpen(false)} className="flex items-center space-x-3 px-4 py-2.5 rounded-2xl text-[13px] font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-600/10 transition-all">
                                     <Shield className="w-4.5 h-4.5" />

@@ -209,20 +209,20 @@ const TransactionManagement = () => {
             </div>
             <span>Quản lý Giao dịch</span>
           </h1>
-          <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 mt-1 uppercase font-bold opacity-70 tracking-tight">Theo dõi và điều phối dòng tiền hệ thống BASTICKET.</p>
+          <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400 mt-1 uppercase font-bold opacity-70 tracking-tight">Theo dõi và điều phối dòng tiền hệ thống BASTICKET.</p>
         </div>
         
         <div className="flex items-center space-x-2 ml-auto sm:ml-0">
           <button 
             onClick={handleExportExcel}
-            className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-100 dark:hover:bg-white/10 transition-all flex items-center text-gray-600 dark:text-gray-400 shadow-sm active:scale-95"
+            className="bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-100 dark:hover:bg-white/10 transition-all flex items-center text-gray-700 dark:text-gray-400 shadow-sm active:scale-95"
           >
             <Download className="w-4 h-4 mr-2" />
             Báo cáo
           </button>
           <button 
             onClick={fetchTransactions}
-            className="p-2.5 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl hover:bg-gray-50 dark:hover:bg-white/10 transition-all text-gray-500 hover:text-neon-green shadow-sm active:scale-95"
+            className="p-2.5 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl hover:bg-gray-50 dark:hover:bg-white/10 transition-all text-gray-600 hover:text-neon-green shadow-sm active:scale-95"
             title="Làm mới dữ liệu"
           >
              <Activity className="w-5 h-5" />
@@ -292,7 +292,7 @@ const TransactionManagement = () => {
       <div className="bg-white dark:bg-[#111114] p-4 rounded-2xl border border-gray-100 dark:border-white/5 shadow-sm space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 md:gap-4">
             <div className="relative lg:col-span-4">
-               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" />
                <input 
                   type="text"
                   placeholder="ID, Email, Khách hàng..."
@@ -358,7 +358,7 @@ const TransactionManagement = () => {
         <div className="overflow-x-auto custom-scrollbar">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-gray-50/50 dark:bg-white/5 text-gray-400 text-[10px] uppercase font-black tracking-widest border-b border-gray-100 dark:border-white/5">
+              <tr className="bg-gray-50/50 dark:bg-white/5 text-gray-600 text-[10px] uppercase font-black tracking-widest border-b border-gray-100 dark:border-white/5">
                 <th className="px-6 py-4">Giao dịch</th>
                 <th className="px-6 py-4">Đối tượng</th>
                 <th className="px-6 py-4 hidden lg:table-cell text-center">Loại hình</th>
@@ -442,7 +442,7 @@ const TransactionManagement = () => {
 
         {/* Footer */}
         <div className="px-6 py-4 bg-gray-50/50 dark:bg-white/[0.015] border-t border-gray-100 dark:border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
-           <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Hiển thị {transactions.length} / {totalCount} giao dịch</span>
+           <span className="text-[10px] font-black uppercase text-gray-600 tracking-widest">Hiển thị {transactions.length} / {totalCount} giao dịch</span>
            <div className="flex items-center space-x-2">
               <button 
                 disabled={filters.page <= 1}

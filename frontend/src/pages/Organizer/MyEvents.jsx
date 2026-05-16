@@ -93,15 +93,21 @@ const MyEvents = () => {
     };
 
     const getStatusInfo = (status, event) => {
+        if (status === 'settled') return { label: 'Đã quyết toán', color: 'bg-emerald-600 text-white', icon: CheckCircle2 };
+        if (status === 'cancelled') return { label: 'Đã hủy', color: 'bg-red-600 text-white', icon: AlertTriangle };
+        if (status === 'hidden') return { label: 'Tạm ẩn', color: 'bg-yellow-500 text-black', icon: AlertTriangle };
+
         const isEnded = status === 'ended' || (event && new Date(event.end_date || event.event_date) < new Date());
-        if (isEnded) return { label: 'Đã kết thúc', color: 'bg-red-600 text-white', icon: Calendar };
+        if (isEnded && status === 'active') return { label: 'Đã kết thúc', color: 'bg-gray-600 text-white', icon: Calendar };
 
         switch (status) {
             case 'draft': return { label: 'Bản nháp', color: 'bg-gray-700 text-white', icon: Clock };
             case 'pending': return { label: 'Chờ duyệt', color: 'bg-amber-500 text-black', icon: AlertCircle };
             case 'active': return { label: 'Đang bán', color: 'bg-green-600 text-white', icon: CheckCircle2 };
             case 'pending_cancel': return { label: 'Chờ hủy', color: 'bg-red-600 text-white', icon: AlertCircle };
+            case 'pending_cancellation_fee': return { label: 'Chờ nộp phí hủy', color: 'bg-purple-600 text-white', icon: AlertCircle };
             case 'pending_reschedule': return { label: 'Chờ dời lịch', color: 'bg-blue-600 text-white', icon: Calendar };
+            case 'ended': return { label: 'Đã kết thúc', color: 'bg-gray-600 text-white', icon: Calendar };
             default: return { label: status, color: 'bg-gray-600 text-white', icon: Clock };
         }
     };
@@ -111,13 +117,14 @@ const MyEvents = () => {
         const isEnded = event.status === 'ended' || new Date(event.end_date || event.event_date) < new Date();
         
         const matchesStatus = filterStatus === 'all' || 
-                             (filterStatus === 'ended' ? isEnded : event.status === filterStatus);
+                             (filterStatus === 'ended' ? (isEnded && !['settled', 'cancelled', 'hidden', 'pending_cancel', 'pending_cancellation_fee', 'pending_reschedule'].includes(event.status)) : (
+                                filterStatus === 'active' ? (event.status === 'active' && !isEnded) : event.status === filterStatus
+                             ));
         
         const matchesCategory = filterCategory === 'all' || event.category_id === filterCategory;
         
         let matchesDate = true;
         if (filterDate) {
-            // Sử dụng en-CA để lấy YYYY-MM-DD từ ngày địa phương
             const eventDateStr = new Date(event.event_date).toLocaleDateString('en-CA');
             matchesDate = eventDateStr === filterDate;
         }
@@ -130,10 +137,10 @@ const MyEvents = () => {
             {/* Header Section - More Compact & Professional */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
                 <div>
-                    <h1 className="text-xl font-black text-gray-900 dark:text-white tracking-tight uppercase leading-none">
+                    <h1 className="text-lg md:text-xl font-black text-gray-900 dark:text-white uppercase">
                         Quản lý sự kiện
                     </h1>
-                    <p className="text-[13px] text-gray-700 dark:text-gray-400 mt-1 font-medium opacity-80">
+                    <p className="text-gray-500 dark:text-gray-400 text-xs md:text-sm font-medium mt-0.5">
                         Theo dõi tiến độ và quản lý các show diễn của bạn.
                     </p>
                 </div>
@@ -200,17 +207,29 @@ const MyEvents = () => {
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
                         <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] pb-1 sm:pb-0">
                             <span className="text-[9px] font-black uppercase text-gray-400 mr-1 shrink-0">Trạng thái:</span>
-                            {['all', 'draft', 'pending', 'active', 'ended'].map((s) => (
+                            {[
+                                { key: 'all', label: 'TẤT CẢ' },
+                                { key: 'draft', label: 'NHÁP' },
+                                { key: 'pending', label: 'CHỜ DUYỆT' },
+                                { key: 'active', label: 'ĐANG BÁN' },
+                                { key: 'hidden', label: 'TẠM ẨN' },
+                                { key: 'pending_cancel', label: 'CHỜ HỦY' },
+                                { key: 'pending_cancellation_fee', label: 'CHỜ NỘP PHÍ' },
+                                { key: 'pending_reschedule', label: 'CHỜ DỜI LỊCH' },
+                                { key: 'cancelled', label: 'ĐÃ HỦY' },
+                                { key: 'ended', label: 'KẾT THÚC' },
+                                { key: 'settled', label: 'ĐÃ QUYẾT TOÁN' }
+                            ].map((item) => (
                                 <button
-                                    key={s}
-                                    onClick={() => setFilterStatus(s)}
+                                    key={item.key}
+                                    onClick={() => setFilterStatus(item.key)}
                                     className={`px-2.5 sm:px-3 py-1.5 rounded-lg text-[9px] font-black transition-all whitespace-nowrap border ${
-                                        filterStatus === s 
+                                        filterStatus === item.key 
                                         ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-600/20' 
                                         : 'bg-gray-50 dark:bg-white/5 text-gray-500 hover:text-blue-600 border-transparent hover:border-blue-600/20'
                                     }`}
                                 >
-                                    {s === 'all' ? 'TẤT CẢ' : s === 'draft' ? 'NHÁP' : s === 'pending' ? 'CHỜ DUYỆT' : s === 'active' ? 'ĐANG BÁN' : 'KẾT THÚC'}
+                                    {item.label}
                                 </button>
                             ))}
                         </div>
@@ -297,12 +316,30 @@ const MyEvents = () => {
                                         </div>
 
                                         <div className="pt-4 mt-auto flex items-center justify-between gap-2 border-t border-gray-200 dark:border-white/5">
-                                            <button 
-                                                onClick={() => navigate(`/organizer/events/${event.id}`)} 
-                                                className="flex-1 py-2 bg-blue-50 dark:bg-white/5 rounded-lg text-[9px] font-black uppercase text-blue-600 dark:text-blue-400 hover:bg-blue-600 hover:text-white transition-all flex items-center justify-center gap-1 group/btn border border-blue-100 dark:border-white/5"
-                                            >
-                                                Quản lý <ChevronRight className="w-2.5 h-2.5 group-hover/btn:translate-x-0.5 transition-transform" />
-                                            </button>
+                                            {event.status === 'pending_cancellation_fee' ? (
+                                                <div className="flex items-center gap-2 w-full">
+                                                    <button 
+                                                        onClick={() => navigate(`/organizer/events/${event.id}`)} 
+                                                        className="flex-1 py-2 bg-blue-50 dark:bg-white/5 rounded-lg text-[9px] font-black uppercase text-blue-600 dark:text-blue-400 hover:bg-blue-600 hover:text-white transition-all flex items-center justify-center gap-1 group/btn border border-blue-100 dark:border-white/5"
+                                                    >
+                                                        Quản lý <ChevronRight className="w-2.5 h-2.5 group-hover/btn:translate-x-0.5 transition-transform" />
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => navigate(`/organizer/events/${event.id}/cancellation-fee`)} 
+                                                        className="flex-1 py-2 bg-purple-600 text-white rounded-lg text-[9px] font-black uppercase shadow-md shadow-purple-600/30 hover:bg-purple-700 transition-all flex items-center justify-center gap-1 group/btn animate-pulse"
+                                                    >
+                                                        Nộp phí <ChevronRight className="w-2.5 h-2.5 group-hover/btn:translate-x-0.5 transition-transform" />
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <button 
+                                                    onClick={() => navigate(`/organizer/events/${event.id}`)} 
+                                                    className="flex-1 py-2 bg-blue-50 dark:bg-white/5 rounded-lg text-[9px] font-black uppercase text-blue-600 dark:text-blue-400 hover:bg-blue-600 hover:text-white transition-all flex items-center justify-center gap-1 group/btn border border-blue-100 dark:border-white/5"
+                                                >
+                                                    Quản lý <ChevronRight className="w-2.5 h-2.5 group-hover/btn:translate-x-0.5 transition-transform" />
+                                                </button>
+                                            )}
+
                                             
                                             <div className="flex items-center gap-1.5">
                                                 {(event.status === 'draft' || event.status === 'pending' || event.status === 'active') && (
@@ -371,8 +408,14 @@ const MyEvents = () => {
                                     </div>
 
                                     {/* Quick Actions */}
-                                    <div className="flex items-center gap-1 shrink-0 ml-auto">
+                                    <div className="flex items-center gap-1.5 shrink-0 ml-auto">
                                         <button onClick={() => navigate(`/organizer/events/${event.id}`)} className="p-2 bg-gray-50 dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:bg-blue-600 hover:text-white rounded-lg transition-all border border-transparent hover:border-blue-600/30" title="Chi tiết"><ExternalLink className="w-3.5 h-3.5" /></button>
+                                        
+                                        {event.status === 'pending_cancellation_fee' && (
+                                            <button onClick={() => navigate(`/organizer/events/${event.id}/cancellation-fee`)} className="px-3 py-2 bg-purple-600 text-white rounded-lg text-[9px] font-black uppercase shadow-md shadow-purple-600/30 hover:bg-purple-700 transition-all flex items-center gap-1 animate-pulse" title="Nộp phí hủy">
+                                                <span>Nộp phí</span> <ExternalLink className="w-3 h-3" />
+                                            </button>
+                                        )}
                                         
                                         {(event.status === 'draft' || event.status === 'pending' || event.status === 'active') && (
                                             <>

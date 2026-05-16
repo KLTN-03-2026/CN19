@@ -1,4 +1,5 @@
 const prisma = require('../config/prisma');
+const blockchainService = require('../services/blockchain.service');
 
 /**
  * Controller xử lý Quyết toán sự kiện (Event Settlement)
@@ -45,17 +46,38 @@ const SettlementController = {
 
       // Với mỗi sự kiện, tính toán doanh thu "Pending" (chưa đối soát)
       const enhancedEvents = await Promise.all(events.map(async (event) => {
+        if (['cancelled', 'pending_cancellation_fee'].includes(event.status)) {
+          return {
+            ...event,
+            financials: {
+              pending_orders_count: 0,
+              pending_marketplace_count: 0,
+              pending_revenue: 0,
+              ticket_revenue: 0,
+              merch_revenue: 0,
+              marketplace_royalty: 0,
+              total_revenue: 0,
+              total_fees: 0
+            },
+            settlement_status: 'cancelled',
+            payout_details: null
+          };
+        }
+
         const unsettledOrders = await prisma.order.findMany({
           where: {
             event_id: event.id,
             status: 'paid',
             is_settled: false,
-            order_type: 'TICKET_PURCHASE'
+            order_type: { in: ['TICKET_PURCHASE', 'MERCHANDISE_PURCHASE'] }
           },
           select: {
             id: true,
             total_amount: true,
-            platform_fee: true
+            platform_fee: true,
+            commission_fee: true,
+            gas_fee: true,
+            organizer_revenue: true
           }
         });
 
@@ -173,6 +195,10 @@ const SettlementController = {
         return res.status(403).json({ error: 'Bạn không có quyền yêu cầu quyết toán cho sự kiện này.' });
       }
 
+      if (['cancelled', 'pending_cancellation_fee'].includes(event.status)) {
+        return res.status(400).json({ error: 'Sự kiện đã bị hủy, không thể yêu cầu quyết toán.' });
+      }
+
       // Kiểm tra thời gian kết thúc sự kiện
       const eventEndDate = event.end_date || event.event_date;
       if (eventEndDate && new Date(eventEndDate) > new Date()) {
@@ -287,7 +313,7 @@ const SettlementController = {
           where: {
             event_id: eventId,
             status: 'paid',
-            order_type: 'TICKET_PURCHASE'
+            order_type: { in: ['TICKET_PURCHASE', 'MERCHANDISE_PURCHASE'] }
           }
         });
 
@@ -345,6 +371,20 @@ const SettlementController = {
       });
 
       const enhancedEvents = await Promise.all(events.map(async (event) => {
+        if (['cancelled', 'pending_cancellation_fee'].includes(event.status)) {
+          return {
+            ...event,
+            financials: {
+              pending_revenue: 0,
+              ticket_revenue: 0,
+              merch_revenue: 0,
+              marketplace_royalty: 0,
+              total_fees: 0
+            },
+            settlement_status: 'cancelled'
+          };
+        }
+
         // Tính toán toàn bộ doanh thu (kể cả đã đối soát hay chưa để xem tổng quan)
         const orders = await prisma.order.findMany({
           where: {
@@ -442,6 +482,25 @@ const SettlementController = {
       }
 
       if (action === 'settle') {
+        // GHI LOG LÊN BLOCKCHAIN (Minh bạch tài chính tuyệt đối)
+        let bcTxHash = 'SETTLE-' + Date.now();
+        try {
+          const hash = await blockchainService.logFinancialTransaction(
+            payout.id,
+            Number(payout.total_revenue),
+            {
+              ticketPlatformFee: Number(payout.platform_fee),
+              ticketCommissionFee: Number(payout.commission_fee),
+              gasFee: Number(payout.gas_fee),
+              royaltyFee: Number(payout.marketplace_royalty)
+            },
+            'ORGANIZER_SETTLEMENT'
+          );
+          if (hash) bcTxHash = hash;
+        } catch (bcErr) {
+          console.error('[Web3 Settlement Error]:', bcErr);
+        }
+
         // Thực hiện kết chuyển tiền
         await prisma.$transaction(async (tx) => {
           // 1. Cập nhật trạng thái Payout
@@ -452,7 +511,7 @@ const SettlementController = {
               processed_at: new Date(), 
               evidence_url, 
               admin_notes: note,
-              payout_trans_id: 'SETTLE-' + Date.now() 
+              payout_trans_id: bcTxHash 
             }
           });
 

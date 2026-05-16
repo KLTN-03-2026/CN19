@@ -1,0 +1,23 @@
+{
+  "40": [
+    {"name": "Xã Quỳnh Phú", "code": "nghean_quynhphu", "parent_code": "40", "type": "Xã"},
+    {"name": "Xã Thiên Thuận", "code": "nghean_thienthuan", "parent_code": "40", "type": "Xã"},
+    {"name": "Phường Vinh Tân", "code": "15931", "parent_code": "40"}
+  ],
+  "01": [
+    {"name": "Phường Quang Trung", "code": "hanoi_quangtrung_new", "parent_code": "01", "type": "Phường"},
+    {"name": "Phường Phúc Xá", "code": "00001", "parent_code": "01"}
+  ],
+  "79": [
+    {"name": "Phường Đa Kao", "code": "26749", "parent_code": "79"},
+    {"name": "Phường Bến Nghé", "code": "26734", "parent_code": "79"}
+  ],
+  "46": [
+    {"name": "Phường Thuận Lộc", "code": "hue_thuanloc", "parent_code": "46", "type": "Phường"},
+    {"name": "Phường Phú Hội", "code": "hue_phuhoi", "parent_code": "46", "type": "Phường"}
+  ],
+  "48": [
+    {"name": "Phường Hải Châu I", "code": "danang_haichau1", "parent_code": "48"},
+    {"name": "Phường Thạch Thang", "code": "danang_thachthang", "parent_code": "48"}
+  ]
+}

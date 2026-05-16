@@ -382,10 +382,17 @@ const MarketplaceDetail = () => {
                             )}
 
                             <div className="pt-8 text-center border-t border-white/5">
-                                <div className="inline-flex items-center gap-2 px-6 py-2 bg-blue-600/20 rounded-full border border-blue-600/30">
-                                    <ShieldCheck className="w-4 h-4 text-blue-400" />
-                                    <span className="text-[10px] font-black text-blue-400 uppercase">Giao dịch đã tất toán</span>
-                                </div>
+                                {transaction.status === 'cancelled' ? (
+                                    <div className="inline-flex items-center gap-2 px-6 py-2 bg-red-500/20 rounded-full border border-red-500/30">
+                                        <AlertCircle className="w-4 h-4 text-red-400" />
+                                        <span className="text-[10px] font-black text-red-400 uppercase">Giao dịch đã bị hủy do hủy sự kiện</span>
+                                    </div>
+                                ) : (
+                                    <div className="inline-flex items-center gap-2 px-6 py-2 bg-blue-600/20 rounded-full border border-blue-600/30">
+                                        <ShieldCheck className="w-4 h-4 text-blue-400" />
+                                        <span className="text-[10px] font-black text-blue-400 uppercase">Giao dịch đã tất toán</span>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>

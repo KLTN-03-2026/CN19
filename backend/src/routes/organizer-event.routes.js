@@ -11,8 +11,12 @@ router.post('/', controller.createEvent);
 // [PUT] /api/organizer/events/:id
 router.put('/:id', controller.updateEvent);
 
-// [POST] /api/organizer/events/:id/cancel-request
+// [POST] /api/organizer/events/:id/cancel-request (Alias for emergency actions)
 router.post('/:id/cancel-request', controller.requestCancelOrReschedule);
+router.post('/:id/emergency', controller.requestCancelOrReschedule);
+router.post('/:id/emergency-action', controller.requestCancelOrReschedule);
+router.post('/:id/cancel-emergency', controller.cancelEmergencyRequest);
+router.post('/:id/pay-cancellation-fee', controller.payCancellationFee);
 
 // [PUT] /api/organizer/events/:id/resale-policy
 router.put('/:id/resale-policy', controller.updateResalePolicy);

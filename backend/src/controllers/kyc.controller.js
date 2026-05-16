@@ -1,4 +1,6 @@
+const prisma = require('../config/prisma');
 const fptaiService = require('../services/fptai.service');
+const botService = require('../services/bot.service');
 
 /**
  * KYC Controller
@@ -6,8 +8,38 @@ const fptaiService = require('../services/fptai.service');
  */
 const ocrIdCard = async (req, res) => {
   try {
-    const { front_url, back_url } = req.body;
+    const { front_url, back_url, behaviorData, turnstileToken, user_id } = req.body;
     
+    // 0. Anti-Bot Verification
+    const aiAnalysis = await botService.analyzeBotBehavior(req, turnstileToken, behaviorData);
+    
+    // Log Bot Detection for OCR
+    prisma.botDetectionLog.create({
+      data: {
+        user_id: user_id || null, 
+        event_type: 'KYC_OCR',
+        click_speed_ms: behaviorData?.click_speed_ms || 0,
+        form_fill_duration: behaviorData?.form_fill_duration || 0,
+        behavior_metrics: behaviorData?.behavior_metrics || {},
+        risk_score: aiAnalysis.riskScore,
+        decision: aiAnalysis.isBot ? 'BLOCK' : 'ALLOW',
+        ip_address: botService.getClientIp(req),
+        user_agent: req.headers['user-agent'],
+        detection_details: {
+          details: aiAnalysis.details,
+          recaptchaScore: aiAnalysis.recaptchaScore,
+          aiRiskScore: aiAnalysis.aiRiskScore
+        }
+      }
+    }).catch(err => console.error('KYC Bot Log Error:', err));
+
+    if (aiAnalysis.isBot) {
+      return res.status(403).json({ 
+        error: 'Phát hiện hành vi tự động bất thường trong quá trình định danh. Vui lòng thử lại.',
+        isBot: true 
+      });
+    }
+
     if (!front_url) {
       return res.status(400).json({ error: 'Cần cung cấp link ảnh mặt trước thẻ.' });
     }
@@ -41,9 +73,14 @@ const ocrIdCard = async (req, res) => {
     });
 
     if (existingId) {
-      return res.status(400).json({ 
-        error: 'Số CMND/CCCD này đã được sử dụng để đăng ký một Ban tổ chức khác. Vui lòng kiểm tra lại.' 
-      });
+      // NẾU LÀ CHÍNH USER NÀY ĐANG ĐĂNG KÝ LẠI THÌ CHO PHÉP (Bypass lỗi trùng ID cho cùng account)
+      if (user_id && existingId.user_id === user_id) {
+        console.log(`[KYC] Bypass check trùng CCCD cho User ${user_id} đang thực hiện Resubmit.`);
+      } else {
+        return res.status(400).json({ 
+          error: 'Số CMND/CCCD này đã được sử dụng để đăng ký một Ban tổ chức khác. Vui lòng kiểm tra lại.' 
+        });
+      }
     }
 
     res.status(200).json({
@@ -71,7 +108,37 @@ const ocrIdCard = async (req, res) => {
 
 const verifyBiometric = async (req, res) => {
   try {
-    const { id_card_face_url, captured_face_url } = req.body;
+    const { id_card_face_url, captured_face_url, behaviorData, turnstileToken } = req.body;
+
+    // 0. Anti-Bot Verification
+    const aiAnalysis = await botService.analyzeBotBehavior(req, turnstileToken, behaviorData);
+    
+    // Log Bot Detection for Biometric
+    prisma.botDetectionLog.create({
+      data: {
+        user_id: null, 
+        event_type: 'KYC_BIOMETRIC',
+        click_speed_ms: behaviorData?.click_speed_ms || 0,
+        form_fill_duration: behaviorData?.form_fill_duration || 0,
+        behavior_metrics: behaviorData?.behavior_metrics || {},
+        risk_score: aiAnalysis.riskScore,
+        decision: aiAnalysis.isBot ? 'BLOCK' : 'ALLOW',
+        ip_address: botService.getClientIp(req),
+        user_agent: req.headers['user-agent'],
+        detection_details: {
+          details: aiAnalysis.details,
+          recaptchaScore: aiAnalysis.recaptchaScore,
+          aiRiskScore: aiAnalysis.aiRiskScore
+        }
+      }
+    }).catch(err => console.error('Biometric Bot Log Error:', err));
+
+    if (aiAnalysis.isBot) {
+      return res.status(403).json({ 
+        error: 'Xác thực sinh trắc học bị từ chối do phát hiện dấu hiệu Bot.',
+        isBot: true 
+      });
+    }
 
     if (!id_card_face_url || !captured_face_url) {
       return res.status(400).json({ error: 'Cần link ảnh chân dung trên ID và ảnh Selfie vừa chụp.' });

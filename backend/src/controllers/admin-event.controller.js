@@ -1,6 +1,8 @@
 const { ethers } = require('ethers');
 const prisma = require('../config/prisma');
 const web3Service = require('../services/web3.service');
+const emailService = require('../services/email.service');
+const NotificationService = require('../services/notification.service');
 
 // [UC_22] Quản lý sự kiện: Lấy toàn bộ các sự kiện
 const getEvents = async (req, res) => {
@@ -53,10 +55,9 @@ const getEvents = async (req, res) => {
       prisma.event.count(),
       prisma.event.count({ 
         where: { 
-          OR: [
-            { status: 'pending' },
-            { status: 'draft' }
-          ]
+          status: { 
+            in: ['pending', 'pending_cancel', 'pending_reschedule']
+          }
         } 
       })
     ]);
@@ -108,7 +109,20 @@ const approveEvent = async (req, res) => {
 
     const event = await prisma.event.findUnique({
       where: { id },
-      include: { organizer: { include: { user: true } } }
+      include: { 
+        organizer: { include: { user: true } },
+        _count: {
+          select: { 
+            tickets: {
+              where: {
+                order: {
+                  status: { in: ['paid', 'success', 'completed'] }
+                }
+              }
+            }
+          }
+        }
+      }
     });
 
     if (!event) {
@@ -122,15 +136,10 @@ const approveEvent = async (req, res) => {
        if (!smartContractAddress) {
           try {
             // Lấy ví BTC, nếu không có thì dùng ví admin hệ thống làm backup
-            let ownerWallet = event.organizer.user.wallet_address || process.env.CONTRACT_ADDRESS; 
+            await web3Service.ensureInitialized();
+            let ownerWallet = web3Service.signer?.address || '0x3078b443A7eC4C8bE695A2dF7a03F9629501E238'; 
             
-            // Xử lý trường hợp ví bị lưu sai format (e.g. thiếu ký tự)
-            if (!ownerWallet || !ethers.isAddress(ownerWallet)) {
-              console.warn(`⚠️ [Admin Controller] Ví Organizer không hợp lệ (${ownerWallet}), đang dùng ví Admin dự phòng.`);
-              ownerWallet = process.env.ADMIN_WALLET_ADDRESS || this.signer.address; // Giả sử có biến này hoặc lấy từ signer
-            }
-
-            console.log(`[Admin Controller] Đang yêu cầu deploy cho ví: ${ownerWallet}`);
+            console.log(`[Admin Controller] Đang yêu cầu deploy cho ví Admin: ${ownerWallet}`);
             
             smartContractAddress = await web3Service.deployEventContract(ownerWallet);
           } catch (web3Error) {
@@ -157,19 +166,116 @@ const approveEvent = async (req, res) => {
        }
     }
 
-    const newStatus = action === 'approve' ? 'active' : 'draft'; 
-    
+    let newStatus = event.status;
+    let eventUpdateData = { smart_contract_address: smartContractAddress };
+
+    if (action === 'approve') {
+      if (event.status === 'pending_reschedule') {
+        newStatus = 'postponed';
+        
+        // Tìm yêu cầu EmergencyRequest gần nhất
+        const latestEmergency = await prisma.emergencyRequest.findFirst({
+          where: { event_id: id, status: 'pending', request_type: 'reschedule' },
+          orderBy: { created_at: 'desc' }
+        });
+
+        if (latestEmergency) {
+          if (latestEmergency.new_date) eventUpdateData.event_date = latestEmergency.new_date;
+          if (latestEmergency.new_time) eventUpdateData.event_time = latestEmergency.new_time;
+          if (latestEmergency.new_end_date) eventUpdateData.end_date = latestEmergency.new_end_date;
+          if (latestEmergency.new_end_time) eventUpdateData.end_time = latestEmergency.new_end_time;
+
+          await prisma.emergencyRequest.update({
+            where: { id: latestEmergency.id },
+            data: { status: 'approved', admin_notes: reason || 'Admin đã duyệt dời lịch' }
+          });
+
+          // Thông báo Email cho toàn bộ khách hàng mua vé
+          const affectedTickets = await prisma.ticket.findMany({
+            where: { event_id: id, status: { notIn: ['cancelled', 'refunded'] } },
+            include: { current_owner: { select: { email: true, full_name: true } } }
+          });
+
+          const uniqueUsersMap = new Map();
+          for (const t of affectedTickets) {
+            if (t.current_owner && t.current_owner.email) {
+              uniqueUsersMap.set(t.current_owner.email, t.current_owner);
+            }
+          }
+
+          const oldDate = event.event_date;
+          const newDate = latestEmergency.new_date || event.event_date;
+          const newTime = latestEmergency.new_time || event.event_time;
+
+          for (const u of uniqueUsersMap.values()) {
+            emailService.sendEventRescheduleEmail(u, event, oldDate, newDate, newTime).catch(e => console.error("Email error:", e));
+          }
+        }
+      } else {
+        newStatus = 'active';
+      }
+    } else if (action === 'active') { // Hủy ẩn (Unhide)
+      // Tìm lịch sử ẩn gần nhất của sự kiện này để khôi phục đúng trạng thái cũ
+      const lastHideLog = await prisma.adminActionLog.findFirst({
+        where: { target_id: id, action_type: 'event_hide' },
+        orderBy: { created_at: 'desc' }
+      });
+      if (lastHideLog && lastHideLog.old_value) {
+        newStatus = lastHideLog.old_value;
+      } else {
+        // Nếu không có log cũ, kiểm tra nếu chưa có smart contract thì phải quay về pending
+        newStatus = event.smart_contract_address ? 'active' : 'pending';
+      }
+    } else if (action === 'hide') {
+      newStatus = 'hidden';
+    } else if (action === 'reject') {
+      if (event.status === 'active' || event._count.tickets > 0) {
+        newStatus = 'hidden';
+      } else {
+        newStatus = 'draft';
+      }
+    }
+
+    eventUpdateData.status = newStatus;
+
     await prisma.event.update({
       where: { id },
-      data: { 
-        status: newStatus,
-        smart_contract_address: smartContractAddress
-      }
+      data: eventUpdateData
     });
 
     await prisma.adminActionLog.create({
-      data: { admin_id: req.user.userId, action_type: `event_${action}`, target_id: id }
+      data: { 
+        admin_id: req.user.userId, 
+        action_type: `event_${action}`, 
+        target_id: id,
+        old_value: event.status,
+        new_value: newStatus
+      }
     });
+
+    // 2. Thông báo cho BTC qua hệ thống chính xác theo từng action
+    if (action === 'approve' || action === 'reject') {
+      const isReschedule = event.status === 'pending_reschedule';
+      await NotificationService.create({
+        user_id: event.organizer.user_id,
+        type: action === 'approve' ? (isReschedule ? 'EVENT_RESCHEDULED' : 'EVENT_APPROVED') : 'EVENT_REJECTED',
+        title: action === 'approve' ? (isReschedule ? 'Yêu cầu dời lịch đã được duyệt' : 'Sự kiện đã được duyệt') : 'Sự kiện bị từ chối',
+        message: action === 'approve' 
+          ? (isReschedule ? `Yêu cầu dời lịch sự kiện "${event.title}" đã được Admin phê duyệt. Trạng thái sự kiện hiện tại: Đã dời lịch.` : `Chúc mừng! Sự kiện "${event.title}" đã được duyệt và đang mở bán.`)
+          : `Rất tiếc, sự kiện "${event.title}" đã bị từ chối. Lý do: ${reason || 'Không có lý do cụ thể'}.`,
+        target_id: id
+      });
+    } else if (action === 'hide' || action === 'active') {
+      await NotificationService.create({
+        user_id: event.organizer.user_id,
+        type: action === 'hide' ? 'EVENT_HIDDEN' : 'EVENT_UNHIDDEN',
+        title: action === 'hide' ? 'Sự kiện bị ẩn' : 'Sự kiện được hiển thị lại',
+        message: action === 'hide'
+          ? `Sự kiện "${event.title}" của bạn tạm thời bị ẩn khỏi hệ thống.`
+          : `Sự kiện "${event.title}" của bạn đã được hiển thị trở lại trên hệ thống.`,
+        target_id: id
+      });
+    }
 
     // TODO: Gửi Email cho BTC báo kết quả
 
@@ -184,24 +290,243 @@ const approveEvent = async (req, res) => {
 };
 
 // [UC_22] Hủy khẩn cấp sự kiện
+// [UC_22] Hủy khẩn cấp sự kiện & Đối soát bồi hoàn tài chính (2-Step Verification)
 const forceCancelEvent = async (req, res) => {
   try {
     const { id } = req.params;
-    const { reason } = req.body; 
+    const { reason, confirm_fee_paid } = req.body; 
 
+    // 1. Tìm thông tin sự kiện và Organizer
+    const event = await prisma.event.findUnique({
+      where: { id },
+      include: { 
+        organizer: { include: { user: true } }
+      }
+    });
+
+    if (!event) {
+      return res.status(404).json({ error: 'Không tìm thấy sự kiện' });
+    }
+
+    // 2. TÍNH TOÁN TOÀN BỘ CÁC KHOẢN PHÍ (Hệ thống, Dịch vụ, Gas, Merch, Resale, Transfer)
+    const successfulOrders = await prisma.order.findMany({
+      where: { 
+        event_id: id,
+        status: { in: ['paid', 'success', 'completed', 'refund_pending'] }
+      }
+    });
+
+    let totalPrimaryFee = 0;
+    successfulOrders.forEach(o => {
+      totalPrimaryFee += Number(o.platform_fee || 0) + Number(o.commission_fee || 0) + Number(o.gas_fee || 0);
+    });
+
+    const successfulMkt = await prisma.marketplaceTransaction.findMany({
+      where: {
+        ticket: { event_id: id },
+        status: { in: ['paid', 'success', 'completed'] }
+      }
+    });
+    let totalMarketplaceFee = 0;
+    successfulMkt.forEach(tx => {
+      totalMarketplaceFee += Number(tx.platform_fee || 0) + Number(tx.gas_fee || 0);
+    });
+
+    const totalFeeRequired = totalPrimaryFee + totalMarketplaceFee;
+
+    // BƯỚC 1: NẾU BTC CHƯA THANH TOÁN (Hoặc Admin đang kiểm tra/gửi thông báo)
+    if (!confirm_fee_paid) {
+      await prisma.event.update({
+        where: { id },
+        data: { status: 'pending_cancellation_fee' }
+      });
+
+      await prisma.adminActionLog.create({
+        data: {
+          admin_id: req.user.userId,
+          action_type: 'cancellation_fee_notice',
+          target_id: id,
+          new_value: String(totalFeeRequired)
+        }
+      });
+
+      // Gửi Email thông báo yêu cầu BTC nộp phí trước
+      await NotificationService.create({
+        user_id: event.organizer.user_id,
+        type: 'CANCELLATION_FEE_NOTICE',
+        title: 'Yêu cầu thanh toán phí bồi hoàn hủy sự kiện',
+        message: `Sự kiện "${event.title}" đang chờ hủy. Ban tổ chức vui lòng thanh toán phí bồi hoàn hệ thống và Gas (${totalFeeRequired.toLocaleString()} đ) để hoàn tất quy trình hủy và hoàn tiền khách hàng.`,
+        target_id: id
+      });
+
+      return res.status(200).json({
+        status: 'pending_cancellation_fee',
+        total_fee_required: totalFeeRequired,
+        message: 'Đã gửi thông báo yêu cầu BTC thanh toán chi phí bồi hoàn hủy sự kiện.'
+      });
+    }
+
+    // BƯỚC 2: KHI ĐÃ XÁC NHẬN BTC THANH TOÁN ĐỦ -> HỦY CHÍNH THỨC & HOÀN TIỀN
     await prisma.event.update({
       where: { id },
       data: { status: 'cancelled' }
     });
 
-    // TODO: Block việc mua bán, chuyển nhượng và tự động kích hoạt logic Hoàn tiền
+    if (event.smart_contract_address) {
+      try {
+        await web3Service.pauseContract(event.smart_contract_address);
+        console.log(`[Admin] Đã tạm dừng Smart Contract: ${event.smart_contract_address}`);
+      } catch (contractError) {
+        console.error('⚠️ [Web3 Pause Error]:', contractError.message);
+      }
+    }
 
-    await prisma.adminActionLog.create({
-      data: { admin_id: req.user.userId, action_type: `event_force_cancel`, target_id: id, new_value: reason }
+    const affectedOrders = await prisma.order.updateMany({
+      where: { 
+        event_id: id,
+        status: { in: ['paid', 'success', 'completed'] }
+      },
+      data: { status: 'refund_pending' }
     });
 
-    res.status(200).json({ message: 'Đã hủy khẩn cấp sự kiện.' });
+    await prisma.ticket.updateMany({
+      where: { event_id: id },
+      data: { status: 'cancelled' }
+    });
+
+    await prisma.marketplaceTransaction.updateMany({
+      where: { ticket: { event_id: id }, status: { in: ['paid', 'success', 'completed'] } },
+      data: { status: 'cancelled' }
+    });
+
+    const ticketsToRefund = await prisma.ticket.findMany({
+      where: { event_id: id },
+      include: { 
+        ticket_tier: true,
+        transactions: {
+          where: { status: { in: ['paid', 'success', 'completed'] } },
+          orderBy: { created_at: 'desc' },
+          take: 1
+        }
+      }
+    });
+    for (const t of ticketsToRefund) {
+      const originalPrice = t.ticket_tier ? Number(t.ticket_tier.price) : 0;
+      
+      if (t.transactions && t.transactions.length > 0) {
+        const lastTx = t.transactions[0];
+        const buyerRefundAmount = Number(lastTx.buyer_pay_amount);
+        const sellerRefundAmount = originalPrice;
+        
+        // 1. Hoàn tiền cho Người mua lại (Buyer)
+        const buyerExist = await prisma.refundRequest.findFirst({
+          where: { ticket_id: t.id, customer_id: lastTx.buyer_id }
+        });
+        if (!buyerExist) {
+          await prisma.refundRequest.create({
+            data: {
+              ticket_id: t.id,
+              customer_id: lastTx.buyer_id,
+              status: 'pending',
+              refund_amount: buyerRefundAmount,
+              type: 'event_cancelled',
+              reason: `Tự động hoàn tiền mua vé Marketplace do sự kiện bị hủy: ${event.title} (Giá mua: ${buyerRefundAmount.toLocaleString('vi-VN')}đ)`
+            }
+          });
+        }
+
+        // 2. Hoàn tiền gốc cho Người bán lại (Seller)
+        const sellerExist = await prisma.refundRequest.findFirst({
+          where: { ticket_id: t.id, customer_id: lastTx.seller_id }
+        });
+        if (!sellerExist) {
+          await prisma.refundRequest.create({
+            data: {
+              ticket_id: t.id,
+              customer_id: lastTx.seller_id,
+              status: 'pending',
+              refund_amount: sellerRefundAmount,
+              type: 'event_cancelled',
+              reason: `Tự động hoàn tiền gốc mua vé do sự kiện bị hủy (Vé đã bán lại trên Marketplace): ${event.title} (Giá gốc: ${sellerRefundAmount.toLocaleString('vi-VN')}đ)`
+            }
+          });
+        }
+      } else {
+        // Vé chưa bán lại trên Marketplace
+        const exist = await prisma.refundRequest.findFirst({
+          where: { ticket_id: t.id, customer_id: t.current_owner_id }
+        });
+        if (!exist) {
+          await prisma.refundRequest.create({
+            data: {
+              ticket_id: t.id,
+              customer_id: t.current_owner_id,
+              status: 'pending',
+              refund_amount: originalPrice,
+              type: 'event_cancelled',
+              reason: `Tự động tạo yêu cầu hoàn tiền do sự kiện bị hủy: ${event.title}`
+            }
+          });
+        }
+      }
+    }
+
+    // Trừ tiền từ ví BTC hoặc ghi nhận thanh toán phí
+    await prisma.user.update({
+      where: { id: event.organizer.user_id },
+      data: { balance: { decrement: totalFeeRequired } }
+    });
+
+    await prisma.walletTransaction.create({
+      data: {
+        user_id: event.organizer.user_id,
+        amount: totalFeeRequired,
+        type: 'FEE',
+        description: `Thanh toán phí bồi hoàn hủy sự kiện: ${event.title}`,
+        status: 'completed'
+      }
+    });
+
+    await prisma.adminActionLog.create({
+      data: { 
+        admin_id: req.user.userId, 
+        action_type: `event_force_cancel`, 
+        target_id: id, 
+        new_value: reason || 'Hủy sự kiện và hoàn tiền'
+      }
+    });
+
+    // Gửi Email thông báo hủy và hoàn tiền cho BTC và toàn bộ Khách hàng
+    const sendNotifications = async () => {
+      try {
+        await emailService.sendEventCancellationEmail(event.organizer.user, event, reason || 'Hủy sự kiện', 'organizer');
+
+        const orders = await prisma.order.findMany({
+          where: { event_id: id, status: 'refund_pending' },
+          include: { customer: true }
+        });
+
+        for (const order of orders) {
+          if (order.customer) {
+            await emailService.sendEventCancellationEmail(order.customer, event, reason || 'Hủy sự kiện', 'customer');
+          }
+        }
+        console.log(`[Admin Notification] Đã gửi thông báo hủy cho BTC và ${orders.length} khách hàng.`);
+      } catch (emailError) {
+        console.error('[Admin Notification Error]:', emailError);
+      }
+    };
+
+    sendNotifications();
+
+    res.status(200).json({ 
+      status: 'cancelled',
+      message: 'Đã hủy khẩn cấp sự kiện, thu phí bồi hoàn từ BTC và chuyển trạng thái hoàn tiền cho toàn bộ đơn hàng.',
+      total_fee_paid: totalFeeRequired,
+      affected_orders: affectedOrders.count
+    });
   } catch (error) {
+    console.error('Force Cancel Event Error:', error);
     res.status(500).json({ error: 'Lỗi server.' });
   }
 };

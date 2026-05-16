@@ -12,6 +12,7 @@ const vnMerchandise = {
         received: "Đã nhận",
         sold: "Đã bán",
         listing: "Đang đăng bán",
+        transferred: "Đã chuyển nhượng",
         cancelled: "Bị hủy"
     },
     labels: {
@@ -42,6 +43,8 @@ const vnMerchandise = {
         pickup_success: "Nhận hàng thành công",
         staff_name: "Nhân viên soát",
         pickup_date: "Ngày nhận",
+        recipient: "Người nhận",
+        transfer_success: "Chuyển nhượng NFT thành công",
         thank_you: "Cảm ơn bạn đã đồng hành cùng BASTICKET. Chúc bạn có trải nghiệm tuyệt vời tại sự kiện!",
         order_number: "Mã đơn hàng",
         close_btn: "Đóng"

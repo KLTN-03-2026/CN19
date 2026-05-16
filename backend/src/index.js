@@ -55,11 +55,13 @@ const kycRoutes = require('./routes/kyc.routes');
 const aiRoutes = require('./routes/ai.routes');
 const metadataRoutes = require('./routes/metadata.routes');
 const utilsRoutes = require('./routes/utils.routes');
+const webhookRoutes = require('./routes/webhook.routes');
 
 const settlementRoutes = require('./routes/settlement.routes');
 const { startAutoSettlementJob } = require('./jobs/auto-settlement.job');
 const { startMarketplaceCleanupJob } = require('./jobs/marketplace-cleanup.job');
 const systemRoutes = require('./routes/system.routes');
+const notificationRoutes = require('./routes/notification.routes');
 
 const app = express();
 
@@ -68,10 +70,12 @@ app.use(helmet()); // Thiết lập các header bảo mật cơ bản
 app.set('trust proxy', 1); // Tin tưởng proxy để lấy IP thật (Rate limit)
 app.use(globalLimiter); // Giới hạn chung toàn hệ thống
 
-// --- Middlewares ---
+const maintenanceMiddleware = require('./middlewares/maintenance.middleware');
+
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(maintenanceMiddleware); // Kiểm tra bảo trì toàn hệ thống
 app.use('/uploads', express.static('uploads'));
 
 // --- Mount Routes ---
@@ -124,6 +128,8 @@ app.use('/api/metadata', metadataRoutes);
 app.use('/api/utils', utilsRoutes);
 app.use('/api/settlements', settlementRoutes);
 app.use('/api/system', systemRoutes);
+app.use('/api/webhooks', webhookRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Test Route
 app.get('/', (req, res) => {

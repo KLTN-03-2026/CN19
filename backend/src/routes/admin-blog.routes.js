@@ -8,6 +8,8 @@ router.use(authenticate);
 router.use(authorize('admin'));
 
 router.get('/', controller.getAllBlogs);
+router.get('/reports', controller.getAllReports);
+router.put('/reports/:id/resolve', controller.resolveReport);
 router.get('/:id', controller.getBlogById);
 router.post('/', controller.createBlog);
 router.put('/:id/toggle', controller.toggleBlogStatus);

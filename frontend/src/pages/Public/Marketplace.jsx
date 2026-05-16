@@ -114,6 +114,11 @@ const Marketplace = () => {
     };
 
     const handleBuyTicket = async (listingId, puzzleData = null) => {
+        if (user?.role === 'admin') {
+            toast.error(i18n.language.startsWith('vi') ? 'Quản trị viên không thể mua vé.' : 'Admins cannot purchase tickets.');
+            return;
+        }
+
         if (!user) {
             toast.error(t('marketplace.messages.login_required') || 'Vui lòng đăng nhập để mua vé.');
             navigate('/login');
@@ -291,7 +296,7 @@ const Marketplace = () => {
                                         <p className="text-sm font-black text-white tracking-tight">
                                             {(() => {
                                                 const resaleGasFee = Number(listing.event.resale_gas_fee || config.system_gas_fee || 10000);
-                                                const platformFeePercent = Number(listing.event.resale_platform_fee_percent || config.resale_transaction_fee_percent || 3.0);
+                                                const platformFeePercent = Number(listing.event.resale_platform_fee_percent || config.resale_transaction_fee_percent || 1.0);
                                                 const totalAskingPrice = Number(listing.asking_price);
                                                 
                                                 // [Smart Fee Calculation]: Chỉ tính phí trên phần vé
@@ -348,6 +353,24 @@ const Marketplace = () => {
                                                 {listing.event.location_address}
                                             </div>
                                         </div>
+
+                                        {/* Merchandise List Display */}
+                                        {listing.merchandise_items?.length > 0 && (
+                                            <div className="pt-2 border-t border-gray-100 dark:border-white/5 space-y-1.5">
+                                                <p className="text-[8px] font-black text-blue-500 uppercase tracking-tight flex items-center gap-1">
+                                                    <ShoppingBag className="w-2.5 h-2.5" />
+                                                    {t('checkout.addons')} ({listing.merchandise_items.length})
+                                                </p>
+                                                <div className="flex flex-wrap gap-1">
+                                                    {listing.merchandise_items.map((item, idx) => (
+                                                        <div key={idx} className="flex items-center gap-1 px-1.5 py-0.5 bg-blue-500/10 border border-blue-500/20 rounded-md">
+                                                            <span className="text-[8px] font-bold text-blue-600 dark:text-blue-400 truncate max-w-[60px]">{item.merchandise.name}</span>
+                                                            <span className="text-[8px] font-black text-blue-600/50 dark:text-blue-400/50">x{item.quantity}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
 
                                     {/* Seller Info & Action Buttons Row */}
@@ -387,10 +410,12 @@ const Marketplace = () => {
                                     </div>
 
                                     {/* Action */}
-                                    {user && (listing.seller_id === user.id || listing.event.organizer?.user_id === user.id) ? (
+                                    {user && (listing.seller_id === user.id || listing.event.organizer?.user_id === user.id || user.role === 'admin') ? (
                                         <div className="w-full py-3 px-4 bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl flex items-center justify-center">
                                             <span className="text-[10px] font-black text-gray-500 dark:text-gray-400 uppercase tracking-tight">
-                                                {listing.seller_id === user.id ? t('eventDetail.you_are_owner') : t('reviews.organizer')}
+                                                {user.role === 'admin' 
+                                                  ? (i18n.language.startsWith('vi') ? 'QUẢN TRỊ VIÊN' : 'ADMIN MODE') 
+                                                  : (listing.seller_id === user.id ? t('eventDetail.you_are_owner') : t('reviews.organizer'))}
                                             </span>
                                         </div>
                                     ) : (
@@ -575,7 +600,7 @@ const Marketplace = () => {
                                     <p className="text-2xl font-black text-slate-900 dark:text-white tracking-tighter">
                                         {(() => {
                                             const resaleGasFee = Number(selectedListing.event.resale_gas_fee || config.system_gas_fee || 10000);
-                                            const platformFeePercent = Number(selectedListing.event.resale_platform_fee_percent || config.resale_transaction_fee_percent || 3.0);
+                                            const platformFeePercent = Number(selectedListing.event.resale_platform_fee_percent || config.resale_transaction_fee_percent || 1.0);
                                             const totalAskingPrice = Number(selectedListing.asking_price);
                                             
                                             const metadata = selectedListing.metadata || {};
@@ -592,10 +617,10 @@ const Marketplace = () => {
                                         setSelectedListing(null);
                                         handleBuyTicket(listingId);
                                     }}
-                                    disabled={isBuying === selectedListing.id || (user && (selectedListing.seller_id === user.id || selectedListing.event.organizer?.user_id === user.id))}
+                                    disabled={isBuying === selectedListing.id || (user && (selectedListing.seller_id === user.id || selectedListing.event.organizer?.user_id === user.id || user.role === 'admin'))}
                                     className="px-6 py-3 bg-neon-green hover:bg-neon-green-hover text-black text-xs font-black uppercase rounded-xl transition-all active:scale-95 disabled:opacity-50 disabled:grayscale"
                                 >
-                                    {isBuying === selectedListing.id ? t('common.loading') : t('marketplace.listing.buy_now')}
+                                    {isBuying === selectedListing.id ? t('common.loading') : (user?.role === 'admin' ? (i18n.language.startsWith('vi') ? 'QUẢN TRỊ' : 'ADMIN') : t('marketplace.listing.buy_now'))}
                                 </button>
                             </div>
                         </div>

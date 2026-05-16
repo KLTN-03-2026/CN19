@@ -2,8 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
+import axios from 'axios';
 import { 
-  Building2, Briefcase, Mail, Phone, MapPin, UploadCloud, FileText, 
+  Briefcase, Mail, Phone, MapPin, UploadCloud, FileText, 
   Lock as LockIcon, ArrowRight, ArrowLeft, X, ShieldCheck, CheckCircle2,
   RefreshCw, Camera
 } from 'lucide-react';
@@ -15,6 +16,7 @@ import WebcamCapture from '../../components/KYC/WebcamCapture';
 import api from '../../services/api';
 import useBotBehavior from '../../hooks/useBotBehavior';
 import { Turnstile } from '@marsidev/react-turnstile';
+import Logo from '../../components/common/Logo';
 
 const RegisterOrganizer = () => {
   const { t } = useTranslation();
@@ -57,13 +59,13 @@ const RegisterOrganizer = () => {
       else toast.error(t('org.error_fill'));
     } else if (step === 2) {
       if (!kycUrls.front || !kycUrls.back || !ocrData || !kycUrls.license) {
-        toast.error("Vui lòng tải lên đủ CCCD (đã bóc tách) và Giấy phép kinh doanh.");
+        toast.error(t('org.error_missing_file') || "Vui lòng tải lên đủ CCCD (đã bóc tách) và Giấy phép kinh doanh.");
         return;
       }
       setStep(3);
     } else if (step === 3) {
       if (!kycUrls.selfie || !biometricResult) {
-        toast.error("Vui lòng hoàn tất xác thực khuôn mặt.");
+        toast.error(t('org.face_auth_error') || "Vui lòng hoàn tất xác thực khuôn mặt.");
         return;
       }
       handleSendRequest();
@@ -89,21 +91,26 @@ const RegisterOrganizer = () => {
       console.warn("Dữ liệu ảnh không đủ để bóc tách OCR.");
       return;
     }
-    const toastId = toast.loading("Đang bóc tách dữ liệu AI...");
+    const toastId = toast.loading(t('org.ai_processing') || "Đang bóc tách dữ liệu AI...");
     try {
       console.log('--- Bắt đầu gọi API OCR ---');
       console.log('Front URL:', front);
       console.log('Back URL:', back);
       setIsProcessingAI(true);
-      const res = await api.post('/kyc/ocr', { front_url: front, back_url: back });
+      const res = await api.post('/kyc/ocr', { 
+        front_url: front, 
+        back_url: back,
+        behaviorData: getBehaviorData(),
+        turnstileToken: turnstileToken,
+        user_id: user?.id // Gửi user_id lên để backend kiểm tra tính duy nhất (trường hợp đăng ký lại)
+      });
       console.log('Kết quả OCR thành công:', res.data);
       setOcrData(res.data.data);
-      toast.success("Xác thực thông tin thẻ thành công!", { id: toastId });
+      toast.success(t('org.ai_verified') || "Xác thực thông tin thẻ thành công!", { id: toastId });
     } catch (error) {
       console.error('Lỗi OCR chi tiết:', error.response?.data || error.message);
       const errMsg = error.response?.data?.error || "Không thể bóc tách thông tin thẻ.";
       toast.error(errMsg, { id: toastId });
-      // Đảm bảo ocrData vẫn null để nút TIẾP TỤC bị mờ
       setOcrData(null);
     } finally {
       setIsProcessingAI(false);
@@ -114,18 +121,54 @@ const RegisterOrganizer = () => {
     if (!selectedFile) return;
     const cloudName = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
     const uploadPreset = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
+    
+    console.log('--- Bắt đầu tải ảnh lên Cloudinary ---');
+    console.log('Cloud Name:', cloudName);
+    console.log('Upload Preset:', uploadPreset);
+    console.log('File:', selectedFile.name, selectedFile.size, selectedFile.type);
+
+    if (!cloudName || !uploadPreset || cloudName === 'your_cloud_name') {
+      toast.error("Cloudinary chưa được cấu hình đúng trong .env (VITE_CLOUDINARY_CLOUD_NAME)");
+      return;
+    }
+
     setIsLoading(true);
     const formData = new FormData();
     formData.append('file', selectedFile);
     formData.append('upload_preset', uploadPreset);
+    
     try {
-      const res = await axios.post(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, formData);
-      const url = res.data.secure_url;
-      setKycUrls(prev => ({ ...prev, [side]: url }));
+      // Sử dụng fetch thay vì axios để tránh các vấn đề về phiên bản/bundling
+      const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/upload`, {
+        method: 'POST',
+        body: formData
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok && data.secure_url) {
+        const url = data.secure_url;
+        console.log('Tải ảnh thành công:', url);
+        setKycUrls(prev => ({ ...prev, [side]: url }));
+        toast.success("Tải ảnh lên thành công!");
+      } else {
+        const errorMsg = data.error?.message || "Upload failed";
+        console.error("Cloudinary Error Response:", data);
+        toast.error(`Lỗi Cloudinary: ${errorMsg}`);
+      }
     } catch (error) {
-      toast.error("Lỗi khi tải ảnh.");
+      console.error("Fetch Upload Error:", error);
+      toast.error(`Lỗi khi tải ảnh: ${error.message}`);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const removeImage = (side) => {
+    setKycUrls(prev => ({ ...prev, [side]: '' }));
+    if (side === 'front' || side === 'back') {
+      setOcrData(null);
+      lastProcessedUrls.current = "";
     }
   };
 
@@ -138,7 +181,7 @@ const RegisterOrganizer = () => {
     formData.append('file', dataUri);
     formData.append('upload_preset', uploadPreset);
     try {
-      const res = await axios.post(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, formData);
+      const res = await axios.post(`https://api.cloudinary.com/v1_1/${cloudName}/upload`, formData);
       const selfieUrl = res.data.secure_url;
       setKycUrls(prev => ({ ...prev, selfie: selfieUrl }));
       setIsProcessingAI(true);
@@ -147,7 +190,7 @@ const RegisterOrganizer = () => {
         captured_face_url: selfieUrl 
       });
       setBiometricResult(bioRes.data.data);
-      toast.success("Xác thực sinh trắc học thành công!");
+      toast.success(t('org.face_auth_success') || "Xác thực sinh trắc học thành công!");
     } catch (error) {
       console.error('Lỗi Biometric:', error.response?.data || error.message);
       const errMsg = error.response?.data?.error || "Lỗi xác thực sinh trắc học.";
@@ -240,9 +283,9 @@ const RegisterOrganizer = () => {
           <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center">
             <LockIcon className="w-12 h-12 text-red-500" />
           </div>
-          <h2 className="text-3xl font-bold text-gray-900 dark:text-white">Quyền hạn không hợp lệ</h2>
-          <p className="text-gray-500 dark:text-gray-400">Bạn đang đăng nhập với quyền Quản trị viên (Admin). Admin không cần đăng ký tài khoản Ban tổ chức.</p>
-          <button onClick={() => navigate('/')} className="px-8 py-3 bg-neon-green text-black rounded-xl font-bold">Quay lại Trang chủ</button>
+          <h2 className="text-3xl font-bold text-gray-900 dark:text-white">{t('org.invalid_role') || 'Quyền hạn không hợp lệ'}</h2>
+          <p className="text-gray-500 dark:text-gray-400">{t('org.admin_warning') || 'Bạn đang đăng nhập với quyền Quản trị viên (Admin). Admin không cần đăng ký tài khoản Ban tổ chức.'}</p>
+          <button onClick={() => navigate('/')} className="px-8 py-3 bg-neon-green text-black rounded-xl font-bold">{t('common.backHome') || 'Quay lại Trang chủ'}</button>
         </div>
       </div>
     );
@@ -258,7 +301,7 @@ const RegisterOrganizer = () => {
           <h2 className="text-3xl font-bold text-gray-900 dark:text-white">{t('org.pending_title')}</h2>
           <p className="text-gray-500 dark:text-gray-400 leading-relaxed">{t('org.pending_desc')}</p>
           <div className="w-full h-px bg-gray-100 dark:bg-dark-border my-4" />
-          <button onClick={() => navigate('/')} className="px-8 py-3 bg-gray-100 hover:bg-gray-200 dark:bg-white/5 dark:hover:bg-white/10 text-gray-900 dark:text-white rounded-xl font-bold transition-all">Quay lại Trang chủ</button>
+          <button onClick={() => navigate('/')} className="px-8 py-3 bg-gray-100 hover:bg-gray-200 dark:bg-white/5 dark:hover:bg-white/10 text-gray-900 dark:text-white rounded-xl font-bold transition-all">{t('common.backHome') || 'Quay lại Trang chủ'}</button>
         </div>
       </div>
     );
@@ -274,7 +317,7 @@ const RegisterOrganizer = () => {
           <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-neon-green rounded-full mix-blend-screen filter blur-[80px] opacity-40"></div>
           <div className="absolute bottom-1/4 right-1/4 w-32 h-32 bg-blue-500 rounded-full mix-blend-screen filter blur-[80px] opacity-40"></div>
           <div className="relative z-10">
-            <Building2 className="w-14 h-14 text-neon-green mb-6" />
+            <Logo variant="full" size="lg" className="mb-4" />
             <h2 className="text-3xl font-black mb-4 leading-snug">{t('org.partner_with')}<br/><span className="text-neon-green">BASTICKET</span></h2>
             <p className="text-gray-400 mb-8 leading-relaxed font-normal">{t('org.desc')}</p>
             <div className="space-y-4">
@@ -299,8 +342,8 @@ const RegisterOrganizer = () => {
         <div className="w-full md:w-[55%] p-8 md:p-12 relative flex flex-col justify-center">
           <div className="mb-8">
             <div className="flex justify-between items-center mb-2">
-              <span className={`text-xs font-bold uppercase tracking-wider ${step >= 1 ? 'text-neon-green' : 'text-gray-400'}`}>{t('org.step1')}</span>
-              <span className={`text-xs font-bold uppercase tracking-wider ${step >= 2 ? 'text-neon-green' : 'text-gray-400'}`}>{t('org.step2')}</span>
+              <span className={`text-xs font-bold uppercase tracking-tight ${step >= 1 ? 'text-neon-green' : 'text-gray-400'}`}>{t('org.step1')}</span>
+              <span className={`text-xs font-bold uppercase tracking-tight ${step >= 2 ? 'text-neon-green' : 'text-gray-400'}`}>{t('org.step2')}</span>
             </div>
             <div className="h-1.5 w-full bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden">
               <div className="h-full bg-neon-green transition-all duration-500 ease-out" style={{ width: step === 1 ? '33.3%' : step === 2 ? '66.6%' : '100%' }}></div>
@@ -308,14 +351,14 @@ const RegisterOrganizer = () => {
           </div>
 
           <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">
-            {step === 1 ? t('org.setup_acc') : step === 2 ? 'Tải lên CCCD' : step === 3 ? 'Xác thực sinh trắc' : 'Xác thực OTP'}
+            {step === 1 ? t('org.setup_acc') : step === 2 ? t('org.step2_title') : step === 3 ? t('org.step3_title') : t('org.step4_title')}
           </h3>
 
           <form className="flex-1 flex flex-col justify-between" onSubmit={(e) => e.preventDefault()}>
             {step === 1 && (
               <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
                 <div className="relative">
-                  <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wide">{t('org.name_label')}</label>
+                  <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-tight">{t('org.name_label')}</label>
                   <input type="text" {...register("organizerName", { required: true })}
                     className={`w-full pl-4 pr-10 py-3 bg-white border ${errors.organizerName ? 'border-red-500' : 'border-gray-300'} text-gray-900 placeholder-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-neon-green transition-colors`}
                     placeholder={t('org.name_placeholder')}
@@ -373,7 +416,7 @@ const RegisterOrganizer = () => {
                 </div>
 
                 <div className="relative">
-                  <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-wide">{t('org.desc_label')}</label>
+                  <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1 uppercase tracking-tight">{t('org.desc_label')}</label>
                   <textarea {...register("description")} rows="2"
                     className="w-full px-4 py-3 bg-white border border-gray-300 text-gray-900 placeholder-gray-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-neon-green resize-none"
                     placeholder={t('org.desc_placeholder')}
@@ -394,7 +437,7 @@ const RegisterOrganizer = () => {
                 
                 {/* 1. Phần CCCD (eKYC) */}
                 <div>
-                  <label className="block text-[10px] font-bold text-gray-500 mb-2 uppercase tracking-widest">Xác thực ID (CCCD/CMND)</label>
+                  <label className="block text-[10px] font-bold text-gray-500 mb-2 uppercase tracking-tight">{t('org.id_label')}</label>
                   <div className="grid grid-cols-2 gap-3">
                     {['front', 'back'].map((side) => (
                       <div key={side} className="relative group">
@@ -409,7 +452,7 @@ const RegisterOrganizer = () => {
                           {kycUrls[side] ? (
                             <img src={kycUrls[side]} alt={side} className="w-full h-full object-cover rounded-2xl shadow-sm" />
                           ) : (
-                            <><UploadCloud className="w-8 h-8 mb-2 text-gray-400" /><p className="text-[10px] font-bold text-gray-400 uppercase">Mặt {side === 'front' ? 'trước' : 'sau'}</p></>
+                            <><UploadCloud className="w-8 h-8 mb-2 text-gray-400" /><p className="text-[10px] font-bold text-gray-400 uppercase">{t(`org.${side}_side`)}</p></>
                           )}
                         </div>
                         {kycUrls[side] && (
@@ -428,7 +471,7 @@ const RegisterOrganizer = () => {
 
                 {/* 2. Phần Giấy phép kinh doanh (License) */}
                 <div className="relative group">
-                  <label className="block text-[10px] font-bold text-gray-500 mb-2 uppercase tracking-widest">Giấy phép kinh doanh / Pháp lý</label>
+                  <label className="block text-[10px] font-bold text-gray-500 mb-2 uppercase tracking-tight">{t('org.license_label')}</label>
                   <div onClick={() => !kycUrls.license && document.getElementById('file-license').click()}
                     className={`relative w-full h-[120px] rounded-2xl border-2 border-dashed flex flex-col items-center justify-center transition-all ${
                       kycUrls.license 
@@ -443,7 +486,7 @@ const RegisterOrganizer = () => {
                         <span className="text-xs font-bold text-gray-700 dark:text-white truncate max-w-[200px]">Đã tải lên giấy tờ</span>
                       </div>
                     ) : (
-                      <><UploadCloud className="w-8 h-8 mb-2 text-gray-400" /><p className="text-[10px] font-bold text-gray-400 uppercase">Tải lên Giấy phép (.png, .jpg, .pdf)</p></>
+                      <><UploadCloud className="w-8 h-8 mb-2 text-gray-400" /><p className="text-[10px] font-bold text-gray-400 uppercase">{t('org.upload_license_hint')}</p></>
                     )}
                   </div>
                   {kycUrls.license && (
@@ -461,7 +504,7 @@ const RegisterOrganizer = () => {
                 {isProcessingAI ? (
                   <div className="flex items-center justify-center space-x-2 p-3 bg-neon-green/5 border border-dashed border-neon-green/30 rounded-xl animate-pulse">
                     <RefreshCw className="w-4 h-4 animate-spin text-neon-green" />
-                    <span className="text-[10px] font-bold text-neon-green uppercase tracking-wider">Đang bóc tách AI...</span>
+                    <span className="text-[10px] font-bold text-neon-green uppercase tracking-tight">{t('org.ai_processing')}</span>
                   </div>
                 ) : (
                   !ocrData && kycUrls.front && kycUrls.back && (
@@ -469,7 +512,7 @@ const RegisterOrganizer = () => {
                        <button type="button" onClick={() => { lastProcessedUrls.current = ""; triggerOCR(kycUrls.front, kycUrls.back); }}
                         className="text-[10px] font-black text-red-500 uppercase hover:underline"
                        >
-                         Thử lại bóc tách
+                         {t('org.ai_retry')}
                        </button>
                     </div>
                   )
@@ -478,58 +521,58 @@ const RegisterOrganizer = () => {
                 {ocrData && (
                   <div className="px-5 py-4 bg-gray-50 dark:bg-black/20 border border-gray-100 dark:border-dark-border rounded-2xl space-y-3 shadow-sm">
                     <div className="flex items-center justify-between border-b border-gray-100 dark:border-dark-border pb-2">
-                       <p className="text-[10px] font-black text-neon-green uppercase tracking-widest">THÔNG TIN TRÍCH XUẤT</p>
-                       <span className="text-[9px] bg-neon-green/10 text-neon-green px-2 py-0.5 rounded-full font-bold">XÁC MINH AI</span>
+                       <p className="text-[10px] font-black text-neon-green uppercase tracking-tight">{t('org.ai_result_title')}</p>
+                       <span className="text-[9px] bg-neon-green/10 text-neon-green px-2 py-0.5 rounded-full font-bold">{t('org.ai_verified')}</span>
                     </div>
                     
                     <div className="grid grid-cols-2 gap-y-3 gap-x-4">
                       <div className="col-span-2">
-                        <p className="text-[9px] text-gray-400 uppercase font-bold mb-0.5">Họ và Tên</p>
+                        <p className="text-[9px] text-gray-400 uppercase font-bold mb-0.5">{t('org.full_name')}</p>
                         <p className="text-sm font-bold text-gray-900 dark:text-white uppercase leading-tight">{ocrData.full_name}</p>
                       </div>
                       
                       <div>
-                        <p className="text-[9px] text-gray-400 uppercase font-bold mb-0.5">Số CCCD</p>
+                        <p className="text-[9px] text-gray-400 uppercase font-bold mb-0.5">{t('org.id_number')}</p>
                         <p className="text-sm font-mono font-bold text-gray-900 dark:text-white">{ocrData.id_number}</p>
                       </div>
 
                       <div>
-                        <p className="text-[9px] text-gray-400 uppercase font-bold mb-0.5">Ngày sinh</p>
+                        <p className="text-[9px] text-gray-400 uppercase font-bold mb-0.5">{t('org.dob')}</p>
                         <p className="text-sm font-bold text-gray-900 dark:text-white">{ocrData.dob}</p>
                       </div>
 
                       <div>
-                        <p className="text-[9px] text-gray-400 uppercase font-bold mb-0.5">Giới tính</p>
+                        <p className="text-[9px] text-gray-400 uppercase font-bold mb-0.5">{t('org.sex')}</p>
                         <p className="text-sm font-bold text-gray-900 dark:text-white uppercase">{ocrData.sex || 'N/A'}</p>
                       </div>
 
                       <div>
-                        <p className="text-[9px] text-gray-400 uppercase font-bold mb-0.5">Quốc tịch</p>
+                        <p className="text-[9px] text-gray-400 uppercase font-bold mb-0.5">{t('org.nationality')}</p>
                         <p className="text-sm font-bold text-gray-900 dark:text-white uppercase">{ocrData.nationality || 'VIỆT NAM'}</p>
                       </div>
 
                       <div className="col-span-2">
-                        <p className="text-[9px] text-gray-400 uppercase font-bold mb-0.5">Quê quán</p>
+                        <p className="text-[9px] text-gray-400 uppercase font-bold mb-0.5">{t('org.home')}</p>
                         <p className="text-[11px] font-medium text-gray-600 dark:text-gray-300 leading-normal">{ocrData.home || 'N/A'}</p>
                       </div>
 
                       <div className="col-span-2">
-                        <p className="text-[9px] text-gray-400 uppercase font-bold mb-0.5">Địa chỉ thường trú</p>
+                        <p className="text-[9px] text-gray-400 uppercase font-bold mb-0.5">{t('org.address')}</p>
                         <p className="text-[11px] font-medium text-gray-600 dark:text-gray-300 leading-normal">{ocrData.address}</p>
                       </div>
 
                       <div>
-                        <p className="text-[9px] text-gray-400 uppercase font-bold mb-0.5">Ngày hết hạn</p>
+                        <p className="text-[9px] text-gray-400 uppercase font-bold mb-0.5">{t('org.doe')}</p>
                         <p className="text-sm font-bold text-gray-900 dark:text-white">{ocrData.doe || 'N/A'}</p>
                       </div>
 
                       <div>
-                        <p className="text-[9px] text-gray-400 uppercase font-bold mb-0.5">Ngày cấp</p>
+                        <p className="text-[9px] text-gray-400 uppercase font-bold mb-0.5">{t('org.issue_date')}</p>
                         <p className="text-sm font-bold text-gray-900 dark:text-white">{ocrData.issue_date || 'N/A'}</p>
                       </div>
 
                       <div className="col-span-2">
-                        <p className="text-[9px] text-gray-400 uppercase font-bold mb-0.5">Nơi cấp</p>
+                        <p className="text-[9px] text-gray-400 uppercase font-bold mb-0.5">{t('org.issue_loc')}</p>
                         <p className="text-[11px] font-medium text-gray-600 dark:text-gray-300 leading-normal">{ocrData.issue_loc || 'N/A'}</p>
                       </div>
                     </div>
@@ -541,9 +584,9 @@ const RegisterOrganizer = () => {
                     <ArrowLeft className="w-5 h-5" />
                   </button>
                   <button type="button" onClick={handleNextStep} disabled={!ocrData || !kycUrls.license || isProcessingAI || isLoading} 
-                    className="flex-1 py-4 bg-neon-green text-black font-bold rounded-xl disabled:opacity-50 tracking-wider uppercase flex items-center justify-center space-x-2 shadow-[0_0_15px_rgba(82,196,45,0.4)] transition-all"
+                    className="flex-1 py-4 bg-neon-green text-black font-bold rounded-xl disabled:opacity-50 tracking-tight uppercase flex items-center justify-center space-x-2 shadow-[0_0_15px_rgba(82,196,45,0.4)] transition-all"
                   >
-                    TIẾP TỤC
+                    {t('org.continue')}
                   </button>
                 </div>
               </div>
@@ -554,26 +597,31 @@ const RegisterOrganizer = () => {
                 <WebcamCapture onCapture={handleSelfieCapture} />
                 {biometricResult && (
                   <div className={`w-full p-4 rounded-2xl border-2 flex justify-between items-center ${biometricResult.similarity >= 80 ? 'border-neon-green bg-green-50/5' : 'border-red-500 bg-red-50'}`}>
-                    <span className="text-xs font-bold text-gray-500 uppercase">Khớp: {biometricResult.similarity.toFixed(2)}%</span>
+                    <span className="text-xs font-bold text-gray-500 uppercase">{t('org.match_score')}: {biometricResult.similarity.toFixed(2)}%</span>
                     <ShieldCheck className={biometricResult.similarity >= 80 ? 'text-neon-green' : 'text-red-500'} />
                   </div>
                 )}
                 <div className="flex space-x-3 w-full mt-auto">
                   <button type="button" onClick={() => setStep(2)} className="px-5 py-4 border border-gray-300 dark:border-dark-border text-gray-700 dark:text-white rounded-xl hover:bg-gray-50 dark:hover:bg-dark-bg transition-colors"><ArrowLeft className="w-5 h-5" /></button>
-                  <button type="button" onClick={handleNextStep} disabled={!biometricResult || biometricResult.similarity < 80 || isLoading || !turnstileToken} className="flex-1 py-4 bg-neon-green hover:bg-neon-hover text-black font-bold rounded-xl shadow-[0_0_15px_rgba(82,196,45,0.4)] transition-all">GỬI OTP</button>
+                  <button type="button" onClick={handleNextStep} disabled={!biometricResult || biometricResult.similarity < 80 || isLoading || !turnstileToken} className="flex-1 py-4 bg-neon-green hover:bg-neon-hover text-black font-bold rounded-xl shadow-[0_0_15px_rgba(82,196,45,0.4)] transition-all">{t('org.send_otp_btn')}</button>
                 </div>
-                {/* Cloudflare Turnstile */}
-                <div className="mt-4 flex justify-center">
-                    <Turnstile 
-                      siteKey="1x00000000000000000000AA" 
-                      onSuccess={(token) => setTurnstileToken(token)}
-                      options={{
-                        theme: 'dark'
-                      }}
-                    />
-                </div>
-              </div>
+            </div>
             )}
+            
+            {/* Cloudflare Turnstile - Để ngoài các step để load sớm và dùng chung */}
+            <div className={`mt-6 flex justify-center transition-opacity duration-500 ${step >= 2 ? 'opacity-100' : 'opacity-0 pointer-events-none h-0 overflow-hidden'}`}>
+                <Turnstile 
+                  siteKey="0x4AAAAAADLUD-rkZ6wNFnY3" 
+                  onSuccess={(token) => {
+                    console.log('Turnstile Token đã sẵn sàng');
+                    setTurnstileToken(token);
+                  }}
+                  options={{
+                    theme: 'auto',
+                    size: 'flexible'
+                  }}
+                />
+            </div>
           </form>
         </div>
       </div>
@@ -591,7 +639,7 @@ const RegisterOrganizer = () => {
                 <input key={i} type="text" maxLength="1" value={digit} ref={(el) => otpInputs.current[i] = el} onChange={(e) => handleOtpChange(i, e.target.value)} onKeyDown={(e) => handleOtpKeyDown(i, e)} className="w-12 h-14 bg-white border border-gray-300 text-gray-900 text-center text-xl font-black rounded-lg focus:outline-none focus:ring-2 focus:ring-neon-green transition-all" />
               ))}
             </div>
-            <button onClick={verifyOTPAndSubmit} disabled={isLoading} className="w-full py-4 bg-neon-green hover:bg-neon-hover text-black font-bold rounded-xl shadow-[0_0_15px_rgba(82,196,45,0.4)] transition-all">Xác thực</button>
+            <button onClick={verifyOTPAndSubmit} disabled={isLoading} className="w-full py-4 bg-neon-green hover:bg-neon-hover text-black font-bold rounded-xl shadow-[0_0_15px_rgba(82,196,45,0.4)] transition-all">{t('org.verify_btn')}</button>
             <div className="mt-4 text-sm font-medium text-gray-500">
               {countdown > 0 ? <span>{t('org.resend_in')} <span className="text-neon-green font-bold">{countdown}s</span></span> : <button onClick={handleSendRequest} className="text-neon-green font-bold hover:underline">Gửi lại</button>}
             </div>

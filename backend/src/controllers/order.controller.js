@@ -107,12 +107,12 @@ const createPrimaryOrder = async (req, res) => {
         });
       }
 
-      // [Smart Fee Snapshot]: Ưu tiên lấy phí đã chốt của Sự kiện, fallback mới lấy System Settings
+      // [AUDIT] Ưu tiên lấy phí đã chốt của Sự kiện (Locked Fees)
       const sysConfig = await getSystemConfig();
       
-      const platformFeeRate = Number(event.platform_fee_percent !== null ? event.platform_fee_percent : (sysConfig.event_platform_fee_percent || 5));
-      const transactionFeeRate = Number(event.commission_fee_percent !== null ? event.commission_fee_percent : (sysConfig.event_transaction_fee_percent || 3));
-      const sysGasFee = Number(event.resale_gas_fee !== null ? event.resale_gas_fee : (sysConfig.system_gas_fee || 10000));
+      const platformFeeRate = Number(event.platform_fee_percent !== null && event.platform_fee_percent !== undefined ? event.platform_fee_percent : (sysConfig.event_platform_fee_percent || 5));
+      const transactionFeeRate = Number(event.commission_fee_percent !== null && event.commission_fee_percent !== undefined ? event.commission_fee_percent : (sysConfig.event_transaction_fee_percent || 3));
+      const sysGasFee = Number(event.resale_gas_fee !== null && event.resale_gas_fee !== undefined ? event.resale_gas_fee : (sysConfig.system_gas_fee || 10000));
 
       const platformFeePercent = platformFeeRate / 100;
       const transactionFeePercent = transactionFeeRate / 100;
@@ -209,6 +209,10 @@ const createMarketplaceOrder = async (req, res) => {
       return res.status(400).json({ error: 'Rất tiếc, vé này vừa được khách hàng khác đưa vào giỏ hàng.' });
     }
 
+    if (listing.ticket.event.status !== 'active') {
+      return res.status(400).json({ error: 'Sự kiện này đang bị tạm dừng giao dịch bởi Quản trị viên.' });
+    }
+
     if (listing.seller_id === userId) {
       return res.status(400).json({ error: 'Bạn không thể mua vé của chính mình.' });
     }
@@ -232,18 +236,18 @@ const createMarketplaceOrder = async (req, res) => {
         }
       });
 
-      // [Business Rule] Luồng tiền Bán lại (Resale) ưu tiên lấy từ Event, fallback System Settings:
+      // [AUDIT] Luồng tiền Bán lại (Resale) ưu tiên lấy từ Event (Locked Fees):
       const sysConfig = await getSystemConfig();
       const event = listing.ticket.event;
-      const askingPrice = Number(listing.asking_price); // Tổng tiền (Vé + Merch)
+      const askingPrice = Number(listing.asking_price);
       
       // [Smart Fee Base]: Chỉ tính phí trên phần Giá vé, không tính trên vật phẩm tặng kèm
       const metadata = listing.metadata || {};
       const feeBasePrice = Number(metadata.ticket_price || askingPrice);
       
-      const resale_gas_fee = Number(event.resale_gas_fee || sysConfig.system_gas_fee || 10000);
-      const transaction_fee_rate = Number(event.resale_platform_fee_percent || sysConfig.resale_transaction_fee_percent || 3.0);
-      const royalty_fee_rate = Number(event.royalty_fee_percent || sysConfig.default_royalty_percent || 3.0);
+      const resale_gas_fee = Number(event.resale_gas_fee !== null && event.resale_gas_fee !== undefined ? event.resale_gas_fee : (sysConfig.system_gas_fee || 10000));
+      const transaction_fee_rate = Number(event.resale_platform_fee_percent !== null && event.resale_platform_fee_percent !== undefined ? event.resale_platform_fee_percent : (sysConfig.resale_transaction_fee_percent || 1.0));
+      const royalty_fee_rate = Number(event.royalty_fee_percent !== null && event.royalty_fee_percent !== undefined ? event.royalty_fee_percent : (sysConfig.default_royalty_percent || 3.0));
 
       const transaction_fee_percent = transaction_fee_rate / 100;
       const royalty_fee_percent = royalty_fee_rate / 100;
@@ -315,11 +319,24 @@ const getOrderById = async (req, res) => {
     const { id } = req.params;
     const userId = req.user.userId;
 
-    let order = await prisma.order.findUnique({
-      where: { id },
+    console.log(`[DEBUG] getOrderById - ID: ${id}, UserID: ${userId}`);
+    // Kiểm tra xem id có phải là UUID hợp lệ không để tránh lỗi DB
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    
+    let order = await prisma.order.findFirst({
+      where: {
+        OR: [
+          ...(isUUID ? [{ id: id }] : []),
+          { order_number: id }
+        ]
+      },
       include: {
         event: {
-          select: { title: true, image_url: true, location_address: true, event_date: true }
+          include: { 
+            organizer: {
+              select: { user_id: true }
+            }
+          }
         },
         items: {
           include: { ticket_tier: true }
@@ -332,6 +349,46 @@ const getOrderById = async (req, res) => {
 
     // Nếu không thấy trong Order, tìm trong MarketplaceTransaction
     if (!order) {
+        // [Bổ sung] Kiểm tra xem có phải là ID của TicketTransfer không (cho các giao dịch cũ)
+        if (isUUID) {
+            const transferRecord = await prisma.ticketTransfer.findUnique({
+                where: { id: id },
+                include: {
+                    ticket: { include: { ticket_tier: true } },
+                    event: true,
+                    sender: { select: { full_name: true, email: true } },
+                    receiver: { select: { full_name: true, email: true, avatar_url: true } }
+                }
+            });
+    
+            if (transferRecord) {
+                // Map TicketTransfer thành cấu trúc giống Order để hiển thị
+                order = {
+                    id: transferRecord.id,
+                    order_number: `TRF-${transferRecord.id.split('-')[0].toUpperCase()}`,
+                    order_type: 'TICKET_TRANSFER',
+                    status: transferRecord.status === 'completed' ? 'paid' : 'pending',
+                    total_amount: 0, // Các giao dịch cũ có thể không lưu phí
+                    subtotal: 0,
+                    created_at: transferRecord.requested_at,
+                    event: transferRecord.event,
+                    customer_id: transferRecord.from_user_id,
+                    metadata: {
+                        ticket_id: transferRecord.ticket_id,
+                        receiver_email: transferRecord.receiver.email
+                    },
+                    items: [{
+                        ticket_tier: transferRecord.ticket.ticket_tier,
+                        quantity: 1,
+                        subtotal: 0
+                    }],
+                    receiver: transferRecord.receiver
+                };
+            }
+        }
+    }
+
+    if (!order) {
         const mktTx = await prisma.marketplaceTransaction.findFirst({
           where: { 
             OR: [
@@ -342,7 +399,7 @@ const getOrderById = async (req, res) => {
           include: {
             ticket: {
               include: {
-                event: true,
+                event: { include: { organizer: true } },
                 ticket_tier: true
               }
             },
@@ -357,7 +414,13 @@ const getOrderById = async (req, res) => {
         });
 
         if (mktTx) {
-          if (mktTx.buyer_id !== userId && mktTx.seller_id !== userId) {
+          const isMktBuyer = mktTx.buyer_id === userId;
+          const isMktSeller = mktTx.seller_id === userId;
+          const isMktEventOrganizer = mktTx.ticket.event.organizer?.user_id === userId;
+          const isMktAdmin = req.user.role === 'admin';
+
+          if (!isMktBuyer && !isMktSeller && !isMktEventOrganizer && !isMktAdmin) {
+            console.log(`[DEBUG] getOrderById(MKT) - Forbidden. Buyer: ${mktTx.buyer_id}, Seller: ${mktTx.seller_id}, Org: ${mktTx.ticket.event.organizer?.user_id}, CurrentUser: ${userId}`);
             return res.status(403).json({ error: 'Bạn không có quyền xem giao dịch này.' });
           }
 
@@ -369,6 +432,9 @@ const getOrderById = async (req, res) => {
             subtotal: mktTx.listing.asking_price,
             status: mktTx.status,
             order_type: 'MARKETPLACE_PURCHASE',
+            customer_id: mktTx.buyer_id, // Map sang customer_id để dùng chung logic check sở hữu
+            buyer_id: mktTx.buyer_id,
+            seller_id: mktTx.seller_id,
             payment_method: mktTx.payments[0]?.method || 'vnpay',
             event: mktTx.ticket.event,
             created_at: mktTx.created_at,
@@ -408,47 +474,76 @@ const getOrderById = async (req, res) => {
     
     // [Bổ sung] Xử lý lấy thông tin vé cho đơn hàng Chuyển nhượng (TICKET_TRANSFER)
     if (order.order_type === 'TICKET_TRANSFER' && order.metadata?.ticket_id) {
-      const [transferTicket, receiver] = await Promise.all([
-        prisma.ticket.findUnique({
-          where: { id: order.metadata.ticket_id },
-          include: { ticket_tier: true }
-        }),
-        prisma.user.findUnique({
-          where: { email: order.metadata.receiver_email },
-          select: { 
-            full_name: true, 
-            avatar_url: true, 
-            email: true,
-            organizer_profile: {
-              select: { organization_name: true }
+      try {
+        const ticketId = order.metadata.ticket_id;
+        const receiverEmail = order.metadata.receiver_email;
+        const isTicketUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(ticketId);
+
+        const [transferTicket, receiver] = await Promise.all([
+          isTicketUUID ? prisma.ticket.findUnique({
+            where: { id: ticketId },
+            include: { ticket_tier: true }
+          }) : null,
+          receiverEmail ? prisma.user.findUnique({
+            where: { email: receiverEmail },
+            select: { 
+              full_name: true, 
+              avatar_url: true, 
+              email: true,
+              organizer_profile: {
+                select: { organization_name: true }
+              }
             }
-          }
-        })
-      ]);
-      
-      if (transferTicket) {
-        order.items = [{
-          id: 'transfer-item',
-          quantity: 1,
-          unit_price: 10000,
-          subtotal: 10000,
-          ticket_code: transferTicket.nft_token_id || transferTicket.id.substring(0, 8),
-          ticket_tier: transferTicket.ticket_tier
-        }];
-      }
-      if (receiver) {
-        // Ưu tiên lấy tên Tổ chức nếu là tài khoản BTC
-        if (receiver.organizer_profile?.organization_name) {
-          receiver.full_name = receiver.organizer_profile.organization_name;
+          }) : null
+        ]);
+        
+        if (transferTicket) {
+          order.items = [{
+            id: 'transfer-item',
+            quantity: 1,
+            unit_price: Number(transferTicket.ticket_tier.price),
+            subtotal: 0, // Giá trị thanh toán của vé trong đơn chuyển nhượng là 0
+            ticket_code: transferTicket.nft_token_id || transferTicket.id.substring(0, 8),
+            ticket_tier: transferTicket.ticket_tier,
+            is_transfer_item: true
+          }];
         }
-        order.receiver = receiver;
+        if (receiver) {
+          // Ưu tiên lấy tên Tổ chức nếu là tài khoản BTC
+          if (receiver.organizer_profile?.organization_name) {
+            receiver.full_name = receiver.organizer_profile.organization_name;
+          }
+          order.receiver = receiver;
+        }
+      } catch (subErr) {
+        console.error('[ERROR] getOrderById Sub-queries failed:', subErr);
+        // Không quăng lỗi ra ngoài để tránh sập cả trang chi tiết
       }
     }
 
-    // Check ownership for Order model
-    if (order.customer_id && order.customer_id !== userId) {
+    // Check ownership for Order model (Hỗ trợ cả Order thường và MarketplaceTransaction đã map)
+    const authUser = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
+    const isReceiver = !!authUser?.email && !!order.metadata?.receiver_email && order.metadata.receiver_email === authUser.email;
+    const isOwner = order.customer_id === userId || order.buyer_id === userId || order.seller_id === userId || isReceiver;
+    const isEventOrganizer = order.event?.organizer?.user_id === userId;
+    const isAdmin = req.user.role === 'admin';
+
+    if (!isOwner && !isEventOrganizer && !isAdmin) {
+       console.log(`[DEBUG] getOrderById - Forbidden. Order.customer_id: ${order.customer_id}, Buyer: ${order.buyer_id}, Seller: ${order.seller_id}, Org: ${order.event?.organizer?.user_id}, Receiver: ${order.metadata?.receiver_email}, CurrentUser: ${userId}`);
        return res.status(403).json({ error: 'Bạn không có quyền xem đơn hàng này.' });
     }
+
+    // [Bổ sung] Nếu là đơn chuyển nhượng, lấy thêm thông tin sản phẩm từ metadata nếu chưa có
+    if (order.order_type === 'TICKET_TRANSFER' && order.metadata?.merchandise_item_ids?.length > 0 && (!order.merchandise_items || order.merchandise_items.length === 0)) {
+        const giftItems = await prisma.merchandiseOrderItem.findMany({
+            where: { id: { in: order.metadata.merchandise_item_ids } },
+            include: { merchandise: true }
+        });
+        order.merchandise_items = giftItems.map(g => ({ ...g, is_gift: true }));
+    }
+    
+    // Log thành công nếu pass
+    console.log(`[DEBUG] getOrderById - Access Granted. User: ${userId}, Role: ${req.user.role}`);
 
     res.status(200).json({ data: order });
   } catch (error) {
@@ -461,7 +556,7 @@ const getOrderById = async (req, res) => {
 const updatePendingOrder = async (req, res) => {
   try {
     const { id } = req.params;
-    const { merchandise_items, coupon_code } = req.body;
+    const { merchandise_items } = req.body;
     const userId = req.user.userId;
 
     // 1. Kiểm tra đơn hàng hợp lệ
@@ -550,38 +645,6 @@ const updatePendingOrder = async (req, res) => {
 
       const ticketSubtotal = order.items.reduce((sum, item) => sum + Number(item.subtotal), 0);
       const currentSubtotal = ticketSubtotal + merchSubtotal;
-
-      // C. Xử lý Coupon
-      let discountAmount = 0;
-      let couponId = null;
-
-      if (coupon_code) {
-        const coupon = await tx.coupon.findUnique({
-          where: { code: coupon_code.toUpperCase() }
-        });
-
-        if (!coupon || !coupon.is_active) throw new Error('Mã giảm giá không hợp lệ hoặc đã hết hạn.');
-        
-        const now = new Date();
-        if (now < coupon.start_date || now > coupon.end_date) throw new Error('Mã giảm giá đã hết hạn.');
-
-        if (coupon.min_order_amount && currentSubtotal < Number(coupon.min_order_amount)) {
-          throw new Error('Đơn hàng không đạt giá trị tối thiểu để dùng mã này.');
-        }
-
-        // Tính giảm giá
-        if (coupon.discount_type === 'percentage') {
-          discountAmount = (currentSubtotal * Number(coupon.discount_value)) / 100;
-          if (coupon.max_discount_amount && discountAmount > Number(coupon.max_discount_amount)) {
-            discountAmount = Number(coupon.max_discount_amount);
-          }
-        } else {
-          discountAmount = Number(coupon.discount_value);
-        }
-        
-        couponId = coupon.id;
-      }
-
       const totalTickets = order.items.reduce((sum, item) => sum + item.quantity, 0);
       
       const ticket_platform_fee = (ticketSubtotal * ticketPlatformFeeRate / 100);
@@ -597,8 +660,6 @@ const updatePendingOrder = async (req, res) => {
         where: { id },
         data: {
           subtotal: currentSubtotal,
-          coupon_id: couponId,
-          discount_amount: discountAmount,
           platform_fee: total_platform_fee,
           commission_fee: total_commission_fee,
           gas_fee: gas_fee,
@@ -610,7 +671,7 @@ const updatePendingOrder = async (req, res) => {
           merchandise_commission_fee: total_merch_commission_fee,
 
           organizer_revenue: organizer_revenue,
-          total_amount: currentSubtotal - discountAmount,
+          total_amount: currentSubtotal,
           merchandise_items: {
             create: newMerchItems
           }
@@ -618,8 +679,7 @@ const updatePendingOrder = async (req, res) => {
         include: {
           event: { select: { title: true, image_url: true, location_address: true, event_date: true } },
           items: { include: { ticket_tier: true } },
-          merchandise_items: { include: { merchandise: true } },
-          coupon: true
+          merchandise_items: { include: { merchandise: true } }
         }
       });
     });
@@ -644,16 +704,25 @@ const createTransferOrder = async (req, res) => {
     // 1. Kiểm tra vé và quyền sở hữu
     const ticket = await prisma.ticket.findUnique({
       where: { id: ticket_id },
-      include: { event: true }
+      include: { 
+        event: {
+          include: {
+            organizer: {
+              include: { user: { select: { email: true } } }
+            }
+          }
+        } 
+      }
     });
 
     if (!ticket) return res.status(404).json({ error: 'Không tìm thấy vé.' });
     if (ticket.current_owner_id !== userId) return res.status(403).json({ error: 'Bạn không sở hữu vé này.' });
-    if (ticket.status !== 'valid' && ticket.status !== 'active') return res.status(400).json({ error: 'Vé không khả dụng để chuyển nhượng.' });
-    if (ticket.transfer_count >= 2) return res.status(400).json({ error: 'Vé này đã đạt giới hạn 2 lần chuyển nhượng.' });
-
-    if (!ticket || ticket.current_owner_id !== userId) {
-      return res.status(403).json({ error: 'Bạn không sở hữu vé này hoặc vé không tồn tại.' });
+    if (ticket.is_on_marketplace) return res.status(400).json({ error: 'Vé đang được niêm yết trên chợ, vui lòng gỡ niêm yết trước khi chuyển nhượng.' });
+    if (ticket.status !== 'valid' && ticket.status !== 'active' && ticket.status !== 'minted') return res.status(400).json({ error: 'Vé không khả dụng để chuyển nhượng.' });
+    
+    // [Business Rule] Chặn chuyển nhượng cho chính mình
+    if (ticket.event.organizer.user.email === receiver_email) {
+      return res.status(400).json({ error: 'Không thể chuyển nhượng vé cho Ban tổ chức của sự kiện này.' });
     }
 
     if (!ticket.event.allow_transfer) {
@@ -665,9 +734,9 @@ const createTransferOrder = async (req, res) => {
       return res.status(400).json({ error: 'Vé này đã đạt giới hạn chuyển nhượng tối đa (2 lần).' });
     }
 
-    // [Smart Fee Snapshot]: Chuyển nhượng cũng phải lấy phí Gas của Sự kiện đã chốt
+    // [AUDIT] Chuyển nhượng cũng phải lấy phí Gas của Sự kiện đã chốt (Locked Fees)
     const sysConfig = await getSystemConfig();
-    const sysGasFee = Number(ticket.event.resale_gas_fee !== null ? ticket.event.resale_gas_fee : (sysConfig.system_gas_fee || 10000));
+    const sysGasFee = Number(ticket.event.resale_gas_fee !== null && ticket.event.resale_gas_fee !== undefined ? ticket.event.resale_gas_fee : (sysConfig.system_gas_fee || 10000));
     
     const order_number = 'TRF' + Date.now();
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 phút để thanh toán phí
@@ -695,6 +764,33 @@ const createTransferOrder = async (req, res) => {
         }
       }
     });
+
+    // [Security Check] Kiểm tra vật phẩm tặng kèm nếu có
+    if (merchandise_item_ids && Array.isArray(merchandise_item_ids) && merchandise_item_ids.length > 0) {
+      const validItems = await prisma.merchandiseOrderItem.findMany({
+        where: {
+          id: { in: merchandise_item_ids },
+          order_id: ticket.order_id, // [QUAN TRỌNG] Phải cùng đơn hàng với vé
+          merchandise: {
+            OR: [
+              { event_id: ticket.event_id },
+              { event_id: null }
+            ]
+          },
+          is_redeemed: false,
+          OR: [
+            { owner_id: userId },
+            { owner_id: null, order: { customer_id: userId } }
+          ]
+        }
+      });
+
+      if (validItems.length !== merchandise_item_ids.length) {
+        // Xóa đơn hàng vừa tạo vì dữ liệu không hợp lệ
+        await prisma.order.delete({ where: { id: order.id } });
+        return res.status(400).json({ error: 'Một số sản phẩm không hợp lệ, đã nhận hoặc không thuộc sở hữu của bạn.' });
+      }
+    }
 
     res.status(201).json({ 
       message: 'Khởi tạo thanh toán phí chuyển nhượng thành công.', 
@@ -808,88 +904,105 @@ const getMyMerchandise = async (req, res) => {
       }
     });
 
-    // 5. Chuẩn hóa sản phẩm sở hữu
-    const formattedOwned = items.map(item => {
-      let status = item.is_redeemed ? 'received' : 'pending';
-      if (item.order?.status === 'cancelled') status = 'cancelled';
-      
-      const listing = activeListings.find(l => {
-        const mIds = l.metadata?.merchandise_item_ids || [];
-        return Array.isArray(mIds) && mIds.includes(item.id);
-      });
-      if (listing) status = 'listing';
-
-      // Tìm giao dịch mua lại nếu có
-      const purchaseTx = purchaseTransactions.find(tx => {
-        const mIds = tx.listing?.metadata?.merchandise_item_ids || [];
-        return Array.isArray(mIds) && mIds.includes(item.id);
-      });
-
-      return { 
-        ...item, 
-        status,
-        mkt_transaction_number: purchaseTx ? purchaseTx.transaction_number : null,
-        listing_info: listing ? {
-            ...listing,
-            asking_price: Number(listing.asking_price),
-            order_number: item.order?.order_number,
-            event_title: item.order?.event?.title,
-            ticket: listing.ticket ? {
-                ...listing.ticket,
-                event: listing.ticket.event ? {
-                    ...listing.ticket.event,
-                    resale_gas_fee: Number(listing.ticket.event.resale_gas_fee || 10000),
-                    resale_platform_fee_percent: Number(listing.ticket.event.resale_platform_fee_percent || 3.0)
-                } : null
-            } : null
-        } : null,
-        unit_price: Number(item.unit_price),
-        subtotal: Number(item.subtotal),
-        event_title: item.merchandise?.event?.title || item.order?.event?.title || 'Sự kiện hệ thống'
-      };
-    });
-
-    // 5. Chuẩn hóa sản phẩm đã bán
-    const formattedSold = [];
-    const soldItemIds = [];
+    // 5. Thu thập ID các sản phẩm đã bán qua marketplace listing
+    const soldItemIds = new Set();
     const transactionMap = {};
 
-    soldTransactions.forEach(tx => {
-      const mIds = tx.listing?.metadata?.merchandise_item_ids;
-      if (Array.isArray(mIds)) {
-        mIds.forEach(id => {
-          soldItemIds.push(id);
-          transactionMap[id] = tx;
-        });
+    if (soldTransactions && soldTransactions.length > 0) {
+      soldTransactions.forEach(tx => {
+        const mIds = tx.listing?.metadata?.merchandise_item_ids;
+        if (Array.isArray(mIds)) {
+          mIds.forEach(id => {
+            soldItemIds.add(id);
+            transactionMap[id] = tx;
+          });
+        }
+      });
+    }
+
+    // 6. Query các sản phẩm đã chuyển nhượng (người mua gốc là mình nhưng chủ hiện tại là người khác)
+    const directTransferredItems = await prisma.merchandiseOrderItem.findMany({
+      where: {
+        order: {
+          customer_id: userId,
+          status: { in: ['paid', 'success', 'completed'] }
+        }
+      },
+      include: {
+        owner: {
+          select: { id: true, full_name: true, email: true, avatar_url: true }
+        },
+        merchandise: {
+          include: { event: { select: { title: true } } }
+        },
+        order: { 
+          include: { event: { select: { title: true } } } 
+        }
       }
     });
 
-    if (soldItemIds.length > 0) {
-      const soldItems = await prisma.merchandiseOrderItem.findMany({
-        where: { id: { in: soldItemIds } },
-        select: {
-          id: true,
-          quantity: true,
-          unit_price: true,
-          subtotal: true,
-          merchandise: {
-            select: {
-              id: true,
-              name: true,
-              image_url: true,
-              event: { select: { title: true } }
-            }
-          },
-          order: { 
-            select: { 
-              status: true,
-              id: true,
-              event: { select: { title: true } }
-            } 
-          }
-        }
+    // Lọc thủ công trong JS để đảm bảo không bị lỗi Prisma logic
+    const finalTransferredItems = directTransferredItems.filter(item => 
+      item.owner_id !== userId && 
+      item.owner_id !== null && 
+      !soldItemIds.has(item.id)
+    );
+
+    // 7. Chuẩn hóa sản phẩm sở hữu
+    const transferredItemIds = new Set(finalTransferredItems.map(i => i.id));
+    const excludedIds = new Set([...soldItemIds, ...transferredItemIds]);
+
+    const formattedOwned = items
+      .filter(item => !excludedIds.has(item.id))
+      .map(item => {
+        let status = item.is_redeemed ? 'received' : 'pending';
+        if (item.order?.status === 'cancelled' || item.order?.status === 'refunded') status = 'cancelled';
+        
+        const listing = activeListings.find(l => {
+          const mIds = l.metadata?.merchandise_item_ids || [];
+          return Array.isArray(mIds) && mIds.includes(item.id);
+        });
+        if (listing) status = 'listing';
+
+        const purchaseTx = purchaseTransactions.find(tx => {
+          const mIds = tx.listing?.metadata?.merchandise_item_ids || [];
+          return Array.isArray(mIds) && mIds.includes(item.id);
+        });
+
+        return { 
+          ...item, 
+          status,
+          mkt_transaction_number: purchaseTx ? purchaseTx.transaction_number : null,
+          listing_info: listing ? {
+              ...listing,
+              asking_price: Number(listing.asking_price),
+              order_number: item.order?.order_number,
+              event_title: item.order?.event?.title,
+              ticket: listing.ticket ? {
+                  ...listing.ticket,
+                  event: listing.ticket.event ? {
+                      ...listing.ticket.event,
+                      resale_gas_fee: Number(listing.ticket.event.resale_gas_fee || 10000),
+                      resale_platform_fee_percent: Number(listing.ticket.event.resale_platform_fee_percent || 3.0)
+                  } : null
+              } : null
+          } : null,
+          unit_price: Number(item.unit_price),
+          subtotal: Number(item.subtotal),
+          event_title: item.merchandise?.event?.title || item.order?.event?.title || 'Sự kiện hệ thống'
+        };
       });
 
+    // 8. Chuẩn hóa sản phẩm đã BÁN
+    const formattedSold = [];
+    if (soldItemIds.size > 0) {
+      const soldItems = await prisma.merchandiseOrderItem.findMany({
+        where: { id: { in: [...soldItemIds] } },
+        include: {
+          merchandise: { include: { event: { select: { title: true } } } },
+          order: { include: { event: { select: { title: true } } } }
+        }
+      });
       soldItems.forEach(item => {
         const tx = transactionMap[item.id];
         formattedSold.push({
@@ -897,19 +1010,31 @@ const getMyMerchandise = async (req, res) => {
           status: 'sold',
           unit_price: Number(item.unit_price),
           subtotal: Number(item.subtotal),
-          sold_at: tx.created_at,
-          transaction_id: tx.id,
-          transaction_number: tx.transaction_number,
-          buyer: tx.buyer,
+          sold_at: tx?.created_at,
+          transaction_id: tx?.id,
+          transaction_number: tx?.transaction_number,
+          buyer: tx?.buyer,
           event_title: item.merchandise?.event?.title || item.order?.event?.title || 'Sự kiện hệ thống'
         });
       });
     }
 
-    res.status(200).json({ data: [...formattedOwned, ...formattedSold] });
+    // 9. Chuẩn hóa sản phẩm đã CHUYỂN NHƯỢNG
+    const formattedTransferred = finalTransferredItems.map(item => ({
+      ...item,
+      status: 'transferred',
+      unit_price: Number(item.unit_price),
+      subtotal: Number(item.subtotal),
+      sold_at: item.updated_at,
+      transaction_number: 'GAS-TRANSFER',
+      buyer: item.owner,
+      event_title: item.merchandise?.event?.title || item.order?.event?.title || 'Sự kiện hệ thống'
+    }));
+
+    return res.status(200).json({ data: [...formattedOwned, ...formattedSold, ...formattedTransferred] });
   } catch (error) {
     console.error('getMyMerchandise error:', error);
-    res.status(500).json({ error: 'Lỗi server khi lấy danh sách sản phẩm.' });
+    return res.status(500).json({ error: 'Lỗi server khi lấy danh sách sản phẩm.', detail: error.message });
   }
 };
 
@@ -941,7 +1066,12 @@ const getMerchandiseOrderItemById = async (req, res) => {
     });
 
     if (!item) return res.status(404).json({ error: 'Không tìm thấy sản phẩm.' });
-    if (item.order.customer_id !== userId) return res.status(403).json({ error: 'Bạn không có quyền xem thông tin này.' });
+    const isItemOwner = item.order?.customer_id === userId || item.owner_id === userId;
+    const isItemAdmin = req.user.role === 'admin';
+
+    if (!isItemOwner && !isItemAdmin) {
+       return res.status(403).json({ error: 'Bạn không có quyền xem thông tin này.' });
+    }
 
     res.status(200).json({ data: item });
   } catch (error) {

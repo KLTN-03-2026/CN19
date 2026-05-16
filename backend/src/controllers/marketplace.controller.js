@@ -34,13 +34,15 @@ const createListing = async (req, res) => {
       return res.status(400).json({ error: 'Sự kiện này không hỗ trợ đăng bán lại vé.' });
     }
 
-    // [Business Rule] Không được bán lại quá giới hạn giá gốc niêm yết (mặc định 108%)
+    // [Business Rule] Không được bán lại quá giới hạn giá gốc niêm yết của sự kiện (ưu tiên) hoặc hệ thống (fallback)
     const sysConfig = await getSystemConfig();
     const ticketAskingPrice = Number(asking_price);
     const originalPrice = Number(ticket.ticket_tier.price);
     
-    // limitPercent = 100 + resale_price_cap (ví dụ 100 + 8 = 108)
-    const limitPercent = 100 + Number(sysConfig.resale_price_cap_percent || 8);
+    // Ưu tiên cấu hình sự kiện (ví dụ 108%), nếu không có mới lấy hệ thống (ví dụ 100 + 7 = 107%)
+    const limitPercent = ticket.event.resale_price_limit_percent 
+      ? Number(ticket.event.resale_price_limit_percent)
+      : (100 + Number(sysConfig.resale_price_cap_percent || 7));
     const maxTicketAskingPrice = (originalPrice * limitPercent) / 100;
     
     if (ticketAskingPrice > maxTicketAskingPrice) {
@@ -54,27 +56,58 @@ const createListing = async (req, res) => {
     const selectedMerchandise = [];
 
     if (merchandise_item_ids && merchandise_item_ids.length > 0) {
+      // [Security Check] Đảm bảo user sở hữu các vật phẩm này và chúng hợp lệ
       const items = await prisma.merchandiseOrderItem.findMany({
         where: {
           id: { in: merchandise_item_ids },
-          order_id: ticket.order_id, // Ràng buộc: Cùng đơn hàng với vé
-          listing_id: null,          // Ràng buộc: Chưa đăng bán ở bài đăng khác
-          is_redeemed: false,        // Ràng buộc: Chưa nhận hàng
+          order_id: ticket.order_id, // [QUAN TRỌNG] Phải cùng đơn hàng với vé
+          merchandise: { 
+            OR: [
+              { event_id: ticket.event_id },
+              { event_id: null } // Cho phép cả sản phẩm chung của BTC không gắn event cụ thể
+            ]
+          },
+          is_redeemed: false,
+          // Kiểm tra quyền sở hữu
           OR: [
             { owner_id: userId },
             { 
-              owner_id: null,
-              order: { customer_id: userId }
+              owner_id: null, 
+              order: { customer_id: userId } 
             }
           ]
         },
         include: { merchandise: true }
       });
 
+      console.log(`[Marketplace] User ${userId} listing ticket ${ticket_id} with ${merchandise_item_ids.length} items. Found in DB: ${items.length}`);
+
+      // Kiểm tra chi tiết từng item để báo lỗi chính xác
       if (items.length !== merchandise_item_ids.length) {
-        return res.status(400).json({ 
-          error: 'Một số sản phẩm không hợp lệ, đã được đăng bán ở bài khác hoặc không thuộc đơn hàng của vé này.' 
+        const foundIds = items.map(i => i.id);
+        const missingIds = merchandise_item_ids.filter(id => !foundIds.includes(id));
+        
+        // Kiểm tra xem có phải do đã được đăng bán ở bài khác không
+        const alreadyListed = await prisma.merchandiseOrderItem.findFirst({
+            where: { 
+                id: { in: missingIds },
+                listing_id: { not: null }
+            }
         });
+
+        if (alreadyListed) {
+            return res.status(400).json({ error: 'Một số sản phẩm đã được đăng bán ở bài đăng khác. Vui lòng kiểm tra lại.' });
+        }
+
+        return res.status(400).json({ 
+          error: 'Một số sản phẩm không hợp lệ hoặc không thuộc sở hữu của bạn.' 
+        });
+      }
+
+      // Kiểm tra xem có item nào đã được gán listing_id chưa (tránh trùng lặp)
+      const busyItem = items.find(i => i.listing_id !== null);
+      if (busyItem) {
+        return res.status(400).json({ error: `Sản phẩm "${busyItem.merchandise.name}" đã được đăng bán ở bài khác.` });
       }
 
       items.forEach(item => {
@@ -226,6 +259,9 @@ const getListings = async (req, res) => {
             }
           }
         },
+        merchandise_items: {
+          include: { merchandise: true }
+        },
         event: {
           include: {
             organizer: {
@@ -275,10 +311,13 @@ const updateListing = async (req, res) => {
       return res.status(400).json({ error: 'Bài đăng đang có người giao dịch hoặc không còn hoạt động.' });
     }
 
-    // [Business Rule] Kiểm tra giới hạn giá trần (chỉ tính cho phần vé)
+    // [Business Rule] Kiểm tra giới hạn giá trần (Ưu tiên Sự kiện > Hệ thống > 107%)
+    const sysConfig = await getSystemConfig();
     const newTicketPrice = Number(asking_price);
     const originalPrice = Number(listing.ticket.ticket_tier.price);
-    const limitPercent = Number(listing.ticket.event.resale_price_limit_percent || 108.0);
+    const limitPercent = listing.ticket.event.resale_price_limit_percent 
+      ? Number(listing.ticket.event.resale_price_limit_percent)
+      : (100 + Number(sysConfig.resale_price_cap_percent || 7));
     const maxTicketPrice = (originalPrice * limitPercent) / 100;
 
     if (newTicketPrice > maxTicketPrice) {
@@ -293,14 +332,40 @@ const updateListing = async (req, res) => {
     const currentMetadata = listing.metadata || {};
 
     if (merchandise_item_ids) {
-      // Nếu có gửi danh sách mới, tính toán lại
+      // [Security Check] Đảm bảo user sở hữu các vật phẩm này và chúng hợp lệ
       const items = await prisma.merchandiseOrderItem.findMany({
         where: {
           id: { in: merchandise_item_ids },
-          order_id: listing.ticket.order_id
+          order_id: listing.ticket.order_id, // [QUAN TRỌNG] Phải cùng đơn hàng với vé
+          merchandise: { 
+            OR: [
+              { event_id: listing.ticket.event_id },
+              { event_id: null }
+            ]
+          },
+          is_redeemed: false,
+          OR: [
+            { owner_id: userId },
+            { 
+              owner_id: null, 
+              order: { customer_id: userId } 
+            }
+          ]
         },
         include: { merchandise: true }
       });
+
+      console.log(`[Marketplace Update] User ${userId} updating listing ${id}. Found in DB: ${items.length}`);
+
+      if (items.length !== merchandise_item_ids.length) {
+        return res.status(400).json({ error: 'Một số sản phẩm không hợp lệ hoặc không thuộc sở hữu của bạn.' });
+      }
+
+      // Kiểm tra xem có item nào đã được gán cho listing KHÁC chưa
+      const busyItem = items.find(i => i.listing_id !== null && i.listing_id !== listing.id);
+      if (busyItem) {
+        return res.status(400).json({ error: `Sản phẩm "${busyItem.merchandise.name}" đã được đăng bán ở bài khác.` });
+      }
 
       items.forEach(item => {
         merchandiseTotal += Number(item.unit_price) * item.quantity;
@@ -321,18 +386,35 @@ const updateListing = async (req, res) => {
     // [Logic Chuẩn]: Giá cập nhật = Giá vé mới + Giá vật phẩm
     const totalAskingPrice = newTicketPrice + merchandiseTotal;
 
-    await prisma.marketplaceListing.update({
-      where: { id: listing.id },
-      data: { 
-        asking_price: totalAskingPrice,
-        metadata: {
-          ...currentMetadata,
-          ticket_price: newTicketPrice,
-          merchandise_total: merchandiseTotal,
-          selected_merchandise: selectedMerchandise,
-          merchandise_item_ids: merchandise_item_ids || currentMetadata.merchandise_item_ids || []
-        }
+    await prisma.$transaction(async (tx) => {
+      // 1. Giải phóng tất cả sản phẩm cũ của bài đăng này
+      await tx.merchandiseOrderItem.updateMany({
+        where: { listing_id: listing.id },
+        data: { listing_id: null }
+      });
+
+      // 2. Liên kết các sản phẩm mới được chọn
+      if (merchandise_item_ids && merchandise_item_ids.length > 0) {
+        await tx.merchandiseOrderItem.updateMany({
+          where: { id: { in: merchandise_item_ids } },
+          data: { listing_id: listing.id }
+        });
       }
+
+      // 3. Cập nhật thông tin bài đăng
+      await tx.marketplaceListing.update({
+        where: { id: listing.id },
+        data: { 
+          asking_price: totalAskingPrice,
+          metadata: {
+            ...currentMetadata,
+            ticket_price: newTicketPrice,
+            merchandise_total: merchandiseTotal,
+            selected_merchandise: selectedMerchandise,
+            merchandise_item_ids: merchandise_item_ids || currentMetadata.merchandise_item_ids || []
+          }
+        }
+      });
     });
 
     res.status(200).json({ message: 'Cập nhật bài đăng thành công.' });

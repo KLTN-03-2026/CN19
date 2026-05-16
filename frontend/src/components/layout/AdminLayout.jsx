@@ -32,6 +32,8 @@ import {
 import { useAuthStore } from '../../store/useAuthStore';
 import toast from 'react-hot-toast';
 import ScrollToTop from './ScrollToTop';
+import Logo from '../common/Logo';
+import NotificationDropdown from './NotificationDropdown';
 
 const AdminLayout = () => {
   const { user, logout } = useAuthStore();
@@ -90,8 +92,6 @@ const AdminLayout = () => {
     { path: '/admin/withdrawals', icon: Banknote, label: 'Quản lý rút tiền', permission: 'settlements' },
     { path: '/admin/products', icon: Package, label: 'Quản lý sản phẩm', permission: 'merchandise' },
     { path: '/admin/blog', icon: FileText, label: 'Quản lý blog', permission: 'blogs' },
-    { path: '/admin/coupons', icon: Tag, label: 'Mã giảm giá', permission: 'coupons' },
-    { path: '/admin/support', icon: LifeBuoy, label: 'Hỗ trợ & Khiếu nại', permission: 'support' },
     { path: '/admin/settings', icon: Settings, label: 'Cấu hình hệ thống', permission: 'system' },
     { path: '/admin/reports', icon: FileDown, label: 'Thống kê & Báo cáo', permission: 'dashboard' },
   ];
@@ -123,12 +123,10 @@ const AdminLayout = () => {
       >
         <div className="pt-6 pr-6 pl-6 pb-4 flex items-center justify-between">
           <div className={`flex items-center space-x-3 ${!isSidebarOpen && 'hidden'}`}>
-            <div className="w-8 h-8 bg-neon-green rounded-lg flex items-center justify-center">
-              <ShieldCheck className="w-5 h-5 text-black" />
-            </div>
+            <Logo variant="icon" size="md" />
             <span className="font-black text-xl tracking-tight text-gray-900 dark:text-white uppercase">Admin</span>
           </div>
-          <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
+          <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors">
             {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-6 h-6" />}
           </button>
         </div>
@@ -144,7 +142,7 @@ const AdminLayout = () => {
                 className={`flex items-center space-x-3 px-4 py-2.5 rounded-xl transition-all group ${
                   isActive 
                     ? 'bg-neon-green text-black font-bold shadow-[0_0_15px_rgba(82,196,45,0.3)]' 
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white'
+                    : 'text-gray-800 dark:text-gray-500 hover:bg-gray-200 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white'
                 }`}
               >
                 <Icon className={`w-4.5 h-4.5 ${isActive ? 'text-black' : 'group-hover:text-neon-green'}`} />
@@ -179,7 +177,7 @@ const AdminLayout = () => {
             </button>
             
             <div className="flex items-center flex-1 max-w-md relative">
-              <Search className="absolute left-3 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-3 w-4 h-4 text-gray-600" />
               <input 
                 type="text" 
                 placeholder="Tìm nhanh..." 
@@ -192,7 +190,7 @@ const AdminLayout = () => {
             {/* Back to Home Button */}
             <Link 
               to="/" 
-              className="flex items-center space-x-2 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 px-3 md:px-4 py-2 rounded-xl text-sm font-bold transition-all border border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-400 hover:text-neon-green dark:hover:text-neon-green"
+              className="flex items-center space-x-2 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 px-3 md:px-4 py-2 rounded-xl text-sm font-bold transition-all border border-gray-200 dark:border-white/10 text-gray-700 dark:text-gray-500 hover:text-neon-green dark:hover:text-neon-green"
               title="Quay về trang chủ"
             >
               <Home className="w-4 h-4" />
@@ -203,15 +201,12 @@ const AdminLayout = () => {
             {/* Theme Toggle */}
             <button 
               onClick={() => setIsDark(!isDark)}
-              className="p-2 bg-gray-100 dark:bg-white/5 rounded-full text-gray-500 dark:text-gray-400 hover:text-neon-green transition-all border border-gray-200 dark:border-white/5"
+              className="p-2 bg-gray-100 dark:bg-white/5 rounded-full text-gray-600 dark:text-gray-500 hover:text-neon-green transition-all border border-gray-200 dark:border-white/5"
             >
-              {isDark ? <Moon className="w-5 h-5 text-gray-400" /> : <Sun className="w-5 h-5 text-yellow-500" />}
+              {isDark ? <Moon className="w-5 h-5 text-gray-500" /> : <Sun className="w-5 h-5 text-yellow-500" />}
             </button>
 
-            <button className="relative text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-[#111114]"></span>
-            </button>
+            <NotificationDropdown />
             <div className="flex items-center space-x-3 pl-4 border-l border-gray-200 dark:border-white/5">
               <div className="text-right flex flex-col hidden sm:flex">
                 <span className="text-sm font-bold text-gray-900 dark:text-white">{user?.full_name || 'Admin'}</span>
@@ -229,8 +224,8 @@ const AdminLayout = () => {
         </header>
 
         {/* Content Area */}
-        <div className="p-4 sm:p-6 md:p-8 lg:p-10 flex-1 overflow-y-auto text-[14px] leading-relaxed text-gray-700 dark:text-zinc-300">
-          <div className="max-w-screen-2xl mx-auto w-full">
+        <div className="p-4 sm:p-5 md:p-6 lg:p-8 flex-1 overflow-y-auto text-[14px] leading-relaxed text-gray-700 dark:text-zinc-300">
+          <div className="max-w-[1920px] mx-auto w-full">
             <Outlet />
           </div>
         </div>

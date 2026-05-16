@@ -227,9 +227,9 @@ const CategoryManagement = () => {
   };
 
   return (
-    <div className="space-y-4 animate-in fade-in duration-500 max-w-[1600px] mx-auto">
+    <div className="space-y-3 md:space-y-4 animate-in fade-in duration-500 w-full mx-auto">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 lg:mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="space-y-1">
           <h1 className="text-xl md:text-2xl font-black uppercase text-gray-900 dark:text-white flex items-center space-x-3">
             <div className="p-2 bg-neon-green/10 rounded-xl shrink-0">
@@ -237,7 +237,7 @@ const CategoryManagement = () => {
             </div>
             <span className="truncate">Quản lý Danh mục</span>
           </h1>
-          <p className="text-gray-500 dark:text-gray-400 text-[11px] md:text-sm font-medium">
+          <p className="text-gray-900 dark:text-gray-400 text-[11px] md:text-sm font-bold">
             Phân loại và điều phối các kiểu hình sự kiện ({categories.length} loại hình).
           </p>
         </div>
@@ -254,7 +254,7 @@ const CategoryManagement = () => {
       {/* Filter Bar - Modern & Compact */}
       <div className="bg-white dark:bg-[#111114] p-3 md:p-4 rounded-2xl md:rounded-3xl border border-gray-200 dark:border-white/5 flex flex-col lg:flex-row items-stretch lg:items-center gap-4 shadow-sm">
         <div className="relative flex-1 group">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 group-focus-within:text-neon-green transition-colors" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 w-4 h-4 group-focus-within:text-neon-green transition-colors" />
           <input 
             type="text"
             placeholder="Tìm theo tên danh mục..."
@@ -276,7 +276,7 @@ const CategoryManagement = () => {
               <option value="active">Hoạt động</option>
               <option value="hidden">Đã ẩn</option>
             </select>
-            <MoreVertical className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
+            <MoreVertical className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-500 pointer-events-none" />
           </div>
   
           {/* Date Sort */}
@@ -289,21 +289,21 @@ const CategoryManagement = () => {
               <option value="newest">Mới nhất</option>
               <option value="oldest">Cũ nhất</option>
             </select>
-            <ArrowUpDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
+            <ArrowUpDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-500 pointer-events-none" />
           </div>
 
           {/* View Toggle - Hidden on very small screens to save space */}
           <div className="hidden sm:flex items-center bg-gray-50 dark:bg-white/5 p-1 rounded-xl border border-gray-200 dark:border-white/10">
             <button 
               onClick={() => setViewMode('list')}
-              className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-white dark:bg-white/10 text-neon-green shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+              className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-white dark:bg-white/10 text-neon-green shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
               title="Danh sách"
             >
               <List className="w-4 h-4" />
             </button>
             <button 
               onClick={() => setViewMode('grid')}
-              className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-white dark:bg-white/10 text-neon-green shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+              className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-white dark:bg-white/10 text-neon-green shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
               title="Lưới"
             >
               <LayoutGrid className="w-4 h-4" />
@@ -316,7 +316,7 @@ const CategoryManagement = () => {
       {loading ? (
         <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-200 dark:border-white/5 p-20 flex flex-col items-center justify-center">
           <Loader2 className="w-8 h-8 text-neon-green animate-spin mb-4" />
-          <p className="text-gray-500 uppercase text-[10px] font-black tracking-widest">Đang tải dữ liệu...</p>
+          <p className="text-gray-700 uppercase text-[10px] font-black tracking-widest">Đang tải dữ liệu...</p>
         </div>
       ) : viewMode === 'list' ? (
         <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-200 dark:border-white/5 overflow-hidden shadow-sm">
@@ -324,11 +324,11 @@ const CategoryManagement = () => {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-gray-50 dark:bg-white/5 border-b border-gray-200 dark:border-white/5">
-                  <th className="px-6 py-4 text-xs font-black uppercase text-gray-500">Danh mục</th>
-                  <th className="px-6 py-4 text-xs font-black uppercase text-gray-500 text-center hidden md:table-cell">Số lượng sự kiện</th>
-                  <th className="px-6 py-4 text-xs font-black uppercase text-gray-500 text-center hidden sm:table-cell">Trạng thái</th>
-                  <th className="px-6 py-4 text-xs font-black uppercase text-gray-500 text-center hidden lg:table-cell">Ngày khởi tạo</th>
-                  <th className="px-6 py-4 text-xs font-black uppercase text-gray-500 text-right">Thao tác</th>
+                  <th className="px-6 py-4 text-xs font-black uppercase text-gray-700">Danh mục</th>
+                  <th className="px-6 py-4 text-xs font-black uppercase text-gray-700 text-center hidden md:table-cell">Số lượng sự kiện</th>
+                  <th className="px-6 py-4 text-xs font-black uppercase text-gray-700 text-center hidden sm:table-cell">Trạng thái</th>
+                  <th className="px-6 py-4 text-xs font-black uppercase text-gray-700 text-center hidden lg:table-cell">Ngày khởi tạo</th>
+                  <th className="px-6 py-4 text-xs font-black uppercase text-gray-700 text-right">Thao tác</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-white/5">
@@ -340,7 +340,7 @@ const CategoryManagement = () => {
                           {c.image_url ? (
                             <img src={c.image_url} alt={c.name} className="w-full h-full object-cover" />
                           ) : (
-                            <Calendar className="w-4 h-4 md:w-5 md:h-5 text-gray-400 group-hover:text-neon-green" />
+                            <Calendar className="w-4 h-4 md:w-5 md:h-5 text-gray-600 group-hover:text-neon-green" />
                           )}
                         </div>
                         <div className="flex flex-col">
@@ -370,7 +370,7 @@ const CategoryManagement = () => {
                       </button>
                     </td>
                     <td className="px-6 py-4 text-center hidden lg:table-cell">
-                      <span className="text-xs font-bold text-gray-400">
+                      <span className="text-xs font-bold text-gray-600">
                         {new Date(c.created_at).toLocaleDateString('vi-VN')}
                       </span>
                     </td>
@@ -378,21 +378,21 @@ const CategoryManagement = () => {
                       <div className="flex items-center justify-end space-x-1 md:space-x-1.5">
                         <button 
                           onClick={() => handleOpenDetail(c)}
-                          className="p-1.5 md:p-2 bg-gray-50 dark:bg-white/5 text-gray-400 hover:text-neon-green hover:bg-neon-green/10 rounded-lg border border-transparent dark:border-white/5 transition-all shadow-sm"
+                          className="p-1.5 md:p-2 bg-gray-50 dark:bg-white/5 text-gray-600 hover:text-neon-green hover:bg-neon-green/10 rounded-lg border border-transparent dark:border-white/5 transition-all shadow-sm"
                           title="Chi tiết"
                         >
                           <Eye className="w-4 h-4" />
                         </button>
                         <button 
                           onClick={() => handleOpenModal(c)}
-                          className="p-1.5 md:p-2 bg-gray-50 dark:bg-white/5 text-gray-400 hover:text-blue-500 hover:bg-blue-500/10 rounded-lg border border-transparent dark:border-white/5 transition-all shadow-sm"
+                          className="p-1.5 md:p-2 bg-gray-50 dark:bg-white/5 text-gray-600 hover:text-blue-500 hover:bg-blue-500/10 rounded-lg border border-transparent dark:border-white/5 transition-all shadow-sm"
                           title="Chỉnh sửa"
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
                         <button 
                           onClick={() => handleDelete(c.id)}
-                          className="p-1.5 md:p-2 bg-gray-50 dark:bg-white/5 text-gray-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg border border-transparent dark:border-white/5 shadow-sm transition-all"
+                          className="p-1.5 md:p-2 bg-gray-50 dark:bg-white/5 text-gray-600 hover:text-red-500 hover:bg-red-500/10 rounded-lg border border-transparent dark:border-white/5 shadow-sm transition-all"
                           title="Xóa"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -412,14 +412,14 @@ const CategoryManagement = () => {
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 md:gap-4">
           {filteredCategories.length > 0 ? filteredCategories.map((c) => (
             <div key={c.id} className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-200 dark:border-white/5 overflow-hidden hover:border-neon-green/30 transition-all group flex flex-col h-full shadow-sm">
               <div className="relative aspect-video overflow-hidden bg-gray-100 dark:bg-white/5">
                 {c.image_url ? (
                   <img src={c.image_url} alt={c.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-gray-300 dark:text-gray-700">
+                  <div className="w-full h-full flex items-center justify-center text-gray-500 dark:text-gray-600">
                     <Tags className="w-12 h-12" />
                   </div>
                 )}
@@ -431,33 +431,33 @@ const CategoryManagement = () => {
                   </span>
                 </div>
               </div>
-              <div className="p-5 flex-1 flex flex-col">
+              <div className="p-4 flex-1 flex flex-col">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-bold text-gray-900 dark:text-white uppercase truncate flex-1 mr-2">{c.name}</h3>
+                  <h3 className="font-black text-gray-900 dark:text-white uppercase truncate flex-1 mr-2">{c.name}</h3>
                   <span className="text-[10px] font-black text-blue-500 bg-blue-500/10 px-2 py-0.5 rounded-full whitespace-nowrap">
                     {c._count.events} Sự kiện
                   </span>
                 </div>
                 <div className="mt-auto pt-4 flex items-center justify-between border-t border-gray-100 dark:border-white/5">
-                   <span className="text-[10px] text-gray-400 font-bold uppercase tracking-tighter">Ngày tạo: {new Date(c.created_at).toLocaleDateString('vi-VN')}</span>
+                   <span className="text-[10px] text-gray-600 font-bold tracking-tighter">Ngày tạo: {new Date(c.created_at).toLocaleDateString('vi-VN')}</span>
                    <div className="flex items-center space-x-1">
                       <button 
                         onClick={() => handleOpenDetail(c)}
-                        className="p-2 text-gray-400 hover:text-neon-green hover:bg-neon-green/10 rounded-lg transition-all"
+                        className="p-2 text-gray-600 hover:text-neon-green hover:bg-neon-green/10 rounded-lg transition-all"
                         title="Chi tiết"
                       >
                         <Eye className="w-4 h-4" />
                       </button>
                       <button 
                         onClick={() => handleOpenModal(c)}
-                        className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-500/10 rounded-lg transition-all"
+                        className="p-2 text-gray-600 hover:text-blue-500 hover:bg-blue-500/10 rounded-lg transition-all"
                         title="Chỉnh sửa"
                       >
                         <Edit2 className="w-4 h-4" />
                       </button>
                       <button 
                          onClick={() => handleDelete(c.id)}
-                         className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
+                         className="p-2 text-gray-600 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
                          title="Xóa"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -482,7 +482,7 @@ const CategoryManagement = () => {
               <h3 className="text-lg md:text-xl font-black text-gray-900 dark:text-white uppercase tracking-tight">
                 {editingCategory ? 'Chỉnh sửa Danh mục' : 'Thêm Danh mục Mới'}
               </h3>
-              <button onClick={handleCloseModal} className="p-2 hover:bg-gray-100 dark:hover:bg-white/5 rounded-full transition-all text-gray-400">
+              <button onClick={handleCloseModal} className="p-2 hover:bg-gray-100 dark:hover:bg-white/5 rounded-full transition-all text-gray-600">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -490,7 +490,7 @@ const CategoryManagement = () => {
             <form onSubmit={handleSubmit} className="space-y-5">
               {/* Ảnh bìa */}
               <div>
-                <label className="block text-xs font-black text-gray-400 uppercase mb-3 ml-1">
+                <label className="block text-xs font-black text-gray-600 uppercase mb-3 ml-1">
                   Ảnh bìa danh mục
                 </label>
                 <div 
@@ -512,7 +512,7 @@ const CategoryManagement = () => {
                       </button>
                     </>
                   ) : (
-                    <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                    <div className="flex flex-col items-center justify-center h-full text-gray-600">
                       <ImageIcon className="w-10 h-10 mb-2" />
                       <span className="text-xs font-bold uppercase">Nhấn để tải ảnh</span>
                     </div>
@@ -528,7 +528,7 @@ const CategoryManagement = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-black text-gray-400 uppercase mb-3 ml-1">
+                <label className="block text-xs font-black text-gray-600 uppercase mb-3 ml-1">
                   Tên Danh mục
                 </label>
                 <input 
@@ -549,7 +549,7 @@ const CategoryManagement = () => {
                       <span className="ml-2 text-[8px] bg-amber-500/10 text-amber-500 px-1.5 py-0.5 rounded border border-amber-500/20 uppercase">Ràng buộc</span>
                     )}
                   </label>
-                  <p className="text-xs text-gray-500 mt-0.5">
+                  <p className="text-xs text-gray-700 mt-0.5">
                     {editingCategory?._count?.events > 0 && isCategoryActive
                       ? `Đang có ${editingCategory._count.events} sự kiện (Không thể ẩn)`
                       : 'Cho phép danh mục hiển thị trên hệ thống'}
@@ -631,7 +631,7 @@ const CategoryManagement = () => {
             <div className="p-5 md:p-8">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
                 <div className="space-y-1 bg-gray-50 dark:bg-white/5 p-3 rounded-xl border border-gray-200 dark:border-white/5">
-                  <span className="text-[9px] md:text-[10px] font-black text-gray-400 uppercase flex items-center gap-2">
+                  <span className="text-[9px] md:text-[10px] font-black text-gray-800 dark:text-gray-400 uppercase flex items-center gap-2">
                     <Calendar className="w-3 h-3" /> Ngày tạo
                   </span>
                   <p className="text-xs md:text-sm font-bold text-gray-900 dark:text-white">
@@ -641,7 +641,7 @@ const CategoryManagement = () => {
                   </p>
                 </div>
                 <div className="space-y-1 bg-gray-50 dark:bg-white/5 p-3 rounded-xl border border-gray-200 dark:border-white/5">
-                  <span className="text-[9px] md:text-[10px] font-black text-gray-400 uppercase flex items-center gap-2">
+                  <span className="text-[9px] md:text-[10px] font-black text-gray-800 dark:text-gray-400 uppercase flex items-center gap-2">
                     <Clock className="w-3 h-3" /> Cập nhật cuối
                   </span>
                   <p className="text-xs md:text-sm font-bold text-gray-900 dark:text-white">
@@ -651,7 +651,7 @@ const CategoryManagement = () => {
                   </p>
                 </div>
                 <div className="space-y-1 bg-gray-50 dark:bg-white/5 p-3 rounded-xl border border-gray-200 dark:border-white/5">
-                  <span className="text-[9px] md:text-[10px] font-black text-gray-400 uppercase flex items-center gap-2">
+                  <span className="text-[9px] md:text-[10px] font-black text-gray-800 dark:text-gray-400 uppercase flex items-center gap-2">
                     <Tags className="w-3 h-3" /> Quy mô
                   </span>
                   <p className="text-xs md:text-sm font-bold text-gray-900 dark:text-white truncate">
@@ -659,10 +659,10 @@ const CategoryManagement = () => {
                   </p>
                 </div>
                 <div className="space-y-1 bg-gray-50 dark:bg-white/5 p-3 rounded-xl border border-gray-200 dark:border-white/5">
-                  <span className="text-[9px] md:text-[10px] font-black text-gray-400 uppercase flex items-center gap-2">
+                  <span className="text-[9px] md:text-[10px] font-black text-gray-800 dark:text-gray-400 uppercase flex items-center gap-2">
                     <AlertCircle className="w-3 h-3" /> ID Danh mục
                   </span>
-                  <p className="text-[10px] font-mono text-gray-500 break-all leading-tight">
+                  <p className="text-[10px] font-mono text-gray-700 break-all leading-tight">
                     {selectedDetailCategory.id}
                   </p>
                 </div>

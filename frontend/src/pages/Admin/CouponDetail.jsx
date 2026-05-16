@@ -54,7 +54,7 @@ const CouponDetail = () => {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
         <Loader2 className="w-10 h-10 text-neon-green animate-spin" />
-        <p className="text-gray-500 font-black uppercase text-xs tracking-widest">Đang tải chi tiết...</p>
+        <p className="text-gray-600 font-black uppercase text-xs tracking-widest">Đang tải chi tiết...</p>
       </div>
     );
   }
@@ -78,7 +78,7 @@ const CouponDetail = () => {
         <div className="space-y-4">
           <button 
             onClick={() => navigate('/admin/coupons')}
-            className="flex items-center text-gray-500 hover:text-neon-green font-black uppercase text-[10px] tracking-widest transition-colors group"
+            className="flex items-center text-gray-700 hover:text-neon-green font-black uppercase text-[10px] tracking-widest transition-colors group"
           >
             <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" />
             Quay lại danh sách
@@ -97,7 +97,7 @@ const CouponDetail = () => {
                   {status.label}
                 </span>
               </div>
-              <p className="text-gray-500 dark:text-gray-400 font-medium text-sm mt-1">{coupon.description || 'Không có mô tả cho mã này'}</p>
+              <p className="text-gray-700 dark:text-gray-400 font-medium text-sm mt-1">{coupon.description || 'Không có mô tả cho mã này'}</p>
             </div>
           </div>
         </div>
@@ -118,7 +118,7 @@ const CouponDetail = () => {
             <div className="w-10 h-10 bg-purple-500/10 rounded-xl flex items-center justify-center mb-4">
                 {coupon.discount_type === 'PERCENTAGE' ? <Percent className="text-purple-500" /> : <DollarSign className="text-purple-500" />}
             </div>
-            <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Giá trị giảm</div>
+            <div className="text-[10px] font-black text-gray-600 uppercase tracking-widest mb-1">Giá trị giảm</div>
             <div className="text-2xl font-black text-gray-900 dark:text-white tracking-widest">
                 {coupon.discount_type === 'PERCENTAGE' ? `${coupon.discount_value}%` : `${Number(coupon.discount_value).toLocaleString('vi-VN')}đ`}
             </div>
@@ -128,9 +128,9 @@ const CouponDetail = () => {
             <div className="w-10 h-10 bg-blue-500/10 rounded-xl flex items-center justify-center mb-4">
                 <ShoppingBag className="text-blue-500" />
             </div>
-            <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Đã sử dụng</div>
+            <div className="text-[10px] font-black text-gray-600 uppercase tracking-widest mb-1">Đã sử dụng</div>
             <div className="text-2xl font-black text-gray-900 dark:text-white tracking-widest">
-                {coupon.used_count} <span className="text-xs text-gray-400 font-bold">/ {coupon.usage_limit || '∞'}</span>
+                {coupon.used_count} <span className="text-xs text-gray-600 font-bold">/ {coupon.usage_limit || '∞'}</span>
             </div>
         </div>
 
@@ -138,7 +138,7 @@ const CouponDetail = () => {
             <div className="w-10 h-10 bg-neon-green/10 rounded-xl flex items-center justify-center mb-4">
                 <Clock className="text-neon-green" />
             </div>
-            <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Hiệu lực từ</div>
+            <div className="text-[10px] font-black text-gray-600 uppercase tracking-widest mb-1">Hiệu lực từ</div>
             <div className="text-sm font-black text-gray-900 dark:text-white">
                 {format(parseISO(coupon.start_date), 'dd/MM/yyyy')}
             </div>
@@ -148,7 +148,7 @@ const CouponDetail = () => {
             <div className="w-10 h-10 bg-red-500/10 rounded-xl flex items-center justify-center mb-4">
                 <AlertCircle className="text-red-500" />
             </div>
-            <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Hết hạn vào</div>
+            <div className="text-[10px] font-black text-gray-600 uppercase tracking-widest mb-1">Hết hạn vào</div>
             <div className="text-sm font-black text-gray-900 dark:text-white">
                 {format(parseISO(coupon.end_date), 'dd/MM/yyyy')}
             </div>
@@ -165,27 +165,27 @@ const CouponDetail = () => {
 
                 <div className="space-y-4">
                     <div className="flex justify-between items-center text-xs">
-                        <span className="text-gray-500 font-medium">ID Hệ thống:</span>
-                        <code className="bg-gray-100 dark:bg-white/5 px-2 py-1 rounded text-[10px] font-mono select-all text-gray-400">{coupon.id}</code>
+                        <span className="text-gray-600 font-medium">ID Hệ thống:</span>
+                        <code className="bg-gray-100 dark:bg-white/5 px-2 py-1 rounded text-[10px] font-mono select-all text-gray-600">{coupon.id}</code>
                     </div>
                     <div className="flex justify-between items-center text-xs">
-                        <span className="text-gray-500 font-medium">Mã ưu đãi:</span>
+                        <span className="text-gray-600 font-medium">Mã ưu đãi:</span>
                         <span className="font-black text-neon-green uppercase">{coupon.code}</span>
                     </div>
                     <div className="flex justify-between items-center text-xs">
-                        <span className="text-gray-500 font-medium">Loại ưu đãi:</span>
+                        <span className="text-gray-600 font-medium">Loại ưu đãi:</span>
                         <span className="font-bold text-gray-700 dark:text-gray-300">
                              {coupon.discount_type === 'PERCENTAGE' ? 'Giảm theo phần trăm (%)' : 'Giảm số tiền cố định (đ)'}
                         </span>
                     </div>
                     <div className="flex justify-between items-center text-xs">
-                        <span className="text-gray-500 font-medium">Đơn hàng tối thiểu:</span>
+                        <span className="text-gray-600 font-medium">Đơn hàng tối thiểu:</span>
                         <span className="font-bold text-gray-700 dark:text-gray-300">
                              {coupon.min_order_amount ? `${Number(coupon.min_order_amount).toLocaleString('vi-VN')}đ` : 'Không giới hạn'}
                         </span>
                     </div>
                     <div className="flex justify-between items-center text-xs">
-                        <span className="text-gray-500 font-medium">Giảm tối đa (%):</span>
+                        <span className="text-gray-600 font-medium">Giảm tối đa (%):</span>
                         <span className="font-bold text-gray-700 dark:text-gray-300">
                              {coupon.discount_type === 'PERCENTAGE' && coupon.max_discount_amount 
                                 ? `${Number(coupon.max_discount_amount).toLocaleString('vi-VN')}đ` 
@@ -217,7 +217,7 @@ const CouponDetail = () => {
                                 <Activity className="w-5 h-5 text-neon-green" />
                                 <div>
                                     <div className="text-[10px] font-black uppercase text-neon-green tracking-widest">Toàn bộ hệ thống</div>
-                                    <div className="text-xs text-gray-500 italic mt-0.5">Áp dụng cho mọi đơn hàng hợp lệ.</div>
+                                    <div className="text-xs text-gray-600 italic mt-0.5">Áp dụng cho mọi đơn hàng hợp lệ.</div>
                                 </div>
                             </div>
                         )}
@@ -238,7 +238,7 @@ const CouponDetail = () => {
             <div className="p-8 border-b border-gray-50 dark:border-white/5 flex items-center justify-between">
                 <div>
                     <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-gray-900 dark:text-white">Lịch sử sử dụng gần đây</h3>
-                    <p className="text-[10px] text-gray-500 mt-1 font-bold italic uppercase tracking-tighter">* Hiển thị 20 giao dịch cuối cùng</p>
+                    <p className="text-[10px] text-gray-700 mt-1 font-bold italic uppercase tracking-tighter">* Hiển thị 20 giao dịch cuối cùng</p>
                 </div>
                 <div className="p-3 bg-gray-50 dark:bg-white/5 rounded-xl border border-gray-100 dark:border-white/5">
                     <HistoryIcon className="w-4 h-4 text-gray-400" />
@@ -249,10 +249,10 @@ const CouponDetail = () => {
                 <table className="w-full text-left">
                     <thead>
                         <tr className="bg-gray-50/50 dark:bg-white/5 border-b border-gray-100 dark:border-white/5">
-                            <th className="px-8 py-4 text-[10px] font-black uppercase text-gray-400 tracking-wider">Mã đơn hàng</th>
-                            <th className="px-8 py-4 text-[10px] font-black uppercase text-gray-400 tracking-wider">Khách hàng</th>
-                            <th className="px-8 py-4 text-[10px] font-black uppercase text-gray-400 tracking-wider">Ngày dùng</th>
-                            <th className="px-8 py-4 text-[10px] font-black uppercase text-gray-400 tracking-wider text-right">Số tiền giảm</th>
+                            <th className="px-8 py-4 text-[10px] font-black uppercase text-gray-600 tracking-wider">Mã đơn hàng</th>
+                            <th className="px-8 py-4 text-[10px] font-black uppercase text-gray-600 tracking-wider">Khách hàng</th>
+                            <th className="px-8 py-4 text-[10px] font-black uppercase text-gray-600 tracking-wider">Ngày dùng</th>
+                            <th className="px-8 py-4 text-[10px] font-black uppercase text-gray-600 tracking-wider text-right">Số tiền giảm</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 dark:divide-white/5">
@@ -266,11 +266,11 @@ const CouponDetail = () => {
                                 <td className="px-8 py-5">
                                     <div className="flex flex-col">
                                         <span className="text-sm font-bold text-gray-800 dark:text-gray-200 leading-tight">{order.customer.full_name}</span>
-                                        <span className="text-[10px] text-gray-400 font-mono italic mt-0.5">{order.customer.email}</span>
+                                        <span className="text-[10px] text-gray-600 font-mono italic mt-0.5">{order.customer.email}</span>
                                     </div>
                                 </td>
                                 <td className="px-8 py-5">
-                                    <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                                    <span className="text-xs font-medium text-gray-700 dark:text-gray-400">
                                         {format(parseISO(order.created_at), 'dd/MM/yyyy HH:mm')}
                                     </span>
                                 </td>
@@ -283,7 +283,7 @@ const CouponDetail = () => {
                                 <td colSpan="4" className="px-8 py-20 text-center">
                                     <div className="flex flex-col items-center opacity-30">
                                         <ShoppingBag className="w-12 h-12 mb-4" />
-                                        <p className="text-sm font-black uppercase tracking-widest">Chưa có lượt sử dụng nào</p>
+                                        <p className="text-sm font-black uppercase tracking-widest text-gray-600">Chưa có lượt sử dụng nào</p>
                                     </div>
                                 </td>
                             </tr>

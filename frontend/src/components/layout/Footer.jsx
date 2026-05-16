@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../store/useAuthStore';
+import Logo from '../common/Logo';
 
 const Footer = () => {
     const { t } = useTranslation();
@@ -66,12 +67,7 @@ const Footer = () => {
             <div className="max-w-[1400px] mx-auto px-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-10">
                 {/* Column 1: Brand */}
                 <div className="space-y-6">
-                    <Link to="/" className="flex items-center gap-3 group">
-                        <Shield className="w-8 h-8 text-neon-green" />
-                        <span className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">
-                            BAS-TICKET
-                        </span>
-                    </Link>
+                    <Logo variant="full" size="lg" />
                     <p className="text-sm font-medium text-gray-600 dark:text-gray-400 leading-relaxed">
                         {t('footer.description', 'Nền tảng phát hành vé sự kiện ứng dụng công nghệ Blockchain và AI. Chống gian lận tuyệt đối, thanh toán minh bạch.')}
                     </p>

@@ -24,7 +24,7 @@ import axios from 'axios';
 import { useSystemConfig } from '../../hooks/useSystemConfig';
 
 const EditEvent = () => {
-    const { eventPlatformFee, eventTransactionFee, gasFee, resalePriceCap } = useSystemConfig();
+    const { eventPlatformFee, eventTransactionFee, gasFee, resaleTransactionFee, resalePriceCap } = useSystemConfig();
     const { id } = useParams();
     const navigate = useNavigate();
     const [step, setStep] = useState(1);
@@ -42,8 +42,14 @@ const EditEvent = () => {
     const [isCategoryOpen, setIsCategoryOpen] = useState(false);
     const [targetStatus, setTargetStatus] = useState('pending');
     const [originalStatus, setOriginalStatus] = useState(null);
+    const [activeFees, setActiveFees] = useState({
+        platformFee: 5,
+        transactionFee: 3,
+        gasFee: 10000,
+        resaleTransactionFee: 3
+    });
 
-    const { register, control, handleSubmit, watch, setValue, formState: { errors } } = useForm({
+    const { register, control, handleSubmit, watch, setValue, trigger, formState: { errors } } = useForm({
         defaultValues: {
             title: '',
             category_id: '',
@@ -122,6 +128,14 @@ const EditEvent = () => {
                 }
                 setTargetStatus(eventData.status);
                 setOriginalStatus(eventData.status);
+                
+                // Cập nhật phí đã chốt của sự kiện này (Snapshot fees)
+                setActiveFees({
+                    platformFee: eventData.platform_fee_percent ?? eventPlatformFee,
+                    transactionFee: eventData.commission_fee_percent ?? eventTransactionFee,
+                    gasFee: eventData.resale_gas_fee ?? gasFee,
+                    resaleTransactionFee: eventData.resale_platform_fee_percent ?? resaleTransactionFee
+                });
 
             } catch (err) {
                 toast.error('Không thể tải dữ liệu sự kiện.');
@@ -132,7 +146,18 @@ const EditEvent = () => {
             }
         };
         fetchData();
-    }, [id, setValue, replace, navigate]);
+    }, [id, setValue, replace, navigate, eventPlatformFee, eventTransactionFee, gasFee, resaleTransactionFee]);
+
+    useEffect(() => {
+        // Initialize activeFees with current system defaults until eventData loads
+        setActiveFees(prev => ({
+            ...prev,
+            platformFee: eventPlatformFee,
+            transactionFee: eventTransactionFee,
+            gasFee: gasFee,
+            resaleTransactionFee: resaleTransactionFee
+        }));
+    }, [eventPlatformFee, eventTransactionFee, gasFee, resaleTransactionFee]);
 
     const handleImageUpload = async (e) => {
         const file = e.target.files[0];
@@ -159,7 +184,7 @@ const EditEvent = () => {
                     }
                 }
             );
-            setValue('image_url', res.data.secure_url);
+            setValue('image_url', res.data.secure_url, { shouldValidate: true });
             toast.success("Tải ảnh lên thành công!");
         } catch (error) {
             toast.error("Lỗi khi tải ảnh lên Cloudinary.");
@@ -284,7 +309,29 @@ const EditEvent = () => {
         }
     };
 
-    const nextStep = (e) => { e.preventDefault(); setStep(step + 1); };
+    const nextStep = async (e) => { 
+        if (e && e.preventDefault) e.preventDefault(); 
+        
+        let fieldsToValidate = [];
+        if (step === 1) fieldsToValidate = ['title', 'category_id', 'image_url'];
+        if (step === 2) fieldsToValidate = ['event_date', 'end_date', 'location_address'];
+        if (step === 3) {
+            const isValid = await trigger('ticket_tiers');
+            if (!isValid) {
+                toast.error('Vui lòng kiểm tra lại thông tin các hạng vé.');
+                return;
+            }
+            setStep(step + 1);
+            return;
+        }
+
+        const isStepValid = await trigger(fieldsToValidate);
+        if (isStepValid) {
+            setStep(step + 1);
+        } else {
+            toast.error('Vui lòng điền đầy đủ các thông tin bắt buộc.');
+        }
+    };
     const prevStep = (e) => { e.preventDefault(); setStep(step - 1); };
 
     if (isLoading) {
@@ -360,7 +407,7 @@ const EditEvent = () => {
                 <div className="mb-8 p-4 bg-blue-600/10 border border-blue-600/20 rounded-2xl flex items-start gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
                     <AlertCircle className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
                     <div>
-                        <h4 className="text-sm font-bold text-blue-600 uppercase ">Sự kiện đang trong quá trình bán vé</h4>
+                        <h4 className="text-sm font-bold text-blue-600 uppercase ">Sự kiện đang mở bán - Bạn chỉ có thể cập nhật thông tin mô tả & truyền thông</h4>
                         <p className="text-xs text-blue-700/70 dark:text-blue-400/70 mt-1 font-medium leading-relaxed">
                             Để đảm bảo quyền lợi khách hàng, bạn chỉ có thể chỉnh sửa các thông tin bổ trợ (mô tả, hình ảnh, video). 
                             Các thông tin cốt lõi như thời gian, địa điểm và giá vé đã được khóa lại.
@@ -371,7 +418,10 @@ const EditEvent = () => {
 
             {renderStepHeader()}
 
-            <form onSubmit={handleSubmit(onSubmit)} className="bg-white dark:bg-[#111114] rounded-3xl border border-gray-200 dark:border-white/5 shadow-2xl p-5 md:p-8 relative overflow-hidden transition-colors">
+            <form onSubmit={handleSubmit(onSubmit, (errors) => {
+                console.log('Form Errors:', errors);
+                toast.error('Vui lòng kiểm tra lại thông tin. Một số trường chưa hợp lệ.');
+            })} className="bg-white dark:bg-[#111114] rounded-3xl border border-gray-200 dark:border-white/5 shadow-2xl p-5 md:p-8 relative overflow-hidden transition-colors">
                 {/* Hidden Registered Fields for Validation */}
                 <input type="hidden" {...register('image_url', { required: true })} />
                 <input type="hidden" {...register('location_address', { required: true })} />
@@ -565,6 +615,7 @@ const EditEvent = () => {
                                     {...register('event_date', { 
                                         required: 'Vui lòng chọn ngày diễn ra',
                                         validate: (value) => {
+                                            if (originalStatus === 'active') return true;
                                             const selected = new Date(value);
                                             const today = new Date();
                                             today.setHours(0,0,0,0);
@@ -585,7 +636,7 @@ const EditEvent = () => {
                                     type="time" 
                                     {...register('event_time', {
                                         validate: (value) => {
-                                            if (!value) return true;
+                                            if (!value || originalStatus === 'active') return true;
                                             const eventDate = watch('event_date');
                                             if (!eventDate) return true;
                                             
@@ -612,6 +663,7 @@ const EditEvent = () => {
                                     {...register('end_date', { 
                                         required: 'Vui lòng chọn ngày kết thúc',
                                         validate: (value) => {
+                                            if (originalStatus === 'active') return true;
                                             const startDate = watch('event_date');
                                             if (!startDate) return true;
                                             const startObj = new Date(startDate);
@@ -631,6 +683,7 @@ const EditEvent = () => {
                                 </label>
                                 <input type="time" {...register('end_time', {
                                     validate: (value) => {
+                                        if (originalStatus === 'active') return true;
                                         const event_date = watch('event_date');
                                         const end_date = watch('end_date');
                                         const event_time = watch('event_time');
@@ -698,7 +751,7 @@ const EditEvent = () => {
                                             <label className="text-[10px] font-black uppercase  text-gray-600 dark:text-gray-400 italic">Giá vé (VNĐ)</label>
                                             <input type="number" {...register(`ticket_tiers.${index}.price`, { required: true })} readOnly={originalStatus === 'active'} className={`w-full bg-transparent border-b border-gray-200 dark:border-white/20 py-1 text-sm font-bold placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:outline-none focus:border-blue-600 ${originalStatus === 'active' ? 'opacity-60 cursor-not-allowed' : ''}`} />
                                             <p className="text-[10px] text-blue-600 dark:text-blue-400 font-medium mt-1">
-                                                * Bạn nhận về: {Math.max(0, watch(`ticket_tiers.${index}.price`) * (1 - (eventPlatformFee + eventTransactionFee) / 100) - gasFee).toLocaleString()} VNĐ (Đã trừ: {eventPlatformFee}% phí sàn & {eventTransactionFee}% phí giao dịch & {gasFee.toLocaleString()}đ phí Blockchain/AI)
+                                                * Bạn nhận về: {Math.max(0, watch(`ticket_tiers.${index}.price`) * (1 - (activeFees.platformFee + activeFees.transactionFee) / 100) - activeFees.gasFee).toLocaleString()} VNĐ (Đã trừ: {activeFees.platformFee}% phí sàn & {activeFees.transactionFee}% phí giao dịch & {activeFees.gasFee.toLocaleString()}đ phí Blockchain/AI)
                                             </p>
                                         </div>
                                         <div className="space-y-1">
@@ -754,8 +807,13 @@ const EditEvent = () => {
                                                 type="number"
                                                 {...register('resale_price_limit_percent', { 
                                                     required: 'Vui lòng nhập giới hạn giá',
-                                                    max: { value: 100 + (resalePriceCap || 8), message: `Tối đa ${100 + (resalePriceCap || 8)}% để tránh đầu cơ` },
-                                                    min: { value: 100, message: 'Tối thiểu 100% (bằng giá gốc)' },
+                                                    validate: (value) => {
+                                                        if (originalStatus === 'active') return true;
+                                                        const maxVal = 100 + (resalePriceCap || 8);
+                                                        if (value > maxVal) return `Tối đa ${maxVal}% để tránh đầu cơ`;
+                                                        if (value < 100) return 'Tối thiểu 100% (bằng giá gốc)';
+                                                        return true;
+                                                    },
                                                     valueAsNumber: true
                                                 })}
                                                 disabled={originalStatus === 'active'}
@@ -780,7 +838,7 @@ const EditEvent = () => {
                                     <div className="space-y-2">
                                          <div className="flex justify-between items-center text-[10px]">
                                             <span className="text-gray-700 dark:text-white">Người mua trả:</span>
-                                            <span className="font-bold dark:text-white">Giá niêm yết + Phí sàn + Phí Gas ({gasFee.toLocaleString()}đ)</span>
+                                            <span className="font-bold dark:text-white">Giá niêm yết + Phí sàn + Phí Gas ({activeFees.gasFee.toLocaleString()}đ)</span>
                                          </div>
                                          <div className="flex justify-between items-center text-[10px]">
                                             <span className="text-gray-700 dark:text-white">Người bán nhận:</span>
@@ -792,7 +850,7 @@ const EditEvent = () => {
                                          </div>
                                          <div className="flex justify-between items-center text-[10px]">
                                             <span className="text-gray-700 dark:text-white">Hệ thống nhận:</span>
-                                            <span className="font-bold text-purple-600">Phí sàn ({eventMarketplaceFee}%) + Phí Blockchain/AI ({gasFee.toLocaleString()}đ)</span>
+                                            <span className="font-bold text-purple-600">Phí sàn ({activeFees.resaleTransactionFee}%) + Phí Blockchain/AI ({activeFees.gasFee.toLocaleString()}đ)</span>
                                          </div>
                                     </div>
                                 </div>
@@ -876,8 +934,8 @@ const EditEvent = () => {
                 isOpen={isMapModalOpen} onClose={() => setIsMapModalOpen(false)}
                 onConfirm={(data) => {
                     setValue('location_address', data.text, { shouldValidate: true });
-                    setValue('latitude', data.lat);
-                    setValue('longitude', data.lng);
+                    setValue('latitude', data.lat, { shouldValidate: true });
+                    setValue('longitude', data.lng, { shouldValidate: true });
                 }}
             />
         </div>

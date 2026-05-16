@@ -3,7 +3,7 @@ const router = express.Router();
 const controller = require('../controllers/admin-system.controller');
 const { authenticate } = require('../middlewares/auth.middleware');
 
-// Chỉ yêu cầu đăng nhập, không yêu cầu quyền Admin
-router.get('/config', authenticate, controller.getSharedConfig);
+// Cho phép truy cập công khai để lấy tên site và email hỗ trợ
+router.get('/config', controller.getSharedConfig);
 
 module.exports = router;

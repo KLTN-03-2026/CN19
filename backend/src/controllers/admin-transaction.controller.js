@@ -88,7 +88,7 @@ const getTransactions = async (req, res) => {
       revenue: Number(m.platform_fee), 
       status: m.status,
       type: 'MARKETPLACE',
-      created_at: new Date(), 
+      created_at: m.created_at, 
       description: `Sự kiện: ${m.listing.event?.title || 'N/A'} (Chợ)`
     }));
 
@@ -128,29 +128,36 @@ const getTransactionStats = async (req, res) => {
 
     const mktWhere = {
         AND: [
-            { status: 'completed' },
+            { status: { in: ['completed', 'paid', 'success'] } },
             eventId ? { ticket: { event_id: eventId } } : {},
             organizerId ? { ticket: { event: { organizer_id: organizerId } } } : {}
         ]
     };
 
-    // 1. Doanh thu từ Orders
-    const orderSum = await prisma.order.aggregate({
-      where: orderWhere,
-      _sum: { 
-        total_amount: true,
-        platform_fee: true
-      }
+    // 1. Doanh thu và Hoa hồng từ Orders
+    const orders = await prisma.order.findMany({ where: orderWhere });
+    let ordersRevenue = 0;
+    let ordersCommission = 0;
+    orders.forEach(o => {
+        ordersRevenue += Number(o.total_amount || 0);
+        if (o.order_type === 'TICKET_TRANSFER') {
+            ordersCommission += Number(o.total_amount || 0);
+        } else {
+            ordersCommission += Number(o.platform_fee || 0) + Number(o.commission_fee || 0) + Number(o.gas_fee || 0);
+        }
     });
 
-    // 2. Doanh thu từ Marketplace
-    const marketplaceSum = await prisma.marketplaceTransaction.aggregate({
-      where: mktWhere,
-      _sum: { platform_fee: true }
+    // 2. Doanh thu và Hoa hồng từ Marketplace
+    const mkts = await prisma.marketplaceTransaction.findMany({ where: mktWhere });
+    let mktRevenue = 0;
+    let mktCommission = 0;
+    mkts.forEach(m => {
+        mktRevenue += Number(m.buyer_pay_amount || 0);
+        mktCommission += Number(m.platform_fee || 0) + Number(m.gas_fee || 0);
     });
 
-    const totalRevenue = Number(orderSum._sum.total_amount || 0) + Number(marketplaceSum._sum.platform_fee || 0);
-    const totalCommission = Number(orderSum._sum.platform_fee || 0) + Number(marketplaceSum._sum.platform_fee || 0);
+    const totalRevenue = ordersRevenue + mktRevenue;
+    const totalCommission = ordersCommission + mktCommission;
 
     // Tổng số đơn hàng
     const totalOrdersCount = await prisma.order.count({ where: orderWhere });
@@ -161,7 +168,7 @@ const getTransactionStats = async (req, res) => {
       where: { ...orderWhere, status: { in: ['success', 'completed', 'paid'] } }
     });
     const successfulMarketplace = await prisma.marketplaceTransaction.count({
-      where: { ...mktWhere, status: 'completed' }
+      where: { ...mktWhere, status: { in: ['completed', 'paid', 'success'] } }
     });
 
     // Số đơn hàng thất bại
@@ -223,11 +230,22 @@ const getTransactionDetail = async (req, res) => {
         const tx = await prisma.marketplaceTransaction.findUnique({
             where: { id },
             include: {
-                buyer: { select: { id: true, email: true, full_name: true, phone_number: true, wallet_address: true } },
-                seller: { select: { id: true, email: true, full_name: true, phone_number: true, wallet_address: true } },
+                buyer: { select: { id: true, email: true, full_name: true, phone_number: true, wallet_address: true, avatar_url: true } },
+                seller: { select: { id: true, email: true, full_name: true, phone_number: true, wallet_address: true, avatar_url: true } },
                 listing: {
                     include: {
-                        event: { select: { id: true, title: true, image_url: true, location_address: true, event_date: true } }
+                        event: { 
+                            select: { 
+                                id: true, 
+                                title: true, 
+                                image_url: true, 
+                                location_address: true, 
+                                event_date: true,
+                                royalty_fee_percent: true,
+                                platform_fee_percent: true,
+                                resale_platform_fee_percent: true
+                            } 
+                        }
                     }
                 },
                 ticket: {
@@ -249,8 +267,19 @@ const getTransactionDetail = async (req, res) => {
         const order = await prisma.order.findUnique({
             where: { id },
             include: {
-                customer: { select: { id: true, email: true, full_name: true, phone_number: true, wallet_address: true } },
-                event: { select: { id: true, title: true, image_url: true, location_address: true, event_date: true } },
+                customer: { select: { id: true, email: true, full_name: true, phone_number: true, wallet_address: true, avatar_url: true } },
+                event: { 
+                  select: { 
+                    id: true, 
+                    title: true, 
+                    image_url: true, 
+                    location_address: true, 
+                    event_date: true,
+                    platform_fee_percent: true,
+                    commission_fee_percent: true,
+                    royalty_fee_percent: true
+                  } 
+                },
                 items: {
                     include: {
                         ticket_tier: { select: { tier_name: true, price: true } }
@@ -262,7 +291,21 @@ const getTransactionDetail = async (req, res) => {
                     }
                 },
                 tickets: {
-                    select: { id: true, ticket_number: true, nft_token_id: true, status: true, ticket_tier: { select: { tier_name: true } } }
+                    select: { 
+                      id: true, 
+                      ticket_number: true, 
+                      nft_token_id: true, 
+                      nft_mint_tx_hash: true,
+                      status: true, 
+                      ticket_tier: { select: { tier_name: true } } 
+                    }
+                },
+                transfers: {
+                    include: {
+                        ticket: { select: { ticket_number: true, nft_token_id: true } },
+                        receiver: { select: { id: true, email: true, full_name: true, phone_number: true, wallet_address: true, avatar_url: true } },
+                        sender: { select: { id: true, email: true, full_name: true, phone_number: true, wallet_address: true, avatar_url: true } }
+                    }
                 },
                 payments: {
                     orderBy: { created_at: 'desc' }
@@ -272,9 +315,27 @@ const getTransactionDetail = async (req, res) => {
 
         if (!order) return res.status(404).json({ error: 'Không tìm thấy đơn hàng.' });
 
+        // Tìm mint hash từ vé nếu order không có trực tiếp
+        let nft_mint_tx_hash = order.transaction_hash;
+        if (!nft_mint_tx_hash && order.tickets && order.tickets.length > 0) {
+            nft_mint_tx_hash = order.tickets.find(t => t.nft_mint_tx_hash)?.nft_mint_tx_hash;
+        }
+
+        let nft_transfer_tx_hash = order.transfers?.[0]?.nft_transfer_tx_hash || null;
+        let receiver = order.transfers?.[0]?.receiver || null;
+
+        const firstTicket = order.tickets?.find(t => t.nft_token_id) || order.transfers?.[0]?.ticket;
+        const metadata_url = firstTicket?.nft_token_id ? `${process.env.BACKEND_URL || 'http://localhost:5000'}/api/metadata/${firstTicket.nft_token_id}` : null;
+
         return res.status(200).json({
             type: 'ORDER',
-            data: order
+            data: {
+              ...order,
+              receiver,
+              nft_mint_tx_hash,
+              nft_transfer_tx_hash,
+              metadata_url
+            }
         });
     }
   } catch (error) {

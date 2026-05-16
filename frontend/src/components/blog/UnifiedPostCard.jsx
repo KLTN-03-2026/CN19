@@ -243,11 +243,7 @@ const UnifiedPostCard = ({
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`relative group bg-white dark:bg-[#111114] rounded-2xl md:rounded-[1.75rem] border transition-all duration-500 overflow-hidden ${
-        isOfficial 
-          ? 'border-neon-green/30 shadow-[0_0_40px_rgba(82,196,45,0.05)] ring-1 ring-neon-green/10' 
-          : 'border-gray-100 dark:border-white/5 shadow-sm hover:shadow-xl'
-      }`}
+      className={`relative group bg-white dark:bg-[#111114] rounded-2xl md:rounded-[1.75rem] border ${isOfficial ? 'border-blue-500/50 shadow-lg shadow-blue-500/5' : 'border-gray-100 dark:border-white/5'} shadow-sm hover:shadow-xl transition-all duration-500 overflow-hidden`}
     >
       {/* Premium Glow for Official Posts */}
       {isOfficial && (
@@ -273,7 +269,7 @@ const UnifiedPostCard = ({
                 <CheckCircle2 className={`w-3.5 h-3.5 ${isOfficial ? 'text-neon-green' : 'text-blue-500'}`} />
               )}
             </div>
-            <div className="flex items-center gap-1.5 text-[10px] font-medium text-gray-400 mt-0.5">
+            <div className="flex items-center gap-1.5 text-[10px] font-medium text-gray-700 dark:text-gray-400 mt-0.5">
               <Globe className="w-2.5 h-2.5" />
               <span>
                 {(() => {
@@ -293,14 +289,14 @@ const UnifiedPostCard = ({
         
         <div className="flex items-center gap-1">
            {(post.slug || post.id) && (
-             <Link to={`/blog/${post.slug || post.id}`} className="p-2 rounded-full bg-gray-50 dark:bg-white/5 text-gray-400 hover:text-neon-green transition-all">
+             <Link to={`/blog/${post.slug || post.id}`} className="p-2 rounded-full bg-gray-50 dark:bg-white/5 text-gray-700 dark:text-gray-400 hover:text-neon-green transition-all">
                 <ExternalLink className="w-3.5 h-3.5" />
              </Link>
            )}
             <div className="relative group/topmenu">
               <button 
                 onClick={() => setShowTopMenu(!showTopMenu)}
-                className="w-9 h-9 rounded-full hover:bg-gray-100 dark:hover:bg-white/5 flex items-center justify-center text-gray-400 transition-all"
+                 className="w-9 h-9 rounded-full hover:bg-gray-100 dark:hover:bg-white/5 flex items-center justify-center text-gray-700 dark:text-gray-400 transition-all"
               >
                 <MoreHorizontal className="w-4.5 h-4.5" />
               </button>
@@ -319,7 +315,7 @@ const UnifiedPostCard = ({
                         onClick={handleToggleSave}
                         className="w-full flex items-center gap-2 px-3 py-2.5 text-[11px] font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-all text-left border-b border-gray-50 dark:border-white/5"
                       >
-                        <Bookmark className={`w-3.5 h-3.5 ${isSaved ? 'text-neon-green fill-current' : 'text-gray-400'}`} />
+                         <Bookmark className={`w-3.5 h-3.5 ${isSaved ? 'text-neon-green fill-current' : 'text-gray-700 dark:text-gray-400'}`} />
                         {isSaved ? t('blog.post.unsave_post') : t('blog.post.save_post')}
                       </button>
                       <button 
@@ -399,7 +395,7 @@ const UnifiedPostCard = ({
       <div className="px-4 md:px-5 pb-3 space-y-2">
         <div className="flex flex-wrap items-center gap-2">
             {post.category && (
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-lg font-bold text-[9px] text-gray-400">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-lg font-bold text-[9px] text-gray-700 dark:text-gray-400">
                     <Sparkles className="w-3 h-3 text-orange-400" />
                     {post.category}
                 </div>
@@ -439,7 +435,7 @@ const UnifiedPostCard = ({
                   Sự kiện liên kết
                 </div>
                 {post.event.event_date && (
-                  <div className="flex items-center gap-1 text-[10px] font-bold text-gray-400">
+                   <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-700 dark:text-gray-400">
                     <Calendar className="w-2.5 h-2.5" />
                     {new Date(post.event.event_date).toLocaleDateString('vi-VN')}
                   </div>
@@ -465,7 +461,7 @@ const UnifiedPostCard = ({
 
       {/* Stats Summary */}
       {(likesCount > 0 || commentsCount > 0) && (
-        <div className="px-6 py-2 flex items-center justify-between text-[11px] font-medium text-gray-400 border-t border-gray-50 dark:border-white/5">
+         <div className="px-6 py-2 flex items-center justify-between text-[11px] font-medium text-gray-700 dark:text-gray-400 border-t border-gray-50 dark:border-white/5">
             <div className="flex items-center gap-1.5">
                 <button 
                   onClick={fetchBlogLikers}
@@ -488,7 +484,7 @@ const UnifiedPostCard = ({
           className={`flex-1 flex items-center justify-center gap-1.5 md:gap-2 py-2 rounded-xl transition-all duration-300 ${
             isLiked 
               ? 'text-rose-500' 
-              : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5'
+              : 'text-gray-700 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5'
           }`}
         >
           <Heart className={`w-3.5 h-3.5 md:w-4 md:h-4 transition-all duration-300 ${isLiked ? 'fill-current scale-110' : 'group-hover:scale-110'}`} />
@@ -500,14 +496,14 @@ const UnifiedPostCard = ({
         <button 
           onClick={toggleComments}
           className={`flex-1 flex items-center justify-center gap-1.5 md:gap-2 py-2 rounded-xl transition-all ${
-            showComments ? 'text-neon-green bg-neon-green/5' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5'
+            showComments ? 'text-neon-green bg-neon-green/5' : 'text-gray-700 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5'
           }`}
         >
           <MessageCircle className="w-3.5 h-3.5 md:w-4 md:h-4" />
           <span className="text-[10px] md:text-[11px] font-bold">{t('blog.post.comment')}</span>
         </button>
 
-        <div className="flex-1 flex items-center justify-center gap-1.5 md:gap-2 py-2 text-gray-600 dark:text-gray-400">
+        <div className="flex-1 flex items-center justify-center gap-1.5 md:gap-2 py-2 text-gray-700 dark:text-gray-400">
           <Eye className="w-3.5 h-3.5 md:w-4 md:h-4" />
           <span className="text-[10px] md:text-[11px] font-bold">
             {(post.views || 0).toLocaleString()} {t('blog.post.views') || 'lượt xem'}
@@ -673,7 +669,7 @@ const UnifiedPostCard = ({
                                                    </div>
                                                 </div>
                                              ) : (
-                                                <p className="text-[12px] font-medium text-gray-600 dark:text-gray-400 whitespace-pre-wrap">
+                                                <p className="text-[12px] font-medium text-gray-700 dark:text-gray-400 whitespace-pre-wrap">
                                                   {reply.content.split(' ').map((word, i) => 
                                                     word.startsWith('@') ? <span key={i} className="text-neon-green font-bold mr-1">{word} </span> : word + ' '
                                                   )}

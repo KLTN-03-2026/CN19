@@ -124,7 +124,7 @@ const CouponManagement = () => {
       {/* Filter Bar */}
       <div className="bg-white dark:bg-[#111114] p-4 rounded-2xl border border-gray-100 dark:border-white/5 mb-6 flex flex-col md:flex-row gap-4 items-center">
         <form onSubmit={handleSearch} className="relative flex-1 w-full">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600 w-5 h-5" />
           <input 
             type="text"
             placeholder="Tìm theo mã giảm giá..."
@@ -137,7 +137,8 @@ const CouponManagement = () => {
         <div className="flex items-center gap-3 w-full md:w-auto">
           {/* Discount Type Filter */}
           <div className="relative w-full md:w-44">
-            <Tag className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
+            <Tag className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 w-4 h-4 pointer-events-none" />
+            <Tag className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-700 w-4 h-4 pointer-events-none" />
             <select 
               className="w-full font-medium bg-gray-50 dark:bg-[#1a1a1e] border border-gray-200 dark:border-white/20 rounded-xl py-3 pl-9 pr-10 text-xs font-bold appearance-none focus:outline-none focus:border-neon-green transition-all dark:text-white text-gray-900 cursor-pointer"
               value={typeFilter}
@@ -147,11 +148,11 @@ const CouponManagement = () => {
               <option value="PERCENTAGE">Phần trăm (%)</option>
               <option value="FIXED_AMOUNT">Cố định (đ)</option>
             </select>
-            <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 rotate-90 pointer-events-none" />
+            <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-700 w-4 h-4 rotate-90 pointer-events-none" />
           </div>
 
           <div className="relative w-full md:w-48">
-            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
+            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-600 w-4 h-4 pointer-events-none" />
             <select 
               className="w-full font-medium bg-gray-50 dark:bg-[#1a1a1e] border border-gray-200 dark:border-white/20 rounded-xl py-3 pl-9 pr-10 text-xs font-bold appearance-none focus:outline-none focus:border-neon-green transition-all dark:text-white text-gray-900 cursor-pointer"
               value={statusFilter}
@@ -162,7 +163,7 @@ const CouponManagement = () => {
               <option value="inactive">Tạm dừng</option>
               <option value="expired">Đã hết hạn</option>
             </select>
-            <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 rotate-90 pointer-events-none" />
+            <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 w-4 h-4 rotate-90 pointer-events-none" />
           </div>
         </div>
       </div>
@@ -171,7 +172,7 @@ const CouponManagement = () => {
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20">
           <Loader2 className="w-10 h-10 text-neon-green animate-spin mb-4" />
-          <p className="text-gray-500 dark:text-gray-400 animate-pulse uppercase text-xs font-black tracking-widest">Đang tải dữ liệu...</p>
+          <p className="text-gray-900 dark:text-gray-400 animate-pulse uppercase text-xs font-black tracking-widest">Đang tải dữ liệu...</p>
         </div>
       ) : (
         <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 overflow-hidden shadow-sm">
@@ -179,13 +180,13 @@ const CouponManagement = () => {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="bg-gray-50/50 dark:bg-white/5 border-b border-gray-100 dark:border-white/5">
-                  <th className="px-6 py-4 text-[10px] font-black uppercase text-gray-400 tracking-wider">Thông tin Mã</th>
-                  <th className="px-6 py-4 text-[10px] font-black uppercase text-gray-400 tracking-wider">Phạm vi</th>
-                  <th className="px-6 py-4 text-[10px] font-black uppercase text-gray-400 tracking-wider">Loại giảm giá</th>
-                  <th className="px-6 py-4 text-[10px] font-black uppercase text-gray-400 tracking-wider">Giá trị</th>
-                  <th className="px-6 py-4 text-[10px] font-black uppercase text-gray-400 tracking-wider text-center">Lượt dùng</th>
-                  <th className="px-6 py-4 text-[10px] font-black uppercase text-gray-400 tracking-wider text-center">Trạng thái</th>
-                  <th className="px-6 py-4 text-[10px] font-black uppercase text-gray-400 tracking-wider text-right">Thao tác</th>
+                  <th className="px-6 py-4 text-[10px] font-black uppercase text-gray-600 tracking-wider">Thông tin Mã</th>
+                  <th className="px-6 py-4 text-[10px] font-black uppercase text-gray-600 tracking-wider">Phạm vi</th>
+                  <th className="px-6 py-4 text-[10px] font-black uppercase text-gray-600 tracking-wider">Loại giảm giá</th>
+                  <th className="px-6 py-4 text-[10px] font-black uppercase text-gray-600 tracking-wider">Giá trị</th>
+                  <th className="px-6 py-4 text-[10px] font-black uppercase text-gray-600 tracking-wider text-center">Lượt dùng</th>
+                  <th className="px-6 py-4 text-[10px] font-black uppercase text-gray-600 tracking-wider text-center">Trạng thái</th>
+                  <th className="px-6 py-4 text-[10px] font-black uppercase text-gray-600 tracking-wider text-right">Thao tác</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-white/5">
@@ -196,11 +197,11 @@ const CouponManagement = () => {
                       <td className="px-6 py-4">
                         <div className="flex items-center space-x-3">
                           <div className="p-2 bg-gray-100 dark:bg-white/5 rounded-lg">
-                            <Tag className="w-5 h-5 text-gray-400" />
+                            <Tag className="w-5 h-5 text-gray-500" />
                           </div>
                           <div>
-                            <div className="font-bold text-gray-900 dark:text-white uppercase tracking-wider">{coupon.code}</div>
-                            <div className="text-[10px] text-gray-400 mt-0.5 line-clamp-1">{coupon.description || 'Không có mô tả'}</div>
+                            <div className="font-black text-gray-900 dark:text-white uppercase tracking-wider">{coupon.code}</div>
+                            <div className="text-[10px] text-gray-900 dark:text-gray-400 mt-0.5 font-bold line-clamp-1">{coupon.description || 'Không có mô tả'}</div>
                           </div>
                         </div>
                       </td>
@@ -213,7 +214,7 @@ const CouponManagement = () => {
                             </div>
                           </div>
                         ) : (
-                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter italic">Tất cả sự kiện</span>
+                          <span className="text-[10px] font-black text-gray-600 uppercase tracking-tighter italic">Tất cả sự kiện</span>
                         )}
                       </td>
                       <td className="px-6 py-4">
@@ -230,13 +231,13 @@ const CouponManagement = () => {
                             : `${Number(coupon.discount_value).toLocaleString('vi-VN')}đ`}
                         </div>
                         {coupon.max_discount_amount && (
-                          <div className="text-[9px] text-gray-400 font-bold uppercase mt-0.5">
+                          <div className="text-[9px] text-gray-800 dark:text-gray-400 font-black uppercase mt-0.5">
                             Tối đa: {Number(coupon.max_discount_amount).toLocaleString('vi-VN')}đ
                           </div>
                         )}
                       </td>
                       <td className="px-6 py-4 text-center">
-                        <div className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                        <div className="text-xs font-black text-gray-900 dark:text-gray-300">
                           {coupon.used_count} / {coupon.usage_limit || '∞'}
                         </div>
                         <div className="w-20 h-1 bg-gray-100 dark:bg-white/5 rounded-full mx-auto mt-2 overflow-hidden">
@@ -255,7 +256,7 @@ const CouponManagement = () => {
                         <div className="flex items-center justify-end space-x-2">
                           <button 
                             onClick={() => navigate(`/admin/coupons/${coupon.id}`)}
-                            className="p-2 text-gray-400 hover:text-neon-green hover:bg-neon-green/10 rounded-lg transition-all"
+                            className="p-2 text-gray-600 hover:text-neon-green hover:bg-neon-green/10 rounded-lg transition-all"
                             title="Xem chi tiết"
                           >
                             <Eye className="w-4 h-4" />
@@ -273,14 +274,14 @@ const CouponManagement = () => {
                           </button>
                           <button 
                             onClick={() => navigate(`/admin/coupons/edit/${coupon.id}`)}
-                            className="p-2 text-gray-400 hover:text-blue-500 hover:bg-blue-500/10 rounded-lg transition-all"
+                            className="p-2 text-gray-600 hover:text-blue-500 hover:bg-blue-500/10 rounded-lg transition-all"
                             title="Chỉnh sửa"
                           >
                             <Edit className="w-4 h-4" />
                           </button>
                           <button 
                             onClick={() => handleDelete(coupon.id)}
-                            className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
+                            className="p-2 text-gray-600 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
                             title="Xóa"
                             disabled={coupon.used_count > 0}
                           >
@@ -295,10 +296,10 @@ const CouponManagement = () => {
                     <td colSpan="6" className="px-6 py-20 text-center">
                       <div className="flex flex-col items-center">
                         <div className="w-16 h-16 bg-gray-100 dark:bg-white/5 rounded-full flex items-center justify-center mb-4">
-                          <Tag className="w-8 h-8 text-gray-300 dark:text-white/10" />
+                          <Tag className="w-8 h-8 text-gray-600 dark:text-white/10" />
                         </div>
-                        <p className="text-gray-500 dark:text-gray-400 font-bold">Không tìm thấy mã giảm giá nào</p>
-                        <p className="text-xs text-gray-400 mt-1">Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm</p>
+                        <p className="text-gray-800 dark:text-gray-400 font-black">Không tìm thấy mã giảm giá nào</p>
+                        <p className="text-xs text-gray-600 mt-1 font-bold">Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm</p>
                       </div>
                     </td>
                   </tr>

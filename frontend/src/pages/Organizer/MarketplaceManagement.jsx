@@ -88,14 +88,15 @@ const MarketplaceManagement = () => {
     };
 
     // Thống kê nhanh dựa trên Tab
+    const validTransactions = transactions.filter(tx => tx.status !== 'cancelled');
     const stats = {
-        totalRoyalty: activeTab === 'resale' 
-            ? transactions.reduce((sum, tx) => sum + Number(tx.royalty_amount || 0), 0)
-            : transactions.reduce((sum, tx) => sum + gasFee, 0), // Phí gas mỗi lần chuyển
+        totalRoyalty: validTransactions.reduce((sum, tx) => 
+            sum + Number(activeTab === 'resale' ? (tx.royalty_amount || 0) : (tx.fee_amount || 0)), 
+        0),
         totalVolume: activeTab === 'resale'
-            ? transactions.reduce((sum, tx) => sum + Number(tx.resale_price || 0), 0)
+            ? validTransactions.reduce((sum, tx) => sum + Number(tx.resale_price || 0), 0)
             : 0,
-        totalCount: transactions.length
+        totalCount: validTransactions.length
     };
 
     return (
@@ -208,7 +209,7 @@ const MarketplaceManagement = () => {
 
             {/* Desktop View Table */}
             <div className="hidden md:block bg-white dark:bg-[#111114] border border-gray-200 dark:border-white/5 rounded-[2rem] overflow-hidden shadow-sm mb-10">
-                <div className="overflow-x-auto">
+                <div className="overflow-x-hidden">
                     <table className="w-full text-sm text-left border-collapse">
                         <thead>
                             <tr className="border-b border-gray-200 dark:border-white/5 text-[10px] font-black uppercase text-gray-500">
@@ -217,7 +218,7 @@ const MarketplaceManagement = () => {
                                 <th className="px-6 py-5">Người bán/Chuyển</th>
                                 <th className="px-6 py-5">Người mua/Nhận</th>
                                 {activeTab === 'resale' && <th className="px-6 py-5 text-right">Giá bán lại</th>}
-                                <th className="px-6 py-5 text-right text-blue-600">Hoa hồng BTC</th>
+                                <th className="px-6 py-5 text-right text-blue-600">{activeTab === 'resale' ? 'Hoa hồng BTC' : 'Phí chuyển nhượng'}</th>
                                 <th className="px-6 py-5 text-right">Thao tác</th>
                             </tr>
                         </thead>
@@ -227,8 +228,11 @@ const MarketplaceManagement = () => {
                                     <tr key={tx.id} className="hover:bg-gray-50 dark:hover:bg-white/[0.01] transition-colors group">
                                         <td className="px-6 py-5">
                                             <div className="flex flex-col">
-                                                <div className="font-black text-blue-600 dark:text-blue-400 text-[11px] leading-tight uppercase mb-1">
+                                                <div className="font-black text-blue-600 dark:text-blue-400 text-[11px] leading-tight uppercase mb-1 flex items-center gap-2">
                                                     #{tx.transaction_number || tx.id.slice(0,8).toUpperCase()}
+                                                    {tx.status === 'cancelled' && (
+                                                        <span className="px-2 py-0.5 bg-red-500/10 text-red-500 rounded text-[9px] font-black tracking-normal">🔴 ĐÃ HỦY</span>
+                                                    )}
                                                 </div>
                                                 <div className="flex items-center gap-1.5 text-xs font-bold text-gray-900 dark:text-white">
                                                     <Ticket className="w-3.5 h-3.5 text-gray-400" />
@@ -335,8 +339,11 @@ const MarketplaceManagement = () => {
                         <div key={tx.id} onClick={() => handleViewDetail(tx)} className="bg-white dark:bg-[#111114] p-5 rounded-[2rem] border border-gray-200 dark:border-white/5 shadow-sm active:scale-[0.98] transition-transform">
                             <div className="flex justify-between items-start mb-4">
                                 <div className="flex flex-col gap-1">
-                                    <span className="text-[10px] font-black text-blue-600 uppercase leading-none">
+                                    <span className="text-[10px] font-black text-blue-600 uppercase leading-none flex items-center gap-2">
                                         #{tx.transaction_number || tx.id.slice(0,8).toUpperCase()}
+                                        {tx.status === 'cancelled' && (
+                                            <span className="px-1.5 py-0.5 bg-red-500/10 text-red-500 rounded text-[8px] font-black tracking-normal">🔴 HỦY</span>
+                                        )}
                                     </span>
                                     <h3 className="font-black text-gray-900 dark:text-white uppercase leading-tight line-clamp-1">{tx.event_title}</h3>
                                 </div>
@@ -344,7 +351,7 @@ const MarketplaceManagement = () => {
                                     <span className="text-sm font-black text-blue-600 dark:text-blue-400">
                                         +{Number(activeTab === 'resale' ? tx.royalty_amount : tx.fee_amount).toLocaleString()}đ
                                     </span>
-                                    <p className="text-[8px] font-black text-gray-400 uppercase">Doanh thu BTC</p>
+                                    <p className="text-[8px] font-black text-gray-400 uppercase">{activeTab === 'resale' ? 'Doanh thu BTC' : 'Phí chuyển nhượng'}</p>
                                 </div>
                             </div>
 

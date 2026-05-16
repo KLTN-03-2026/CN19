@@ -107,8 +107,10 @@ const AdminSettlementManagement = () => {
                 return <span className="px-3 py-1.5 bg-purple-500/10 text-purple-500 rounded-xl text-[10px] font-black uppercase tracking-tight flex items-center gap-1.5 w-fit"><AlertCircle className="w-3 h-3" /> Sắp quyết toán</span>;
             case 'not_started':
                 return <span className="px-3 py-1.5 bg-gray-500/10 text-gray-500 rounded-xl text-[10px] font-black uppercase tracking-tight flex items-center gap-1.5 w-fit"><ShieldAlert className="w-3 h-3" /> Chưa đối soát</span>;
+            case 'cancelled':
+                return <span className="px-3 py-1.5 bg-red-500/10 text-red-500 rounded-xl text-[10px] font-black uppercase tracking-tight flex items-center gap-1.5 w-fit"><ShieldAlert className="w-3 h-3" /> Đã hủy sự kiện</span>;
             default:
-                return <span className="px-3 py-1.5 bg-gray-100 text-gray-500 rounded-xl text-[10px] font-black uppercase tracking-tight w-fit">{status}</span>;
+                return <span className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-xl text-[10px] font-black uppercase tracking-tight w-fit">{status}</span>;
         }
     };
 
@@ -139,13 +141,13 @@ const AdminSettlementManagement = () => {
                                 <CreditCard className="w-6 h-6 text-neon-green" />
                                 QUẢN LÝ QUYẾT TOÁN
                             </h1>
-                            <p className="text-[11px] text-slate-600 dark:text-zinc-500 mt-1 font-bold uppercase tracking-tight">Phê duyệt và giải ngân doanh thu cho Ban tổ chức sau sự kiện</p>
+                            <p className="text-[11px] text-slate-800 dark:text-zinc-400 mt-1 font-bold uppercase tracking-tight">Phê duyệt và giải ngân doanh thu cho Ban tổ chức sau sự kiện</p>
                         </div>
 
                         <div className="flex items-center gap-3">
                             <button 
                                 onClick={() => { fetchRequests(); fetchEligibleEvents(); }}
-                                className="p-3 bg-white dark:bg-zinc-900 rounded-xl border border-gray-200 dark:border-zinc-800/80 hover:border-neon-green/50 transition-all text-slate-600 hover:text-neon-green shadow-sm active:scale-95"
+                                className="p-3 bg-white dark:bg-zinc-900 rounded-xl border border-gray-200 dark:border-zinc-800/80 hover:border-neon-green/50 transition-all text-slate-800 hover:text-neon-green shadow-sm active:scale-95"
                             >
                                 <RefreshCcw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
                             </button>
@@ -159,7 +161,7 @@ const AdminSettlementManagement = () => {
                                 <Clock className="w-32 h-32" />
                             </div>
                             <div className="relative">
-                                <div className="text-[10px] font-black text-slate-600 dark:text-gray-400 uppercase tracking-tight flex items-center gap-2 mb-4">
+                                <div className="text-[10px] font-black text-slate-800 dark:text-gray-400 uppercase tracking-tight flex items-center gap-2 mb-4">
                                     <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span>
                                     Tổng nợ chưa trả ({stats.pendingCount + stats.forecastCount})
                                 </div>
@@ -174,7 +176,7 @@ const AdminSettlementManagement = () => {
                                 <AlertCircle className="w-32 h-32" />
                             </div>
                             <div className="relative">
-                                <div className="text-[10px] font-black text-slate-600 dark:text-gray-400 uppercase tracking-tight flex items-center gap-2 mb-4">
+                                <div className="text-[10px] font-black text-slate-800 dark:text-gray-400 uppercase tracking-tight flex items-center gap-2 mb-4">
                                     <span className="w-2 h-2 rounded-full bg-purple-500"></span>
                                     Tổng quan sự kiện ({stats.totalEvents})
                                 </div>
@@ -189,7 +191,7 @@ const AdminSettlementManagement = () => {
                                 <CheckCircle2 className="w-32 h-32" />
                             </div>
                             <div className="relative">
-                                <div className="text-[10px] font-black text-slate-600 dark:text-gray-400 uppercase tracking-tight flex items-center gap-2 mb-4">
+                                <div className="text-[10px] font-black text-slate-800 dark:text-gray-400 uppercase tracking-tight flex items-center gap-2 mb-4">
                                     <span className="w-2 h-2 rounded-full bg-neon-green"></span>
                                     Đã quyết toán ({stats.settledCount})
                                 </div>
@@ -204,28 +206,28 @@ const AdminSettlementManagement = () => {
                     <div className="flex items-center gap-2 border-b border-gray-200 dark:border-zinc-800/50 pb-0.5 overflow-x-auto custom-scrollbar whitespace-nowrap">
                         <button 
                             onClick={() => setActiveTab('overview')}
-                            className={`px-6 py-3 text-[10px] font-black uppercase tracking-tight transition-all relative ${activeTab === 'overview' ? 'text-purple-600' : 'text-slate-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
+                            className={`px-6 py-3 text-[10px] font-black uppercase tracking-tight transition-all relative ${activeTab === 'overview' ? 'text-purple-600' : 'text-slate-700 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
                         >
                             TẤT CẢ SỰ KIỆN
                             {activeTab === 'overview' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-purple-600 animate-in fade-in zoom-in duration-300"></div>}
                         </button>
                         <button 
                             onClick={() => setActiveTab('all_requests')}
-                            className={`px-6 py-3 text-[10px] font-black uppercase tracking-tight transition-all relative ${activeTab === 'all_requests' ? 'text-neon-green' : 'text-slate-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
+                            className={`px-6 py-3 text-[10px] font-black uppercase tracking-tight transition-all relative ${activeTab === 'all_requests' ? 'text-neon-green' : 'text-slate-700 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
                         >
                             SẮP QUYẾT TOÁN
                             {activeTab === 'all_requests' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-neon-green animate-in fade-in zoom-in duration-300"></div>}
                         </button>
                         <button 
                             onClick={() => setActiveTab('pending')}
-                            className={`px-6 py-3 text-[10px] font-black uppercase tracking-tight transition-all relative ${activeTab === 'pending' ? 'text-yellow-500' : 'text-slate-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
+                            className={`px-6 py-3 text-[10px] font-black uppercase tracking-tight transition-all relative ${activeTab === 'pending' ? 'text-yellow-500' : 'text-slate-700 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
                         >
                             CHỜ DUYỆT ({stats.pendingCount})
                             {activeTab === 'pending' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-yellow-500 animate-in fade-in zoom-in duration-300"></div>}
                         </button>
                         <button 
                             onClick={() => setActiveTab('settled')}
-                            className={`px-6 py-3 text-[10px] font-black uppercase tracking-tight transition-all relative ${activeTab === 'settled' ? 'text-blue-500' : 'text-slate-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
+                            className={`px-6 py-3 text-[10px] font-black uppercase tracking-tight transition-all relative ${activeTab === 'settled' ? 'text-blue-500' : 'text-slate-700 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'}`}
                         >
                             ĐÃ HOÀN TẤT
                             {activeTab === 'settled' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500 animate-in fade-in zoom-in duration-300"></div>}
@@ -271,21 +273,21 @@ const AdminSettlementManagement = () => {
                                             <div className="min-w-0">
                                                 <div className="flex items-center gap-2 mb-2">
                                                     {getStatusBadge(status)}
-                                                    <span className="text-[10px] text-slate-600 dark:text-gray-500 font-black uppercase tracking-tight">
+                                                    <span className="text-[10px] text-slate-700 dark:text-gray-500 font-black uppercase tracking-tight">
                                                         {format(new Date(isOverview ? (item.end_date || item.event_date) : (item.requested_at || item.created_at)), 'dd/MM/yyyy')}
                                                     </span>
                                                 </div>
                                                 <h3 className="text-sm font-black text-gray-900 dark:text-white tracking-tight line-clamp-1 uppercase group-hover:text-neon-green transition-colors">
                                                     {isOverview ? item.title : item.event?.title}
                                                 </h3>
-                                                <div className="text-[10px] text-slate-600 dark:text-gray-400 font-black uppercase tracking-tight mt-1 flex items-center gap-1.5">
+                                                <div className="text-[10px] text-slate-800 dark:text-gray-400 font-black uppercase tracking-tight mt-1 flex items-center gap-1.5">
                                                     <div className="w-1.5 h-1.5 rounded-full bg-neon-green/40"></div>
                                                     BTC: {isOverview ? item.organizer?.organization_name : item.event?.organizer?.organization_name}
                                                 </div>
                                             </div>
                                             
                                             <div className="text-right shrink-0 ml-4">
-                                                <p className="text-[10px] font-black text-slate-500 dark:text-gray-500 uppercase mb-1">{!isOverview || status === 'settled' ? 'THỰC TRẢ' : 'DỰ KIẾN'}</p>
+                                                <p className="text-[10px] font-black text-slate-600 dark:text-gray-500 uppercase mb-1">{!isOverview || status === 'settled' ? 'THỰC TRẢ' : 'DỰ KIẾN'}</p>
                                                 <p className={`text-xl font-black tracking-tight leading-none ${status === 'settled' ? 'text-neon-green' : (status === 'eligible' ? 'text-purple-600' : 'text-gray-900 dark:text-white')}`}>
                                                     {formatCurrency(isOverview ? financials.pending_revenue : item.net_payout)}
                                                 </p>
@@ -295,15 +297,15 @@ const AdminSettlementManagement = () => {
                                         {/* Revenue Breakdown - High Contrast */}
                                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-4 bg-slate-50/80 dark:bg-zinc-950/80 rounded-[1.25rem] border border-gray-200 dark:border-zinc-800/80 mb-5 shadow-inner">
                                             <div className="space-y-1">
-                                                <div className="text-[9px] font-black text-slate-600 dark:text-gray-400 uppercase tracking-tight">Vé</div>
+                                                <div className="text-[9px] font-black text-slate-800 dark:text-gray-400 uppercase tracking-tight">Vé</div>
                                                 <p className="text-[11px] font-black text-gray-900 dark:text-white tracking-tight leading-none">{formatCurrency(financials.ticket_revenue || 0)}</p>
                                             </div>
                                             <div className="space-y-1">
-                                                <div className="text-[9px] font-black text-slate-600 dark:text-gray-400 uppercase tracking-tight">Vật phẩm</div>
+                                                <div className="text-[9px] font-black text-slate-800 dark:text-gray-400 uppercase tracking-tight">Vật phẩm</div>
                                                 <p className="text-[11px] font-black text-gray-900 dark:text-white tracking-tight leading-none">{formatCurrency(financials.merch_revenue || 0)}</p>
                                             </div>
                                             <div className="space-y-1">
-                                                <div className="text-[9px] font-black text-slate-600 dark:text-gray-400 uppercase tracking-tight">Mkt</div>
+                                                <div className="text-[9px] font-black text-slate-800 dark:text-gray-400 uppercase tracking-tight">Mkt</div>
                                                 <p className="text-[11px] font-black text-gray-900 dark:text-white tracking-tight leading-none">{formatCurrency(financials.marketplace_royalty || 0)}</p>
                                             </div>
                                             <div className="space-y-1">
@@ -316,7 +318,7 @@ const AdminSettlementManagement = () => {
                                         <div className="mt-auto flex items-center justify-between pt-1">
                                             <div className="flex items-center gap-2">
                                                 <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-zinc-800 flex items-center justify-center">
-                                                    <Banknote className="w-4 h-4 text-slate-600 dark:text-gray-400" />
+                                                    <Banknote className="w-4 h-4 text-slate-800 dark:text-gray-400" />
                                                 </div>
                                                 <div className="text-[10px] font-black text-slate-600 dark:text-gray-400 uppercase">
                                                     {!isOverview ? `TK: *${item.bank_info?.account_number?.slice(-4) || '****'}` : (status === 'settled' ? 'Hoàn tất giải ngân' : 'Chờ BTC yêu cầu')}
@@ -332,7 +334,7 @@ const AdminSettlementManagement = () => {
                                                     <ChevronRight className="w-3 h-3" />
                                                 </button>
                                             ) : (
-                                                <div className="text-[10px] font-black text-slate-500 dark:text-gray-500 uppercase italic opacity-80 tracking-tight">
+                                                <div className="text-[10px] font-black text-slate-700 dark:text-gray-500 uppercase italic opacity-80 tracking-tight">
                                                     {status === 'settled' ? 'DONE' : 'PENDING'}
                                                 </div>
                                             )}
@@ -346,7 +348,7 @@ const AdminSettlementManagement = () => {
                     <div className="text-center py-28 bg-white dark:bg-zinc-900/50 rounded-[2.5rem] border-2 border-dashed border-gray-200 dark:border-zinc-800 shadow-sm">
                         <ShieldCheck className="w-20 h-20 text-slate-200 dark:text-zinc-800 mx-auto mb-6" />
                         <h3 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-tight">Hiện chưa có dữ liệu</h3>
-                        <p className="text-slate-600 dark:text-gray-500 text-[11px] mt-2 font-bold uppercase tracking-tight">
+                        <p className="text-slate-800 dark:text-gray-500 text-[11px] mt-2 font-bold uppercase tracking-tight">
                             {activeTab === 'requests' ? 'Các yêu cầu mới từ BTC sẽ xuất hiện tại đây' : 'Hiện không có sự kiện nào trong danh sách này'}
                         </p>
                     </div>
@@ -372,7 +374,7 @@ const AdminSettlementManagement = () => {
                                   </div>
                                   CHI TIẾT GIẢI NGÂN
                              </h2>
-                             <p className="text-[11px] text-slate-500 dark:text-zinc-500 font-black uppercase tracking-tight mt-2 ml-14">Mã yêu cầu: #{selectedRequest.id}</p>
+                             <p className="text-[11px] text-slate-700 dark:text-zinc-400 font-black uppercase tracking-tight mt-2 ml-14">Mã yêu cầu: #{selectedRequest.id}</p>
                         </div>
 
                         {/* Modal Content */}
@@ -390,7 +392,7 @@ const AdminSettlementManagement = () => {
                                 <div className="flex-1 space-y-5">
                                     <div className="grid grid-cols-2 gap-6">
                                         <div>
-                                            <label className="text-[10px] font-black text-slate-500 dark:text-zinc-500 uppercase tracking-tight block mb-2">Tên sự kiện</label>
+                                            <label className="text-[10px] font-black text-slate-700 dark:text-zinc-500 uppercase tracking-tight block mb-2">Tên sự kiện</label>
                                             <div className="font-black text-gray-900 dark:text-white uppercase tracking-tight leading-tight text-sm">{selectedRequest.event?.title}</div>
                                         </div>
                                         <div>
@@ -400,7 +402,7 @@ const AdminSettlementManagement = () => {
                                     </div>
                                     <div className="pt-6 border-t border-gray-100 dark:border-zinc-800/50 flex items-end justify-between">
                                         <div>
-                                            <label className="text-[10px] font-black text-slate-500 dark:text-zinc-500 uppercase tracking-widest block mb-2">Tổng doanh thu (GROSS)</label>
+                                            <label className="text-[10px] font-black text-slate-700 dark:text-zinc-500 uppercase tracking-widest block mb-2">Tổng doanh thu (GROSS)</label>
                                             <div className="font-black text-gray-900 dark:text-white text-2xl tracking-tight">{formatCurrency(selectedRequest.total_revenue)}</div>
                                         </div>
                                         <div className="text-right">
@@ -419,15 +421,15 @@ const AdminSettlementManagement = () => {
                                 </h3>
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                     <div className="p-4 bg-white dark:bg-zinc-950 rounded-2xl border border-gray-100 dark:border-zinc-800/50 shadow-sm">
-                                        <div className="text-[9px] font-black text-slate-500 dark:text-gray-500 uppercase mb-1.5 tracking-tight">Doanh thu vé</div>
+                                        <div className="text-[9px] font-black text-slate-700 dark:text-gray-500 uppercase mb-1.5 tracking-tight">Doanh thu vé</div>
                                         <div className="font-black text-gray-900 dark:text-white text-sm tracking-tight">{formatCurrency(selectedRequest.ticket_revenue || 0)}</div>
                                     </div>
                                     <div className="p-4 bg-white dark:bg-zinc-950 rounded-2xl border border-gray-100 dark:border-zinc-800/50 shadow-sm">
-                                        <div className="text-[9px] font-black text-slate-500 dark:text-gray-500 uppercase mb-1.5 tracking-tight">Vật phẩm</div>
+                                        <div className="text-[9px] font-black text-slate-700 dark:text-gray-500 uppercase mb-1.5 tracking-tight">Vật phẩm</div>
                                         <div className="font-black text-gray-900 dark:text-white text-sm tracking-tight">{formatCurrency(selectedRequest.merch_revenue || 0)}</div>
                                     </div>
                                     <div className="p-4 bg-white dark:bg-zinc-950 rounded-2xl border border-gray-100 dark:border-zinc-800/50 shadow-sm">
-                                        <div className="text-[9px] font-black text-slate-500 dark:text-gray-500 uppercase mb-1.5 tracking-tight">Marketplace</div>
+                                        <div className="text-[9px] font-black text-slate-700 dark:text-gray-500 uppercase mb-1.5 tracking-tight">Marketplace</div>
                                         <div className="font-black text-gray-900 dark:text-white text-sm tracking-tight">{formatCurrency(selectedRequest.marketplace_royalty || 0)}</div>
                                     </div>
                                     <div className="p-4 bg-white dark:bg-zinc-950 rounded-2xl border border-gray-100 dark:border-zinc-800/50 shadow-sm">
@@ -439,7 +441,7 @@ const AdminSettlementManagement = () => {
 
                             {/* Bank Info Section */}
                             <div className="p-6 bg-slate-50/80 dark:bg-zinc-900/80 rounded-[2rem] border border-gray-200 dark:border-zinc-800">
-                                <div className="text-[10px] font-black text-slate-600 dark:text-zinc-500 uppercase tracking-tight mb-5 flex items-center gap-2">
+                                <div className="text-[10px] font-black text-slate-800 dark:text-zinc-500 uppercase tracking-tight mb-5 flex items-center gap-2">
                                     <Banknote className="w-4 h-4 text-neon-green/70" />
                                     THÔNG TIN CHUYỂN KHOẢN
                                 </div>
@@ -463,7 +465,7 @@ const AdminSettlementManagement = () => {
                             {selectedRequest.status !== 'settled' && (
                                 <div className="space-y-6">
                                     <div className="space-y-3">
-                                        <label className="text-[10px] font-black text-slate-600 dark:text-zinc-500 uppercase tracking-tight flex items-center gap-2 ml-1">
+                                        <label className="text-[10px] font-black text-slate-800 dark:text-zinc-500 uppercase tracking-tight flex items-center gap-2 ml-1">
                                             <FileText className="w-4 h-4 text-neon-green/60" /> Ghi chú nội bộ
                                         </label>
                                         <textarea 
@@ -475,7 +477,7 @@ const AdminSettlementManagement = () => {
                                         />
                                     </div>
                                     <div className="space-y-3">
-                                        <label className="text-[10px] font-black text-slate-600 dark:text-zinc-500 uppercase tracking-tight flex items-center gap-2 ml-1">
+                                        <label className="text-[10px] font-black text-slate-800 dark:text-zinc-500 uppercase tracking-tight flex items-center gap-2 ml-1">
                                             <ExternalLink className="w-4 h-4 text-neon-green/60" /> Biên lai chuyển khoản (URL)
                                         </label>
                                         <input 
@@ -506,7 +508,7 @@ const AdminSettlementManagement = () => {
                         <div className="p-10 bg-slate-50/90 dark:bg-zinc-900/90 border-t border-gray-100 dark:border-zinc-800/80 flex items-center gap-4 relative z-10 backdrop-blur-xl">
                             <button 
                                 onClick={() => setSelectedRequest(null)}
-                                className="px-10 py-4 text-[11px] font-black uppercase tracking-tight text-slate-600 hover:text-gray-900 dark:hover:text-white bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-2xl transition-all shadow-sm active:scale-95"
+                                className="px-10 py-4 text-[11px] font-black uppercase tracking-tight text-slate-800 hover:text-gray-900 dark:hover:text-white bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-2xl transition-all shadow-sm active:scale-95"
                             >
                                 QUAY LẠI
                             </button>

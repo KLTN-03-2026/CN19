@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AlertTriangle, X, Calendar, MessageSquare, CheckCircle2, PlusCircle } from 'lucide-react';
+import { AlertTriangle, X, Calendar, MessageSquare, CheckCircle2, PlusCircle, Image as ImageIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const EmergencyActionModal = ({ isOpen, onClose, onConfirm, eventTitle }) => {
@@ -9,7 +9,7 @@ const EmergencyActionModal = ({ isOpen, onClose, onConfirm, eventTitle }) => {
     const [newStartTime, setNewStartTime] = useState('');
     const [newEndDate, setNewEndDate] = useState('');
     const [newEndTime, setNewEndTime] = useState('');
-    const [evidenceFile, setEvidenceFile] = useState(null);
+    const [evidenceFiles, setEvidenceFiles] = useState([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
 
@@ -46,11 +46,14 @@ const EmergencyActionModal = ({ isOpen, onClose, onConfirm, eventTitle }) => {
 
         try {
             setIsSubmitting(true);
-            let evidence_url = null;
-            if (evidenceFile) {
-                toast.loading('Đang tải minh chứng...', { id: 'upload' });
-                evidence_url = await uploadToCloudinary(evidenceFile);
-                toast.success('Tải minh chứng thành công', { id: 'upload' });
+            let evidence_urls = [];
+            if (evidenceFiles.length > 0) {
+                toast.loading(`Đang tải ${evidenceFiles.length} minh chứng...`, { id: 'upload' });
+                // Tải tất cả các file cùng lúc
+                evidence_urls = await Promise.all(
+                    evidenceFiles.map(file => uploadToCloudinary(file))
+                );
+                toast.success('Tải tất cả minh chứng thành công', { id: 'upload' });
             }
 
             await onConfirm({ 
@@ -60,7 +63,7 @@ const EmergencyActionModal = ({ isOpen, onClose, onConfirm, eventTitle }) => {
                 new_time: newStartTime,
                 new_end_date: newEndDate,
                 new_end_time: newEndTime,
-                evidence_url 
+                evidence_urls 
             });
             onClose();
         } catch (err) {
@@ -81,8 +84,8 @@ const EmergencyActionModal = ({ isOpen, onClose, onConfirm, eventTitle }) => {
                             <AlertTriangle className="w-5 h-5 text-red-600" />
                         </div>
                         <div>
-                            <h2 className="text-sm font-black uppercase tracking-widest text-gray-900 dark:text-white">Xử lý khẩn cấp</h2>
-                            <p className="text-[10px] font-bold text-red-600 uppercase tracking-tighter italic">Sự kiện: {eventTitle}</p>
+                            <h2 className="text-sm font-black uppercase tracking-tight text-gray-900 dark:text-white">Xử lý khẩn cấp</h2>
+                            <p className="text-[10px] font-bold text-red-600 uppercase tracking-tight italic">Sự kiện: {eventTitle}</p>
                         </div>
                     </div>
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
@@ -103,7 +106,7 @@ const EmergencyActionModal = ({ isOpen, onClose, onConfirm, eventTitle }) => {
                             }`}
                         >
                             <Calendar className="w-5 h-5" />
-                            <span className="text-[10px] font-black uppercase tracking-widest">Dời lịch</span>
+                            <span className="text-[10px] font-black uppercase tracking-tight">Dời lịch</span>
                         </button>
                         <button
                             type="button"
@@ -115,13 +118,13 @@ const EmergencyActionModal = ({ isOpen, onClose, onConfirm, eventTitle }) => {
                             }`}
                         >
                             <X className="w-5 h-5" />
-                            <span className="text-[10px] font-black uppercase tracking-widest">Hủy sự kiện</span>
+                            <span className="text-[10px] font-black uppercase tracking-tight">Hủy sự kiện</span>
                         </button>
                     </div>
 
                     {/* Reason */}
                     <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 flex items-center gap-2">
+                        <label className="text-[10px] font-black uppercase tracking-tight text-gray-500 flex items-center gap-2">
                             <MessageSquare className="w-3 h-3" /> Lý do chi tiết <span className="text-red-500">*</span>
                         </label>
                         <textarea
@@ -135,27 +138,50 @@ const EmergencyActionModal = ({ isOpen, onClose, onConfirm, eventTitle }) => {
 
                     {/* Evidence Upload */}
                     <div className="space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 flex items-center gap-2">
-                            <CheckCircle2 className="w-3 h-3 text-green-600" /> Minh chứng (Hình ảnh/Tài liệu)
+                        <label className="text-[10px] font-black uppercase tracking-tight text-gray-500 flex items-center gap-2">
+                            <CheckCircle2 className="w-3 h-3 text-green-600" /> Minh chứng (Có thể chọn nhiều hình ảnh)
                         </label>
                         <div className="relative group">
                             <input
                                 type="file"
-                                accept="image/*,.pdf"
-                                onChange={(e) => setEvidenceFile(e.target.files[0])}
+                                accept="image/*"
+                                multiple
+                                onChange={(e) => setEvidenceFiles(Array.from(e.target.files))}
                                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
                             />
                             <div className={`p-4 rounded-xl border-2 border-dashed transition-all flex flex-col items-center justify-center gap-2 ${
-                                evidenceFile 
+                                evidenceFiles.length > 0 
                                 ? 'border-green-600 bg-green-600/5 text-green-600' 
                                 : 'border-gray-100 dark:border-white/5 text-gray-400 group-hover:border-blue-600 group-hover:bg-blue-600/5'
                             }`}>
                                 <PlusCircle className="w-6 h-6" />
-                                <span className="text-[10px] font-black uppercase tracking-widest">
-                                    {evidenceFile ? evidenceFile.name : 'Nhấn để chọn file minh chứng'}
+                                <span className="text-[10px] font-black uppercase tracking-tight">
+                                    {evidenceFiles.length > 0 
+                                        ? `Đã chọn ${evidenceFiles.length} file minh chứng` 
+                                        : 'Nhấn để chọn file minh chứng (Có thể chọn nhiều)'}
                                 </span>
                             </div>
                         </div>
+                        {evidenceFiles.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mt-2">
+                                {evidenceFiles.map((file, idx) => (
+                                    <div key={idx} className="px-3 py-1.5 bg-gray-100 dark:bg-white/5 rounded-lg text-[9px] font-bold text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                                        <ImageIcon className="w-3 h-3" />
+                                        <span className="max-w-[100px] truncate">{file.name}</span>
+                                        <button 
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                setEvidenceFiles(prev => prev.filter((_, i) => i !== idx));
+                                            }}
+                                            className="hover:text-red-500"
+                                        >
+                                            <X className="w-3 h-3" />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                     {/* Reschedule Details */}
@@ -163,7 +189,7 @@ const EmergencyActionModal = ({ isOpen, onClose, onConfirm, eventTitle }) => {
                         <div className="space-y-4 pt-4 border-t border-gray-100 dark:border-white/5 animate-in slide-in-from-top-4 duration-300">
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-500">Ngày bắt đầu mới</label>
+                                    <label className="text-[10px] font-black uppercase tracking-tight text-gray-500">Ngày bắt đầu mới</label>
                                     <input
                                         type="date"
                                         value={newStartDate}
@@ -173,7 +199,7 @@ const EmergencyActionModal = ({ isOpen, onClose, onConfirm, eventTitle }) => {
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-500">Giờ bắt đầu mới</label>
+                                    <label className="text-[10px] font-black uppercase tracking-tight text-gray-500">Giờ bắt đầu mới</label>
                                     <input
                                         type="time"
                                         value={newStartTime}
@@ -185,7 +211,7 @@ const EmergencyActionModal = ({ isOpen, onClose, onConfirm, eventTitle }) => {
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-500">Ngày kết thúc mới</label>
+                                    <label className="text-[10px] font-black uppercase tracking-tight text-gray-500">Ngày kết thúc mới</label>
                                     <input
                                         type="date"
                                         value={newEndDate}
@@ -195,7 +221,7 @@ const EmergencyActionModal = ({ isOpen, onClose, onConfirm, eventTitle }) => {
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-500">Giờ kết thúc mới</label>
+                                    <label className="text-[10px] font-black uppercase tracking-tight text-gray-500">Giờ kết thúc mới</label>
                                     <input
                                         type="time"
                                         value={newEndTime}
@@ -217,7 +243,7 @@ const EmergencyActionModal = ({ isOpen, onClose, onConfirm, eventTitle }) => {
                     <button
                         type="submit"
                         disabled={isSubmitting}
-                        className={`w-full py-4 rounded-xl font-black uppercase text-xs tracking-widest transition-all shadow-lg flex items-center justify-center gap-2 ${
+                        className={`w-full py-4 rounded-xl font-black uppercase text-xs tracking-tight transition-all shadow-lg flex items-center justify-center gap-2 ${
                             type === 'cancel'
                             ? 'bg-red-600 text-white shadow-red-600/20 hover:brightness-110'
                             : 'bg-blue-600 text-white shadow-blue-600/20 hover:brightness-110'

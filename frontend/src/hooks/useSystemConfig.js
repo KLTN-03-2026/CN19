@@ -31,7 +31,7 @@ export const useSystemConfig = () => {
         product_transaction_fee_percent: 3,
         system_gas_fee: 10000,
         resale_price_cap_percent: 8,
-        resale_transaction_fee_percent: 3,
+        resale_transaction_fee_percent: 1,
         default_royalty_percent: 3,
         withdrawal_fee_percent: 2,
         min_withdrawal_amount: 100000
@@ -63,7 +63,7 @@ export const useSystemConfig = () => {
     productTransactionFee: getFee('product_transaction_fee_percent', 3),
     // Marketplace & Resale
     resalePriceCap: getFee('resale_price_cap_percent', 8),
-    resaleTransactionFee: getFee('resale_transaction_fee_percent', 3),
+    resaleTransactionFee: getFee('resale_transaction_fee_percent', 1),
     royaltyFee: getFee('default_royalty_percent', 3),
     // Các phí khác
     gasFee: getFee('system_gas_fee', 10000),

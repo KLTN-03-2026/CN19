@@ -18,5 +18,8 @@ export default {
       url: process.env.AMOY_RPC_URL || "https://rpc-amoy.polygon.technology/",
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
     }
+  },
+  etherscan: {
+    apiKey: "GJHZ4QNIV1ZN15JYCGGWY919EXF6D4KREE"
   }
 };

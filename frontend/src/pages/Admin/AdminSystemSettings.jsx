@@ -54,23 +54,21 @@ const AdminSystemSettings = () => {
         setPendingChanges(prev => ({ ...prev, [key]: value }));
     };
 
-    const handleSaveRequest = () => {
-        const criticalKeys = [
-            'event_platform_fee_percent', 
-            'product_platform_fee_percent',
-            'event_marketplace_fee_percent', 
-            'withdrawal_fee_percent',
-            'smart_contract_address',
-            'rpc_url'
-        ];
-        
-        const hasCriticalChanges = criticalKeys.some(key => pendingChanges[key] !== config[key]);
-        
-        if (hasCriticalChanges) {
+    const requestOtp = async () => {
+        try {
+            setSaving(true);
+            await api.post('/admin/config/request-otp');
+            toast.success('Mã OTP đã được gửi vào email admin');
             setShowOtpModal(true);
-        } else {
-            saveConfig();
+        } catch (error) {
+            toast.error('Không thể gửi mã OTP. Vui lòng thử lại.');
+        } finally {
+            setSaving(false);
         }
+    };
+
+    const handleSaveRequest = () => {
+        requestOtp();
     };
 
     const saveConfig = async () => {
@@ -95,7 +93,7 @@ const AdminSystemSettings = () => {
         return (
             <div className="flex flex-col items-center justify-center min-h-[400px]">
                 <Loader2 className="w-8 h-8 text-neon-green animate-spin" />
-                <p className="mt-4 text-xs text-slate-500 font-bold">Đang tải cấu hình...</p>
+                <p className="mt-4 text-xs text-slate-700 font-bold">Đang tải cấu hình...</p>
             </div>
         );
     }
@@ -117,7 +115,7 @@ const AdminSystemSettings = () => {
                     </div>
                     <div>
                         <h1 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Cài đặt hệ thống</h1>
-                        <p className="text-slate-500 dark:text-gray-400 text-sm font-medium tracking-tight mt-0.5">Tham số vận hành & Cấu hình kỹ thuật</p>
+                        <p className="text-slate-800 dark:text-zinc-400 text-sm font-medium tracking-tight mt-0.5">Tham số vận hành & Cấu hình kỹ thuật</p>
                     </div>
                 </div>
 
@@ -149,11 +147,11 @@ const AdminSystemSettings = () => {
                                 className={`w-full flex items-center gap-4 px-6 py-2.5 rounded-2xl text-[14px] font-bold transition-all duration-300 group relative ${
                                     activeTab === tab.id 
                                     ? 'bg-neon-green text-black shadow-xl shadow-neon-green/20 border-2 border-neon-green' 
-                                    : 'bg-white dark:bg-white/5 text-gray-600 dark:text-gray-400 border border-slate-200 dark:border-white/10 hover:border-neon-green/30 hover:bg-slate-50 dark:hover:bg-white/10 hover:shadow-lg shadow-sm'
+                                    : 'bg-white dark:bg-white/5 text-slate-800 dark:text-gray-400 border border-slate-200 dark:border-white/10 hover:border-neon-green/30 hover:bg-slate-50 dark:hover:bg-white/10 hover:shadow-lg shadow-sm'
                                 }`}
                             >
                                 <div className={`p-2 rounded-xl transition-colors ${activeTab === tab.id ? 'bg-black/10' : 'bg-slate-100 dark:bg-white/10 group-hover:bg-neon-green/10'}`}>
-                                    <tab.icon className={`w-5 h-5 ${activeTab === tab.id ? 'text-black' : 'text-gray-400 group-hover:text-neon-green'}`} />
+                                    <tab.icon className={`w-5 h-5 ${activeTab === tab.id ? 'text-black' : 'text-gray-600 group-hover:text-neon-green'}`} />
                                 </div>
                                 <span>{tab.label}</span>
                                 <ChevronRight className={`ml-auto w-4 h-4 transition-transform duration-300 ${activeTab === tab.id ? 'translate-x-0' : '-translate-x-2 opacity-0 group-hover:translate-x-0 group-hover:opacity-100'}`} />
@@ -171,13 +169,13 @@ const AdminSystemSettings = () => {
                                     <Globe className="w-5 h-5 text-neon-green" />
                                     <div>
                                         <h2 className="text-base font-black text-slate-900 dark:text-white tracking-tight">Thông tin chung</h2>
-                                        <p className="text-slate-500 dark:text-gray-400 font-medium text-xs tracking-tight">Thương hiệu & Thông tin liên hệ</p>
+                                        <p className="text-slate-800 dark:text-zinc-400 font-medium text-xs tracking-tight">Thương hiệu & Thông tin liên hệ</p>
                                     </div>
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                     <div className="space-y-2.5">
-                                        <label className="text-[11px] font-bold text-slate-500 dark:text-gray-400 tracking-tight ml-1">Tên nền tảng</label>
+                                        <label className="text-[11px] font-bold text-slate-800 dark:text-zinc-400 tracking-tight ml-1">Tên nền tảng</label>
                                         <input 
                                             type="text"
                                             value={pendingChanges.site_name}
@@ -186,7 +184,7 @@ const AdminSystemSettings = () => {
                                         />
                                     </div>
                                     <div className="space-y-2.5">
-                                        <label className="text-[11px] font-bold text-slate-500 dark:text-gray-400 tracking-tight ml-1">Email hỗ trợ</label>
+                                        <label className="text-[11px] font-bold text-slate-800 dark:text-zinc-400 tracking-tight ml-1">Email hỗ trợ</label>
                                         <input 
                                             type="email"
                                             value={pendingChanges.support_email}
@@ -201,7 +199,7 @@ const AdminSystemSettings = () => {
                                             </div>
                                             <div>
                                                 <h3 className="text-sm font-black text-slate-900 dark:text-white tracking-tight">Chế độ bảo trì</h3>
-                                                <p className="text-xs text-slate-500 dark:text-gray-400 font-medium tracking-tight mt-1">Ngăn chặn truy cập của người dùng để bảo trì kỹ thuật.</p>
+                                                <p className="text-xs text-slate-800 dark:text-zinc-400 font-medium tracking-tight mt-1">Ngăn chặn truy cập của người dùng để bảo trì kỹ thuật.</p>
                                             </div>
                                         </div>
                                         <button 
@@ -221,20 +219,20 @@ const AdminSystemSettings = () => {
                                     <CreditCard className="w-5 h-5 text-neon-green" />
                                     <div>
                                         <h2 className="text-base font-black text-slate-900 dark:text-white tracking-tight">Quản lý phí</h2>
-                                        <p className="text-slate-500 dark:text-gray-400 font-medium text-xs tracking-tight">Cấu hình các loại phí giao dịch</p>
+                                        <p className="text-slate-800 dark:text-zinc-400 font-medium text-xs tracking-tight">Cấu hình các loại phí giao dịch</p>
                                     </div>
                                 </div>
 
                                 <div className="space-y-8">
                                     {/* Event Fees Section */}
                                     <div className="space-y-6">
-                                        <div className="flex items-center gap-2 text-slate-400">
+                                        <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
                                             <Calendar className="w-3.5 h-3.5" />
                                             <span className="text-[10px] font-black uppercase tracking-wider">Cấu hình phí cho Vé Sự Kiện</span>
                                         </div>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-6">
                                             <div className="space-y-2.5">
-                                                <label className="text-[11px] font-bold text-slate-500 dark:text-gray-400 tracking-tight ml-1">Phí nền tảng sự kiện (Primary)</label>
+                                                <label className="text-[11px] font-bold text-slate-800 dark:text-zinc-400 tracking-tight ml-1">Phí nền tảng sự kiện (Primary)</label>
                                                 <div className="relative">
                                                     <input 
                                                         type="number"
@@ -242,11 +240,11 @@ const AdminSystemSettings = () => {
                                                         onChange={e => handleChange('event_platform_fee_percent', e.target.value)}
                                                         className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:border-neon-green transition-all"
                                                     />
-                                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">%</div>
+                                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-600">%</div>
                                                 </div>
                                             </div>
                                             <div className="space-y-2.5">
-                                                <label className="text-[11px] font-bold text-slate-500 dark:text-gray-400 tracking-tight ml-1">Phí giao dịch vé</label>
+                                                <label className="text-[11px] font-bold text-slate-800 dark:text-zinc-400 tracking-tight ml-1">Phí giao dịch vé</label>
                                                 <div className="relative">
                                                     <input 
                                                         type="number"
@@ -254,7 +252,7 @@ const AdminSystemSettings = () => {
                                                         onChange={e => handleChange('event_transaction_fee_percent', e.target.value)}
                                                         className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:border-neon-green transition-all"
                                                     />
-                                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">%</div>
+                                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-600">%</div>
                                                 </div>
                                             </div>
                                         </div>
@@ -264,13 +262,13 @@ const AdminSystemSettings = () => {
 
                                     {/* Product Fees Section */}
                                     <div className="space-y-6">
-                                        <div className="flex items-center gap-2 text-slate-400">
+                                        <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
                                             <Package className="w-3.5 h-3.5" />
                                             <span className="text-[10px] font-black uppercase tracking-wider">Cấu hình phí cho Sản Phẩm (Merchandise)</span>
                                         </div>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-6">
                                             <div className="space-y-2.5">
-                                                <label className="text-[11px] font-bold text-slate-500 dark:text-gray-400 tracking-tight ml-1">Phí nền tảng sản phẩm</label>
+                                                <label className="text-[11px] font-bold text-slate-800 dark:text-zinc-400 tracking-tight ml-1">Phí nền tảng sản phẩm</label>
                                                 <div className="relative">
                                                     <input 
                                                         type="number"
@@ -278,11 +276,11 @@ const AdminSystemSettings = () => {
                                                         onChange={e => handleChange('product_platform_fee_percent', e.target.value)}
                                                         className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:border-neon-green transition-all"
                                                     />
-                                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">%</div>
+                                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-600">%</div>
                                                 </div>
                                             </div>
                                             <div className="space-y-2.5">
-                                                <label className="text-[11px] font-bold text-slate-500 dark:text-gray-400 tracking-tight ml-1">Phí giao dịch sản phẩm</label>
+                                                <label className="text-[11px] font-bold text-slate-800 dark:text-zinc-400 tracking-tight ml-1">Phí giao dịch sản phẩm</label>
                                                 <div className="relative">
                                                     <input 
                                                         type="number"
@@ -290,7 +288,7 @@ const AdminSystemSettings = () => {
                                                         onChange={e => handleChange('product_transaction_fee_percent', e.target.value)}
                                                         className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:border-neon-green transition-all"
                                                     />
-                                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">%</div>
+                                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-600">%</div>
                                                 </div>
                                             </div>
                                         </div>
@@ -300,13 +298,13 @@ const AdminSystemSettings = () => {
 
                                     {/* Resale Fees Section */}
                                     <div className="space-y-6">
-                                        <div className="flex items-center gap-2 text-slate-400">
+                                        <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
                                             <Percent className="w-3.5 h-3.5" />
                                             <span className="text-[10px] font-black uppercase tracking-wider">Cấu hình Bán lại (Marketplace)</span>
                                         </div>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-6">
                                             <div className="space-y-2.5">
-                                                <label className="text-[11px] font-bold text-slate-500 dark:text-gray-400 tracking-tight ml-1">Biên độ giá bán lại tối đa (so với giá gốc)</label>
+                                                <label className="text-[11px] font-bold text-slate-800 dark:text-zinc-400 tracking-tight ml-1">Biên độ giá bán lại tối đa (so với giá gốc)</label>
                                                 <div className="relative">
                                                     <input 
                                                         type="number"
@@ -314,11 +312,11 @@ const AdminSystemSettings = () => {
                                                         onChange={e => handleChange('resale_price_cap_percent', e.target.value)}
                                                         className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:border-neon-green transition-all"
                                                     />
-                                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">%</div>
+                                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-600">%</div>
                                                 </div>
                                             </div>
                                             <div className="space-y-2.5">
-                                                <label className="text-[11px] font-bold text-slate-500 dark:text-gray-400 tracking-tight ml-1">Phí giao dịch bán lại</label>
+                                                <label className="text-[11px] font-bold text-slate-800 dark:text-zinc-400 tracking-tight ml-1">Phí giao dịch bán lại</label>
                                                 <div className="relative">
                                                     <input 
                                                         type="number"
@@ -326,7 +324,7 @@ const AdminSystemSettings = () => {
                                                         onChange={e => handleChange('resale_transaction_fee_percent', e.target.value)}
                                                         className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:border-neon-green transition-all"
                                                     />
-                                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">%</div>
+                                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-600">%</div>
                                                 </div>
                                             </div>
                                         </div>
@@ -336,13 +334,13 @@ const AdminSystemSettings = () => {
 
                                     {/* Other Finance Fees Section */}
                                     <div className="space-y-6">
-                                        <div className="flex items-center gap-2 text-slate-400">
+                                        <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
                                             <Banknote className="w-3.5 h-3.5" />
                                             <span className="text-[10px] font-black uppercase tracking-wider">Cấu hình thanh toán & Rút tiền</span>
                                         </div>
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-6">
                                             <div className="space-y-2.5">
-                                                <label className="text-[11px] font-bold text-slate-500 dark:text-gray-400 tracking-tight ml-1">Phí rút tiền doanh thu</label>
+                                                <label className="text-[11px] font-bold text-slate-800 dark:text-zinc-400 tracking-tight ml-1">Phí rút tiền doanh thu</label>
                                                 <div className="relative">
                                                     <input 
                                                         type="number"
@@ -350,11 +348,11 @@ const AdminSystemSettings = () => {
                                                         onChange={e => handleChange('withdrawal_fee_percent', e.target.value)}
                                                         className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:border-neon-green transition-all"
                                                     />
-                                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">%</div>
+                                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-600">%</div>
                                                 </div>
                                             </div>
                                             <div className="space-y-2.5">
-                                                <label className="text-[11px] font-bold text-slate-500 dark:text-gray-400 tracking-tight ml-1">Mức rút tối thiểu</label>
+                                                <label className="text-[11px] font-bold text-slate-800 dark:text-zinc-400 tracking-tight ml-1">Mức rút tối thiểu</label>
                                                 <div className="relative">
                                                     <input 
                                                         type="number"
@@ -366,7 +364,7 @@ const AdminSystemSettings = () => {
                                                 </div>
                                             </div>
                                             <div className="space-y-2.5">
-                                                <label className="text-[11px] font-bold text-slate-500 dark:text-gray-400 tracking-tight ml-1">Tác quyền mặc định (Royalty)</label>
+                                                <label className="text-[11px] font-bold text-slate-800 dark:text-zinc-400 tracking-tight ml-1">Tác quyền mặc định (Royalty)</label>
                                                 <div className="relative">
                                                     <input 
                                                         type="number"
@@ -374,11 +372,11 @@ const AdminSystemSettings = () => {
                                                         onChange={e => handleChange('default_royalty_percent', e.target.value)}
                                                         className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:border-neon-green transition-all"
                                                     />
-                                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">%</div>
+                                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-slate-600">%</div>
                                                 </div>
                                             </div>
                                             <div className="space-y-2.5">
-                                                <label className="text-[11px] font-bold text-slate-500 dark:text-gray-400 tracking-tight ml-1">Ước tính phí Gas (Blockchain)</label>
+                                                <label className="text-[11px] font-bold text-slate-800 dark:text-zinc-400 tracking-tight ml-1">Ước tính phí Gas (Blockchain)</label>
                                                 <div className="relative">
                                                     <input 
                                                         type="number"
@@ -401,36 +399,36 @@ const AdminSystemSettings = () => {
                                     <Cpu className="w-5 h-5 text-neon-green" />
                                     <div>
                                         <h2 className="text-base font-black text-slate-900 dark:text-white tracking-tight">Blockchain</h2>
-                                        <p className="text-slate-500 dark:text-gray-400 font-medium text-xs tracking-tight">Hạ tầng mạng lưới & Smart Contract</p>
+                                        <p className="text-slate-800 dark:text-zinc-400 font-medium text-xs tracking-tight">Hạ tầng mạng lưới & Smart Contract</p>
                                     </div>
                                 </div>
 
-                                <div className="space-y-6">
-                                    <div className="space-y-2.5">
-                                        <label className="text-[11px] font-bold text-slate-500 dark:text-gray-400 tracking-tight ml-1">Địa chỉ Smart Contract chính</label>
-                                        <div className="relative">
-                                            <Key className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                                            <input 
-                                                type="text"
-                                                value={pendingChanges.smart_contract_address}
-                                                onChange={e => handleChange('smart_contract_address', e.target.value)}
-                                                className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl py-3 pl-11 pr-4 text-sm font-mono text-slate-900 dark:text-white focus:outline-none focus:border-neon-green transition-all"
-                                            />
+                                    <div className="space-y-6">
+                                        <div className="space-y-2.5">
+                                            <label className="text-[11px] font-bold text-slate-800 dark:text-zinc-400 tracking-tight ml-1">Địa chỉ Smart Contract chính</label>
+                                            <div className="relative">
+                                                <Key className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
+                                                <input 
+                                                    type="text"
+                                                    value={pendingChanges.smart_contract_address}
+                                                    onChange={e => handleChange('smart_contract_address', e.target.value)}
+                                                    className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl py-3 pl-11 pr-4 text-sm font-mono text-slate-900 dark:text-white focus:outline-none focus:border-neon-green transition-all"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className="space-y-2.5">
+                                            <label className="text-[11px] font-bold text-slate-800 dark:text-zinc-400 tracking-tight ml-1">RPC Endpoint URL</label>
+                                            <div className="relative">
+                                                <Globe className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
+                                                <input 
+                                                    type="text" 
+                                                    value={pendingChanges.rpc_url}
+                                                    onChange={e => handleChange('rpc_url', e.target.value)}
+                                                    className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl py-3 pl-11 pr-4 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-neon-green transition-all"
+                                                />
+                                            </div>
                                         </div>
                                     </div>
-                                    <div className="space-y-2.5">
-                                        <label className="text-[11px] font-bold text-slate-500 dark:text-gray-400 tracking-tight ml-1">RPC Endpoint URL</label>
-                                        <div className="relative">
-                                            <Globe className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                                            <input 
-                                                type="text" 
-                                                value={pendingChanges.rpc_url}
-                                                onChange={e => handleChange('rpc_url', e.target.value)}
-                                                className="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl py-3 pl-11 pr-4 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-neon-green transition-all"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
                             </div>
                         )}
 
@@ -440,15 +438,15 @@ const AdminSystemSettings = () => {
                                     <ShieldCheck className="w-5 h-5 text-neon-green" />
                                     <div>
                                         <h2 className="text-base font-black text-slate-900 dark:text-white tracking-tight">An toàn & Bảo mật</h2>
-                                        <p className="text-slate-500 dark:text-gray-400 font-medium text-xs tracking-tight">Ngưỡng rủi ro & Xác thực quản trị</p>
+                                        <p className="text-slate-800 dark:text-zinc-400 font-medium text-xs tracking-tight">Ngưỡng rủi ro & Xác thực quản trị</p>
                                     </div>
                                 </div>
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-2.5">
-                                        <label className="text-[11px] font-bold text-slate-500 dark:text-gray-400 tracking-tight ml-1">Ngưỡng rủi ro BOT (0-1)</label>
+                                        <label className="text-[11px] font-bold text-slate-800 dark:text-zinc-400 tracking-tight ml-1">Ngưỡng rủi ro BOT (0-1)</label>
                                         <div className="relative">
-                                            <ShieldAlert className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                            <ShieldAlert className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
                                             <input 
                                                 type="number"
                                                 step="0.1"
@@ -460,7 +458,7 @@ const AdminSystemSettings = () => {
                                     </div>
 
                                     <div className="space-y-2.5">
-                                        <label className="text-[11px] font-bold text-slate-500 dark:text-gray-400 tracking-tight ml-1">Xác thực 2 lớp (OTP)</label>
+                                        <label className="text-[11px] font-bold text-slate-800 dark:text-zinc-400 tracking-tight ml-1">Xác thực 2 lớp (OTP)</label>
                                         <div className="p-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl flex items-center justify-between">
                                             <div className="flex items-center gap-2.5">
                                                 <div className="p-1.5 bg-neon-green/10 rounded-lg">

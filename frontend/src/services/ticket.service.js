@@ -47,5 +47,17 @@ export const ticketService = {
     getBlockchainInfo: async (ticketId) => {
         const res = await api.get(`/tickets/${ticketId}/blockchain`);
         return res.data;
+    },
+
+    // Yêu cầu hoàn tiền vé
+    requestRefund: async (ticketId, reason) => {
+        const res = await api.post('/refunds/request', { ticket_id: ticketId, reason });
+        return res.data;
+    },
+
+    // Rút lại (Hủy) yêu cầu hoàn tiền vé
+    cancelRefundRequest: async (ticketId) => {
+        const res = await api.post('/refunds/cancel-request', { ticket_id: ticketId });
+        return res.data;
     }
 };

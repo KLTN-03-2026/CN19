@@ -2,8 +2,8 @@
   "_format": "hh-sol-cache-2",
   "files": {
     "D:\\KLTN_HeThongVeSuKien\\BASTICKET\\smart-contracts\\contracts\\BASTicketNFT.sol": {
-      "lastModificationDate": 1776011368164,
-      "contentHash": "9cbc554b0984e4501f7b118ff1e76ca1",
+      "lastModificationDate": 1778642866364,
+      "contentHash": "1a779360897e9787972cf65a7cf94643",
       "sourceName": "contracts/BASTicketNFT.sol",
       "solcConfig": {
         "version": "0.8.24",

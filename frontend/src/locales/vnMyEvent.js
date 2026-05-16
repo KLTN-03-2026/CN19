@@ -25,7 +25,8 @@ const vnMyEvent = {
     reselling: "Trên chợ",
     transferred: "Đã chuyển nhượng",
     sold: "Đã bán",
-    cancelled: "Bị hủy"
+    cancelled: "Bị hủy",
+    rescheduled: "Dời lịch"
   },
   status: {
     available: "Khả dụng",

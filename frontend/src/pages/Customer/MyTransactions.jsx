@@ -179,7 +179,7 @@ const MyTransactions = () => {
                                 <select 
                                     value={statusFilter}
                                     onChange={(e) => setStatusFilter(e.target.value)}
-                                    className="bg-transparent border-0 text-[12px] font-bold text-gray-600 dark:text-gray-400 focus:ring-0 focus:outline-none cursor-pointer pr-8"
+                                    className="bg-transparent border-0 text-[12px] font-bold text-gray-700 dark:text-gray-500 focus:ring-0 focus:outline-none cursor-pointer pr-8"
                                 >
                                     <option value="all" className="bg-white dark:bg-[#0a0a0a]">{t('transactions.status.all')}</option>
                                     <option value="success" className="bg-white dark:bg-[#0a0a0a]">{t('transactions.status.success')}</option>
@@ -308,7 +308,7 @@ const MyTransactions = () => {
                             <h3 className="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tighter">
                                 {t('transactions.empty.title')}
                             </h3>
-                            <p className="text-gray-500 dark:text-gray-400 max-w-xs mx-auto text-sm">
+                            <p className="text-gray-700 dark:text-gray-400 max-w-xs mx-auto text-sm">
                                 {t('transactions.empty.desc')}
                             </p>
                         </div>

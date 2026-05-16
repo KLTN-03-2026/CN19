@@ -15,7 +15,7 @@ const authenticate = async (req, res, next) => {
     // Kiểm tra trạng thái người dùng trong database
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
-      select: { status: true }
+      select: { status: true, role: true }
     });
 
     if (!user) {
@@ -26,7 +26,7 @@ const authenticate = async (req, res, next) => {
       return res.status(403).json({ error: 'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.' });
     }
 
-    req.user = decoded; // { userId, email, role }
+    req.user = { ...decoded, role: user.role }; // Sử dụng role mới nhất từ DB
     next();
   } catch (err) {
     if (err.name === 'TokenExpiredError') {

@@ -17,7 +17,7 @@ const getMetadata = async (req, res) => {
     const metadata = {
       name: `${ticket.event.title} - ${ticket.ticket_tier.tier_name}`,
       description: `Vé tham gia sự kiện ${ticket.event.title} vào ngày ${ticket.event.event_date}. Phân khu: ${ticket.ticket_tier.section_name}`,
-      image: ticket.event.banner_url || "https://example.com/default-ticket.png",
+      image: ticket.event.image_url || "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?q=80&w=1000&auto=format&fit=crop",
       attributes: [
         { trait_type: "Event", value: ticket.event.title },
         { trait_type: "Tier", value: ticket.ticket_tier.tier_name },

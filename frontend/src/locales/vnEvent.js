@@ -29,6 +29,20 @@ const vnEvent = {
             done: "XONG",
             clear: "XÓA TẤT CẢ BỘ LỌC"
         }
+    },
+    map: {
+        title: "Xác định vị trí",
+        subtitle: "Vui lòng chọn địa điểm tổ chức sự kiện trên bản đồ",
+        province_label: "Tỉnh / Thành phố (*)",
+        province_placeholder: "-- Chọn Tỉnh/Thành phố --",
+        ward_label: "Phường / Xã / Thị trấn (Cấp cơ sở)",
+        ward_placeholder: "Chọn hoặc tìm kiếm...",
+        detail_label: "Số nhà, tên đường cụ thể (*)",
+        detail_placeholder: "VD: 123 Nguyễn Sinh Cung...",
+        click_to_pin: "Click để chọn vị trí trên bản đồ",
+        debounce_hint: "* Bản đồ sẽ tự động tìm vị trí sau 1.5 giây khi bạn ngừng gõ.",
+        confirm_btn: "Xác nhận Địa chỉ",
+        err_incomplete: "Vui lòng điền đầy đủ thông tin Tỉnh, Xã và Số nhà!"
     }
 };
 

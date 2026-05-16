@@ -33,11 +33,23 @@ const PaymentResult = () => {
           // Chuyển searchParams thành object sạch
           const params = Object.fromEntries(searchParams.entries());
           const res = await verifyVNPayReturn(params);
+          if (res?.isFeeOrder) {
+            const eventId = res.orderId.replace('FEE-', '');
+            toast.success('Đã nộp phí & Hoàn tất hủy sự kiện thành công qua cổng thanh toán trực tuyến!');
+            navigate(`/organizer/events/${eventId}/cancellation-fee`, { replace: true });
+            return;
+          }
           setOrder(res?.order);
           setStatus('success');
           toast.success(t('paymentResult.toastSuccessVNPay'));
-        } else if (momoResultCode === '0') {
-          // Đối với MoMo (trong demo này ta tạm xử lý đơn giản hoặc gọi API kiểm tra)
+        } else if (momoResultCode === '0' || searchParams.get('orderId')?.startsWith('FEE')) {
+          const orderIdParam = searchParams.get('orderId');
+          if (orderIdParam?.startsWith('FEE')) {
+            const eventId = orderIdParam.replace('FEE-', '');
+            toast.success('Đã nộp phí & Hoàn tất hủy sự kiện thành công qua cổng thanh toán trực tuyến!');
+            navigate(`/organizer/events/${eventId}/cancellation-fee`, { replace: true });
+            return;
+          }
           setStatus('success');
           toast.success(t('paymentResult.toastSuccessMoMo'));
         } else if (vnpResponseCode || momoResultCode) {
@@ -85,37 +97,44 @@ const PaymentResult = () => {
                </div>
                
                <h2 className="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tighter mb-3 leading-none">
-                   {order?.order_type === 'TICKET_TRANSFER' ? (
+                   {searchParams.get('orderId')?.startsWith('FEE') ? (
+                      <>Nộp phí bồi hoàn <br/><span className="text-neon-green">thành công!</span></>
+                   ) : order?.order_type === 'TICKET_TRANSFER' ? (
                       <>Chuyển nhượng <br/><span className="text-neon-green">thành công!</span></>
                    ) : (
                       <>{t('paymentResult.successTitlePart1')} <br/><span className="text-neon-green">{t('paymentResult.successTitlePart2')}</span></>
                    )}
                 </h2>
                 <p className="text-gray-500 dark:text-gray-400 font-medium mb-10 max-w-xs mx-auto text-sm leading-relaxed">
-                   {order?.order_type === 'TICKET_TRANSFER' 
+                   {searchParams.get('orderId')?.startsWith('FEE')
+                     ? "Đã nộp phí & Hoàn tất hủy sự kiện thành công. Hệ thống đang tự động hoàn tiền cho khách hàng."
+                     : order?.order_type === 'TICKET_TRANSFER' 
                      ? `Vé NFT đã được chuyển đến ${order?.metadata?.receiver_email || 'người nhận'} thành công.`
                      : t('paymentResult.successDesc')}
                 </p>
 
                <div className="grid grid-cols-1 gap-4 mb-10">
-                  <Link 
-                    to="/my-tickets"
-                    className="flex flex-col items-center gap-3 p-4 bg-gray-50 dark:bg-white/5 rounded-3xl border border-gray-100 dark:border-white/10 hover:border-neon-green/50 hover:bg-neon-green/5 transition-all group"
-                  >
-                    <button className="w-10 h-10 rounded-full bg-white dark:bg-white/10 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
-                       <Ticket className="w-5 h-5 text-neon-green" />
-                    </button>
-                    <span className="text-[10px] font-black uppercase text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white">{t('paymentResult.viewTickets')}</span>
-                  </Link>
-
-                  {/* <div 
-                    className="flex flex-col items-center gap-3 p-5 bg-gray-50 dark:bg-white/5 rounded-3xl border border-gray-100 dark:border-white/10 hover:border-blue-500/50 hover:bg-blue-500/5 transition-all group cursor-pointer"
-                  >
-                    <button className="w-10 h-10 rounded-full bg-white dark:bg-white/10 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
-                       <Share2 className="w-5 h-5 text-blue-500" />
-                    </button>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white">Khoe với bạn</span>
-                  </div> */}
+                  {searchParams.get('orderId')?.startsWith('FEE') ? (
+                     <Link 
+                       to="/organizer/my-events"
+                       className="flex flex-col items-center gap-3 p-4 bg-gray-50 dark:bg-white/5 rounded-3xl border border-gray-100 dark:border-white/10 hover:border-neon-green/50 hover:bg-neon-green/5 transition-all group"
+                     >
+                       <button className="w-10 h-10 rounded-full bg-white dark:bg-white/10 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                          <Ticket className="w-5 h-5 text-neon-green" />
+                       </button>
+                       <span className="text-[10px] font-black uppercase text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white">Quản lý sự kiện</span>
+                     </Link>
+                  ) : (
+                     <Link 
+                       to="/my-tickets"
+                       className="flex flex-col items-center gap-3 p-4 bg-gray-50 dark:bg-white/5 rounded-3xl border border-gray-100 dark:border-white/10 hover:border-neon-green/50 hover:bg-neon-green/5 transition-all group"
+                     >
+                       <button className="w-10 h-10 rounded-full bg-white dark:bg-white/10 flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                          <Ticket className="w-5 h-5 text-neon-green" />
+                       </button>
+                       <span className="text-[10px] font-black uppercase text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white">{t('paymentResult.viewTickets')}</span>
+                     </Link>
+                  )}
                </div>
 
                <Link 

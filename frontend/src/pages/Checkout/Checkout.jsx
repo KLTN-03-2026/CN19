@@ -381,13 +381,20 @@ const Checkout = () => {
                       {order.items.map((item, idx) => (
                          <div key={idx} className="flex items-center justify-between">
                             <div className="flex items-center gap-4">
-                               <Ticket className="w-4 h-4 text-neon-green/50" />
+                               {item.is_transfer_item ? <ArrowRightLeft className="w-4 h-4 text-neon-green" /> : <Ticket className="w-4 h-4 text-neon-green/50" />}
                                <div>
-                                  <p className="text-sm font-black uppercase tracking-tight">{item.ticket_tier.tier_name}</p>
-                                  <p className="text-[10px] text-gray-400 font-bold">{t('checkout.quantity')} x{item.quantity}</p>
+                                  <p className="text-sm font-black uppercase tracking-tight">
+                                    {item.ticket_tier.tier_name}
+                                    {item.is_transfer_item && <span className="ml-2 text-[8px] bg-neon-green/10 text-neon-green px-1.5 py-0.5 rounded tracking-widest">CHUYỂN NHƯỢNG</span>}
+                                  </p>
+                                  <p className="text-[10px] text-gray-400 font-bold">
+                                    {item.is_transfer_item ? `Giá gốc: ${formatPrice(item.unit_price, currentLocale)}` : `${t('checkout.quantity')} x${item.quantity}`}
+                                  </p>
                                </div>
                             </div>
-                            <p className="font-black text-sm">{formatPrice(item.subtotal, currentLocale)}</p>
+                            <p className={`font-black text-sm ${item.is_transfer_item ? 'text-neon-green' : ''}`}>
+                               {item.is_transfer_item ? 'MIỄN PHÍ' : formatPrice(item.subtotal, currentLocale)}
+                            </p>
                          </div>
                       ))}
                       {order.merchandise_items && order.merchandise_items.map((item, idx) => (
@@ -490,7 +497,7 @@ const Checkout = () => {
                                      <span className="w-6 text-center text-xs font-black">{qty}</span>
                                      <button 
                                         onClick={() => handleMerchCount(m.id, 1, m.stock)}
-                                        className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-neon-green text-white hover:text-black transition-colors"
+                                        className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-neon-green text-gray-900 dark:text-white hover:text-black transition-colors"
                                      >
                                         <Plus className="w-3 h-3" />
                                      </button>
@@ -525,20 +532,23 @@ const Checkout = () => {
                       </div>
                    )}
 
-                   <div className="flex justify-between items-center text-xs font-bold">
-                      <span className="text-gray-400 font-black uppercase">
-                        {t('checkout.serviceFee')} {order.platform_fee_percent ? `${Number(order.platform_fee_percent).toFixed(1)}%` : '3.0%'}
-                      </span>
-                      <span className="text-neon-green">
-                        {(() => {
-                           const metadata = order.metadata || {};
-                           const ticketPrice = Number(metadata.ticket_price || (order.items && order.items[0]?.subtotal) || 0);
-                           const platformFeePercent = Number(order.platform_fee_percent || 3.0);
-                           const smartPlatformFee = order.order_type === 'MARKETPLACE_PURCHASE' ? (ticketPrice * platformFeePercent / 100) : (order.platform_fee || 0);
-                           return `+${formatPrice(smartPlatformFee, currentLocale)}`;
-                        })()}
-                      </span>
-                   </div>
+                   {/* Service Fee row - Only show for Transfer if needed, hide for Primary Purchase and Marketplace Purchase (since marketplace fees are shown on the left) */}
+                   {order.order_type !== 'TICKET_PURCHASE' && order.order_type !== 'MARKETPLACE_PURCHASE' && (
+                    <div className="flex justify-between items-center text-xs font-bold animate-in fade-in duration-500">
+                       <span className="text-gray-400 font-black uppercase">
+                         {t('checkout.serviceFee')} {order.platform_fee_percent ? `${Number(order.platform_fee_percent).toFixed(1)}%` : '3.0%'}
+                       </span>
+                       <span className="text-neon-green">
+                         {(() => {
+                            const metadata = order.metadata || {};
+                            const ticketPrice = Number(metadata.ticket_price || (order.items && order.items[0]?.subtotal) || 0);
+                            const platformFeePercent = Number(order.platform_fee_percent || 3.0);
+                            const smartPlatformFee = order.order_type === 'MARKETPLACE_PURCHASE' ? (ticketPrice * platformFeePercent / 100) : (order.platform_fee || 0);
+                            return `+${formatPrice(smartPlatformFee, currentLocale)}`;
+                         })()}
+                       </span>
+                    </div>
+                   )}
 
                    {/* Coupon Input */}
                    {order.order_type !== 'TICKET_TRANSFER' && (

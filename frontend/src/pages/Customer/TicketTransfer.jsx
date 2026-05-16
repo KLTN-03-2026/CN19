@@ -14,6 +14,7 @@ import {
     CheckSquare,
     Square
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { ticketService } from '../../services/ticket.service';
 import { userService } from '../../services/user.service';
 import orderService from '../../services/order.service';
@@ -22,6 +23,7 @@ import toast from 'react-hot-toast';
 import { useSystemConfig } from '../../hooks/useSystemConfig';
 
 const TicketTransfer = () => {
+    const { t, i18n } = useTranslation();
     const { id } = useParams();
     const navigate = useNavigate();
     const { user: authUser } = useAuthStore();
@@ -34,6 +36,9 @@ const TicketTransfer = () => {
     const [isCheckingEmail, setIsCheckingEmail] = useState(false);
     const [isTransferring, setIsTransferring] = useState(false);
     const [selectedMerch, setSelectedMerch] = useState([]); // Danh sách ID sản phẩm được chọn
+    const validItems = ticket?.order?.merchandise_items?.filter(item => 
+        !item.is_redeemed && (!item.owner_id || item.owner_id === authUser?.userId || item.owner_id === authUser?.id)
+    ) || [];
 
     useEffect(() => {
         fetchTicketDetail();
@@ -49,15 +54,15 @@ const TicketTransfer = () => {
             const isOwner = res.data.is_current_owner || res.data.current_owner_id === authUser?.userId || res.data.current_owner_id === authUser?.id;
 
             if (!isOwner) {
-                toast.error('Bạn không còn sở hữu vé này.');
+                toast.error(t('transfer.error_no_owner') || 'Bạn không còn sở hữu vé này.');
                 navigate('/my-tickets');
             }
             if (res.data.status === 'used' || res.data.status === 'cancelled') {
-                toast.error('Vé không khả dụng để chuyển nhượng.');
+                toast.error(t('transfer.error_unavailable') || 'Vé không khả dụng để chuyển nhượng.');
                 navigate('/my-tickets');
             }
         } catch (error) {
-            toast.error('Không thể tải thông tin vé.');
+            toast.error(t('transfer.error_load_failed') || 'Không thể tải thông tin vé.');
             navigate('/my-tickets');
         } finally {
             setLoading(false);
@@ -79,6 +84,11 @@ const TicketTransfer = () => {
         try {
             setIsCheckingEmail(true);
             const res = await userService.findByEmail(email);
+            if (res.data?.role === 'admin') {
+                toast.error(t('transfer.error_admin_receiver') || 'Tài khoản Quản trị viên không thể nhận chuyển nhượng vé.');
+                setReceiverInfo(null);
+                return;
+            }
             setReceiverInfo(res.data);
         } catch (error) {
             setReceiverInfo(null);
@@ -89,18 +99,23 @@ const TicketTransfer = () => {
 
     const handleTransfer = async () => {
         if (!receiverEmail) {
-            toast.error('Vui lòng nhập email người nhận.');
+            toast.error(t('transfer.error_no_email') || 'Vui lòng nhập email người nhận.');
+            return;
+        }
+        
+        if (receiverInfo?.role === 'admin') {
+            toast.error(t('transfer.error_admin_receiver') || 'Không thể chuyển vé cho Quản trị viên.');
             return;
         }
         
         try {
             setIsTransferring(true);
             const res = await orderService.createTransferOrder(ticket.id, receiverEmail, selectedMerch);
-            toast.success('Khởi tạo thanh toán phí chuyển nhượng thành công!');
+            toast.success(t('transfer.success_init') || 'Khởi tạo thanh toán phí chuyển nhượng thành công!');
             navigate(`/checkout/${res.data.id}`);
         } catch (error) {
             console.error('Transfer error:', error);
-            toast.error(error.response?.data?.error || 'Không thể khởi tạo thanh toán. Vui lòng thử lại.');
+            toast.error(error.response?.data?.error || t('transfer.error_init_failed') || 'Không thể khởi tạo thanh toán. Vui lòng thử lại.');
         } finally {
             setIsTransferring(false);
         }
@@ -132,13 +147,13 @@ const TicketTransfer = () => {
                         className="inline-flex items-center gap-2 text-gray-500 hover:text-neon-hover dark:hover:text-neon-green transition-colors text-[12px] font-black group"
                     >
                         <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-1 transition-transform" />
-                        Trở về danh sách vé
+                        {t('transfer.back_to_list')}
                     </Link>
                     
                     <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-4">
                         <div className="space-y-4">
                             <h1 className="text-xl md:text-3xl font-black text-gray-900 dark:text-white uppercase leading-[1.1] tracking-tighter">
-                                Chuyển nhượng <br/> <span className="text-neon-hover dark:text-neon-green">tài sản NFT</span>
+                                {t('transfer.title_part1')} <br/> <span className="text-neon-hover dark:text-neon-green">{t('transfer.title_part2')}</span>
                             </h1>
                         </div>
                     </div>
@@ -157,7 +172,7 @@ const TicketTransfer = () => {
                                 />
                                 <div className="absolute top-4 left-4">
                                     <span className="bg-neon-green text-black px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest shadow-[0_0_20px_rgba(57,255,20,0.4)]">
-                                        TÀI SẢN NFT
+                                        {t('transfer.nft_asset')}
                                     </span>
                                 </div>
                             </div>
@@ -171,7 +186,7 @@ const TicketTransfer = () => {
                                     <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-gray-400 dark:text-gray-500 text-[11px] font-bold">
                                         <div className="flex items-center gap-1.5 capitalize">
                                             <Calendar className="w-3.5 h-3.5 text-neon-hover dark:text-neon-green" />
-                                            {new Date(ticket.event.event_date).toLocaleDateString('vi-VN', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' })}
+                                            {new Date(ticket.event.event_date).toLocaleDateString(i18n.language === 'vi' ? 'vi-VN' : 'en-US', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' })}
                                         </div>
                                         <div className="flex items-center gap-1.5">
                                             <MapPin className="w-3.5 h-3.5 text-blue-500" />
@@ -182,7 +197,7 @@ const TicketTransfer = () => {
 
                                 <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 dark:bg-neon-green/[0.02] rounded-2xl border border-gray-100 dark:border-neon-green/10">
                                     <div className="space-y-0.5">
-                                        <p className="text-[9px] font-black text-gray-400">Hạng vé / Vị trí</p>
+                                        <p className="text-[9px] font-black text-gray-400">{t('transfer.tier_pos')}</p>
                                         <p className="text-sm font-black text-gray-900 dark:text-white uppercase truncate">
                                             {ticket.ticket_tier.tier_name}
                                         </p>
@@ -191,7 +206,7 @@ const TicketTransfer = () => {
                                         </p>
                                     </div>
                                     <div className="space-y-0.5 text-right">
-                                        <p className="text-[9px] font-black text-gray-400 ">Mã định danh</p>
+                                        <p className="text-[9px] font-black text-gray-400 ">{t('transfer.identifier')}</p>
                                         <p className="text-sm font-black text-gray-900 dark:text-white uppercase">#{ticket.ticket_number}</p>
                                         <p className="text-[10px] font-black text-gray-500 uppercase">Token: {ticket.nft_token_id || '98271'}</p>
                                     </div>
@@ -203,9 +218,9 @@ const TicketTransfer = () => {
                         <div className="p-4 bg-neon-green/5 border border-neon-green/20 rounded-2xl flex gap-4 shadow-inner">
                             <Shield className="w-5 h-5 text-neon-hover dark:text-neon-green shrink-0" />
                             <div className="space-y-1">
-                                <p className="text-[10px] font-black text-neon-hover dark:text-neon-green uppercase tracking-tight">Giao thức Chuyển quyền sở hữu</p>
+                                <p className="text-[10px] font-black text-neon-hover dark:text-neon-green uppercase tracking-tight">{t('transfer.protocol_title')}</p>
                                 <p className="text-[11px] text-gray-500 dark:text-gray-400 font-medium leading-relaxed">
-                                    Hành động này sẽ thay đổi chủ sở hữu tài sản kỹ thuật số vĩnh viễn trên mạng lưới Blockchain. Vui lòng kiểm tra kỹ thông tin người nhận.
+                                    {t('transfer.protocol_desc')}
                                 </p>
                             </div>
                         </div>
@@ -222,16 +237,16 @@ const TicketTransfer = () => {
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
                                         <span className="w-6 h-6 rounded-md bg-neon-green text-black flex items-center justify-center font-black text-[10px] shadow-[0_0_10px_rgba(57,255,20,0.3)]">01</span>
-                                        <h3 className="text-xs font-black text-gray-900 dark:text-white uppercase">Thông tin người nhận</h3>
+                                        <h3 className="text-xs font-black text-gray-900 dark:text-white uppercase">{t('transfer.receiver_title')}</h3>
                                     </div>
-                                    <span className="text-[10px] font-bold text-neon-hover dark:text-neon-green/60">Email định danh duy nhất</span>
+                                    <span className="text-[10px] font-bold text-neon-hover dark:text-neon-green/60">{t('transfer.receiver_hint')}</span>
                                 </div>
 
                                 <div className="relative group">
                                     <Send className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-neon-green transition-colors" />
                                     <input 
                                         type="email"
-                                        placeholder="Nhập email tài khoản BASTICKET người nhận..."
+                                        placeholder={t('transfer.email_placeholder')}
                                         value={receiverEmail}
                                         onChange={(e) => setReceiverEmail(e.target.value)}
                                         className="w-full bg-gray-50 dark:bg-white/[0.02] border border-gray-200 dark:border-white/10 rounded-2xl py-2.5 pl-14 pr-8 text-[13px] font-bold text-gray-900 dark:text-white focus:outline-none focus:border-neon-green focus:ring-4 focus:ring-neon-green/5 transition-all"
@@ -273,11 +288,11 @@ const TicketTransfer = () => {
                                 ) : receiverEmail && !isCheckingEmail && receiverEmail.includes('@') ? (
                                     <div className="p-4 bg-red-500/5 border border-red-500/10 rounded-2xl flex items-center gap-3 animate-in fade-in duration-300">
                                         <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
-                                        <span className="text-[11px] font-black text-red-500 uppercase">Cảnh báo: Không tìm thấy tài khoản đích</span>
+                                        <span className="text-[11px] font-black text-red-500 uppercase">{t('transfer.warning_not_found')}</span>
                                     </div>
                                 ) : (
                                     <p className="text-[10px] text-gray-400 font-bold text-center uppercase tracking-tight opacity-50">
-                                        Xác thực chủ sở hữu mới thông qua hệ thống định danh BASTICKET
+                                        {t('transfer.receiver_verify_hint')}
                                     </p>
                                 )}
                             </div>
@@ -288,26 +303,22 @@ const TicketTransfer = () => {
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-2">
                                             <Package className="w-5 h-5 text-neon-green" />
-                                            <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tight">Sản phẩm đi kèm (Miễn phí chuyển)</h3>
+                                            <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tight">{t('transfer.merch_title')}</h3>
                                         </div>
                                         <button 
                                             onClick={() => {
-                                                const allIds = ticket.order.merchandise_items.map(m => m.id);
+                                                const allIds = validItems.map(m => m.id);
                                                 setSelectedMerch(selectedMerch.length === allIds.length ? [] : allIds);
                                             }}
                                             className="text-[10px] font-black text-neon-green uppercase hover:underline"
                                         >
-                                            {selectedMerch.length === ticket.order.merchandise_items.length ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}
+                                            {selectedMerch.length === validItems.length ? t('transfer.deselect_all') : t('transfer.select_all')}
                                         </button>
                                     </div>
                                     <div className="grid grid-cols-1 gap-3">
-                                        {ticket.order.merchandise_items.map((item) => {
+                                        {validItems.map((item) => {
                                             const isSelected = selectedMerch.includes(item.id);
-                                            // Kiểm tra xem user có thực sự sở hữu món này không (nếu đã chuyển nhượng xé lẻ trước đó)
-                                            const isOwner = !item.owner_id || item.owner_id === authUser?.userId || item.owner_id === authUser?.id;
                                             
-                                            if (!isOwner) return null;
-
                                             return (
                                                 <div 
                                                     key={item.id}
@@ -329,7 +340,7 @@ const TicketTransfer = () => {
                                                     </div>
                                                     <div className="flex-1 min-w-0">
                                                         <p className="text-[11px] font-black text-gray-900 dark:text-white truncate uppercase">{item.merchandise.name}</p>
-                                                        <p className="text-[10px] text-gray-500 font-bold uppercase">Số lượng: {item.quantity}</p>
+                                                        <p className="text-[10px] text-gray-500 font-bold uppercase">{t('checkout.quantity')} {item.quantity}</p>
                                                     </div>
                                                     {isSelected ? (
                                                         <CheckSquare className="w-5 h-5 text-neon-green" />
@@ -349,13 +360,13 @@ const TicketTransfer = () => {
                                     <div className="space-y-4">
                                         <div className="flex items-center gap-2">
                                             <span className="w-6 h-6 rounded-md bg-neon-green text-black flex items-center justify-center font-black text-[10px] shadow-[0_0_10px_rgba(57,255,20,0.3)]">02</span>
-                                            <h3 className="text-xs font-black text-gray-900 dark:text-white uppercase">Xác nhận giao dịch</h3>
+                                            <h3 className="text-xs font-black text-gray-900 dark:text-white uppercase">{t('transfer.confirm_title')}</h3>
                                         </div>
 
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <div className="px-5 py-3 bg-gray-50 dark:bg-neon-green/[0.03] border border-gray-100 dark:border-neon-green/20 rounded-2xl space-y-2">
                                                 <div className="flex items-center justify-between">
-                                                    <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 leading-none">Phí Chuyển đổi NFT</p>
+                                                    <p className="text-[10px] font-bold text-gray-400 dark:text-gray-500 leading-none">{t('transfer.gas_fee_label')}</p>
                                                     <Info className="w-3 h-3 text-neon-hover dark:text-neon-green" />
                                                 </div>
                                                 <p className="text-2xl font-black text-gray-900 dark:text-white  leading-none">
@@ -366,7 +377,7 @@ const TicketTransfer = () => {
                                             <div className="px-5 py-3 bg-red-500/5 border border-red-500/10 rounded-2xl flex items-center gap-3">
                                                 <AlertCircle className="w-5 h-5 text-red-500 shrink-0" />
                                                 <p className="text-[10px] text-red-500 font-bold leading-tight">
-                                                    Sở hữu vĩnh viễn: Hành động không thể hoàn tác sau khi thanh toán.
+                                                    {t('transfer.permanent_ownership')}
                                                 </p>
                                             </div>
                                         </div>
@@ -379,11 +390,11 @@ const TicketTransfer = () => {
                                     >
                                         {isTransferring ? (
                                             <>
-                                                Xử lý giao thức...
+                                                {t('transfer.processing_btn')}
                                             </>
                                         ) : (
                                             <>
-                                                Xác nhận Chuyển nhượng ngay
+                                                {t('transfer.confirm_btn')}
                                             </>
                                         )}
                                     </button>
@@ -395,16 +406,16 @@ const TicketTransfer = () => {
                                 <div className="space-y-1.5 group">
                                     <div className="flex items-center gap-2">
                                         <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_5px_rgba(59,130,246,0.5)]"></div>
-                                        <span className="text-[10px] font-black text-gray-700 dark:text-gray-300 uppercase tracking-tight group-hover:text-blue-500 transition-colors">Tài sản NFT</span>
+                                        <span className="text-[10px] font-black text-gray-700 dark:text-gray-300 uppercase tracking-tight group-hover:text-blue-500 transition-colors">{t('transfer.nft_asset')}</span>
                                     </div>
-                                    <p className="text-[10px] text-gray-500 dark:text-gray-400 font-medium leading-relaxed capitalize">Xác định duy nhất bởi mã định danh tài sản kỹ thuật số trên mạng lưới Polygon.</p>
+                                    <p className="text-[10px] text-gray-500 dark:text-gray-400 font-medium leading-relaxed capitalize">{t('transfer.nft_asset_desc')}</p>
                                 </div>
                                 <div className="space-y-1.5 group">
                                     <div className="flex items-center gap-2">
                                         <div className="w-1.5 h-1.5 rounded-full bg-neon-green shadow-[0_0_5px_rgba(57,255,20,0.5)]"></div>
-                                        <span className="text-[10px] font-black text-gray-700 dark:text-gray-300 uppercase tracking-tight group-hover:text-neon-green transition-colors">Kho số Digital</span>
+                                        <span className="text-[10px] font-black text-gray-700 dark:text-gray-300 uppercase tracking-tight group-hover:text-neon-green transition-colors">{t('transfer.digital_vault')}</span>
                                     </div>
-                                    <p className="text-[10px] text-gray-500 dark:text-gray-400 font-medium leading-relaxed capitalize">Quyền sở hữu được cập nhật thông minh và lưu trữ cực kỳ bảo mật cho người dùng mới.</p>
+                                    <p className="text-[10px] text-gray-500 dark:text-gray-400 font-medium leading-relaxed capitalize">{t('transfer.digital_vault_desc')}</p>
                                 </div>
                             </div>
                         </div>

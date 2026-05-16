@@ -23,4 +23,7 @@ router.get('/withdrawals', controller.getWithdrawals);
 // [POST] /api/admin/withdrawals/:id/process
 router.post('/withdrawals/:id/process', controller.processWithdrawal);
 
+// [GET] /api/admin/withdrawals/:id/qr
+router.get('/withdrawals/:id/qr', controller.generateWithdrawalQR);
+
 module.exports = router;

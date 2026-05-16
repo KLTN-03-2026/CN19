@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 import EventReviews from '../../../components/events/EventReviews';
 import EventCard from '../../../components/events/EventCard';
 import useBotBehavior from '../../../hooks/useBotBehavior';
-import { useGoogleReCaptcha } from 'react-google-recaptcha-v3';
+import { Turnstile } from '@marsidev/react-turnstile';
 import { useAuthStore } from '../../../store/useAuthStore';
 import toast from 'react-hot-toast';
 
@@ -29,7 +29,7 @@ const PublicEventDetail = () => {
 
   // AI Bot Protection Hooks
   const { getBehaviorData } = useBotBehavior();
-  const { executeRecaptcha } = useGoogleReCaptcha();
+  const [turnstileToken, setTurnstileToken] = useState(null);
   const isAuthenticated = useAuthStore(state => state.isAuthenticated);
   const user = useAuthStore(state => state.user);
 
@@ -53,13 +53,13 @@ const PublicEventDetail = () => {
   });
   const recommendations = recommendationsData?.data?.filter(e => e.id !== id)?.slice(0, 5) || [];
 
-  const isOrganizer = user && data?.data?.organizer?.user?.id === user.id;
+  const isRestricted = user && (data?.data?.organizer?.user?.id === user.id || user?.role === 'admin');
 
   if (isLoading) {
     return (
       <div className="min-h-screen pt-32 pb-20 flex flex-col items-center justify-center bg-gray-50 dark:bg-[#0a0a0c] transition-colors duration-500">
         <div className="w-16 h-16 border-4 border-neon-green/20 border-t-neon-green rounded-full animate-spin"></div>
-        <p className="mt-4 text-gray-500 font-bold tracking-widest uppercase text-sm">{t('eventDetail.loading', 'Loading masterpiece...')}</p>
+        <p className="mt-4 text-gray-700 dark:text-gray-500 font-bold tracking-widest uppercase text-sm">{t('eventDetail.loading', 'Loading masterpiece...')}</p>
       </div>
     );
   }
@@ -115,6 +115,14 @@ const PublicEventDetail = () => {
       return;
     }
 
+    // Temporarily allow admin for testing
+    /*
+    if (user?.role === 'admin') {
+      toast.error(i18n.language.startsWith('vi') ? 'Quản trị viên không thể thực hiện giao dịch này.' : 'Admins cannot perform this transaction.');
+      return;
+    }
+    */
+
     if (totalSelectedTickets === 0 || isSubmitting) return;
 
     setIsSubmitting(true);
@@ -123,11 +131,21 @@ const PublicEventDetail = () => {
     try {
       // 1. Phân tích Hành vi (AI Behavior Analysis)
       const behaviorData = getBehaviorData();
+      
+      // Kiểm tra token Turnstile (Bypass cho Localhost nếu cần)
+      let captchaToken = turnstileToken;
+      
+      const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      if (!captchaToken && isLocalhost) {
+        console.warn('[DEV] No Turnstile token found, using local bypass for development.');
+        captchaToken = 'local-dev-bypass';
+      }
 
-      // 2. Lấy reCAPTCHA Token ẩn (Invisible AI)
-      let captchaToken = null;
-      if (executeRecaptcha) {
-        captchaToken = await executeRecaptcha('checkout');
+      if (!captchaToken) {
+        toast.error(i18n.language.startsWith('vi') ? 'Vui lòng hoàn thành xác thực bảo mật.' : 'Please complete security verification.');
+        setIsSubmitting(false);
+        toast.dismiss(toastId);
+        return;
       }
 
       // 3. Gom dữ liệu đơn hàng
@@ -154,7 +172,7 @@ const PublicEventDetail = () => {
     } catch (error) {
       console.error("Checkout Error:", error);
       // Nếu Backend phát hiện Bot (HTTP 403), show lỗi màu đỏ gắt lên
-      const errorMsg = error.response?.data?.error || t('eventDetail.orderFailed', 'System error. Please try again.');
+      const errorMsg = error.response?.data?.error || (i18n.language.startsWith('vi') ? 'Lỗi hệ thống hoặc phát hiện hành vi bất thường. Vui lòng thử lại.' : 'System error or unusual behavior detected. Please try again.');
       toast.error(errorMsg, { id: toastId, duration: 5000, icon: '🛡️' });
     } finally {
       setIsSubmitting(false);
@@ -186,7 +204,7 @@ const PublicEventDetail = () => {
           <div className="flex justify-between items-center mb-4 w-full animate-in fade-in slide-in-from-top-4 duration-700">
             <button 
               onClick={() => navigate(-1)}
-              className="flex items-center gap-3 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all font-medium group"
+              className="flex items-center gap-3 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all font-medium group"
             >
               <div className="w-8 h-8 rounded-full border border-gray-200 dark:border-gray-800 flex items-center justify-center group-hover:border-gray-400 dark:group-hover:border-white transition-colors bg-white/50 dark:bg-[#0a0a0c]/50 backdrop-blur-md">
                 <ArrowLeft className="w-4 h-4" />
@@ -231,7 +249,7 @@ const PublicEventDetail = () => {
                <div className="flex flex-wrap items-center gap-3 mb-1">
                  <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-white/5 rounded-2xl border border-gray-200 dark:border-white/10 backdrop-blur-md">
                     <Tag className="w-4 h-4 text-neon-green" />
-                    <span className="text-[9px] sm:text-[10px] font-black uppercase text-gray-500 dark:text-gray-300">
+                    <span className="text-[9px] sm:text-[10px] font-black uppercase text-gray-700 dark:text-gray-300">
                       {event.category?.name || t('eventDetail.musicEvent', 'Music Event')}
                     </span>
                  </div>
@@ -249,7 +267,7 @@ const PublicEventDetail = () => {
                         <Calendar className="w-5 h-5 text-neon-green" />
                      </div>
                      <div className="pt-0.5">
-                        <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold mb-1 flex items-center gap-1.5">{t('eventDetail.time', 'Time')}</p>
+                        <p className="text-[10px] text-gray-700 dark:text-gray-400 font-bold mb-1 flex items-center gap-1.5">{t('eventDetail.time', 'Time')}</p>
                         <p className="font-bold text-gray-900 dark:text-white text-[14px]">{formattedDate}</p>
                         <p className="text-[12px] text-neon-green font-medium mt-0.5 ">{event.event_time || t('eventDetail.pendingUpdate', 'Pending update')}</p>
                      </div>
@@ -260,13 +278,13 @@ const PublicEventDetail = () => {
                         <MapPin className="w-5 h-5 text-neon-green" />
                      </div>
                      <div className="pt-0.5 overflow-hidden">
-                        <p className="text-[10px] text-gray-500 dark:text-gray-400 font-bold mb-1 flex items-center gap-1.5">{t('eventDetail.location', 'Location')}</p>
+                        <p className="text-[10px] text-gray-700 dark:text-gray-400 font-bold mb-1 flex items-center gap-1.5">{t('eventDetail.location', 'Location')}</p>
                         <p className="font-bold text-gray-900 dark:text-white text-[14px] truncate">{event.location_address || t('eventDetail.pendingUpdate', 'Pending update')}</p>
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
                            {event.latitude && event.longitude ? (
-                              <button onClick={() => document.getElementById('map-section')?.scrollIntoView({ behavior: 'smooth' })} className="text-[11px] font-bold text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mt-0.5 inline-flex items-center gap-1 uppercase transition-colors"><ChevronRight className="w-3 h-3" /> {t('eventDetail.map', 'Map')}</button>
+                              <button onClick={() => document.getElementById('map-section')?.scrollIntoView({ behavior: 'smooth' })} className="text-[11px] font-bold text-gray-700 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mt-0.5 inline-flex items-center gap-1 uppercase transition-colors"><ChevronRight className="w-3 h-3" /> {t('eventDetail.map', 'Map')}</button>
                            ) : (
-                              <a href={`https://maps.google.com/?q=${event.location_address}`} target="_blank" rel="noreferrer" className="text-[11px] font-bold text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mt-0.5 inline-flex items-center gap-1 uppercase  transition-colors"><ChevronRight className="w-3 h-3" /> {t('eventDetail.map', 'Map')}</a>
+                              <a href={`https://maps.google.com/?q=${event.location_address}`} target="_blank" rel="noreferrer" className="text-[11px] font-bold text-gray-700 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white mt-0.5 inline-flex items-center gap-1 uppercase  transition-colors"><ChevronRight className="w-3 h-3" /> {t('eventDetail.map', 'Map')}</a>
                            )}
                         </div>
                      </div>
@@ -290,9 +308,14 @@ const PublicEventDetail = () => {
                       </div>
                     )}
                   </div>
-                  <div>
-                    <p className="text-[10px] font-bold text-gray-500 uppercase mb-1">{t('eventDetail.organizer', 'Organizer')}</p>
-                    <p className="font-black text-[15px] text-gray-900 dark:text-white tracking-tight group-hover:text-neon-green transition-colors">{event.organizer?.organization_name}</p>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] font-bold text-gray-700 dark:text-gray-500 uppercase mb-1">{t('eventDetail.organizer', 'Organizer')}</p>
+                    <p className="font-black text-[15px] text-gray-900 dark:text-white tracking-tight group-hover:text-neon-green transition-colors truncate">{event.organizer?.organization_name}</p>
+                    {event.organizer?.description && (
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 line-clamp-2 font-medium">
+                        {event.organizer.description}
+                      </p>
+                    )}
                   </div>
                </Link>
 
@@ -304,12 +327,12 @@ const PublicEventDetail = () => {
                      <div className="absolute top-1/2 left-1/4 -translate-y-1/2 w-32 h-32 bg-neon-green/20 rounded-full blur-[50px] pointer-events-none group-hover:bg-neon-green/30 transition-colors"></div>
                      
                      <div className="relative z-10 py-5 lg:py-0 w-full lg:w-auto text-center lg:text-left">
-                        <p className="text-[13px] font-bold text-gray-400 mb-1">{t('eventDetail.lowestPriceFrom', 'Cheapest from')}</p>
+                        <p className="text-[13px] font-bold text-gray-600 dark:text-gray-400 mb-1">{t('eventDetail.lowestPriceFrom', 'Cheapest from')}</p>
                         <p className="text-xl xl:text-xl font-black text-neon-green tracking-tighter filter drop-shadow-[0_0_10px_rgba(82,196,45,0.4)]">
                            {lowestPrice === 0 ? t('eventDetail.free', 'FREE') : formatPrice(lowestPrice)}
                         </p>
                      </div>
-                     {!isOrganizer ? (
+                     {!isRestricted ? (
                        <button 
                          onClick={scrollToTickets}
                          disabled={event.organizer?.user?.status?.toLowerCase() !== 'active'}
@@ -325,7 +348,10 @@ const PublicEventDetail = () => {
                        </button>
                      ) : (
                        <div className="relative z-8 px-6 py-4 bg-neon-green/10 text-neon-green font-bold uppercase text-[10px] rounded-2xl border border-neon-green/30 flex items-center gap-2">
-                          <ShieldCheck className="w-4 h-4" /> {t('eventDetail.you_are_owner', 'You are the owner')}
+                          <ShieldCheck className="w-4 h-4" /> 
+                          {user?.role === 'admin' 
+                            ? (i18n.language.startsWith('vi') ? 'BẠN LÀ QUẢN TRỊ VIÊN' : 'YOU ARE ADMIN') 
+                            : t('eventDetail.you_are_owner', 'You are the owner')}
                        </div>
                      )}
                   </div>
@@ -362,8 +388,8 @@ const PublicEventDetail = () => {
                   className="prose dark:prose-invert max-w-none prose-emerald
                              prose-headings:font-black prose-headings:uppercase prose-headings:tracking-tight 
                              prose-a:text-neon-green hover:prose-a:text-neon-hover 
-                             prose-p:text-gray-600 dark:prose-p:text-gray-300 prose-p:leading-[1.8] prose-p:text-[16px]
-                             prose-li:text-gray-600 dark:prose-li:text-gray-300 prose-li:leading-[1.8]
+                             prose-p:text-gray-700 dark:prose-p:text-gray-300 prose-p:leading-[1.8] prose-p:text-[16px]
+                             prose-li:text-gray-700 dark:prose-li:text-gray-300 prose-li:leading-[1.8]
                              prose-strong:text-gray-900 dark:prose-strong:text-white prose-strong:font-black
                              prose-img:rounded-[2rem] prose-img:border prose-img:border-gray-200 dark:prose-img:border-white/10 prose-img:shadow-xl dark:prose-img:shadow-2xl"
                   dangerouslySetInnerHTML={{ __html: event.description || `<p>${t('eventDetail.infoUpdating', 'Information is being updated...')}</p>` }}
@@ -371,22 +397,49 @@ const PublicEventDetail = () => {
              </div>
              
              {/* 🎬 VIDEO SECTION */}
-             {event.video_url && (
-                <div className="bg-white dark:bg-[#111114] rounded-[2.5rem] p-4 md:p-6 border border-gray-200 dark:border-white/5 shadow-xl dark:shadow-2xl relative overflow-hidden transition-colors mt-4">
-                   <div className="absolute top-0 left-12 w-32 h-1 bg-gradient-to-r from-neon-green to-transparent"></div>
-                   <h3 className="text-sm md:text-lg font-black text-gray-900 dark:text-white uppercase mb-3 flex items-center gap-3">
-                       {t('eventDetail.introductionVideo', 'Introduction Video')}
-                   </h3>
-                   <div className="w-full aspect-video rounded-[2rem] overflow-hidden border border-gray-200 dark:border-white/10 shadow-sm relative group bg-black">
-                      <video 
-                        src={event.video_url} 
-                        controls 
-                        className="w-full h-full object-contain"
-                        poster={event.image_url}
-                      />
-                   </div>
-                </div>
-             )}
+             {event.video_url && (() => {
+                const url = event.video_url;
+                // Detect YouTube
+                const youtubeMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&?/]+)/);
+                // Detect Vimeo
+                const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
+                
+                let embedSrc = null;
+                if (youtubeMatch) {
+                  embedSrc = `https://www.youtube.com/embed/${youtubeMatch[1]}?rel=0&modestbranding=1`;
+                } else if (vimeoMatch) {
+                  embedSrc = `https://player.vimeo.com/video/${vimeoMatch[1]}`;
+                }
+                
+                return (
+                  <div className="bg-white dark:bg-[#111114] rounded-[2.5rem] p-4 md:p-6 border border-gray-200 dark:border-white/5 shadow-xl dark:shadow-2xl relative overflow-hidden transition-colors mt-4">
+                     <div className="absolute top-0 left-12 w-32 h-1 bg-gradient-to-r from-neon-green to-transparent"></div>
+                     <h3 className="text-sm md:text-lg font-black text-gray-900 dark:text-white uppercase mb-3 flex items-center gap-3">
+                         {t('eventDetail.introductionVideo', 'Introduction Video')}
+                     </h3>
+                     <div className="w-full aspect-video rounded-[2rem] overflow-hidden border border-gray-200 dark:border-white/10 shadow-sm relative group bg-black">
+                        {embedSrc ? (
+                          <iframe
+                            src={`${embedSrc}&origin=${window.location.origin}`}
+                            className="w-full h-full"
+                            frameBorder="0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                            allowFullScreen
+                            title="Event Introduction Video"
+                          />
+                        ) : (
+                          <video 
+                            src={url} 
+                            controls 
+                            className="w-full h-full object-contain"
+                            poster={event.image_url}
+                            preload="metadata"
+                          />
+                        )}
+                     </div>
+                  </div>
+                );
+             })()}
              
              {/* 🎟️ SEATING CHART BLOCK */}
              {event.seating_charts && event.seating_charts.length > 0 && (
@@ -425,7 +478,7 @@ const PublicEventDetail = () => {
                    <h3 className="text-sm md:text-lg font-black text-gray-900 dark:text-white uppercase mb-1. flex items-center gap-3">
                        {t('eventDetail.locationMap', 'Location Map')}
                    </h3>
-                   <p className="mb-5 text-xs md:text-base text-gray-600 dark:text-gray-400 font-medium flex items-start gap-2">
+                   <p className="mb-5 text-xs md:text-base text-gray-700 dark:text-gray-400 font-medium flex items-start gap-2">
                      <Map className="w-5 h-5 shrink-0 mt-0.5" />
                      {event.location_address}
                    </p>
@@ -449,7 +502,7 @@ const PublicEventDetail = () => {
                 <h4 className="text-orange-600 dark:text-[#ff6b00] font-black uppercase text-xs mb-6 flex items-center gap-2">
                    {t('eventDetail.importantNote', 'Important Note')}
                 </h4>
-                <ul className="text-gray-600 dark:text-gray-400 text-xs sm:text-sm space-y-3 font-medium leading-relaxed max-w-2xl relative z-10 list-none pl-0">
+                <ul className="text-gray-700 dark:text-gray-400 text-xs sm:text-sm space-y-3 font-medium leading-relaxed max-w-2xl relative z-10 list-none pl-0">
                   <li className="flex items-start gap-3">
                     <CheckCircle2 className="w-5 h-5 text-orange-400 dark:text-[#ff6b00]/60 shrink-0 mt-0.5" />
                     {t('eventDetail.note1', 'Please double-check ticket tier and time before checkout.')}
@@ -479,7 +532,7 @@ const PublicEventDetail = () => {
                   <h3 className="text-sm sm:text-lg font-black text-gray-900 dark:text-white uppercase flex items-center gap-3">
                     <Ticket className="w-5 h-5 text-neon-green" /> {t('eventDetail.buyTicket', 'Buy Tickets')}
                   </h3>
-                  <div className="px-3 py-1 rounded-full bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-[11px] font-bold text-gray-500 dark:text-gray-400">
+                  <div className="px-3 py-1 rounded-full bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-[11px] font-bold text-gray-700 dark:text-gray-400">
                     {event.ticket_tiers?.length || 0} {t('eventDetail.ticketCategories', 'categories')}
                   </div>
                 </div>
@@ -491,22 +544,28 @@ const PublicEventDetail = () => {
                      </div>
                      <div>
                        <h4 className="font-black text-red-500 uppercase text-xs mb-1">{t('eventDetail.salesSuspended', 'SALES SUSPENDED')}</h4>
-                       <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed font-bold">
+                       <p className="text-xs text-gray-700 dark:text-gray-400 leading-relaxed font-bold">
                          {t('eventDetail.organizerLockedWarning', "Ticket booking is temporarily suspended because the Organizer's account is currently under review or locked.")}
                        </p>
                      </div>
                    </div>
                  )}
 
-                 {isOrganizer && event.organizer?.user?.status?.toLowerCase() === 'active' && (
+                  {isRestricted && event.organizer?.user?.status?.toLowerCase() === 'active' && (
                    <div className="mb-4 p-3 bg-neon-green/5 border border-neon-green/20 rounded-[2rem] flex flex-col items-center text-center gap-3">
                      <div className="w-10 h-10 bg-neon-green/10 rounded-full flex items-center justify-center">
                        <ShieldCheck className="w-4 h-4 text-neon-green" />
                      </div>
                      <div>
-                       <h4 className="font-black text-neon-green uppercase text-xs mb-1">{t('eventDetail.preview_mode', 'Preview Mode')}</h4>
-                       <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
-                         {t('eventDetail.organizer_preview_desc', 'You are the organizer of this event. The system does not allow you to book your own tickets.')}
+                       <h4 className="font-black text-neon-green uppercase text-xs mb-1">
+                         {user?.role === 'admin' 
+                           ? (i18n.language.startsWith('vi') ? 'QUYỀN QUẢN TRỊ' : 'ADMIN PRIVILEGE') 
+                           : t('eventDetail.preview_mode', 'Preview Mode')}
+                       </h4>
+                       <p className="text-xs text-gray-700 dark:text-gray-400 leading-relaxed">
+                         {user?.role === 'admin'
+                           ? (i18n.language.startsWith('vi') ? 'Hệ thống không cho phép Quản trị viên mua vé để đảm bảo tính minh bạch.' : 'The system does not allow Admins to book tickets for transparency.')
+                           : t('eventDetail.organizer_preview_desc', 'You are the organizer of this event. The system does not allow you to book your own tickets.')}
                        </p>
                      </div>
                    </div>
@@ -541,14 +600,14 @@ const PublicEventDetail = () => {
                             <div className="pb-4">
                               <h5 className="font-black text-gray-900 dark:text-white text-xs sm:text-sm uppercase pr-4">{tier.tier_name}</h5>
                               {tier.benefits && (
-                                <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed max-w-[90%]">{tier.benefits}</p>
+                                <p className="text-xs text-gray-700 dark:text-gray-400 leading-relaxed max-w-[90%]">{tier.benefits}</p>
                               )}
                             </div>
                             
                             {/* Bottom part: Price & Action */}
                             <div className="pt-2 flex items-end justify-between">
                               <div>
-                                <div className="text-[12px] font-black text-gray-400 dark:text-gray-500 mb-1">{t('eventDetail.unitPrice', 'Price')}</div>
+                                <div className="text-[12px] font-black text-gray-600 dark:text-gray-500 mb-1">{t('eventDetail.unitPrice', 'Price')}</div>
                                 <div className="text-lg font-black text-neon-green drop-shadow-sm">
                                   {parseFloat(tier.price) === 0 ? t('eventDetail.free', 'FREE') : formatPrice(tier.price)}
                                 </div>
@@ -560,7 +619,7 @@ const PublicEventDetail = () => {
                                   {isSoldOut ? t('eventDetail.soldOut', 'SOLD OUT') : `${t('eventDetail.remaining', 'LEFT:')} ${tier.quantity_available}`}
                                 </span>
                                 
-                                {!isSoldOut && !isOrganizer && event.organizer?.user?.status?.toLowerCase() === 'active' && (
+                                {!isSoldOut && !isRestricted && event.organizer?.user?.status?.toLowerCase() === 'active' && (
                                   <div className="flex items-center gap-1 bg-gray-100 dark:bg-black/50 p-1.5 rounded-2xl border border-gray-200 dark:border-white/10 backdrop-blur-md">
                                     <button 
                                       onClick={() => handleTicketChange(tier.id, -1, tier.quantity_available)}
@@ -589,10 +648,24 @@ const PublicEventDetail = () => {
                   ) : (
                     <div className="py- text-center border-2 border-dashed border-gray-200 dark:border-white/10 rounded-[2.5rem] bg-gray-50 dark:bg-white/5">
                       <Ticket className="w-12 h-12 text-gray-300 dark:text-white/20 mx-auto mb-4" />
-                      <p className="text-gray-400 dark:text-gray-400 font-bold uppercase tracking-widest text-sm">{t('eventDetail.noTickets', 'No tickets available yet')}</p>
+                      <p className="text-gray-600 dark:text-gray-400 font-bold uppercase tracking-widest text-sm">{t('eventDetail.noTickets', 'No tickets available yet')}</p>
                     </div>
                    )}
                 </div>
+
+                {/* Cloudflare Turnstile Verification */}
+                {!isRestricted && event.organizer?.user?.status?.toLowerCase() === 'active' && (
+                  <div className="mt-6 pt-6 border-t border-gray-100 dark:border-white/5 flex flex-col items-center">
+                    <p className="text-[10px] font-black text-gray-400 uppercase mb-3 tracking-widest">{t('eventDetail.securityCheck', 'Security Verification')}</p>
+                    <div className="rounded-2xl overflow-hidden shadow-sm">
+                      <Turnstile 
+                        siteKey="0x4AAAAAADLUD-rkZ6wNFnY3"
+                        onSuccess={(token) => setTurnstileToken(token)}
+                        options={{ size: 'normal', theme: 'auto' }}
+                      />
+                    </div>
+                  </div>
+                )}
              </div>
           </div>
         </div>
@@ -609,11 +682,11 @@ const PublicEventDetail = () => {
               <h2 className="text-sm md:text-xl font-black text-gray-900 dark:text-white uppercase tracking-tighter leading-none">
                 {t('eventDetail.recommendedTitle', 'Events you might')} <span className="text-neon-green">{t('eventDetail.recommendedHighlight', 'LIKE')}</span>
               </h2>
-              <p className="text-gray-500 dark:text-gray-400 font-medium text-xs md:text-sm max-w-xl">
+              <p className="text-gray-700 dark:text-gray-400 font-medium text-xs md:text-sm max-w-xl">
                 {t('eventDetail.recommendedDesc', 'Based on your interests and most prominent trending events.')}
               </p>
             </div>
-            <Link to="/events" className="group flex items-center gap-4 text- font-bold text-gray-400 hover:text-neon-green transition-all whitespace-nowrap">
+            <Link to="/events" className="group flex items-center gap-4 text- font-bold text-gray-600 hover:text-neon-green transition-all whitespace-nowrap">
               {t('home.events.view_all', 'View all events')} 
             </Link>
           </div>
@@ -644,7 +717,7 @@ const PublicEventDetail = () => {
                   <p className="text-[10px] font-black text-neon-green uppercase tracking-[0.2em] mt-0.5">{formattedDate}</p>
                </div>
             </div>
-            {!isOrganizer ? (
+            {!isRestricted ? (
               <button 
                   onClick={scrollToTickets}
                   disabled={event.organizer?.user?.status !== 'active'}
@@ -654,13 +727,13 @@ const PublicEventDetail = () => {
               </button>
             ) : (
               <div className="px-6 py-3 bg-neon-green text-black font-black uppercase text-[10px] tracking-widest rounded-xl shadow-[0_0_20px_rgba(82,196,45,0.4)]">
-                {t('eventDetail.you_are_owner', 'You are the owner')}
+                {user?.role === 'admin' ? (i18n.language.startsWith('vi') ? 'QUẢN TRỊ VIÊN' : 'ADMIN MODE') : t('eventDetail.you_are_owner', 'You are the owner')}
               </div>
             )}
          </div>
       </div>
       {/* 💳 Floating Payment Checkout Bar (Visible when tickets are selected) */}
-      <div className={`fixed bottom-0 inset-x-0 z-50 transform transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${totalSelectedTickets > 0 && !isOrganizer ? 'translate-y-0' : 'translate-y-[150%]'}`}>
+      <div className={`fixed bottom-0 inset-x-0 z-50 transform transition-transform duration-500 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${totalSelectedTickets > 0 && !isRestricted ? 'translate-y-0' : 'translate-y-[150%]'}`}>
          {/* Gradient fade to hide content behind bar */}
          <div className="absolute bottom-[100%] inset-x-0 h-32 bg-gradient-to-t from-white dark:from-[#0a0a0c] to-transparent pointer-events-none transition-colors"></div>
          
@@ -675,9 +748,12 @@ const PublicEventDetail = () => {
                   </div>
                 </div>
                 <div>
-                  <div className="text-[10px] font-black uppercase text-gray-400 mb-1">{t('eventDetail.subtotal', 'Subtotal')}</div>
-                  <div className="text-xl md:text-xl font-black text-white tracking-tighter truncate max-w-[200px] md:max-w-none">
+                  <div className="text-[10px] font-black uppercase text-gray-600 mb-1">{t('eventDetail.subtotal', 'Subtotal')}</div>
+                  <div className="text-xl md:text-xl font-black text-white tracking-tighter truncate max-w-[200px] md:max-w-none flex items-center gap-2">
                     {totalPrice === 0 ? t('eventDetail.free', 'FREE') : formatPrice(totalPrice)}
+                    {user?.role === 'admin' && (
+                      <span className="text-[10px] bg-neon-green text-black px-2 py-0.5 rounded-full animate-pulse whitespace-nowrap font-black">ADMIN BYPASS</span>
+                    )}
                   </div>
                 </div>
               </div>

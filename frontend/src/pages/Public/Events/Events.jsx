@@ -86,7 +86,7 @@ const Events = () => {
                             {t('explore.title')} <span className="text-neon-green">{t('explore.title_highlight')}</span>
                         </h1>
                     </div>
-                    <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 font-medium max-w-3xl leading-relaxed">
+                    <p className="text-xs md:text-sm text-gray-700 dark:text-gray-400 font-medium max-w-3xl leading-relaxed">
                         {t('explore.subtitle')}
                     </p>
                 </div>
@@ -95,20 +95,20 @@ const Events = () => {
                 {/* 🛡️ Search & Tools Bar - SCROLLS WITH PAGE */}
                 <div className="flex flex-col md:flex-row gap-4 mb-6 relative z-[100] py-4 animate-in fade-in duration-700 transition-all">
                     <div className="flex-1 relative group">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-hover:text-neon-green group-focus-within:text-neon-green transition-colors" />
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-600 group-hover:text-neon-green group-focus-within:text-neon-green transition-colors" />
                         <input 
                             type="text" 
                             placeholder={t('explore.search_placeholder')}
                             value={searchTerm}
                             onChange={handleSearchChange}
-                            className="w-full pl-14 pr-4 py-4 text-xs md:text-sm bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/5 rounded-2xl outline-none hover:border-neon-green/30 focus:border-neon-green/50 text-gray-900 dark:text-white font-medium transition-all shadow-sm focus:bg-white dark:focus:bg-white/5"
+                            className="w-full pl-14 pr-4 py-4 text-xs md:text-sm bg-gray-100 dark:bg-white/[0.03] border border-gray-300 dark:border-white/5 rounded-2xl outline-none hover:border-neon-green/30 focus:border-neon-green/50 text-gray-900 dark:text-white font-medium transition-all shadow-sm focus:bg-white dark:focus:bg-white/5"
                         />
                     </div>
                     
                     <div className="flex items-center gap-3">
                         <button 
                             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                            className={`flex items-center gap-2 px-6 py-4 border rounded-2xl font-bold text-xs transition-all group ${isSidebarOpen ? 'bg-neon-green/10 border-neon-green text-neon-green' : 'bg-gray-50 dark:bg-white/[0.03] border-gray-200 dark:border-white/5 text-gray-900 dark:text-white hover:border-neon-green/30'}`}
+                            className={`flex items-center gap-2 px-6 py-4 border rounded-2xl font-bold text-xs transition-all group ${isSidebarOpen ? 'bg-neon-green/10 border-neon-green text-neon-green' : 'bg-gray-100 dark:bg-white/[0.03] border-gray-300 dark:border-white/5 text-gray-900 dark:text-white hover:border-neon-green/30'}`}
                         >
                             <SlidersHorizontal className={`w-4 h-4 transition-transform duration-500 ${isSidebarOpen ? 'rotate-180' : ''}`} />
                             <span>{t('explore.filters')}</span>
@@ -116,7 +116,7 @@ const Events = () => {
                         <div className="relative group min-w-[200px]">
                             <button 
                                 onClick={() => setIsSortOpen(!isSortOpen)}
-                                className="w-full flex items-center justify-between gap-3 px-6 py-4 bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/5 rounded-2xl font-bold text-xs text-gray-900 dark:text-white hover:border-neon-green/30 transition-all shadow-sm"
+                                className="w-full flex items-center justify-between gap-3 px-6 py-4 bg-gray-100 dark:bg-white/[0.03] border border-gray-300 dark:border-white/5 rounded-2xl font-bold text-xs text-gray-900 dark:text-white hover:border-neon-green/30 transition-all shadow-sm"
                             >
                                 <span className="truncate">
                                     {sortBy === 'newest' && t('explore.sort.newest')}
@@ -124,7 +124,7 @@ const Events = () => {
                                     {sortBy === 'price-desc' && t('explore.sort.price_desc')}
                                     {sortBy === 'popular' && t('explore.sort.popular')}
                                 </span>
-                                <ArrowUpDown className={`w-4 h-4 text-gray-400 transition-transform duration-300 ${isSortOpen ? 'rotate-180' : ''}`} />
+                                <ArrowUpDown className={`w-4 h-4 text-gray-600 transition-transform duration-300 ${isSortOpen ? 'rotate-180' : ''}`} />
                             </button>
 
                             {/* Custom Dropdown Content */}

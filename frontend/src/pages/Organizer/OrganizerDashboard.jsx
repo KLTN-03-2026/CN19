@@ -31,7 +31,7 @@ import { vi } from 'date-fns/locale';
 const COLORS = ['#2563eb', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#6b7280'];
 
 const StatCard = ({ title, value, change, icon: Icon, isPositive, color }) => (
-  <div className="bg-white dark:bg-[#111114] p-3 md:p-6 rounded-2xl border border-gray-200 dark:border-white/5 relative overflow-hidden group hover:shadow-xl transition-all duration-300">
+  <div className="bg-white dark:bg-[#111114] p-3 md:p-4 rounded-2xl border border-gray-200 dark:border-white/5 relative overflow-hidden group hover:shadow-xl transition-all duration-300">
     <div className={`absolute top-0 right-0 w-24 h-24 bg-${color}-500/10 blur-[50px] -mr-8 -mt-8`}></div>
     <div className="flex items-start justify-between relative z-10">
       <div className="flex-1 min-w-0">
@@ -92,15 +92,47 @@ const OrganizerDashboard = () => {
     { title: 'Sự kiện sắp tới', value: data?.upcoming_events_count || 0, change: 'Sự kiện mở bán', icon: Calendar, isPositive: true, color: 'amber' },
   ];
 
+  const getEventBadge = (status, dateStr, endDateStr) => {
+    const isPast = endDateStr ? new Date(endDateStr) < new Date() : (dateStr !== 'N/A' && new Date(dateStr) < new Date());
+    
+    if (status === 'completed' || status === 'settled' || (status === 'active' && isPast)) {
+      return {
+        label: status === 'settled' ? 'Đã quyết toán' : 'Kết thúc',
+        className: 'bg-blue-500/10 text-blue-500 border border-blue-500/20'
+      };
+    }
+    
+    switch (status) {
+      case 'active':
+        return { label: 'Đang bán', className: 'bg-green-500/10 text-green-500 border border-green-500/20' };
+      case 'pending':
+        return { label: 'Chờ duyệt', className: 'bg-amber-500/10 text-amber-500 border border-amber-500/20' };
+      case 'cancelled':
+        return { label: 'Đã hủy', className: 'bg-red-500/10 text-red-500 border border-red-500/20' };
+      case 'hidden':
+        return { label: 'Tạm ẩn', className: 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' };
+      case 'pending_cancel':
+        return { label: 'Chờ hủy', className: 'bg-red-500/10 text-red-500 border border-red-500/20' };
+      case 'pending_cancellation_fee':
+        return { label: 'Chờ nộp phí hủy', className: 'bg-purple-500/10 text-purple-500 border border-purple-500/20' };
+      case 'pending_reschedule':
+        return { label: 'Chờ dời lịch', className: 'bg-indigo-500/10 text-indigo-500 border border-indigo-500/20' };
+      case 'draft':
+        return { label: 'Nháp', className: 'bg-gray-500/10 text-gray-500 border border-gray-500/20' };
+      default:
+        return { label: status === 'ended' ? 'Kết thúc' : 'Nháp', className: 'bg-gray-500/10 text-gray-500 border border-gray-500/20' };
+    }
+  };
+
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-lg md:text-xl font-black text-gray-900 dark:text-white uppercase">
             Trang chủ BTC
           </h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1 text-xs md:text-sm">
+          <p className="text-gray-500 dark:text-gray-400 text-xs md:text-sm font-medium">
             Chào mừng {user?.full_name}! Chúc bạn một ngày làm việc hiệu quả và bùng nổ doanh số.
           </p>
         </div>
@@ -111,32 +143,32 @@ const OrganizerDashboard = () => {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-2 md:gap-3 ">
         {stats.map((stat, i) => (
           <StatCard key={i} {...stat} />
         ))}
       </div>
 
       {/* Top Row: Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-4">
         {/* Revenue Chart */}
         <div className="lg:col-span-2 bg-white dark:bg-[#111114] p-4 md:p-8 rounded-3xl border border-gray-200 dark:border-white/5 shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-3 mb-4 md:mb-8">
             <div>
-              <h3 className="text-sm md:text-base font-black text-gray-900 dark:text-white uppercase">Doanh thu {chartPeriod} ngày qua</h3>
+              <h3 className="text-sm md:text-base font-black text-gray-900 dark:text-white uppercase tracking-tight">Doanh thu {chartPeriod} ngày qua</h3>
               <p className="text-xs font-medium text-gray-500 mt-0.5">Xu hướng bán vé & hoạt động sinh lời</p>
             </div>
             <div className="flex items-center gap-3">
               <div className="flex items-center bg-gray-50 dark:bg-white/5 p-1 rounded-xl border border-gray-200 dark:border-white/5">
                 <button
                   onClick={() => setChartPeriod(7)}
-                  className={`px-2 md:px-4 py-1 md:py-1.5 text-[8px] md:text-[10px] uppercase tracking-wider font-bold rounded-lg transition-all ${chartPeriod === 7 ? 'bg-white dark:bg-[#111114] text-blue-600 shadow-sm border border-gray-200 dark:border-white/10' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'}`}
+                  className={`px-2 md:px-4 py-1 md:py-1.5 text-[8px] md:text-[10px] tracking-wider font-bold rounded-lg transition-all ${chartPeriod === 7 ? 'bg-white dark:bg-[#111114] text-blue-600 shadow-sm border border-gray-200 dark:border-white/10' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'}`}
                 >
                   7 ngày
                 </button>
                 <button
                   onClick={() => setChartPeriod(30)}
-                  className={`px-2 md:px-4 py-1 md:py-1.5 text-[8px] md:text-[10px] uppercase tracking-wider font-bold rounded-lg transition-all ${chartPeriod === 30 ? 'bg-white dark:bg-[#111114] text-blue-600 shadow-sm border border-gray-200 dark:border-white/10' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'}`}
+                  className={`px-2 md:px-4 py-1 md:py-1.5 text-[8px] md:text-[10px] tracking-wider font-bold rounded-lg transition-all ${chartPeriod === 30 ? 'bg-white dark:bg-[#111114] text-blue-600 shadow-sm border border-gray-200 dark:border-white/10' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'}`}
                 >
                   30 ngày
                 </button>
@@ -214,8 +246,8 @@ const OrganizerDashboard = () => {
         <div className="bg-white dark:bg-[#111114] p-4 md:p-8 rounded-3xl border border-gray-200 dark:border-white/5 shadow-sm flex flex-col">
           <div className="flex items-center justify-between mb-3 md:mb-4">
             <div>
-              <h3 className="text-sm md:text-base font-black text-gray-900 dark:text-white uppercase">Cơ Cấu</h3>
-              <p className="text-xs font-bold text-gray-500 mt-0.5">Theo sự kiện</p>
+              <h3 className="text-sm md:text-base font-black text-gray-900 dark:text-white uppercase tracking-tight ">Cơ Cấu</h3>
+              <p className="text-xs font-medium text-gray-500 mt-0.5">Theo sự kiện</p>
             </div>
             <div className="p-2 md:p-3 bg-emerald-500/10 rounded-xl">
               <PieChartIcon className="w-5 h-5 text-emerald-500" />
@@ -272,22 +304,22 @@ const OrganizerDashboard = () => {
       </div>
 
       {/* Middle Row: Events & Notifications */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 mt-4 md:mt-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-4 mt-3 md:mt-4">
         {/* Left Column: My Events Overview */}
         <div className="lg:col-span-2 space-y-4 md:space-y-6">
           <div className="bg-white dark:bg-[#111114] rounded-3xl border border-gray-200 dark:border-white/5 overflow-hidden shadow-sm">
             <div className="px-4 md:px-8 py-4 border-b border-gray-200 dark:border-white/5 flex items-center justify-between">
-                <h3 className="text-sm md:text-base font-black text-gray-900 dark:text-white uppercase">Sự kiện gần đây</h3>
+                <h3 className="text-sm md:text-base font-black text-gray-900 dark:text-white uppercase tracking-tight ">Sự kiện gần đây</h3>
                 <button onClick={() => navigate('/organizer/my-events')} className="text-blue-600 text-xs font-bold hover:underline">Tất cả</button>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left min-w-[500px]">
                 <thead>
                   <tr className="bg-gray-50/50 dark:bg-white/5 border-b border-gray-200 dark:border-white/5">
-                    <th className="px-4 md:px-8 py-3 text-[9px] md:text-[10px] font-black uppercase text-gray-400 tracking-wider">Sự kiện</th>
-                    <th className="px-3 py-3 text-[9px] md:text-[10px] font-black uppercase text-gray-400 tracking-wider text-center hidden sm:table-cell">Ngày diễn ra</th>
-                    <th className="px-3 py-3 text-[9px] md:text-[10px] font-black uppercase text-gray-400 tracking-wider text-center">Tiến độ</th>
-                    <th className="px-4 md:px-8 py-3 text-[9px] md:text-[10px] font-black uppercase text-gray-400 tracking-wider text-right">Trạng thái</th>
+                    <th className="px-4 md:px-8 py-3 text-[9px] md:text-[10px] font-black uppercase text-gray-500 tracking-tight">Sự kiện</th>
+                    <th className="px-3 py-3 text-[9px] md:text-[10px] font-black uppercase text-gray-500 tracking-tight text-center hidden sm:table-cell">Ngày diễn ra</th>
+                    <th className="px-3 py-3 text-[9px] md:text-[10px] font-black uppercase text-gray-500 tracking-tight text-center">Tiến độ</th>
+                    <th className="px-4 md:px-8 py-3 text-[9px] md:text-[10px] font-black uppercase text-gray-500 tracking-tight text-right">Trạng thái</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 dark:divide-white/5">
@@ -316,13 +348,14 @@ const OrganizerDashboard = () => {
                         </div>
                       </td>
                       <td className="px-4 md:px-8 py-4 text-right">
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-[10px] font-black uppercase ${
-                          event.status === 'active' ? 'bg-green-500/10 text-green-500' : 
-                          event.status === 'ended' ? 'bg-blue-500/10 text-blue-500' :
-                          'bg-gray-500/10 text-gray-500'
-                        }`}>
-                          {event.status === 'active' ? 'Đang bán' : event.status === 'ended' ? 'Kết thúc' : event.status === 'published' ? 'Sắp mở' : 'Nháp'}
-                        </span>
+                        {(() => {
+                          const badge = getEventBadge(event.status, event.date, event.end_date);
+                          return (
+                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-[10px] font-black ${badge.className}`}>
+                              {badge.label}
+                            </span>
+                          );
+                        })()}
                       </td>
                     </tr>
                   )) : (
@@ -339,7 +372,7 @@ const OrganizerDashboard = () => {
         {/* Right Column: Alerts */}
         <div className="space-y-4 md:space-y-6">
           <div className="bg-white dark:bg-[#111114] p-4 md:p-8 rounded-3xl border border-gray-200 dark:border-white/5 shadow-sm h-full flex flex-col">
-            <h3 className="text-base font-black text-gray-900 dark:text-white mb-6 uppercase">Thông báo mới</h3>
+            <h3 className="text-base font-black text-gray-900 dark:text-white mb-4 uppercase tracking-tight">Thông báo mới</h3>
             <div className="space-y-6 flex-1">
               {data?.notifications?.length > 0 ? data.notifications.map((item, i) => (
                 <div key={i} className="flex items-start space-x-4 group/item">
@@ -364,14 +397,14 @@ const OrganizerDashboard = () => {
       </div>
 
       {/* Bottom Row: Merchandise & Quick Actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 mt-4 md:mt-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 md:gap-4 mt-3 md:mt-4">
         {/* Top Merchandise */}
         <div className="lg:col-span-2 bg-white dark:bg-[#111114] p-4 md:p-8 rounded-3xl border border-gray-200 dark:border-white/5 shadow-sm">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-base font-black text-gray-900 dark:text-white uppercase">Top Sản Phẩm Bán Chạy</h3>
           </div>
           
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 md:gap-6">
             {data?.top_merchandise?.length > 0 ? data.top_merchandise.map((item, i) => (
               <div key={item.id || i} className="flex flex-col p-4 bg-gray-50/50 dark:bg-white/[0.02] border border-gray-200 dark:border-white/5 rounded-2xl hover:border-indigo-500/30 hover:bg-indigo-50 dark:hover:bg-indigo-500/5 transition-all cursor-pointer group" onClick={() => navigate(`/organizer/products/${item.id}`)}>
                 <div className="flex items-center justify-between mb-4">

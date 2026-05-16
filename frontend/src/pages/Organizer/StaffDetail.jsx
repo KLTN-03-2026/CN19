@@ -60,6 +60,19 @@ const StaffDetail = () => {
 
     const { staff, assignments, stats } = data;
 
+    const getStatusLabel = (st) => {
+        switch(st) {
+            case 'active': return { label: 'Đang bán', className: 'bg-emerald-500/10 text-emerald-500' };
+            case 'completed': return { label: 'Kết thúc', className: 'bg-blue-500/10 text-blue-500' };
+            case 'settled': return { label: 'Đã quyết toán', className: 'bg-purple-500/10 text-purple-500' };
+            case 'pending': return { label: 'Chờ duyệt', className: 'bg-amber-500/10 text-amber-500' };
+            case 'draft': return { label: 'Nháp', className: 'bg-gray-500/10 text-gray-500' };
+            case 'cancelled': return { label: 'Đã hủy', className: 'bg-red-500/10 text-red-500' };
+            case 'hidden': return { label: 'Tạm ẩn', className: 'bg-yellow-500/10 text-yellow-500' };
+            default: return { label: st, className: 'bg-gray-500/10 text-gray-500' };
+        }
+    };
+
     return (
         <div className="max-w-7xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
             {/* Header */}
@@ -195,7 +208,9 @@ const StaffDetail = () => {
                             </span>
                         </div>
                         <div className="divide-y divide-gray-100 dark:divide-white/5">
-                            {assignments.map((event) => (
+                            {assignments.map((event) => {
+                                const badge = getStatusLabel(event.status);
+                                return (
                                 <div key={event.id} className="p-4 flex items-center gap-5 hover:bg-gray-50/50 dark:hover:bg-white/5 transition-all group">
                                     <div className="w-16 h-16 rounded-xl bg-gray-100 dark:bg-white/10 overflow-hidden shrink-0 border border-gray-200 dark:border-white/10">
                                         {event.image_url ? (
@@ -209,10 +224,8 @@ const StaffDetail = () => {
                                             <h4 className="font-black text-gray-900 dark:text-white text-xs tracking-tight group-hover:text-blue-600 transition-colors uppercase tracking-tight">
                                                 {event.title}
                                             </h4>
-                                            <span className={`px-1.5 py-0.5 rounded text-[7px] font-black uppercase ${
-                                                event.status === 'published' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-amber-500/10 text-amber-500'
-                                            }`}>
-                                                {event.status}
+                                            <span className={`px-1.5 py-0.5 rounded text-[7px] font-black uppercase ${badge.className}`}>
+                                                {badge.label}
                                             </span>
                                         </div>
                                         <div className="flex items-center gap-3 text-[11px] font-bold text-gray-500">
@@ -243,7 +256,7 @@ const StaffDetail = () => {
                                         </button>
                                     </div>
                                 </div>
-                            ))}
+                            );})}
                             {assignments.length === 0 && (
                                 <div className="p-10 text-center">
                                     <p className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Chưa được phân công sự kiện nào</p>

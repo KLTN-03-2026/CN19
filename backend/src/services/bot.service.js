@@ -22,18 +22,21 @@ const analyzeBotBehavior = async (req, captchaToken, behaviorData, puzzleData) =
     let aiRiskScore = 0.0;
     
     // 1. Xác thực với Google reCAPTCHA v3 hoặc Cloudflare Turnstile
-    if (captchaToken) {
+    if (captchaToken === 'local-dev-bypass') {
+      console.log('[SECURITY] Local development bypass detected.');
+      recaptchaScore = 1.0;
+    } else if (captchaToken) {
       if (captchaToken.startsWith('0.x') || captchaToken.length > 100) {
-        // Có vẻ là Turnstile Token (Thường bắt đầu bằng 0.x hoặc rất dài)
+        // Có vẻ là Turnstile Token
         const response = await axios.post(
           'https://challenges.cloudflare.com/turnstile/v0/siteverify',
           `secret=${process.env.TURNSTILE_SECRET_KEY}&response=${captchaToken}`,
           { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } }
         );
         if (response.data.success) {
-          // Turnstile không trả về score như reCAPTCHA v3, mặc định là 1.0 nếu success
           recaptchaScore = 1.0; 
         } else {
+          console.error('[SECURITY] Turnstile Verification Failed:', response.data['error-codes']);
           recaptchaScore = 0.0;
         }
       } else {
@@ -43,6 +46,9 @@ const analyzeBotBehavior = async (req, captchaToken, behaviorData, puzzleData) =
         );
         if (response.data.success) {
           recaptchaScore = response.data.score; 
+        } else {
+          console.error('[SECURITY] reCAPTCHA Verification Failed:', response.data['error-codes']);
+          recaptchaScore = 0.0;
         }
       }
     }

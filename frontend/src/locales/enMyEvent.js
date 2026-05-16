@@ -25,7 +25,8 @@ const enMyEvent = {
     reselling: "Marketplace",
     transferred: "Transferred",
     sold: "Sold",
-    cancelled: "Cancelled"
+    cancelled: "Cancelled",
+    rescheduled: "Rescheduled"
   },
   status: {
     available: "Available",

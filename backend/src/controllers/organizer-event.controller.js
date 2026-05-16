@@ -1,6 +1,7 @@
 const prisma = require('../config/prisma');
 const sendEmail = require('../utils/sendEmail');
 const { getSystemConfig } = require('../utils/systemConfig');
+const NotificationService = require('../services/notification.service');
 
 // Utils: Kiểm tra quyền sở hữu sự kiện
 const verifyEventOwnership = async (eventId, userId) => {
@@ -125,7 +126,7 @@ const createEvent = async (req, res) => {
         // Chốt cứng các loại phí tại thời điểm tạo
         royalty_fee_percent: royalty_fee_percent ? parseFloat(royalty_fee_percent) : maxRoyaltyCap,
         resale_price_limit_percent: resale_price_limit_percent ? parseFloat(resale_price_limit_percent) : maxResaleLimitPercent,
-        resale_platform_fee_percent: parseFloat(sysConfig.resale_transaction_fee_percent || 3.0),
+        resale_platform_fee_percent: parseFloat(sysConfig.resale_transaction_fee_percent || 1.0),
         resale_gas_fee: parseFloat(sysConfig.system_gas_fee || 10000.0),
         platform_fee_percent: parseFloat(sysConfig.event_platform_fee_percent || 5.0),
         commission_fee_percent: parseFloat(sysConfig.event_transaction_fee_percent || 3.0),
@@ -146,7 +147,17 @@ const createEvent = async (req, res) => {
 
     res.status(201).json({ message: 'Tạo sự kiện thành công. Đang chờ Admin phê duyệt.', data: newEvent });
 
-    // Gửi email thông báo cho BTC (Non-blocking)
+    // 2. Thông báo cho Admin (Non-blocking)
+    if (newEvent.status === 'pending') {
+      NotificationService.notifyAdmins({
+        type: 'NEW_EVENT_REQUEST',
+        title: 'Yêu cầu duyệt sự kiện mới',
+        message: `BTC "${organizer.organization_name}" vừa gửi yêu cầu duyệt sự kiện "${title}".`,
+        target_id: newEvent.id
+      });
+    }
+
+    // 3. Gửi email thông báo cho BTC (Non-blocking)
     if (status !== 'draft') {
       const emailContent = `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #eee; border-radius: 10px; overflow: hidden;">
@@ -209,87 +220,98 @@ const updateEvent = async (req, res) => {
 
     const event = await verifyEventOwnership(id, req.user.userId);
 
-    // Chỉ cho phép sửa toàn bộ nếu status là draft hoặc pending
-    const isLocked = event.status === 'active' || event.status === 'ended';
-
-    // Nếu đã active/ended, hạn chế sửa thông tin tài chính/vé quan trọng
-    // Nhưng ở đây ta cứ triển khai cho các trường hợp draft/pending trước
-    if (isLocked) {
-      return res.status(400).json({ error: 'Không thể chỉnh sửa sự kiện đã bắt đầu bán vé hoặc đã kết thúc.' });
+    // [Mới] Chỉ chặn hoàn toàn nếu sự kiện đã kết thúc. 
+    // Nếu đang active, ta cho phép đi tiếp nhưng sẽ lọc trường ở bước update bên dưới.
+    if (event.status === 'ended') {
+      return res.status(400).json({ error: 'Không thể chỉnh sửa sự kiện đã kết thúc.' });
     }
+    const isActive = event.status === 'active';
 
-    // Validate Dates: Ngày diễn ra và Ngày kết thúc là bắt buộc
-    if (!event_date || !end_date) {
-      return res.status(400).json({ error: 'Ngày diễn ra và ngày kết thúc sự kiện là bắt buộc.' });
-    }
-    const startObj = new Date(event_date);
-    const endObj = new Date(end_date);
-    startObj.setHours(0, 0, 0, 0);
-    endObj.setHours(0, 0, 0, 0);
+    // Với sự kiện đang active, bỏ qua toàn bộ validation về ngày, giá, phí
+    // vì những trường này đã bị khóa và sẽ không được cập nhật
+    if (!isActive) {
+      // Validate Dates: Ngày diễn ra và Ngày kết thúc là bắt buộc
+      if (!event_date || !end_date) {
+        return res.status(400).json({ error: 'Ngày diễn ra và ngày kết thúc sự kiện là bắt buộc.' });
+      }
+      const startObj = new Date(event_date);
+      const endObj = new Date(end_date);
+      startObj.setHours(0, 0, 0, 0);
+      endObj.setHours(0, 0, 0, 0);
 
-    if (startObj > endObj) {
-      return res.status(400).json({ error: 'Ngày kết thúc không được trước ngày diễn ra sự kiện.' });
-    } else if (startObj.getTime() === endObj.getTime()) {
-      if (event_time && end_time) {
-        const [startH, startM] = event_time.split(':').map(Number);
-        const [endH, endM] = end_time.split(':').map(Number);
-        if (startH * 60 + startM >= endH * 60 + endM) {
-          return res.status(400).json({ error: 'Nếu cùng một ngày, giờ kết thúc phải lớn hơn giờ bắt đầu.' });
+      if (startObj > endObj) {
+        return res.status(400).json({ error: 'Ngày kết thúc không được trước ngày diễn ra sự kiện.' });
+      } else if (startObj.getTime() === endObj.getTime()) {
+        if (event_time && end_time) {
+          const [startH, startM] = event_time.split(':').map(Number);
+          const [endH, endM] = end_time.split(':').map(Number);
+          if (startH * 60 + startM >= endH * 60 + endM) {
+            return res.status(400).json({ error: 'Nếu cùng một ngày, giờ kết thúc phải lớn hơn giờ bắt đầu.' });
+          }
         }
       }
-    }
 
-    // Validate Resale & Royalty
-    if (allow_resale !== false) {
+      // Validate Resale & Royalty
+      if (allow_resale !== false) {
         const sysConfig = await getSystemConfig();
         const maxResaleLimitPercent = 100 + Number(sysConfig.resale_price_cap_percent || 8);
         const maxRoyaltyCap = parseFloat(sysConfig.default_royalty_percent || 3.0);
         
         if (resale_price_limit_percent && parseFloat(resale_price_limit_percent) > maxResaleLimitPercent) {
-            return res.status(400).json({ error: `Giới hạn giá bán lại tối đa không được vượt quá ${maxResaleLimitPercent}% theo quy định hệ thống.` });
+          return res.status(400).json({ error: `Giới hạn giá bán lại tối đa không được vượt quá ${maxResaleLimitPercent}% theo quy định hệ thống.` });
         }
         if (royalty_fee_percent && parseFloat(royalty_fee_percent) > maxRoyaltyCap) {
-            return res.status(400).json({ error: `Phí bản quyền không được vượt quá mức tối đa ${maxRoyaltyCap}% của hệ thống.` });
+          return res.status(400).json({ error: `Phí bản quyền không được vượt quá mức tối đa ${maxRoyaltyCap}% của hệ thống.` });
         }
+      }
     }
 
     // Cập nhật thông tin cơ bản
+    // [Mới] Xây dựng object update linh hoạt dựa trên trạng thái active
+    const updateData = {
+      title: !isActive ? title : undefined,
+      category_id: !isActive ? category_id : undefined,
+      description, // Luôn cho phép sửa
+      image_url,   // Luôn cho phép sửa
+      video_url,   // Luôn cho phép sửa
+      event_date: !isActive ? (event_date ? new Date(event_date) : undefined) : undefined,
+      event_time: !isActive ? event_time : undefined,
+      end_date: !isActive ? (end_date ? new Date(end_date) : undefined) : undefined,
+      end_time: !isActive ? end_time : undefined,
+      location_address: !isActive ? location_address : undefined,
+      latitude: !isActive ? (latitude ? parseFloat(latitude) : undefined) : undefined,
+      longitude: !isActive ? (longitude ? parseFloat(longitude) : undefined) : undefined,
+      status: (() => {
+        // Nếu sự kiện đang active, không cho phép hạ cấp về draft/pending
+        if (isActive && (status === 'draft' || status === 'pending')) {
+          return undefined; // Giữ nguyên status cũ
+        }
+        return status || event.status;
+      })(),
+      allow_resale: !isActive ? (allow_resale !== undefined ? allow_resale : undefined) : undefined,
+      allow_transfer: !isActive ? (allow_transfer !== undefined ? allow_transfer : undefined) : undefined,
+      allow_refund: allow_refund !== undefined ? allow_refund : undefined,
+      royalty_fee_percent: !isActive ? (royalty_fee_percent !== undefined ? parseFloat(royalty_fee_percent) : undefined) : undefined,
+      resale_price_limit_percent: !isActive ? (resale_price_limit_percent !== undefined ? parseFloat(resale_price_limit_percent) : undefined) : undefined,
+      refund_deadline_days: refund_deadline_days !== undefined ? parseInt(refund_deadline_days) : undefined,
+      seating_charts: seating_charts && Array.isArray(seating_charts) ? seating_charts : undefined,
+      // Hạng vé: Tuyệt đối không xóa/sửa khi đã active
+      ticket_tiers: (!isActive && ticket_tiers) ? {
+        deleteMany: {},
+        create: ticket_tiers.map(tier => ({
+          tier_name: tier.tier_name,
+          price: parseFloat(tier.price),
+          quantity_total: parseInt(tier.quantity_total),
+          quantity_available: parseInt(tier.quantity_total),
+          benefits: tier.benefits,
+          section_name: tier.section_name
+        }))
+      } : undefined
+    };
+
     const updatedEvent = await prisma.event.update({
       where: { id },
-      data: {
-        title,
-        description,
-        image_url,
-        video_url,
-        category_id,
-        event_date: new Date(event_date),
-        event_time,
-        end_date: new Date(end_date),
-        end_time,
-        location_address,
-        latitude: latitude ? parseFloat(latitude) : undefined,
-        longitude: longitude ? parseFloat(longitude) : undefined,
-        status: status || event.status,
-        allow_resale: allow_resale !== undefined ? allow_resale : undefined,
-        allow_transfer: allow_transfer !== undefined ? allow_transfer : undefined,
-        allow_refund: allow_refund !== undefined ? allow_refund : undefined,
-        royalty_fee_percent: royalty_fee_percent !== undefined ? parseFloat(royalty_fee_percent) : undefined,
-        resale_price_limit_percent: resale_price_limit_percent !== undefined ? parseFloat(resale_price_limit_percent) : undefined,
-        refund_deadline_days: refund_deadline_days !== undefined ? parseInt(refund_deadline_days) : undefined,
-        // Cập nhật hạng vé: Xóa cũ, tạo mới (Đơn giản nhất cho logic CreateEvent data)
-        ticket_tiers: ticket_tiers ? {
-          deleteMany: {},
-          create: ticket_tiers.map(tier => ({
-            tier_name: tier.tier_name,
-            price: parseFloat(tier.price),
-            quantity_total: parseInt(tier.quantity_total),
-            quantity_available: parseInt(tier.quantity_total),
-            benefits: tier.benefits,
-            section_name: tier.section_name
-          }))
-        } : undefined,
-        seating_charts: seating_charts && Array.isArray(seating_charts) ? seating_charts : undefined
-      }
+      data: updateData
     });
 
     res.status(200).json({ message: 'Cập nhật sự kiện thành công.', data: updatedEvent });
@@ -310,13 +332,13 @@ const requestCancelOrReschedule = async (req, res) => {
       new_time, 
       new_end_date, 
       new_end_time, 
-      evidence_url 
+      evidence_urls 
     } = req.body; 
 
     const event = await verifyEventOwnership(id, req.user.userId);
 
-    if (event.status !== 'active') {
-      return res.status(400).json({ error: 'Chỉ có thể yêu cầu xử lý khẩn cấp với sự kiện đang hoạt động.' });
+    if (!['active', 'pending_cancel', 'pending_reschedule'].includes(event.status)) {
+      return res.status(400).json({ error: 'Chỉ có thể yêu cầu xử lý khẩn cấp với sự kiện đang hoạt động hoặc đang chờ xử lý khẩn cấp.' });
     }
 
     const nextStatus = request_type === 'cancel' ? 'pending_cancel' : 'pending_reschedule';
@@ -333,7 +355,7 @@ const requestCancelOrReschedule = async (req, res) => {
           new_time: new_time || null,
           new_end_date: new_end_date ? new Date(new_end_date) : null,
           new_end_time: new_end_time || null,
-          evidence_url: evidence_url || null,
+          evidence_urls: evidence_urls || [],
           status: 'pending'
         }
       }),
@@ -343,6 +365,18 @@ const requestCancelOrReschedule = async (req, res) => {
         data: { status: nextStatus }
       })
     ]);
+
+    // 3. Thông báo cho Admin
+    try {
+      await NotificationService.notifyAdmins({
+        type: 'EMERGENCY_REQUEST',
+        title: 'Yêu cầu xử lý khẩn cấp',
+        message: `BTC sự kiện "${event.title}" vừa gửi yêu cầu ${request_type === 'cancel' ? 'hủy' : 'dời ngày'} khẩn cấp.`,
+        target_id: id
+      });
+    } catch (notifErr) {
+      console.error('[Emergency Request] Failed to notify admins:', notifErr);
+    }
 
     res.status(200).json({ message: 'Đã gửi yêu cầu xử lý khẩn cấp cùng minh chứng lên Admin.' });
   } catch (error) {
@@ -523,6 +557,11 @@ const getOrganizerEvents = async (req, res) => {
         },
         _count: {
           select: { tickets: { where: { status: { in: ['valid', 'minted', 'used'] } } } }
+        },
+        emergency_requests: {
+          where: { status: 'pending' },
+          orderBy: { created_at: 'desc' },
+          take: 1
         }
       }
     });
@@ -578,6 +617,9 @@ const getEventById = async (req, res) => {
             tickets: { where: { status: { in: ['valid', 'minted', 'used'] } } },
             marketplace_listings: true
           }
+        },
+        emergency_requests: {
+          orderBy: { created_at: 'desc' }
         }
       }
     });
@@ -641,8 +683,18 @@ const getEventById = async (req, res) => {
     });
 
     // 6. Summary Totals
-    const total_gross_revenue = primaryTicketRevenue + primaryMerchRevenue + resaleVolume;
-    const estimated_net_revenue = (primaryTicketRevenue + primaryMerchRevenue - primaryTotalFees) + resaleRoyalties;
+    let total_gross_revenue = primaryTicketRevenue + primaryMerchRevenue + resaleVolume;
+    let estimated_net_revenue = (primaryTicketRevenue + primaryMerchRevenue - primaryTotalFees) + resaleRoyalties;
+
+    if (['cancelled', 'pending_cancellation_fee'].includes(eventDetails.status)) {
+        primaryTicketRevenue = 0;
+        primaryMerchRevenue = 0;
+        resaleVolume = 0;
+        resaleRoyalties = 0;
+        primaryTotalFees = 0;
+        total_gross_revenue = 0;
+        estimated_net_revenue = 0;
+    }
 
     // 7. Recent Orders List
     const recentOrdersRaw = await prisma.order.findMany({
@@ -714,6 +766,32 @@ const getEventById = async (req, res) => {
       }
     });
 
+    // 10. Cancellation Fee Breakdown (nếu đang ở trạng thái chờ nộp phí hủy)
+    let cancellation_fee_breakdown = null;
+    let isFeePaid = false;
+    if (eventDetails.status === 'pending_cancellation_fee') {
+      let totalPrimaryFee = 0;
+      successfulOrders.forEach(o => {
+        totalPrimaryFee += Number(o.platform_fee || 0) + Number(o.commission_fee || 0) + Number(o.gas_fee || 0);
+      });
+
+      let totalMarketplaceFee = 0;
+      marketplaceTransactions.forEach(tx => {
+        totalMarketplaceFee += Number(tx.platform_fee || 0) + Number(tx.gas_fee || 0);
+      });
+
+      const latestFeeLog = adminLogs.find(l => l.action_type === 'cancellation_fee_notice');
+      const totalFeeRequired = latestFeeLog ? Number(latestFeeLog.new_value) : (totalPrimaryFee + totalMarketplaceFee);
+      isFeePaid = adminLogs.some(l => l.action_type === 'cancellation_fee_paid');
+
+      cancellation_fee_breakdown = {
+        primary_fee: totalPrimaryFee,
+        marketplace_fee: totalMarketplaceFee,
+        total_fee: totalFeeRequired,
+        is_paid: isFeePaid
+      };
+    }
+
     res.status(200).json({ 
       data: { 
         ...eventDetails, 
@@ -724,6 +802,7 @@ const getEventById = async (req, res) => {
         check_in_count: checkInCount,
         recent_orders: recentOrders,
         admin_logs: adminLogs,
+        cancellation_fee_breakdown,
         financials: {
           ticket_revenue_gross: primaryTicketRevenue,
           merch_revenue_gross: primaryMerchRevenue,
@@ -1001,10 +1080,299 @@ const getEventSecondaryActivity = async (req, res) => {
   }
 };
 
+// [UC_16] Hủy yêu cầu khẩn cấp (khi Admin chưa duyệt)
+const cancelEmergencyRequest = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.userId;
+
+    const event = await verifyEventOwnership(id, userId);
+
+    if (!['pending_cancel', 'pending_reschedule'].includes(event.status)) {
+      return res.status(400).json({ error: 'Sự kiện không có yêu cầu khẩn cấp nào đang chờ xử lý.' });
+    }
+
+    // Cập nhật trạng thái sự kiện về active và hủy bỏ yêu cầu
+    await prisma.$transaction([
+      prisma.event.update({
+        where: { id },
+        data: { status: 'active' }
+      }),
+      prisma.emergencyRequest.updateMany({
+        where: { 
+          event_id: id,
+          status: 'pending'
+        },
+        data: { status: 'cancelled' }
+      })
+    ]);
+
+    res.status(200).json({ message: 'Đã hủy yêu cầu xử lý khẩn cấp thành công. Sự kiện đã quay lại trạng thái hoạt động.' });
+
+    // Thông báo cho Admin biết yêu cầu đã bị hủy
+    try {
+      await NotificationService.notifyAdmins({
+        type: 'EMERGENCY_CANCELLED',
+        title: 'Yêu cầu khẩn cấp đã được rút lại',
+        message: `BTC sự kiện "${event.title}" đã hủy yêu cầu xử lý khẩn cấp trước đó.`,
+        target_id: id
+      });
+    } catch (notifErr) {
+      console.error('[Cancel Emergency] Failed to notify admins:', notifErr);
+    }
+
+  } catch (error) {
+    console.error('Error in cancelEmergencyRequest:', error);
+    res.status(400).json({ error: error.message || 'Lỗi server.' });
+  }
+};
+
+// [NEW] Thanh toán phí bồi hoàn hủy sự kiện
+const payCancellationFee = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { paymentMethod } = req.body;
+    const userId = req.user.userId;
+    const event = await verifyEventOwnership(id, userId);
+
+    if (event.status !== 'pending_cancellation_fee') {
+      return res.status(400).json({ error: 'Sự kiện không ở trạng thái yêu cầu nộp phí hủy.' });
+    }
+
+    const latestFeeLog = await prisma.adminActionLog.findFirst({
+      where: { target_id: id, action_type: 'cancellation_fee_notice' },
+      orderBy: { created_at: 'desc' }
+    });
+
+    let totalFeeRequired = latestFeeLog && latestFeeLog.new_value ? Number(latestFeeLog.new_value) : 16810;
+
+    if (paymentMethod === 'vnpay') {
+      const orderMock = {
+        order_number: `FEE-${id}`,
+        total_amount: totalFeeRequired,
+        expires_at: new Date(Date.now() + 15 * 60 * 1000)
+      };
+      const vnpUrl = createRealVNPayUrl(orderMock, req);
+      return res.status(200).json({ payment_url: vnpUrl });
+    }
+
+    // Khấu trừ ví doanh thu / hoàn tất thanh toán
+    await prisma.$transaction(async (tx) => {
+      await tx.adminActionLog.create({
+        data: {
+          admin_id: userId,
+          action_type: 'cancellation_fee_paid',
+          target_id: id,
+          new_value: String(totalFeeRequired)
+        }
+      });
+
+      await tx.event.update({
+        where: { id },
+        data: { status: 'cancelled' }
+      });
+
+      await tx.order.updateMany({
+        where: { event_id: id, status: { in: ['paid', 'success', 'completed'] } },
+        data: { status: 'refund_pending' }
+      });
+
+      await tx.ticket.updateMany({
+        where: { event_id: id },
+        data: { status: 'cancelled' }
+      });
+
+      await tx.marketplaceTransaction.updateMany({
+        where: { ticket: { event_id: id }, status: { in: ['paid', 'success', 'completed'] } },
+        data: { status: 'cancelled' }
+      });
+
+      const ticketsToRefund = await tx.ticket.findMany({
+        where: { event_id: id },
+        include: { 
+          ticket_tier: true,
+          transactions: {
+            where: { status: { in: ['paid', 'success', 'completed'] } },
+            orderBy: { created_at: 'desc' },
+            take: 1
+          }
+        }
+      });
+      for (const t of ticketsToRefund) {
+        const originalPrice = t.ticket_tier ? Number(t.ticket_tier.price) : 0;
+        
+        if (t.transactions && t.transactions.length > 0) {
+          const lastTx = t.transactions[0];
+          const buyerRefundAmount = Number(lastTx.buyer_pay_amount);
+          const sellerRefundAmount = originalPrice;
+          
+          // 1. Hoàn tiền cho Người mua lại (Buyer)
+          const buyerExist = await tx.refundRequest.findFirst({
+            where: { ticket_id: t.id, customer_id: lastTx.buyer_id }
+          });
+          if (!buyerExist) {
+            await tx.refundRequest.create({
+              data: {
+                ticket_id: t.id,
+                customer_id: lastTx.buyer_id,
+                status: 'pending',
+                refund_amount: buyerRefundAmount,
+                type: 'event_cancelled',
+                reason: `Tự động hoàn tiền mua vé Marketplace do sự kiện bị hủy: ${event.title} (Giá mua: ${buyerRefundAmount.toLocaleString('vi-VN')}đ)`
+              }
+            });
+          }
+
+          // 2. Hoàn tiền gốc cho Người bán lại (Seller)
+          const sellerExist = await tx.refundRequest.findFirst({
+            where: { ticket_id: t.id, customer_id: lastTx.seller_id }
+          });
+          if (!sellerExist) {
+            await tx.refundRequest.create({
+              data: {
+                ticket_id: t.id,
+                customer_id: lastTx.seller_id,
+                status: 'pending',
+                refund_amount: sellerRefundAmount,
+                type: 'event_cancelled',
+                reason: `Tự động hoàn tiền gốc mua vé do sự kiện bị hủy (Vé đã bán lại trên Marketplace): ${event.title} (Giá gốc: ${sellerRefundAmount.toLocaleString('vi-VN')}đ)`
+              }
+            });
+          }
+        } else {
+          // Vé chưa bán lại trên Marketplace
+          const exist = await tx.refundRequest.findFirst({
+            where: { ticket_id: t.id, customer_id: t.current_owner_id }
+          });
+          if (!exist) {
+            await tx.refundRequest.create({
+              data: {
+                ticket_id: t.id,
+                customer_id: t.current_owner_id,
+                status: 'pending',
+                refund_amount: originalPrice,
+                type: 'event_cancelled',
+                reason: `Tự động tạo yêu cầu hoàn tiền do sự kiện bị hủy: ${event.title}`
+              }
+            });
+          }
+        }
+      }
+
+      await tx.user.update({
+        where: { id: userId },
+        data: { balance: { decrement: totalFeeRequired } }
+      });
+
+      await tx.walletTransaction.create({
+        data: {
+          user_id: userId,
+          amount: totalFeeRequired,
+          type: 'FEE',
+          description: `Khấu trừ ví doanh thu nộp phí hủy sự kiện: ${event.title}`,
+          status: 'completed'
+        }
+      });
+    });
+
+    const web3Service = require('../services/web3.service');
+    const emailService = require('../services/email.service');
+    const blockchainService = require('../services/blockchain.service');
+
+    if (event.smart_contract_address) {
+      web3Service.pauseContract(event.smart_contract_address).catch(e => console.error('Pause error:', e));
+    }
+
+    const organizerUser = await prisma.user.findUnique({ where: { id: userId } });
+    blockchainService.logFinancialTransaction(
+      'FEE-' + id.slice(0, 8).toUpperCase(),
+      totalFeeRequired,
+      { cancellationFee: totalFeeRequired },
+      'FEE',
+      organizerUser?.wallet_address || undefined
+    );
+
+    emailService.sendEventCancellationEmail(organizerUser, event, 'Sự kiện bị hủy khẩn cấp', 'organizer').catch(() => {});
+    
+    const orders = await prisma.order.findMany({
+      where: { event_id: id, status: 'refund_pending' },
+      include: { customer: true }
+    });
+
+    orders.forEach(o => {
+      if (o.customer) {
+        emailService.sendEventCancellationEmail(o.customer, event, 'Sự kiện bị hủy khẩn cấp', 'customer').catch(() => {});
+      }
+    });
+
+    res.status(200).json({ 
+      status: 'cancelled',
+      message: 'Đã nộp phí & Xác nhận hoàn tất hủy sự kiện thành công! Hệ thống đang tự động hoàn tiền cho khách hàng.' 
+    });
+  } catch (error) {
+    console.error('Lỗi thanh toán phí hủy:', error);
+    res.status(400).json({ error: error.message || 'Lỗi server khi thanh toán phí.' });
+  }
+};
+
+const crypto = require('crypto');
+const qs = require('qs');
+
+function createRealVNPayUrl(order, req) {
+  process.env.TZ = 'Asia/Ho_Chi_Minh';
+  let date = new Date();
+  
+  const pad = n => n < 10 ? '0' + n : n;
+  const formatDate = d => `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+  
+  let createDate = formatDate(date);
+  let expireDate = formatDate(new Date(order.expires_at));
+  
+  let tmnCode = process.env.VNP_TMN_CODE.trim();
+  let secretKey = process.env.VNP_HASH_SECRET.trim();
+  let vnpUrl = process.env.VNP_URL.trim();
+  let returnUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment-result`;
+
+  let amount = Math.round(order.total_amount);
+  let orderInfo = `ThanhToanPhiBoiHoan-${order.order_number}`;
+  let locale = 'vn';
+  let currCode = 'VND';
+  
+  let vnp_Params = {};
+  vnp_Params['vnp_Version'] = '2.1.0';
+  vnp_Params['vnp_Command'] = 'pay';
+  vnp_Params['vnp_TmnCode'] = tmnCode;
+  vnp_Params['vnp_Locale'] = locale;
+  vnp_Params['vnp_CurrCode'] = currCode;
+  vnp_Params['vnp_TxnRef'] = order.order_number;
+  vnp_Params['vnp_OrderInfo'] = orderInfo;
+  vnp_Params['vnp_OrderType'] = 'other';
+  vnp_Params['vnp_Amount'] = amount * 100;
+  vnp_Params['vnp_ReturnUrl'] = returnUrl;
+  let ipAddr = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1';
+  if (ipAddr === '::1' || ipAddr === '::ffff:127.0.0.1') {
+      ipAddr = '127.0.0.1';
+  }
+  vnp_Params['vnp_IpAddr'] = ipAddr;
+  vnp_Params['vnp_CreateDate'] = createDate;
+  vnp_Params['vnp_ExpireDate'] = expireDate;
+
+  let sortedKeys = Object.keys(vnp_Params).sort();
+  let sortedParams = {};
+  sortedKeys.forEach(k => sortedParams[k] = vnp_Params[k]);
+
+  const signData = qs.stringify(sortedParams, { encode: true });
+  const hmac = crypto.createHmac("sha512", secretKey);
+  const signed = hmac.update(Buffer.from(signData, 'utf-8')).digest("hex"); 
+  
+  return `${vnpUrl}?${signData}&vnp_SecureHash=${signed}`;
+}
+
 module.exports = {
   createEvent,
   updateEvent,
   requestCancelOrReschedule,
+  cancelEmergencyRequest,
   updateResalePolicy,
   updateTransferPolicy,
   getAttendees,
@@ -1013,5 +1381,6 @@ module.exports = {
   getEventById,
   deleteEvent,
   getTierTransactions,
-  getEventSecondaryActivity
+  getEventSecondaryActivity,
+  payCancellationFee
 };

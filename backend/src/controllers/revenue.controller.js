@@ -1,4 +1,5 @@
 const prisma = require('../config/prisma');
+const NotificationService = require('../services/notification.service');
 
 /**
  * Controller xử lý Doanh thu và Rút tiền cho Organizer
@@ -66,7 +67,10 @@ const RevenueController = {
                 where: {
                     seller_id: userId,
                     status: { in: ['paid', 'completed', 'success'] },
-                    is_settled: false
+                    is_settled: false,
+                    ticket: {
+                        event: { status: { not: 'cancelled' } }
+                    }
                 },
                 select: { seller_receive_amount: true }
             });
@@ -89,6 +93,16 @@ const RevenueController = {
 
             const totalWithdrawn = withdrawnTransactions._sum.amount || 0;
 
+            // 5. Lấy cấu hình rút tiền từ hệ thống
+            const settings = await prisma.systemSetting.findMany({
+                where: {
+                    key: { in: ['withdrawal_fee_percent', 'min_withdrawal_amount'] }
+                }
+            });
+
+            const feePercent = Number(settings.find(s => s.key === 'withdrawal_fee_percent')?.value || 2);
+            const minWithdrawal = Number(settings.find(s => s.key === 'min_withdrawal_amount')?.value || 100000);
+
             res.status(200).json({
                 balance: Number(user.balance),
                 pendingRevenue: Number(pendingRevenue),
@@ -97,6 +111,10 @@ const RevenueController = {
                     bank_name: user.bank_name,
                     account_number: user.account_number,
                     account_holder: user.account_holder
+                },
+                systemSettings: {
+                    withdrawal_fee_percent: feePercent,
+                    min_withdrawal_amount: minWithdrawal
                 },
                 recentTransactions: user.wallet_transactions
             });
@@ -211,6 +229,14 @@ const RevenueController = {
                     netAmount: netAmount
                 } 
             });
+
+            // 7. Thông báo cho Admin
+            NotificationService.notifyAdmins({
+                type: 'WITHDRAWAL_REQUEST',
+                title: 'Yêu cầu rút tiền mới',
+                message: `Người dùng "${user.full_name || user.email}" vừa yêu cầu rút ${withdrawAmount.toLocaleString()}đ.`,
+                target_id: result.id
+            });
         } catch (error) {
             console.error('Request Withdrawal Error:', error);
             res.status(500).json({ error: error.message || 'Lỗi khi gửi yêu cầu rút tiền.' });
@@ -250,13 +276,13 @@ const RevenueController = {
             const sales = await prisma.marketplaceTransaction.findMany({
                 where: { 
                     seller_id: userId,
-                    status: { in: ['paid', 'completed', 'success'] }
+                    status: { in: ['paid', 'completed', 'success', 'cancelled'] }
                 },
                 include: {
                     ticket: {
                         include: {
                             event: {
-                                select: { title: true, event_date: true, image_url: true }
+                                select: { title: true, event_date: true, image_url: true, status: true }
                             },
                             ticket_tier: {
                                 select: { tier_name: true }

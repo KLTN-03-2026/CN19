@@ -47,11 +47,17 @@ const AdminReports = () => {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [dateRange, setDateRange] = useState('30days');
+    const [customStart, setCustomStart] = useState(format(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'));
+    const [customEnd, setCustomEnd] = useState(format(new Date(), 'yyyy-MM-dd'));
 
-    const fetchAnalytics = async () => {
+    const fetchAnalytics = async (range = dateRange) => {
         try {
             setLoading(true);
-            const res = await api.get('/admin/analytics');
+            let url = `/admin/analytics?period=${range}`;
+            if (range === 'custom') {
+                url = `/admin/analytics?startDate=${customStart}&endDate=${customEnd}`;
+            }
+            const res = await api.get(url);
             setData(res.data.data);
         } catch (error) {
             toast.error('Không thể tải báo cáo phân tích');
@@ -61,8 +67,8 @@ const AdminReports = () => {
     };
 
     useEffect(() => {
-        fetchAnalytics();
-    }, []);
+        fetchAnalytics(dateRange);
+    }, [dateRange, customStart, customEnd]);
 
     const formatCurrency = (amount) => {
         return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount || 0);
@@ -111,31 +117,53 @@ const AdminReports = () => {
                     <p className="text-[11px] text-slate-700 dark:text-zinc-500 mt-1 font-bold uppercase tracking-tight">Phân tích toàn diện doanh thu, sự kiện và tăng trưởng người dùng</p>
                 </div>
 
-                <div className="flex items-center gap-3">
-                    <div className="flex bg-white dark:bg-zinc-900/50 p-1 rounded-xl border border-gray-200 dark:border-zinc-800 shadow-sm">
-                        {['7days', '30days', '90days'].map(range => (
-                            <button 
-                                key={range}
-                                onClick={() => setDateRange(range)}
-                                className={`px-4 py-2 text-[9px] font-black uppercase rounded-lg transition-all ${dateRange === range ? 'bg-neon-green text-black shadow-md' : 'text-slate-500 hover:text-gray-900 dark:hover:text-white'}`}
-                            >
-                                {range === '7days' ? '7 Ngày' : range === '30days' ? '30 Ngày' : '90 Ngày'}
-                            </button>
-                        ))}
+                <div className="flex flex-col items-end gap-3">
+                    <div className="flex items-center gap-3">
+                        <div className="flex bg-white dark:bg-zinc-900/50 p-1 rounded-xl border border-gray-200 dark:border-zinc-800 shadow-sm">
+                            {['today', '7days', '30days', '90days', 'custom'].map(range => (
+                                <button 
+                                    key={range}
+                                    onClick={() => setDateRange(range)}
+                                    className={`px-4 py-2 text-[9px] font-black uppercase rounded-lg transition-all ${dateRange === range ? 'bg-neon-green text-black shadow-md' : 'text-slate-500 hover:text-gray-900 dark:hover:text-white'}`}
+                                >
+                                    {range === 'today' ? 'Hôm nay' : range === '7days' ? '7 Ngày' : range === '30days' ? '30 Ngày' : range === '90days' ? '90 Ngày' : 'Tùy chỉnh'}
+                                </button>
+                            ))}
+                        </div>
+                        <button className="flex items-center gap-2 px-5 py-3 bg-zinc-900 dark:bg-white text-white dark:text-black rounded-xl text-[10px] font-black uppercase hover:bg-neon-green hover:text-black dark:hover:bg-neon-green transition-all shadow-lg active:scale-95">
+                            <Download className="w-3.5 h-3.5" />
+                            Xuất báo cáo (PDF)
+                        </button>
                     </div>
-                    <button className="flex items-center gap-2 px-5 py-3 bg-zinc-900 dark:bg-white text-white dark:text-black rounded-xl text-[10px] font-black uppercase hover:bg-neon-green hover:text-black dark:hover:bg-neon-green transition-all shadow-lg active:scale-95">
-                        <Download className="w-3.5 h-3.5" />
-                        Xuất báo cáo (PDF)
-                    </button>
+
+                    {dateRange === 'custom' && (
+                        <div className="flex items-center gap-2 animate-in fade-in slide-in-from-right-2 duration-300">
+                            <div className="flex items-center gap-2 bg-white dark:bg-zinc-900/50 p-1.5 rounded-xl border border-gray-200 dark:border-white/5 shadow-inner">
+                                <input 
+                                    type="date" 
+                                    value={customStart}
+                                    onChange={(e) => setCustomStart(e.target.value)}
+                                    className="bg-transparent border-none text-[10px] font-black text-gray-900 dark:text-white outline-none px-2"
+                                />
+                                <span className="text-[10px] font-black text-gray-400 px-1">➜</span>
+                                <input 
+                                    type="date" 
+                                    value={customEnd}
+                                    onChange={(e) => setCustomEnd(e.target.value)}
+                                    className="bg-transparent border-none text-[10px] font-black text-gray-900 dark:text-white outline-none px-2"
+                                />
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
 
             {/* Top 4 Stats - REAL DATA */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {[
-                    { label: 'Tăng trưởng User', value: `${data?.user_growth?.reduce((a,b)=>a+b._count.id, 0)}`, sub: 'Tổng người dùng hệ thống', icon: Users, color: 'green' },
+                    { label: 'Người dùng', value: `${data?.total_users?.toLocaleString()}`, sub: 'Tổng số tài khoản hệ thống', icon: Users, color: 'green' },
                     { label: 'Tỉ lệ xác thực KYC', value: `${data?.kyc_ratio}%`, sub: 'Người dùng đã xác thực danh tính', icon: ShieldCheck, color: 'blue' },
-                    { label: 'Doanh thu thu sàn', value: formatCurrency(data?.financial_outflow?._sum?.fee_amount), sub: 'Hoa hồng & Phí rút', icon: DollarSign, color: 'purple' },
+                    { label: 'Tổng doanh thu sàn', value: formatCurrency(data?.total_revenue), sub: 'Hoa hồng & Phí dịch vụ', icon: DollarSign, color: 'purple' },
                     { label: 'Sự kiện hoạt động', value: `${data?.total_events_count}`, sub: 'Đang mở bán công khai', icon: Calendar, color: 'orange' },
                 ].map((stat, i) => (
                     <div key={i} className="bg-white dark:bg-zinc-900/40 p-6 rounded-[2rem] border border-gray-200 dark:border-white/5 relative overflow-hidden group shadow-sm transition-all hover:border-neon-green/30">

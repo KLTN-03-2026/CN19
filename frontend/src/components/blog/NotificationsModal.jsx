@@ -2,7 +2,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Bell, MessageCircle, Heart, Star, Info, CheckCircle2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { formatDistanceToNow } from 'date-fns';
+import { format } from 'date-fns';
 import { vi, enUS } from 'date-fns/locale';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { userService } from '../../services/user.service';
@@ -131,10 +131,7 @@ const NotificationsModal = ({ isOpen, onClose }) => {
                           <div className="text-xs font-black text-gray-900 dark:text-white uppercase mb-1 flex items-center justify-between">
                             {notif.title}
                             <span className="text-[9px] font-bold text-gray-400 normal-case">
-                              {formatDistanceToNow(new Date(notif.created_at), { 
-                                addSuffix: true, 
-                                locale: i18n.language === 'en' ? enUS : vi 
-                              })}
+                              {format(new Date(notif.created_at), 'dd/MM/yyyy HH:mm')}
                             </span>
                           </div>
                           <p className="text-sm text-gray-600 dark:text-gray-400 font-medium leading-normal">

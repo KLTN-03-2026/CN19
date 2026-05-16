@@ -166,6 +166,7 @@ const getEventById = async (req, res) => {
           select: { 
             id: true,
             organization_name: true, 
+            description: true, // Thêm mô tả ban tổ chức
             is_verified: true,
             user: { select: { id: true, avatar_url: true, status: true } }
           } 
@@ -174,8 +175,8 @@ const getEventById = async (req, res) => {
       }
     });
 
-    if (!event) {
-      return res.status(404).json({ error: 'Không tìm thấy sự kiện.' });
+    if (!event || (event.status !== 'active' && event.status !== 'ended')) {
+      return res.status(404).json({ error: 'Sự kiện không tồn tại hoặc đã bị ẩn bởi Quản trị viên.' });
     }
 
     res.status(200).json({ data: event });

@@ -321,14 +321,14 @@ const Blog = () => {
                                 
                                 <div className="mt-6 flex items-center justify-around border-t border-gray-50 dark:border-white/5 pt-6">
                                      <div className="text-center">
-                                         <div className="text-[9px] font-black text-gray-400 uppercase mb-1">{t('blog.profile.posts')}</div>
+                                         <div className="text-[9px] font-black text-gray-700 dark:text-gray-400 uppercase mb-1">{t('blog.profile.posts')}</div>
                                          <div className="text-sm font-black text-gray-900 dark:text-white">
                                              {userStatsData?.pagination?.total || 0}
                                          </div>
                                      </div>
                                     <div className="h-6 w-px bg-gray-100 dark:bg-white/5"></div>
                                      <div className="text-center">
-                                         <div className="text-[9px] font-black text-gray-400 uppercase mb-1">{t('blog.profile.joined')}</div>
+                                         <div className="text-[9px] font-black text-gray-700 dark:text-gray-400 uppercase mb-1">{t('blog.profile.joined')}</div>
                                          <div className="text-sm font-black text-neon-green">
                                              {user?.created_at ? `${(new Date(user.created_at).getMonth() + 1).toString().padStart(2, '0')}/${new Date(user.created_at).getFullYear()}` : '--/--'}
                                          </div>
@@ -357,7 +357,7 @@ const Blog = () => {
                                     className={`flex items-center gap-3.5 px-5 py-3 rounded-xl transition-all font-black text-[11px] uppercase ${
                                         activeTab === item.id 
                                         ? 'bg-neon-green text-black shadow-lg shadow-neon-green/10' 
-                                        : 'text-gray-500 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-neon-green'
+                                        : 'text-gray-800 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-neon-green'
                                     }`}
                                 >
                                     <div className="flex items-center gap-3.5 flex-1">
@@ -393,7 +393,7 @@ const Blog = () => {
                                     className={`shrink-0 flex items-center gap-2 px-3.5 py-2 rounded-full text-[11px] font-black uppercase transition-all ${
                                         activeTab === item.id 
                                         ? 'bg-neon-green text-black shadow-lg shadow-neon-green/20' 
-                                        : 'bg-white dark:bg-[#111114] text-gray-500 border border-gray-100 dark:border-white/5 shadow-sm'
+                                        : 'bg-white dark:bg-[#111114] text-gray-700 border border-gray-100 dark:border-white/5 shadow-sm'
                                     }`}
                                 >
                                     <item.icon className="w-3.5 h-3.5" />
@@ -435,7 +435,7 @@ const Blog = () => {
                                         </Link>
                                     ))
                                 ) : (
-                                    <div className="text-[11px] text-gray-500 italic px-1">Chưa có sự kiện sôi nổi</div>
+                                    <div className="text-[11px] text-gray-700 dark:text-gray-500 italic px-1">Chưa có sự kiện sôi nổi</div>
                                 )}
                              </div>
                         </div>
@@ -466,7 +466,7 @@ const Blog = () => {
                                 </div>
                                 <button 
                                     onClick={() => isAuthenticated ? setIsCreateModalOpen(true) : toast.error(t('reviews.loginToDiscuss'))}
-                                    className="flex-1 h-9 md:h-11 border border-gray-300 dark:border-white/10 bg-gray-100 dark:bg-white/[0.03] hover:bg-gray-100 dark:hover:bg-white/[0.06] rounded-xl px-4 md:px-5 text-left text-gray-500 text-[12px] md:text-[13px] font-medium transition-all"
+                                    className="flex-1 h-9 md:h-11 border border-gray-300 dark:border-white/10 bg-gray-100 dark:bg-white/[0.03] hover:bg-gray-100 dark:hover:bg-white/[0.06] rounded-xl px-4 md:px-5 text-left text-gray-800 dark:text-gray-500 text-[12px] md:text-[13px] font-medium transition-all"
                                 >
                                     {isAuthenticated 
                                         ? t('blog.quick_post.placeholder', { name: user?.full_name?.split(' ').pop() }) 
@@ -506,7 +506,7 @@ const Blog = () => {
                                     {hasMore && !blogLoading && !communityLoading && (
                                         <button 
                                             onClick={() => setPage(p => p + 1)}
-                                            className="w-full py-4 mt-6 bg-white dark:bg-[#111114] border border-gray-100 dark:border-white/5 rounded-2xl text-[11px] font-black uppercase text-gray-400 hover:text-neon-green transition-all"
+                                            className="w-full py-4 mt-6 bg-white dark:bg-[#111114] border border-gray-100 dark:border-white/5 rounded-2xl text-[11px] font-black uppercase text-gray-800 dark:text-gray-400 hover:text-neon-green transition-all"
                                         >
                                             {t('common.loadMore') || 'Xem thêm bảng tin'} <ArrowRight className="inline-block w-4 h-4 ml-2" />
                                         </button>
@@ -514,8 +514,8 @@ const Blog = () => {
                                 </>
                             ) : (
                                 <div className="text-center py-24 bg-white dark:bg-[#111114] rounded-[1.75rem] border border-dashed border-gray-100 dark:border-white/10">
-                                    <Users className="w-12 h-12 text-gray-200 mx-auto mb-4" />
-                                    <h4 className="text-[12px] font-black text-gray-400 uppercase">{t('blog.nav.no_posts_yet') || 'Chưa có bài viết nào'}</h4>
+                                    <Users className="w-12 h-12 text-gray-300 dark:text-gray-200 mx-auto mb-4" />
+                                    <h4 className="text-[12px] font-black text-gray-600 dark:text-gray-400 uppercase">{t('blog.nav.no_posts_yet') || 'Chưa có bài viết nào'}</h4>
                                 </div>
                             )}
                         </div>
@@ -570,7 +570,7 @@ const Blog = () => {
                                                 <div className="text-[12px] font-bold text-gray-900 dark:text-white group-hover:text-neon-green transition-colors truncate">
                                                     {ev.title}
                                                 </div>
-                                                <div className="text-[9px] font-bold text-gray-400 uppercase mt-0.5 flex items-center gap-2">
+                                                <div className="text-[9px] font-bold text-gray-600 dark:text-gray-400 uppercase mt-0.5 flex items-center gap-2">
                                                     <MessageSquare className="w-2.5 h-2.5 text-neon-green" />
                                                     <span className="text-neon-green">{ev.total_discussion} {t('blog.post.comments_count') || 'thảo luận'}</span>
                                                     <span className="opacity-50">•</span>
@@ -581,7 +581,7 @@ const Blog = () => {
                                         </Link>
                                     ))
                                 ) : (
-                                    <div className="text-[11px] font-medium text-gray-400 italic">
+                                    <div className="text-[11px] font-medium text-gray-600 dark:text-gray-400 italic">
                                         Chưa có sự kiện nổi bật
                                     </div>
                                 )}
@@ -591,7 +591,7 @@ const Blog = () => {
                         {/* Footer Links */}
                         <div className="px-6 flex flex-wrap gap-x-4 gap-y-2 opacity-60">
                             {['Điều khoản', 'Bảo mật', 'Cookies', 'BASTICKET © 2026'].map((link, idx) => (
-                                <span key={idx} className="text-[9px] font-black text-gray-400 uppercase cursor-pointer hover:text-neon-green">
+                                <span key={idx} className="text-[9px] font-black text-gray-600 dark:text-gray-400 uppercase cursor-pointer hover:text-neon-green">
                                     {link}
                                 </span>
                             ))}

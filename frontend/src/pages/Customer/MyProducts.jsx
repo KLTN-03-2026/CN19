@@ -18,6 +18,7 @@ import {
     Sparkles,
     Package,
     ArrowRight,
+    ArrowLeftRight,
     User,
     Info,
     Receipt
@@ -105,21 +106,25 @@ const MyProducts = () => {
         setShowSoldInfoModal(true);
     };
 
+    const getItemStatus = (item) => {
+        if (item.status === 'sold') return 'sold';
+        if (item.status === 'transferred') return 'transferred';
+        if (item.status === 'listing') return 'listing';
+        if (item.status === 'cancelled') return 'cancelled';
+        if (item.is_redeemed || item.status === 'received') return 'received';
+        return 'pending';
+    };
+
     const filteredItems = items.filter(item => {
         const matchesSearch = item.merchandise.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                             item.merchandise.event?.title?.toLowerCase().includes(searchTerm.toLowerCase());
+                             item.merchandise.event?.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                             item.event_title?.toLowerCase().includes(searchTerm.toLowerCase());
         
-        const status = item.status || 'pending'; 
-
-        switch (activeTab) {
-            case 'all': return matchesSearch;
-            case 'pending': return matchesSearch && status === 'pending';
-            case 'received': return matchesSearch && status === 'received';
-            case 'sold': return matchesSearch && status === 'sold';
-            case 'listing': return matchesSearch && status === 'listing';
-            case 'cancelled': return matchesSearch && status === 'cancelled';
-            default: return matchesSearch;
-        }
+        if (!matchesSearch) return false;
+        
+        const currentStatus = getItemStatus(item);
+        if (activeTab === 'all') return true;
+        return currentStatus === activeTab;
     });
 
     const formatPrice = (price) => {
@@ -130,19 +135,22 @@ const MyProducts = () => {
     };
 
     const getStatusBadge = (status) => {
+        const baseClass = "px-3 py-1 rounded-full text-[10px] font-black border uppercase whitespace-nowrap inline-flex items-center gap-1.5";
         switch (status) {
             case 'pending':
-                return <span className="bg-amber-500/10 text-amber-600 dark:text-amber-500 px-3 py-1 rounded-full text-[10px] font-black border border-amber-500/20 uppercase">{t('merchandise.status.pending')}</span>;
+                return <span className={`${baseClass} bg-amber-500/10 text-amber-600 dark:text-amber-500 border-amber-500/20`}><Clock className="w-2.5 h-2.5" />{t('merchandise.status.pending')}</span>;
             case 'received':
-                return <span className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 px-3 py-1 rounded-full text-[10px] font-black border border-emerald-500/20 uppercase">{t('merchandise.status.received')}</span>;
+                return <span className={`${baseClass} bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 border-emerald-500/20`}><CheckCircle2 className="w-2.5 h-2.5" />{t('merchandise.status.received')}</span>;
             case 'listing':
-                return <span className="bg-blue-500/10 text-blue-600 dark:text-blue-400 px-3 py-1 rounded-full text-[10px] font-black border border-blue-500/20 uppercase">{t('merchandise.status.listing')}</span>;
+                return <span className={`${baseClass} bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20`}><Tag className="w-2.5 h-2.5" />{t('merchandise.status.listing')}</span>;
             case 'sold':
-                return <span className="bg-purple-500/10 text-purple-600 dark:text-purple-400 px-3 py-1 rounded-full text-[10px] font-black border border-purple-500/20 uppercase">{t('merchandise.status.sold')}</span>;
+                return <span className={`${baseClass} bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20`}><Receipt className="w-2.5 h-2.5" />{t('merchandise.status.sold')}</span>;
+            case 'transferred':
+                return <span className={`${baseClass} bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20`}><ArrowLeftRight className="w-2.5 h-2.5" />{t('merchandise.status.transferred')}</span>;
             case 'cancelled':
-                return <span className="bg-red-500/10 text-red-600 dark:text-red-400 px-3 py-1 rounded-full text-[10px] font-black border border-red-500/20 uppercase">{t('merchandise.status.cancelled')}</span>;
+                return <span className={`${baseClass} bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20`}><X className="w-2.5 h-2.5" />{t('merchandise.status.cancelled')}</span>;
             default:
-                return <span className="bg-gray-500/10 text-gray-500 px-3 py-1 rounded-full text-[10px] font-black border border-gray-500/20 uppercase">{status}</span>;
+                return <span className={`${baseClass} bg-gray-500/10 text-gray-500 border-gray-500/20`}>{status}</span>;
         }
     };
 
@@ -212,6 +220,7 @@ const MyProducts = () => {
                                     { id: 'received', label: t('merchandise.status.received') },
                                     { id: 'listing', label: t('merchandise.status.listing') },
                                     { id: 'sold', label: t('merchandise.status.sold') },
+                                    { id: 'transferred', label: t('merchandise.status.transferred') },
                                     { id: 'cancelled', label: t('merchandise.status.cancelled') }
                                 ].map(tab => (
                                     <button
@@ -257,92 +266,162 @@ const MyProducts = () => {
                             ))}
                         </div>
                     ) : filteredItems.length > 0 ? (
-                        <div className={viewMode === 'grid' ? "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6" : "space-y-4"}>
+                        <div className={viewMode === 'grid' ? "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6" : "space-y-3"}>
                             {filteredItems.map((item, idx) => (
-                                <div 
-                                    key={item.id}
-                                    className={`group bg-white dark:bg-dark-card border border-gray-200 dark:border-white/5 rounded-[2rem] overflow-hidden hover:border-neon-green/20 transition-all duration-500 shadow-sm animate-in fade-in slide-in-from-bottom-6`}
-                                    style={{ animationDelay: `${idx * 50}ms` }}
-                                >
-                                    {/* Image */}
-                                    <div className="relative aspect-[4/3] overflow-hidden">
-                                        <img 
-                                            src={item.merchandise.image_url} 
-                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000" 
-                                            alt={item.merchandise.name}
-                                        />
-                                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                viewMode === 'grid' ? (
+                                    <div 
+                                        key={item.id}
+                                        className={`group bg-white dark:bg-dark-card border border-gray-200 dark:border-white/5 rounded-[2rem] overflow-hidden hover:border-neon-green/20 transition-all duration-500 shadow-sm animate-in fade-in slide-in-from-bottom-6`}
+                                        style={{ animationDelay: `${idx * 50}ms` }}
+                                    >
+                                        {/* Image */}
+                                        <div className="relative aspect-[4/3] overflow-hidden">
+                                            <img 
+                                                src={item.merchandise.image_url} 
+                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000" 
+                                                alt={item.merchandise.name}
+                                            />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                            
+                                            <div className="absolute top-3 left-3">
+                                                {getStatusBadge(getItemStatus(item))}
+                                            </div>
+    
+                                            {['pending', 'received'].includes(getItemStatus(item)) && (
+                                                <div className="absolute bottom-3 left-3 right-3 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all">
+                                                    <button 
+                                                        onClick={() => handleViewPickup(item)}
+                                                        className="w-full py-2 bg-neon-green text-black text-[9px] font-black uppercase rounded-lg flex items-center justify-center gap-2"
+                                                    >
+                                                        {item.is_redeemed ? <Eye className="w-3 h-3" /> : <QrCode className="w-3 h-3" />}
+                                                        {item.is_redeemed ? t('merchandise.labels.view_details') : t('merchandise.labels.pickup_code')}
+                                                    </button>
+                                                </div>
+                                            )}
+    
+                                            {['sold', 'transferred'].includes(getItemStatus(item)) && (
+                                                <div className="absolute bottom-3 left-3 right-3 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all">
+                                                    <button 
+                                                        onClick={() => handleViewSoldInfo(item)}
+                                                        className="w-full py-2 bg-neon-green text-black text-[9px] font-black uppercase rounded-lg flex items-center justify-center gap-2"
+                                                    >
+                                                        <Eye className="w-3 h-3" />
+                                                        {t('merchandise.labels.view_details')}
+                                                    </button>
+                                                </div>
+                                            )}
+    
+                                            {getItemStatus(item) === 'listing' && (
+                                                <div className="absolute bottom-3 left-3 right-3 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all">
+                                                    <button 
+                                                        onClick={() => handleViewListing(item)}
+                                                        className="w-full py-2 bg-blue-500 text-white text-[9px] font-black uppercase rounded-lg flex items-center justify-center gap-2"
+                                                    >
+                                                        <Tag className="w-3 h-3" />
+                                                        {t('merchandise.labels.listing_details_btn')}
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+    
+                                        {/* Info */}
+                                        <div className="p-4 space-y-3">
+                                            <div className="space-y-0.5">
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-[10px] font-black text-neon-green uppercase tracking-tight line-clamp-1 flex-1">
+                                                        {item.event_title}
+                                                    </span>
+                                                    <span className="text-[10px] font-bold text-gray-400 ml-2">
+                                                        x{item.quantity}
+                                                    </span>
+                                                </div>
+                                                <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase leading-tight line-clamp-1">{item.merchandise.name}</h3>
+                                            </div>
+    
+                                            <div className="flex items-center justify-between pt-2.5 border-t border-gray-100 dark:border-white/5">
+                                                <div className="flex flex-col">
+                                                    <span className="text-[10px] font-black text-gray-500">{t('merchandise.labels.total')}</span>
+                                                    <span className="text-[15px] font-black text-gray-900 dark:text-white">{formatPrice(item.subtotal)}</span>
+                                                </div>
+                                                <Link 
+                                                    to={`/my-transactions/${item.transaction_id || item.transaction_number || item.mkt_transaction_number || item.order_id}`}
+                                                    className="p-2 bg-gray-100 dark:bg-white/5 text-gray-500 hover:text-neon-green rounded-lg transition-all"
+                                                    title="Xem chi tiết giao dịch"
+                                                >
+                                                    <ExternalLink className="w-3.5 h-3.5" />
+                                                </Link>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    // List View Row
+                                    <div 
+                                        key={item.id}
+                                        className="group bg-white dark:bg-white/[0.02] border border-gray-200 dark:border-white/5 rounded-2xl p-3 flex items-center gap-4 hover:border-neon-green/30 transition-all animate-in fade-in slide-in-from-right-4"
+                                    >
+                                        <div className="w-16 h-16 rounded-xl overflow-hidden shrink-0 border border-gray-100 dark:border-white/5">
+                                            <img src={item.merchandise.image_url} className="w-full h-full object-cover" alt="" />
+                                        </div>
                                         
-                                        <div className="absolute top-3 left-3">
-                                            {getStatusBadge(item.status || 'pending')}
-                                        </div>
+                                        <div className="flex-1 min-w-0 grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                                            <div className="space-y-0.5">
+                                                <p className="text-[9px] font-black text-neon-green uppercase line-clamp-1">{item.event_title}</p>
+                                                <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase truncate">{item.merchandise.name}</h3>
+                                            </div>
+                                            
+                                            <div className="flex items-center gap-6">
+                                                <div className="flex flex-col">
+                                                    <span className="text-[9px] font-black text-gray-400 uppercase">{t('merchandise.labels.total')}</span>
+                                                    <span className="text-xs font-black text-gray-900 dark:text-white">{formatPrice(item.subtotal)}</span>
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <span className="text-[9px] font-black text-gray-400 uppercase">{t('merchandise.labels.quantity')}</span>
+                                                    <span className="text-xs font-black text-gray-900 dark:text-white">x{item.quantity}</span>
+                                                </div>
+                                            </div>
  
-                                        {['pending', 'received'].includes(item.status || 'pending') && (
-                                            <div className="absolute bottom-3 left-3 right-3 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all">
-                                                <button 
-                                                    onClick={() => handleViewPickup(item)}
-                                                    className="w-full py-2 bg-neon-green text-black text-[9px] font-black uppercase rounded-lg flex items-center justify-center gap-2"
-                                                >
-                                                    {item.is_redeemed ? <Eye className="w-3 h-3" /> : <QrCode className="w-3 h-3" />}
-                                                    {item.is_redeemed ? t('merchandise.labels.view_details') : t('merchandise.labels.pickup_code')}
-                                                </button>
+                                            <div className="flex items-center justify-end gap-3">
+                                                <div className="hidden sm:block">
+                                                    {getStatusBadge(getItemStatus(item))}
+                                                </div>
+                                                <div className="flex items-center gap-1.5">
+                                                    {['pending', 'received'].includes(getItemStatus(item)) && (
+                                                        <button 
+                                                            onClick={() => handleViewPickup(item)}
+                                                            className="p-2 bg-neon-green text-black rounded-xl hover:scale-105 transition-all"
+                                                            title={item.is_redeemed ? t('merchandise.labels.view_details') : t('merchandise.labels.pickup_code')}
+                                                        >
+                                                            {item.is_redeemed ? <Eye className="w-4 h-4" /> : <QrCode className="w-4 h-4" />}
+                                                        </button>
+                                                    )}
+                                                    {['sold', 'transferred'].includes(getItemStatus(item)) && (
+                                                        <button 
+                                                            onClick={() => handleViewSoldInfo(item)}
+                                                            className="p-2 bg-neon-green text-black rounded-xl hover:scale-105 transition-all"
+                                                            title={t('merchandise.labels.view_details')}
+                                                        >
+                                                            <Eye className="w-4 h-4" />
+                                                        </button>
+                                                    )}
+                                                    {getItemStatus(item) === 'listing' && (
+                                                        <button 
+                                                            onClick={() => handleViewListing(item)}
+                                                            className="p-2 bg-blue-500 text-white rounded-xl hover:scale-105 transition-all"
+                                                        >
+                                                            <Tag className="w-4 h-4" />
+                                                        </button>
+                                                    )}
+                                                    <Link 
+                                                        to={`/my-transactions/${item.transaction_id || item.transaction_number || item.mkt_transaction_number || item.order_id}`}
+                                                        className="p-2 bg-gray-100 dark:bg-white/5 text-gray-500 hover:text-neon-green rounded-xl transition-all"
+                                                    >
+                                                        <ExternalLink className="w-4 h-4" />
+                                                    </Link>
+                                                </div>
                                             </div>
-                                        )}
-
-                                        {item.status === 'sold' && (
-                                            <div className="absolute bottom-3 left-3 right-3 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all">
-                                                <button 
-                                                    onClick={() => handleViewSoldInfo(item)}
-                                                    className="w-full py-2 bg-neon-green text-black text-[9px] font-black uppercase rounded-lg flex items-center justify-center gap-2"
-                                                >
-                                                    <Info className="w-3 h-3" />
-                                                    {t('merchandise.labels.view_info')}
-                                                </button>
-                                            </div>
-                                        )}
-
-                                        {item.status === 'listing' && (
-                                            <div className="absolute bottom-3 left-3 right-3 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all">
-                                                <button 
-                                                    onClick={() => handleViewListing(item)}
-                                                    className="w-full py-2 bg-blue-500 text-white text-[9px] font-black uppercase rounded-lg flex items-center justify-center gap-2"
-                                                >
-                                                    <Tag className="w-3 h-3" />
-                                                    {t('merchandise.labels.listing_details_btn')}
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
- 
-                                    {/* Info */}
-                                    <div className="p-4 space-y-3">
-                                        <div className="space-y-0.5">
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-[10px] font-black text-neon-green uppercase tracking-tight">
-                                                    {item.event_title}
-                                                </span>
-                                                <span className="text-[10px] font-bold text-gray-400">
-                                                    x{item.quantity}
-                                                </span>
-                                            </div>
-                                            <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase leading-tight line-clamp-1">{item.merchandise.name}</h3>
-                                        </div>
- 
-                                        <div className="flex items-center justify-between pt-2.5 border-t border-gray-100 dark:border-white/5">
-                                            <div className="flex flex-col">
-                                                <span className="text-[10px] font-black text-gray-500">{t('merchandise.labels.total')}</span>
-                                                <span className="text-[15px] font-black text-gray-900 dark:text-white">{formatPrice(item.subtotal)}</span>
-                                            </div>
-                                            <Link 
-                                                to={`/my-transactions/${item.transaction_id || item.transaction_number || item.mkt_transaction_number || item.order_id}`}
-                                                className="p-2 bg-gray-100 dark:bg-white/5 text-gray-500 hover:text-neon-green rounded-lg transition-all"
-                                                title="Xem chi tiết giao dịch"
-                                            >
-                                                <ExternalLink className="w-3.5 h-3.5" />
-                                            </Link>
                                         </div>
                                     </div>
-                                </div>
+                                )
                             ))}
                         </div>
                     ) : (
@@ -495,7 +574,7 @@ const MyProducts = () => {
                             <div className="space-y-4">
                                  <div className="flex items-center gap-2">
                                     <User className="w-4 h-4 text-neon-green" />
-                                    <span className="text-[10px] font-black uppercase text-gray-500 tracking-tight">{t('merchandise.details.buyer')}</span>
+                                    <span className="text-[10px] font-black uppercase text-gray-500 tracking-tight">{selectedItem.status === 'transferred' ? t('merchandise.details.recipient') : t('merchandise.details.buyer')}</span>
                                 </div>
                                 <div className="flex items-center gap-4 bg-gray-50 dark:bg-white/5 p-4 rounded-2xl border border-gray-100 dark:border-white/5">
                                     <img 
@@ -519,7 +598,9 @@ const MyProducts = () => {
                                 <div className="bg-gray-50 dark:bg-white/5 p-5 rounded-2xl border border-gray-100 dark:border-white/5 space-y-4">
                                     <div className="flex justify-between items-center">
                                         <span className="text-[10px] font-black text-gray-400">{t('merchandise.details.transaction_id')}</span>
-                                        <span className="text-[11px] font-bold text-gray-900 dark:text-white tracking-wider">#{selectedItem.transaction_id?.slice(-8).toUpperCase() || 'N/A'}</span>
+                                        <span className="text-[11px] font-bold text-gray-900 dark:text-white tracking-wider">
+                                            {selectedItem.status === 'transferred' ? '#GAS-TRANSFER' : (selectedItem.transaction_id?.slice(-8).toUpperCase() || 'N/A')}
+                                        </span>
                                     </div>
                                     <div className="flex justify-between items-center">
                                         <span className="text-[10px] font-black text-gray-400">{t('merchandise.details.sold_date')}</span>
@@ -542,7 +623,9 @@ const MyProducts = () => {
                         </div>
 
                         <div className="px-8 py-5 bg-gray-50 dark:bg-black/40 text-center border-t border-gray-100 dark:border-white/5">
-                            <p className="text-[8px] text-gray-500 font-bold tracking-tight">{t('merchandise.details.marketplace_success')}</p>
+                            <p className="text-[8px] text-gray-500 font-bold tracking-tight">
+                                {selectedItem.status === 'transferred' ? t('merchandise.details.transfer_success') : t('merchandise.details.marketplace_success')}
+                            </p>
                         </div>
                     </div>
                 </div>

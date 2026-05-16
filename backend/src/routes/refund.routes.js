@@ -5,8 +5,9 @@ const { authenticate, authorize } = require('../middlewares/auth.middleware');
 
 router.use(authenticate);
 
-// [USER] Yêu cầu hoàn tiền
+// [USER] Yêu cầu hoàn tiền & Hủy yêu cầu
 router.post('/request', refundController.requestRefund);
+router.post('/cancel-request', refundController.cancelRefundRequest);
 
 // [ADMIN] Quản lý hoàn tiền
 router.get('/admin/list', authorize('admin'), refundController.getAdminRefunds);
