@@ -49,6 +49,33 @@ const AdminWithdrawalManagement = () => {
         fetchWithdrawals();
     }, []);
 
+    // Tự động kiểm tra trạng thái mỗi 3 giây khi đang mở modal đơn chờ
+    useEffect(() => {
+        let interval;
+        if (selectedRequest && selectedRequest.status === 'pending') {
+            interval = setInterval(async () => {
+                try {
+                    const res = await api.get('/admin/withdrawals');
+                    const updatedList = res.data.data;
+                    setWithdrawals(updatedList);
+                    
+                    // Tìm xem đơn hiện tại đã được duyệt chưa (qua Webhook payOS)
+                    const currentReq = updatedList.find(w => w.id === selectedRequest.id);
+                    if (currentReq && currentReq.status === 'approved') {
+                        toast.success('Tuyệt vời! Hệ thống đã tự động nhận tiền và duyệt đơn!');
+                        setSelectedRequest(null);
+                        setQrData(null);
+                    }
+                } catch (error) {
+                    // Ignore errors during background polling
+                }
+            }, 3000);
+        }
+        return () => {
+            if (interval) clearInterval(interval);
+        };
+    }, [selectedRequest]);
+
     const handleProcess = async (id, action) => {
         try {
             setIsProcessing(true);
