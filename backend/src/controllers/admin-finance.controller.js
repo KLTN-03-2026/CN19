@@ -287,28 +287,80 @@ const generateWithdrawalQR = async (req, res) => {
       return res.status(404).json({ error: 'Không tìm thấy yêu cầu rút tiền.' });
     }
 
-    // Lấy mã BIN ngân hàng
-    const bankBin = PayoutService.getBankBin(request.bank_name);
+    const shortId = request.id.slice(0, 8).toUpperCase();
+    const netAmount = Number(request.net_amount);
 
-    // Tạo thông tin QR
-    // Nội dung chuyển khoản: BASTICKET WITHDRAW <ID_RUT_TIEN>
-    const qrUrl = PayoutService.generateVietQR({
-      bankCode: bankBin,
-      accountNo: request.account_number,
-      accountName: request.account_holder,
-      amount: Number(request.net_amount),
-      description: `BASTICKET WITHDRAW ${request.id.split('-')[0]}` // Dùng part đầu của UUID cho gọn
-    });
+    // 1. Lấy thông số cấu hình payOS từ biến môi trường
+    const CLIENT_ID = process.env.PAYOS_CLIENT_ID;
+    const API_KEY = process.env.PAYOS_API_KEY;
+    const CHECKSUM_KEY = process.env.PAYOS_CHECKSUM_KEY;
+
+    let qrUrl = null;
+    let actualDesc = `WITHDRAW ${shortId}`;
+
+    if (CLIENT_ID && API_KEY && CHECKSUM_KEY) {
+        try {
+            const crypto = require('crypto');
+            const axios = require('axios');
+            
+            // Sinh orderCode là số nguyên (int) ngẫu nhiên duy nhất
+            const orderCode = Number(String(Date.now()).slice(-9));
+            const returnUrl = process.env.FRONTEND_URL || 'https://basticket.vercel.app';
+            const cancelUrl = process.env.FRONTEND_URL || 'https://basticket.vercel.app';
+
+            const body = {
+                orderCode,
+                amount: netAmount,
+                description: `WITHDRAW ${shortId}`,
+                returnUrl,
+                cancelUrl
+            };
+
+            const sortData = `amount=${netAmount}&cancelUrl=${cancelUrl}&description=WITHDRAW ${shortId}&orderCode=${orderCode}&returnUrl=${returnUrl}`;
+            const signature = crypto.createHmac('sha256', CHECKSUM_KEY).update(sortData).digest('hex');
+            body.signature = signature;
+
+            const payosRes = await axios.post('https://api-merchant.payos.vn/v2/payment-requests', body, {
+                headers: {
+                    'x-client-id': CLIENT_ID,
+                    'x-api-key': API_KEY,
+                    'content-type': 'application/json'
+                }
+            });
+
+            if (payosRes.data && payosRes.data.data) {
+                const payosData = payosRes.data.data;
+                actualDesc = payosData.description; // Lấy chính xác nội dung chuyển khoản do payOS sinh ra
+                
+                // Sử dụng VietQR io để sinh QR ảnh đẹp mắt với đúng nội dung của payOS
+                const encodedName = encodeURIComponent(payosData.accountName || request.user.account_holder);
+                const encodedInfo = encodeURIComponent(actualDesc);
+                qrUrl = `https://img.vietqr.io/image/${payosData.bin || '970422'}-${payosData.accountNumber || '0349480914'}-compact2.png?amount=${netAmount}&addInfo=${encodedInfo}&accountName=${encodedName}`;
+                console.log(`[PayOS QR] Đã tạo thành công Payment Link cho Withdrawal ${shortId}. QR Desc: "${actualDesc}"`);
+            }
+        } catch (payosErr) {
+            console.error('[PayOS QR Error] Lỗi khi gọi API payOS, chuyển sang sinh QR VietQR tĩnh:', payosErr.response?.data || payosErr.message);
+        }
+    }
+
+    // 2. Nếu không tạo được qua payOS thì fallback về VietQR tĩnh
+    if (!qrUrl) {
+        const bankBin = PayoutService.getBankBin(request.bank_name);
+        actualDesc = `WITHDRAW ${shortId}`;
+        const encodedName = encodeURIComponent(request.user?.account_holder || 'TRAN MINH PHUONG');
+        const encodedInfo = encodeURIComponent(actualDesc);
+        qrUrl = `https://img.vietqr.io/image/${bankBin}-${request.user?.account_number || '0349480914'}-compact2.png?amount=${netAmount}&addInfo=${encodedInfo}&accountName=${encodedName}`;
+    }
 
     res.status(200).json({ 
       data: {
         qrUrl,
         bankInfo: {
           bankName: request.bank_name,
-          accountNumber: request.account_number,
-          accountHolder: request.account_holder,
+          accountNumber: request.user?.account_number || request.account_number,
+          accountHolder: request.user?.account_holder || request.account_holder,
           amount: request.net_amount,
-          reference: request.id
+          reference: actualDesc
         }
       }
     });
