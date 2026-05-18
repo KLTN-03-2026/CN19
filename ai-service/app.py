@@ -10,14 +10,18 @@ load_dotenv()
 app = Flask(__name__)
 CORS(app)
 
-# Khởi tạo Groq Client
+# Khởi tạo Groq Client (lazy init để tránh crash khi thiếu key)
+def get_groq_client():
+    api_key = os.environ.get("GROQ_API_KEY")
+    if not api_key:
+        raise ValueError("GROQ_API_KEY chưa được cấu hình trong môi trường!")
+    return Groq(api_key=api_key)
+
 api_key = os.environ.get("GROQ_API_KEY")
 if not api_key:
-    print("⚠️ WARNING: GROQ_API_KEY không tìm thấy trong môi trường! Hãy kiểm tra file .env")
+    print("⚠️ WARNING: GROQ_API_KEY không tìm thấy trong môi trường!")
 else:
     print(f"✅ GROQ_API_KEY đã được load thành công (Ký tự đầu: {api_key[:5]}...)")
-
-client = Groq(api_key=api_key)
 
 @app.route('/analyze', methods=['POST'])
 def analyze_behavior():
@@ -131,6 +135,7 @@ def chat_assistant():
         LUÔN LUÔN: Trả lời tự nhiên, sắc sảo, có chiều sâu và đi thẳng vào con số thật nếu được hỏi. Xưng "Mình", gọi "Bạn".
         """
 
+        client = get_groq_client()
         completion = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[
