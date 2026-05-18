@@ -22,22 +22,42 @@ const WebhookController = {
             }
 
             const { data } = req.body;
-            if (!data || !Array.isArray(data)) {
+            if (!data) {
                 return res.status(200).json({ message: 'No data to process' });
             }
 
-            console.log(`[CASSO WEBHOOK] Received ${data.length} transactions.`);
+            // PayOS gửi data là object { description, amount, reference... }
+            // Casso gửi data là array [ { description, amount, tid... } ]
+            const transactions = Array.isArray(data) ? data : [data];
 
-            for (const transaction of data) {
-                const { description, amount, tid } = transaction;
+            console.log(`[CASSO/PAYOS WEBHOOK] Received ${transactions.length} transactions. Payload:`, JSON.stringify(data));
+
+            for (const transaction of transactions) {
+                const description = transaction.description || transaction.addInfo || '';
+                const amount = transaction.amount || 0;
+                const tid = transaction.tid || transaction.reference || transaction.transactionReference || transaction.orderCode || 'PAYOS_TX';
 
                 // Phân tích nội dung chuyển khoản để tìm ID yêu cầu rút tiền
-                // Định dạng mong đợi: "BASTICKET WITHDRAW <SHORT_ID>"
-                const match = description.toUpperCase().match(/BASTICKET WITHDRAW ([A-Z0-9-]+)/);
-                
+                // Hỗ trợ cả định dạng "BASTICKET WITHDRAW <SHORT_ID>" hoặc chỉ chứa mã short id (ví dụ: "E6E8ABCF")
+                const cleanDesc = description.toUpperCase();
+                let shortId = null;
+                const match = cleanDesc.match(/BASTICKET WITHDRAW ([A-Z0-9-]+)/) || cleanDesc.match(/WITH_([A-Z0-9-]+)/);
                 if (match) {
-                    const shortId = match[1];
-                    console.log(`[CASSO] Found withdrawal reference: ${shortId}`);
+                    shortId = match[1];
+                } else {
+                    // Nếu không khớp chuỗi chuẩn, tìm bất kỳ cụm 8 ký tự hex/alphanumeric nào có thể là ID
+                    const parts = cleanDesc.split(/\s+/);
+                    for (const part of parts) {
+                        if (part.length >= 8 && /^[A-Z0-9_-]+$/.test(part)) {
+                            shortId = part.toLowerCase();
+                            break;
+                        }
+                    }
+                }
+                
+                if (shortId) {
+                    shortId = shortId.toLowerCase();
+                    console.log(`[OPEN BANKING] Found withdrawal reference shortId: ${shortId} from desc: "${description}"`);
 
                     // Tìm yêu cầu rút tiền có ID bắt đầu bằng shortId
                     const withdrawalRequest = await prisma.withdrawalRequest.findFirst({
