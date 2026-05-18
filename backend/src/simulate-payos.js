@@ -6,27 +6,28 @@ async function simulateWebhook() {
         error: 0,
         message: "success",
         data: {
-            orderCode: 123456,
+            orderCode: 999888,
             amount: 9800,
-            description: "BASTICKET WITHDRAW d86f6f2b", // Mã ID thực tế đang pending trong DB Supabase
-            accountNumber: "0349480914",
-            reference: "MB_TEST_99999",
-            transactionDateTime: "2026-05-18 23:50:00"
+            description: "BASTICKET WITHDRAW 7d2b611b", // Mã ID đơn rút tiền mới nhất của bạn (tạo lúc 23:56)
+            accountNumber: "105875958530",
+            reference: "MB_LOCAL_TEST_777",
+            transactionDateTime: "2026-05-18 23:58:00"
         }
     };
 
     try {
-        console.log("🚀 Đang bắn Webhook mô phỏng giao dịch ngân hàng thành công...");
+        console.log("🚀 Đang bắn Webhook kiểm tra trực tiếp vào Local Backend Server...");
         const res = await axios.post('http://localhost:5000/api/webhooks/casso', payload, {
             headers: {
-                'secure-token': process.env.PAYOS_CHECKSUM_KEY || 'test-token'
+                'secure-token': process.env.PAYOS_CHECKSUM_KEY || 'test-token',
+                'Content-Type': 'application/json'
             }
         });
         
-        console.log("✅ Kết quả phản hồi từ Backend:", res.data);
-        console.log("=> THÀNH CÔNG! Đơn rút tiền trong DB đã được tự động chuyển sang APPROVED!");
+        console.log("✅ Kết quả phản hồi từ Local Backend Server:", res.data);
+        console.log("=> HOÀN HẢO! Đơn rút tiền trong DB đã được duyệt thành công!");
     } catch (error) {
-        console.error("❌ Lỗi:", error.response?.data || error.message);
+        console.error("❌ Lỗi Local Server:", error.response?.data || error.message);
     }
 }
 

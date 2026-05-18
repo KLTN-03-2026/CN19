@@ -15,12 +15,8 @@ const WebhookController = {
             console.log(`[WEBHOOK INCOMING] Body:`, JSON.stringify(req.body));
 
             const webhookToken = req.headers['secure-token'] || req.headers['x-api-key'] || req.headers['payos-checksum'] || req.headers['x-payos-checksum'];
-            
-            // Log để kiểm tra token
             console.log(`[WEBHOOK TOKEN] Received token: ${webhookToken || 'None'}`);
 
-            // Để đảm bảo luồng hoạt động ổn định và mượt mà nhất khi test đồ án (với các môi trường Render/Vercel),
-            // nếu không có token hoặc token không khớp nhưng body chứa dữ liệu hợp lệ (code '00' hoặc có data), ta vẫn tiếp tục xử lý
             if (!req.body || (!req.body.data && !Array.isArray(req.body))) {
                 return res.status(200).json({ error: 1, message: 'No valid data to process' });
             }
@@ -41,7 +37,6 @@ const WebhookController = {
                 const cleanDesc = description.toUpperCase().replace(/\s+/g, ' ');
                 let shortId = null;
 
-                // Các mẫu phổ biến: "BASTICKET WITHDRAW D86F6F2B", "WITHDRAW D86F6F2B", "WITH_D86F6F2B", hoặc chỉ chứa chuỗi D86F6F2B
                 const regexes = [
                     /BASTICKET\s*WITHDRAW\s*([A-Z0-9-]+)/,
                     /WITHDRAW\s*([A-Z0-9-]+)/,
@@ -56,7 +51,6 @@ const WebhookController = {
                     }
                 }
 
-                // Nếu vẫn chưa tìm thấy theo mẫu chuẩn, duyệt tìm chuỗi 8 ký tự hex/alphanumeric
                 if (!shortId) {
                     const words = cleanDesc.split(/[\s_:-]+/);
                     for (const word of words) {
@@ -71,7 +65,6 @@ const WebhookController = {
                     shortId = shortId.toLowerCase();
                     console.log(`[OPEN BANKING] Found matching withdrawal shortId: "${shortId}"`);
 
-                    // Tìm yêu cầu rút tiền có ID bắt đầu bằng shortId trong DB
                     const withdrawalRequest = await prisma.withdrawalRequest.findFirst({
                         where: {
                             id: { startsWith: shortId },
@@ -85,10 +78,9 @@ const WebhookController = {
                         
                         // Khớp số tiền (cho phép sai số nhỏ hơn 100đ)
                         if (Math.abs(Number(withdrawalRequest.net_amount) - Math.abs(amount)) < 100) {
-                            let txHash = null;
-
+                            // 1. Thực hiện Transaction cập nhật Database (Nhanh và không bị Web3 block/timeout)
                             await prisma.$transaction(async (tx) => {
-                                // 1. Cập nhật đơn rút tiền sang 'approved'
+                                // a. Cập nhật đơn rút tiền sang 'approved'
                                 await tx.withdrawalRequest.update({
                                     where: { id: withdrawalRequest.id },
                                     data: {
@@ -99,7 +91,7 @@ const WebhookController = {
                                     }
                                 });
 
-                                // 2. Cập nhật giao dịch ví của User sang completed
+                                // b. Cập nhật giao dịch ví của User sang completed
                                 const lastTx = await tx.walletTransaction.findFirst({
                                     where: { user_id: withdrawalRequest.user_id, type: 'WITHDRAWAL', status: 'pending' },
                                     orderBy: { created_at: 'desc' }
@@ -111,7 +103,7 @@ const WebhookController = {
                                     });
                                 }
 
-                                // 3. Thu phí về ví Admin
+                                // c. Thu phí về ví Admin
                                 if (withdrawalRequest.status === 'pending' && Number(withdrawalRequest.fee_amount) > 0) {
                                     const adminUser = await tx.user.findFirst({
                                         where: { role: { in: ['admin', 'super_admin', 'ADMIN', 'SUPER_ADMIN'] } }
@@ -132,29 +124,32 @@ const WebhookController = {
                                         });
                                     }
                                 }
+                            }, { timeout: 15000 }); // Tăng timeout DB lên 15 giây
 
-                                // 4. Ghi log lên Blockchain
-                                try {
-                                    txHash = await blockchainService.logFinancialTransaction(
-                                        withdrawalRequest.id,
-                                        Number(amount),
-                                        { ticketPlatformFee: Number(withdrawalRequest.fee_amount) },
-                                        'WITHDRAWAL_PAYOUT'
-                                    );
-                                } catch (bcError) {
-                                    console.error('[Web3 Error] Không thể ghi log rút tiền lên Blockchain:', bcError.message);
-                                }
+                            console.log(`[DB COMMIT] Đơn rút tiền ${withdrawalRequest.id} đã được cập nhật thành công trong DB!`);
 
-                                // 5. Cập nhật payout_trans_id
+                            // 2. Ghi log lên Blockchain độc lập (Không gây rollback DB nếu RPC chậm)
+                            let txHash = null;
+                            try {
+                                txHash = await blockchainService.logFinancialTransaction(
+                                    withdrawalRequest.id,
+                                    Number(amount),
+                                    { ticketPlatformFee: Number(withdrawalRequest.fee_amount) },
+                                    'WITHDRAWAL_PAYOUT'
+                                );
+
                                 if (txHash) {
-                                    await tx.withdrawalRequest.update({
+                                    await prisma.withdrawalRequest.update({
                                         where: { id: withdrawalRequest.id },
                                         data: { payout_trans_id: txHash }
                                     });
+                                    console.log(`[Web3 COMMIT] Đã lưu TxHash lên đơn rút tiền: ${txHash}`);
                                 }
-                            });
+                            } catch (bcError) {
+                                console.error('[Web3 Error] Không thể ghi log rút tiền lên Blockchain:', bcError.message);
+                            }
 
-                            // Gửi email thành công
+                            // 3. Gửi email thành công
                             if (withdrawalRequest.user) {
                                 try {
                                     EmailService.sendWithdrawalSuccessEmail(withdrawalRequest.user, withdrawalRequest, txHash);
@@ -163,7 +158,7 @@ const WebhookController = {
                                 }
                             }
 
-                            console.log(`[SUCCESS] Đơn rút tiền ${withdrawalRequest.id} đã được xác nhận tự động thành công!`);
+                            console.log(`[SUCCESS] Đơn rút tiền ${withdrawalRequest.id} hoàn tất quy trình duyệt tự động!`);
                         } else {
                             console.warn(`[WARNING] Số tiền không khớp! Đơn yêu cầu ${withdrawalRequest.net_amount}đ nhưng nhận ${amount}đ.`);
                         }
