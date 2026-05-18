@@ -315,14 +315,14 @@ const Revenue = () => {
                           </td>
                           <td className="px-6 py-4">
                              <span className={`px-2 py-1 rounded text-[9px] font-black uppercase flex items-center gap-1 w-fit ${
-                               req.status === 'completed' ? 'bg-green-50 text-green-600 dark:bg-green-500/10' : 
+                               (req.status === 'completed' || req.status === 'approved') ? 'bg-green-50 text-green-600 dark:bg-green-500/10' : 
                                req.status === 'rejected' ? 'bg-red-50 text-red-600 dark:bg-red-500/10' : 
                                'bg-orange-50 text-orange-600 dark:bg-orange-500/10'
                              }`}>
-                               {req.status === 'completed' ? <CheckCircle2 className="w-3 h-3" /> : 
+                               {(req.status === 'completed' || req.status === 'approved') ? <CheckCircle2 className="w-3 h-3" /> : 
                                 req.status === 'rejected' ? <AlertCircle className="w-3 h-3" /> : 
                                 <Clock className="w-3 h-3 animate-pulse" />}
-                               {req.status === 'completed' ? 'Thành công' : 
+                               {(req.status === 'completed' || req.status === 'approved') ? 'Thành công' : 
                                 req.status === 'rejected' ? 'Đã từ chối' : 'Đang xử lý'}
                              </span>
                           </td>
