@@ -561,6 +561,21 @@ const Marketplace = () => {
                                 </p>
                             </div>
 
+                            {/* [Single Transfer Warning] */}
+                            <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl space-y-1.5 flex items-start gap-3">
+                                <Info className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                                <div>
+                                    <h4 className="text-[11px] font-black text-amber-500 uppercase tracking-tight">
+                                        {i18n.language === 'vi' ? 'Chính sách bảo vệ người mua' : 'Buyer Protection Policy'}
+                                    </h4>
+                                    <p className="text-xs text-gray-600 dark:text-gray-300 font-medium leading-relaxed">
+                                        {i18n.language === 'vi' 
+                                          ? 'Vé mua từ Marketplace chỉ được sang tay 1 lần để chống đầu cơ. Sau khi thanh toán, bạn sẽ là chủ sở hữu cuối cùng (không thể tiếp tục chuyển nhượng hoặc đăng bán lại).'
+                                          : 'Marketplace tickets are limited to a single transfer to prevent scalping. Upon purchase, you will be the final owner and cannot resell or transfer this ticket further.'}
+                                    </p>
+                                </div>
+                            </div>
+
                             {/* Merchandise Section in Modal */}
                             {selectedListing.metadata?.selected_merchandise?.length > 0 && (
                                 <div className="space-y-3">

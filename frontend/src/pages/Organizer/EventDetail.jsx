@@ -490,6 +490,24 @@ const EventDetail = () => {
                                         <span className="text-[9px] font-black text-purple-600">{Number(event.resale_price_limit_percent)}%</span>
                                     </div>
                                 </div>
+
+                                {/* Smart Contract Display for Organizer */}
+                                <div className="mt-2 mb-2 flex items-center gap-2 max-w-2xl bg-gray-100/80 dark:bg-black/40 p-2.5 rounded-xl border border-gray-200 dark:border-white/5 font-mono text-[10px] text-gray-600 dark:text-gray-300">
+                                    <span className="font-bold uppercase text-blue-600 text-[9px] shrink-0 bg-blue-500/10 px-2 py-0.5 rounded">Smart Contract:</span>
+                                    <span className="truncate flex-1 font-semibold">{event.smart_contract_address || 'Hệ thống chưa cấp phát hợp đồng'}</span>
+                                    {event.smart_contract_address && event.smart_contract_address.startsWith('0x') && (
+                                        <a 
+                                            href={`https://amoy.polygonscan.com/address/${event.smart_contract_address}#events`}
+                                            target="_blank" 
+                                            rel="noopener noreferrer"
+                                            className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-all shrink-0 flex items-center gap-1.5 uppercase text-[9px] shadow-sm"
+                                            title="Xem trên PolygonScan Amoy Blockchain"
+                                        >
+                                            <span>Explorer</span>
+                                            <ExternalLink className="w-3 h-3" />
+                                        </a>
+                                    )}
+                                </div>
                             </div>
                         </div>
 

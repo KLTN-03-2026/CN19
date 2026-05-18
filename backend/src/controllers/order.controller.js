@@ -375,7 +375,8 @@ const getOrderById = async (req, res) => {
                     customer_id: transferRecord.from_user_id,
                     metadata: {
                         ticket_id: transferRecord.ticket_id,
-                        receiver_email: transferRecord.receiver.email
+                        receiver_email: transferRecord.receiver.email,
+                        nft_transfer_tx_hash: transferRecord.nft_transfer_tx_hash
                     },
                     items: [{
                         ticket_tier: transferRecord.ticket.ticket_tier,
@@ -432,31 +433,35 @@ const getOrderById = async (req, res) => {
             subtotal: mktTx.listing.asking_price,
             status: mktTx.status,
             order_type: 'MARKETPLACE_PURCHASE',
-            customer_id: mktTx.buyer_id, // Map sang customer_id để dùng chung logic check sở hữu
+            customer_id: mktTx.buyer_id,
             buyer_id: mktTx.buyer_id,
             seller_id: mktTx.seller_id,
             payment_method: mktTx.payments[0]?.method || 'vnpay',
             event: mktTx.ticket.event,
             created_at: mktTx.created_at,
             updated_at: mktTx.updated_at,
-            expires_at: mktTx.listing.lock_expires_at, // Bổ sung thời hạn giữ vé
-          items: [
-            {
-              id: 'mkt-item',
-              quantity: 1,
-              unit_price: mktTx.listing.metadata?.ticket_price || mktTx.listing.asking_price,
-              subtotal: mktTx.listing.metadata?.ticket_price || mktTx.listing.asking_price,
-              ticket_tier: mktTx.ticket.ticket_tier
-            }
-          ],
-          platform_fee: mktTx.platform_fee,
-          platform_fee_percent: mktTx.platform_fee_percent,
-          commission_fee: mktTx.commission_fee,
-          gas_fee: mktTx.gas_fee,
-          organizer_royalty: mktTx.organizer_royalty,
-          organizer_royalty_percent: mktTx.organizer_royalty_percent,
-          merchandise_items: [] 
-        };
+            expires_at: mktTx.listing.lock_expires_at,
+            // Bao gồm nft_transfer_tx_hash để frontend hiển thị Blockchain Proof
+            metadata: {
+              nft_transfer_tx_hash: mktTx.nft_transfer_tx_hash || null
+            },
+            items: [
+              {
+                id: 'mkt-item',
+                quantity: 1,
+                unit_price: mktTx.listing.metadata?.ticket_price || mktTx.listing.asking_price,
+                subtotal: mktTx.listing.metadata?.ticket_price || mktTx.listing.asking_price,
+                ticket_tier: mktTx.ticket.ticket_tier
+              }
+            ],
+            platform_fee: mktTx.platform_fee,
+            platform_fee_percent: mktTx.platform_fee_percent,
+            commission_fee: mktTx.commission_fee,
+            gas_fee: mktTx.gas_fee,
+            organizer_royalty: mktTx.organizer_royalty,
+            organizer_royalty_percent: mktTx.organizer_royalty_percent,
+            merchandise_items: []
+          };
 
         // Thêm thông tin quà tặng từ metadata listing
         const { merchandise_item_ids } = mktTx.listing.metadata || {};
@@ -479,7 +484,7 @@ const getOrderById = async (req, res) => {
         const receiverEmail = order.metadata.receiver_email;
         const isTicketUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(ticketId);
 
-        const [transferTicket, receiver] = await Promise.all([
+        const [transferTicket, receiver, ticketTransfer] = await Promise.all([
           isTicketUUID ? prisma.ticket.findUnique({
             where: { id: ticketId },
             include: { ticket_tier: true }
@@ -494,9 +499,17 @@ const getOrderById = async (req, res) => {
                 select: { organization_name: true }
               }
             }
-          }) : null
+          }) : null,
+          prisma.ticketTransfer.findFirst({
+            where: { order_id: order.id }
+          })
         ]);
         
+        if (ticketTransfer && ticketTransfer.nft_transfer_tx_hash) {
+          order.metadata = order.metadata || {};
+          order.metadata.nft_transfer_tx_hash = ticketTransfer.nft_transfer_tx_hash;
+        }
+
         if (transferTicket) {
           order.items = [{
             id: 'transfer-item',
@@ -621,9 +634,9 @@ const updatePendingOrder = async (req, res) => {
           const lineTotal = Number(m.price) * item.quantity;
           merchSubtotal += lineTotal;
 
-          // Tính phí cho từng sản phẩm (Ưu tiên phí riêng của sản phẩm, fallback về hệ thống)
-          const mPlatformFeeRate = Number(m.platform_fee_percent !== null ? m.platform_fee_percent : fallbackMerchPlatformFee);
-          const mCommissionFeeRate = Number(m.commission_fee_percent !== null ? m.commission_fee_percent : fallbackMerchTransFee);
+          // Tính phí cho từng sản phẩm (Ưu tiên phí riêng của sản phẩm nếu > 0, fallback về hệ thống mặc định 5% và 3%)
+          const mPlatformFeeRate = Number(m.platform_fee_percent !== null && Number(m.platform_fee_percent) > 0 ? m.platform_fee_percent : fallbackMerchPlatformFee);
+          const mCommissionFeeRate = Number(m.commission_fee_percent !== null && Number(m.commission_fee_percent) > 0 ? m.commission_fee_percent : fallbackMerchTransFee);
 
           const mPlatformFee = (lineTotal * mPlatformFeeRate / 100);
           const mCommissionFee = (lineTotal * mCommissionFeeRate / 100);
@@ -739,7 +752,7 @@ const createTransferOrder = async (req, res) => {
     const sysGasFee = Number(ticket.event.resale_gas_fee !== null && ticket.event.resale_gas_fee !== undefined ? ticket.event.resale_gas_fee : (sysConfig.system_gas_fee || 10000));
     
     const order_number = 'TRF' + Date.now();
-    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 phút để thanh toán phí
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 phút để thanh toán phí
 
     const order = await prisma.order.create({
       data: {

@@ -602,26 +602,50 @@ const TransactionDetail = () => {
                   <div className="space-y-3">
                      <p className="text-[10px] font-bold text-gray-600">Bảo mật On-chain</p>
                      {(() => {
-                       const txHash = data.nft_mint_tx_hash || data.nft_transfer_tx_hash || data.payout_trans_id;
+                       const mintTx = data.nft_mint_tx_hash || data.nft_transfer_tx_hash || data.payout_trans_id;
+                       const ledgerTx = data.financial_ledger_tx_hash;
                        const metadataUrl = data.metadata_url;
                        
-                       if (txHash) {
+                       if (mintTx || ledgerTx) {
                          return (
                            <div className="space-y-3">
-                             <a 
-                               href={`https://amoy.polygonscan.com/tx/${txHash}`} 
-                               target="_blank" 
-                               rel="noreferrer" 
-                               className="block p-4 bg-neon-green/10 border border-neon-green/20 rounded-2xl group hover:shadow-lg hover:shadow-neon-green/5 transition-all"
-                             >
-                               <div className="flex items-center justify-between">
-                                  <div className="min-w-0">
-                                     <p className="text-sm font-bold text-neon-green">Polygon Amoy</p>
-                                     <p className="text-[10px] text-gray-500 font-bold truncate mt-1.5 opacity-70">{txHash}</p>
-                                  </div>
-                                  <ExternalLink className="w-4 h-4 text-neon-green flex-shrink-0 ml-3" />
-                               </div>
-                             </a>
+                             {mintTx && (
+                               <a 
+                                 href={`https://amoy.polygonscan.com/tx/${mintTx}`} 
+                                 target="_blank" 
+                                 rel="noreferrer" 
+                                 className="block p-4 bg-neon-green/10 border border-neon-green/20 rounded-2xl group hover:shadow-lg hover:shadow-neon-green/5 transition-all"
+                               >
+                                 <div className="flex items-center justify-between">
+                                    <div className="min-w-0">
+                                       <p className="text-xs font-bold text-neon-green flex items-center gap-1.5">
+                                         <Zap className="w-3.5 h-3.5" /> Giao dịch Vé NFT (Tài sản)
+                                       </p>
+                                       <p className="text-[9px] text-gray-500 font-bold truncate mt-1.5 opacity-70">{mintTx}</p>
+                                    </div>
+                                    <ExternalLink className="w-4 h-4 text-neon-green flex-shrink-0 ml-3" />
+                                 </div>
+                               </a>
+                             )}
+
+                             {ledgerTx && (
+                               <a 
+                                 href={`https://amoy.polygonscan.com/tx/${ledgerTx}`} 
+                                 target="_blank" 
+                                 rel="noreferrer" 
+                                 className="block p-4 bg-purple-500/10 border border-purple-500/20 rounded-2xl group hover:shadow-lg hover:shadow-purple-500/5 transition-all"
+                               >
+                                 <div className="flex items-center justify-between">
+                                    <div className="min-w-0">
+                                       <p className="text-xs font-bold text-purple-400 flex items-center gap-1.5">
+                                         <ShieldCheck className="w-3.5 h-3.5" /> Giao dịch Sổ cái (Tài chính)
+                                       </p>
+                                       <p className="text-[9px] text-gray-500 font-bold truncate mt-1.5 opacity-70">{ledgerTx}</p>
+                                    </div>
+                                    <ExternalLink className="w-4 h-4 text-purple-400 flex-shrink-0 ml-3" />
+                                 </div>
+                               </a>
+                             )}
                              
                              {metadataUrl && (
                                <a 

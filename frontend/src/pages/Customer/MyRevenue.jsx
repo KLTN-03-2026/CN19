@@ -532,7 +532,7 @@ const WithdrawalForm = ({ balance, systemSettings, onComplete }) => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     
     const feePercent = systemSettings?.withdrawal_fee_percent || 0;
-    const minWithdrawalValue = systemSettings?.min_withdrawal_amount || 100000;
+    const minWithdrawalValue = systemSettings?.min_withdrawal_amount || 10000;
     
     const feeAmount = (Number(amount) * feePercent) / 100;
     const netAmount = Number(amount) - feeAmount;

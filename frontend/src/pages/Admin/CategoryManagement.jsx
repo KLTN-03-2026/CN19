@@ -412,7 +412,7 @@ const CategoryManagement = () => {
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 md:gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 2xl:grid-cols-5 gap-3 md:gap-4">
           {filteredCategories.length > 0 ? filteredCategories.map((c) => (
             <div key={c.id} className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-200 dark:border-white/5 overflow-hidden hover:border-neon-green/30 transition-all group flex flex-col h-full shadow-sm">
               <div className="relative aspect-video overflow-hidden bg-gray-100 dark:bg-white/5">
@@ -420,47 +420,47 @@ const CategoryManagement = () => {
                   <img src={c.image_url} alt={c.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-gray-500 dark:text-gray-600">
-                    <Tags className="w-12 h-12" />
+                    <Tags className="w-8 h-8 md:w-12 md:h-12" />
                   </div>
                 )}
-                <div className="absolute top-3 right-3 flex space-x-2">
-                  <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase backdrop-blur-md ${
+                <div className="absolute top-2 right-2 md:top-3 md:right-3 flex space-x-2">
+                  <span className={`px-2 py-0.5 md:py-1 rounded-lg text-[9px] md:text-[10px] font-black uppercase backdrop-blur-md ${
                     c.is_active ? 'bg-green-500/80 text-white' : 'bg-red-500/80 text-white'
                   }`}>
                     {c.is_active ? 'Hoạt động' : 'Đã ẩn'}
                   </span>
                 </div>
               </div>
-              <div className="p-4 flex-1 flex flex-col">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-black text-gray-900 dark:text-white uppercase truncate flex-1 mr-2">{c.name}</h3>
-                  <span className="text-[10px] font-black text-blue-500 bg-blue-500/10 px-2 py-0.5 rounded-full whitespace-nowrap">
+              <div className="p-3 md:p-4 flex-1 flex flex-col justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-2 mb-2">
+                  <h3 className="font-black text-xs md:text-sm text-gray-900 dark:text-white uppercase line-clamp-1 flex-1">{c.name}</h3>
+                  <span className="text-[9px] md:text-[10px] font-black text-blue-500 bg-blue-500/10 px-2 py-0.5 rounded-full w-fit whitespace-nowrap">
                     {c._count.events} Sự kiện
                   </span>
                 </div>
-                <div className="mt-auto pt-4 flex items-center justify-between border-t border-gray-100 dark:border-white/5">
-                   <span className="text-[10px] text-gray-600 font-bold tracking-tighter">Ngày tạo: {new Date(c.created_at).toLocaleDateString('vi-VN')}</span>
-                   <div className="flex items-center space-x-1">
+                <div className="mt-auto pt-3 md:pt-4 flex items-center justify-between border-t border-gray-100 dark:border-white/5">
+                   <span className="text-[9px] md:text-[10px] text-gray-600 font-bold tracking-tighter hidden md:inline">Ngày tạo: {new Date(c.created_at).toLocaleDateString('vi-VN')}</span>
+                   <div className="flex items-center space-x-1 ml-auto md:ml-0">
                       <button 
                         onClick={() => handleOpenDetail(c)}
-                        className="p-2 text-gray-600 hover:text-neon-green hover:bg-neon-green/10 rounded-lg transition-all"
+                        className="p-1.5 md:p-2 text-gray-600 hover:text-neon-green hover:bg-neon-green/10 rounded-lg transition-all"
                         title="Chi tiết"
                       >
-                        <Eye className="w-4 h-4" />
+                        <Eye className="w-3.5 h-3.5 md:w-4 md:h-4" />
                       </button>
                       <button 
                         onClick={() => handleOpenModal(c)}
-                        className="p-2 text-gray-600 hover:text-blue-500 hover:bg-blue-500/10 rounded-lg transition-all"
+                        className="p-1.5 md:p-2 text-gray-600 hover:text-blue-500 hover:bg-blue-500/10 rounded-lg transition-all"
                         title="Chỉnh sửa"
                       >
-                        <Edit2 className="w-4 h-4" />
+                        <Edit2 className="w-3.5 h-3.5 md:w-4 md:h-4" />
                       </button>
                       <button 
                          onClick={() => handleDelete(c.id)}
-                         className="p-2 text-gray-600 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
+                         className="p-1.5 md:p-2 text-gray-600 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
                          title="Xóa"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-3.5 h-3.5 md:w-4 md:h-4" />
                       </button>
                    </div>
                 </div>

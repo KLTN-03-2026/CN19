@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { X, Calendar, Tag, DollarSign, Filter, RefreshCcw } from 'lucide-react';
+import { X, Calendar, Tag, DollarSign, Filter, RefreshCcw, MapPin } from 'lucide-react';
 
 const EventsFilter = ({ 
     categories = [], 
@@ -10,6 +10,8 @@ const EventsFilter = ({
     onPriceChange,
     selectedDate,
     onDateChange,
+    location,
+    onLocationChange,
     onClearAll,
     isOpen,
     onClose
@@ -101,9 +103,21 @@ const EventsFilter = ({
                 {/* 📅 Date & Actions Column */}
                 <div className="space-y-4">
                     <h3 className="text-[10px] font-black uppercase text-gray-600 dark:text-gray-400 flex items-center gap-2">
-                         {t('explore.filter_section.time')}
+                         {t('explore.filter_section.time')} & ĐỊA ĐIỂM
                     </h3>
                     <div className="space-y-4 pt-2">
+                        {/* Location Input */}
+                        <div className="relative">
+                            <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <input 
+                                type="text"
+                                placeholder="Nhập địa điểm..."
+                                value={location || ''}
+                                onChange={(e) => onLocationChange && onLocationChange(e.target.value)}
+                                className="w-full pl-10 pr-4 py-3 bg-white dark:bg-white/5 border border-gray-300 dark:border-white/5 rounded-2xl text-[13px] font-bold text-gray-900 dark:text-white outline-none focus:border-neon-green/30 transition-all shadow-sm"
+                            />
+                        </div>
+
                         <div className="relative">
                             <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                             <input 

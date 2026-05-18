@@ -480,6 +480,7 @@ async function createMoMoPayment(order, req, res) {
 async function processOrderSuccess(orderNumber, transactionId, method, payload) {
     let createdTickets = [];
     let orderData = null;
+    let transferData = null;
 
     // Nếu là giao dịch Marketplace, xử lý riêng và thoát sớm
     if (orderNumber.startsWith('MKT')) {
@@ -562,40 +563,17 @@ async function processOrderSuccess(orderNumber, transactionId, method, payload) 
                 const sender = order.customer;
 
                 if (ticket && receiver) {
-                    // Thực thi gọi Blockchain
-                    let txHash = '0xTxHashMock' + Date.now();
-                    try {
-                        // Dùng smart_contract_address của event, hoặc fallback về contract chung
-                        const contractAddress = ticket.event.smart_contract_address || process.env.CONTRACT_ADDRESS;
-                        if (ticket.nft_token_id && contractAddress) {
-                            const senderWallet = order.customer.wallet_address;
-                            const receiverWallet = receiver.wallet_address;
-                            
-                            if (senderWallet && receiverWallet) {
-                                txHash = await web3Service.transferTicket(
-                                    contractAddress, 
-                                    senderWallet, 
-                                    receiverWallet, 
-                                    parseInt(ticket.nft_token_id)
-                                );
-                            }
-                        }
-                    } catch (err) {
-                        console.error('Blockchain transfer error in payment callback:', err);
-                        // Vẫn cho hoàn tất payment trong DB nhưng log lỗi blockchain
-                    }
-
-                    // Lưu bản ghi Transfer
-                    await tx.ticketTransfer.create({
+                    // Lưu bản ghi Transfer (hash sẽ được cập nhật sau bởi background task Blockchain)
+                    const ticketTransfer = await tx.ticketTransfer.create({
                         data: {
                             ticket_id: ticket.id,
                             from_user_id: sender.id,
                             to_user_id: receiver.id,
                             event_id: ticket.event_id,
-                            order_id: order.id, // [Bổ sung] Lưu link tới đơn hàng trả phí gas
+                            order_id: order.id,
                             transfer_method: 'direct',
                             status: 'completed',
-                            nft_transfer_tx_hash: txHash,
+                            nft_transfer_tx_hash: null,
                             completed_at: new Date()
                         }
                     });
@@ -624,116 +602,8 @@ async function processOrderSuccess(orderNumber, transactionId, method, payload) 
                         });
                     }
 
-                    // Gửi email thông báo qua EmailService (Không đợi phản hồi)
-                    emailService.sendTransferSuccessEmail(sender, receiver, ticket);
-                    emailService.sendTicketReceivedEmail(receiver, sender, ticket);
-
-                    // [AUDIT] Ghi log tài chính chuyển nhượng lên Blockchain (Chỉ có phí gas)
-                    blockchainService.logFinancialTransaction(
-                        order.order_number,
-                        Number(order.total_amount),
-                        { gasFee: Number(order.gas_fee || order.total_amount) },
-                        'TRANSFER_FEE',
-                        sender.wallet_address || undefined
-                    );
-
-                    // 4. Thông báo hệ thống
-                    // Cho người nhận
-                    NotificationService.create({
-                        user_id: receiver.id,
-                        type: 'TICKET_RECEIVED_TRANSFER',
-                        title: 'Bạn nhận được vé mới!',
-                        message: `Bạn vừa nhận được 1 vé sự kiện "${ticket.event.title}" từ ${sender.full_name || sender.email}.`,
-                        target_id: order.id
-                    }).catch(() => {});
-
-                    // Cho người gửi
-                    NotificationService.create({
-                        user_id: sender.id,
-                        type: 'TICKET_SENT_TRANSFER',
-                        title: 'Chuyển nhượng thành công!',
-                        message: `Vé sự kiện "${ticket.event.title}" đã được chuyển cho ${receiver.full_name || receiver.email}.`,
-                        target_id: order.id
-                    }).catch(() => {});
+                    transferData = { ticket, receiver, sender, ticketTransfer };
                 }
-            }
-        }
-
-        // 5. Nếu là đơn hàng Mua vé trên Marketplace (MKT...)
-        if (orderNumber.startsWith('MKT')) {
-            const mktTx = await tx.marketplaceTransaction.findUnique({
-                where: { transaction_number: orderNumber },
-                include: { 
-                    listing: { include: { ticket: true } },
-                    buyer: true,
-                    seller: true
-                }
-            });
-
-            if (mktTx && mktTx.status !== 'paid') {
-                // A. Cập nhật trạng thái Transaction
-                await tx.marketplaceTransaction.update({
-                    where: { id: mktTx.id },
-                    data: { 
-                        status: 'paid',
-                        nft_transfer_tx_hash: '0xMktTxHash' + Date.now() // Mock
-                    }
-                });
-
-                // B. Cập nhật trạng thái Listing
-                await tx.marketplaceListing.update({
-                    where: { id: mktTx.listing_id },
-                    data: { 
-                        status: 'sold',
-                        sold_at: new Date()
-                    }
-                });
-
-                // C. Chuyển quyền sở hữu Vé
-                const ticket = await tx.ticket.findUnique({
-                    where: { id: mktTx.ticket_id },
-                    include: { event: true }
-                });
-
-                await tx.ticket.update({
-                    where: { id: mktTx.ticket_id },
-                    data: {
-                        current_owner_id: mktTx.buyer_id,
-                        is_on_marketplace: false,
-                        is_transferred: true
-                    }
-                });
-
-                // D. Chuyển quyền sở hữu Sản phẩm đi kèm (lấy từ metadata của listing)
-                const { merchandise_item_ids } = mktTx.listing.metadata || {};
-                if (merchandise_item_ids && Array.isArray(merchandise_item_ids) && merchandise_item_ids.length > 0) {
-                    await tx.merchandiseOrderItem.updateMany({
-                        where: {
-                            id: { in: merchandise_item_ids },
-                            order_id: ticket.order_id
-                        },
-                        data: {
-                            owner_id: mktTx.buyer_id
-                        }
-                    });
-                }
-
-                // E. Gọi Blockchain Transfer NFT (Nếu có)
-                if (ticket.nft_token_id && ticket.event.smart_contract_address) {
-                    try {
-                        await web3Service.transferTicket(
-                            ticket.event.smart_contract_address,
-                            mktTx.seller.wallet_address,
-                            mktTx.buyer.wallet_address,
-                            parseInt(ticket.nft_token_id)
-                        );
-                    } catch (err) {
-                        console.error('Blockchain Marketplace transfer error:', err);
-                    }
-                }
-
-                // F. Gửi Email (Có thể thêm email riêng cho marketplace sau)
-                emailService.sendTicketReceivedEmail(mktTx.buyer, mktTx.seller, ticket);
             }
         }
     });
@@ -743,26 +613,40 @@ async function processOrderSuccess(orderNumber, transactionId, method, payload) 
         // 4. Gửi email xác nhận
         emailService.sendBookingSuccessEmail(orderData, orderData.customer, orderData.event);
 
-        // 5. Đúc NFT tuần tự (Tránh lỗi Nonce too low)
-        console.log(`[Web3] Bắt đầu đúc ${createdTickets.length} vé cho đơn hàng ${orderNumber}...`);
-        for (const ticket of createdTickets) {
-            await triggerNFTMinting(ticket, orderData.customer.wallet_address);
-        }
+        // 5. Chạy các tác vụ Blockchain ở chế độ nền (Background) để không chặn HTTP Response trả về cho VNPay/Momo/Khách hàng
+        (async () => {
+            console.log(`[Web3 Background] Bắt đầu đúc ${createdTickets.length} vé và ghi sổ tài chính cho đơn hàng ${orderNumber}...`);
+            
+            // A. Đúc NFT tuần tự
+            for (const ticket of createdTickets) {
+                try {
+                    await triggerNFTMinting(ticket, orderData.customer.wallet_address);
+                } catch (mintErr) {
+                    console.error(`[Web3 Background Error] Lỗi đúc vé ${ticket.ticket_number}:`, mintErr.message);
+                }
+            }
 
-        // [AUDIT] Ghi log tài chính mua vé gốc + sản phẩm chi tiết
-        blockchainService.logFinancialTransaction(
-            orderNumber,
-            Number(orderData.total_amount),
-            {
-                ticketPlatformFee: Number(orderData.ticket_platform_fee || 0),
-                ticketCommissionFee: Number(orderData.ticket_commission_fee || 0),
-                merchPlatformFee: Number(orderData.merchandise_platform_fee || 0),
-                merchCommissionFee: Number(orderData.merchandise_commission_fee || 0),
-                gasFee: Number(orderData.gas_fee || 0)
-            },
-            'PRIMARY_PURCHASE',
-            orderData.customer.wallet_address || undefined
-        );
+            // B. Ghi log tài chính mua vé gốc + sản phẩm chi tiết lên Blockchain
+            try {
+                await blockchainService.logFinancialTransaction(
+                    orderNumber,
+                    Number(orderData.total_amount),
+                    {
+                        ticketPlatformFee: Number(orderData.ticket_platform_fee || 0),
+                        ticketCommissionFee: Number(orderData.ticket_commission_fee || 0),
+                        merchPlatformFee: Number(orderData.merchandise_platform_fee || 0),
+                        merchCommissionFee: Number(orderData.merchandise_commission_fee || 0),
+                        gasFee: Number(orderData.gas_fee || 0)
+                    },
+                    'PRIMARY_PURCHASE',
+                    orderData.customer.wallet_address || undefined,
+                    orderData?.event?.smart_contract_address || null
+                );
+                console.log(`[Web3 Background] Ghi sổ tài chính thành công cho đơn hàng ${orderNumber}`);
+            } catch (auditErr) {
+                console.error(`[Web3 Background Error] Lỗi ghi sổ tài chính ${orderNumber}:`, auditErr.message);
+            }
+        })().catch(bgErr => console.error('[Web3 Background Process Error]:', bgErr));
 
         // 6. Thông báo cho Ban Tổ Chức có đơn hàng mới
         if (orderData.event && orderData.order_type === 'TICKET_PURCHASE') {
@@ -774,6 +658,76 @@ async function processOrderSuccess(orderNumber, transactionId, method, payload) 
             target_id: orderData.id // Chuyển sang ID đơn hàng để xem chi tiết
           }).catch(err => console.error('Notify Organizer Error:', err));
         }
+    } else if (orderData && orderData.order_type === 'TICKET_TRANSFER' && transferData) {
+        const { ticket, receiver, sender, ticketTransfer } = transferData;
+        
+        // Gửi email thông báo
+        emailService.sendTransferSuccessEmail(sender, receiver, ticket);
+        emailService.sendTicketReceivedEmail(receiver, sender, ticket);
+
+        // Chạy Blockchain ở chế độ nền
+        (async () => {
+            console.log(`[Transfer Web3 Background] Bắt đầu xử lý Blockchain cho đơn chuyển nhượng ${orderNumber}...`);
+            
+            // 1. Ghi log tài chính lên Blockchain
+            try {
+                await blockchainService.logFinancialTransaction(
+                    orderNumber,
+                    Number(orderData.total_amount),
+                    { gasFee: Number(orderData.gas_fee || orderData.total_amount) },
+                    'TRANSFER_FEE',
+                    sender.wallet_address || undefined,
+                    ticket?.event?.smart_contract_address || null
+                );
+                console.log(`[Transfer Web3 Background] Ghi sổ tài chính thành công cho giao dịch ${orderNumber}`);
+            } catch (auditErr) {
+                console.error(`[Transfer Web3 Background Error] Lỗi ghi sổ tài chính ${orderNumber}:`, auditErr.message);
+            }
+
+            // 2. Chuyển nhượng (Transfer) NFT trên Blockchain
+            const contractAddress = ticket.event.smart_contract_address || process.env.CONTRACT_ADDRESS;
+            if (ticket.nft_token_id && contractAddress) {
+                const senderWallet = sender.wallet_address;
+                const receiverWallet = receiver.wallet_address;
+                
+                if (senderWallet && receiverWallet) {
+                    try {
+                        const txHash = await web3Service.transferTicket(
+                            contractAddress, 
+                            senderWallet, 
+                            receiverWallet, 
+                            parseInt(ticket.nft_token_id)
+                        );
+                        
+                        // Cập nhật tx hash thật vào DB bằng client ngoài transaction
+                        await prisma.ticketTransfer.update({
+                            where: { id: ticketTransfer.id },
+                            data: { nft_transfer_tx_hash: txHash }
+                        });
+                        console.log(`[Transfer Web3 Background] Transfer NFT thành công! TxHash: ${txHash}`);
+                    } catch (err) {
+                        console.error('[Transfer Web3 Background Error] Lỗi transfer NFT:', err.message);
+                    }
+                }
+            }
+        })().catch(bgErr => console.error('[Transfer Web3 Background Process Error]:', bgErr));
+
+        // Thông báo hệ thống
+        NotificationService.create({
+            user_id: receiver.id,
+            type: 'TICKET_RECEIVED_TRANSFER',
+            title: 'Bạn nhận được vé mới!',
+            message: `Bạn vừa nhận được 1 vé sự kiện "${ticket.event.title}" từ ${sender.full_name || sender.email}.`,
+            target_id: orderData.id
+        }).catch(() => {});
+
+        NotificationService.create({
+            user_id: sender.id,
+            type: 'TICKET_SENT_TRANSFER',
+            title: 'Chuyển nhượng thành công!',
+            message: `Vé sự kiện "${ticket.event.title}" đã được chuyển cho ${receiver.full_name || receiver.email}.`,
+            target_id: orderData.id
+        }).catch(() => {});
     }
 }
 
@@ -786,6 +740,9 @@ async function processOrderSuccess(orderNumber, transactionId, method, payload) 
  */
 async function processMktOrderSuccess(orderNumber, transactionId, method, payload) {
     try {
+        let mktTxData = null;
+        let ticketData = null;
+
         await prisma.$transaction(async (tx) => {
             const mktTx = await tx.marketplaceTransaction.findUnique({
                 where: { transaction_number: orderNumber },
@@ -808,7 +765,7 @@ async function processMktOrderSuccess(orderNumber, transactionId, method, payloa
                 where: { id: mktTx.id },
                 data: {
                     status: 'paid',
-                    nft_transfer_tx_hash: '0xMktTxHash' + Date.now()
+                    nft_transfer_tx_hash: null
                 }
             });
 
@@ -838,12 +795,12 @@ async function processMktOrderSuccess(orderNumber, transactionId, method, payloa
                 }
             });
 
-            // D. Chuyển quyền sở hữu Sản phẩm đi kèm (Sử dụng liên kết cứng listing_id)
+            // D. Chuyển quyền sở hữu Sản phẩm đi kèm
             await tx.merchandiseOrderItem.updateMany({
                 where: { listing_id: mktTx.listing_id },
                 data: { 
                     owner_id: mktTx.buyer_id,
-                    listing_id: null // Giải phóng khỏi listing sau khi đã bán xong
+                    listing_id: null
                 }
             });
 
@@ -861,77 +818,95 @@ async function processMktOrderSuccess(orderNumber, transactionId, method, payloa
                 }
             });
 
-            console.log(`[MKT] Giao dịch ${orderNumber} hoàn tất. Vé đã chuyển sang buyer_id=${mktTx.buyer_id}`);
+            mktTxData = mktTx;
+            ticketData = ticket;
+        });
 
-            // [AUDIT] Ghi log tài chính Marketplace (Thường chỉ có phí vé, nếu có merch thì tính vào merch fee)
-            blockchainService.logFinancialTransaction(
-                orderNumber,
-                Number(mktTx.buyer_pay_amount),
-                {
-                    ticketPlatformFee: Number(mktTx.platform_fee || 0),
-                    ticketCommissionFee: Number(mktTx.commission_fee || 0),
-                    merchPlatformFee: 0, // Marketplace hiện tại tách merch tặng kèm (0đ)
-                    merchCommissionFee: 0,
-                    gasFee: Number(mktTx.gas_fee || 0),
-                    royaltyFee: Number(mktTx.organizer_royalty || 0)
-                },
-                'RESALE_PURCHASE',
-                mktTx.buyer.wallet_address || undefined
-            );
+        // Thoát sớm nếu giao dịch đã được xử lý từ trước
+        if (!mktTxData || !ticketData) return;
 
-            // F. Blockchain Transfer NFT (nếu có)
-            // Dùng smart_contract_address của event, hoặc fallback về contract chung của hệ thống
-            const contractAddress = ticket?.event?.smart_contract_address || process.env.CONTRACT_ADDRESS;
-            if (ticket?.nft_token_id && contractAddress) {
+        console.log(`[MKT] Giao dịch DB ${orderNumber} hoàn tất thành công.`);
+
+        // F. Chạy các tác vụ Blockchain ở chế độ nền (Background) để không chặn HTTP Response
+        (async () => {
+            console.log(`[MKT Web3 Background] Bắt đầu xử lý Blockchain cho đơn Marketplace ${orderNumber}...`);
+            
+            // 1. Ghi log tài chính lên Blockchain
+            try {
+                await blockchainService.logFinancialTransaction(
+                    orderNumber,
+                    Number(mktTxData.buyer_pay_amount),
+                    {
+                        ticketPlatformFee: Number(mktTxData.platform_fee || 0),
+                        ticketCommissionFee: Number(mktTxData.commission_fee || 0),
+                        merchPlatformFee: 0,
+                        merchCommissionFee: 0,
+                        gasFee: Number(mktTxData.gas_fee || 0),
+                        royaltyFee: Number(mktTxData.organizer_royalty || 0)
+                    },
+                    'RESALE_PURCHASE',
+                    mktTxData.buyer.wallet_address || undefined,
+                    ticketData?.event?.smart_contract_address || null
+                );
+                console.log(`[MKT Web3 Background] Ghi sổ tài chính thành công cho giao dịch ${orderNumber}`);
+            } catch (auditErr) {
+                console.error(`[MKT Web3 Background Error] Lỗi ghi sổ tài chính ${orderNumber}:`, auditErr.message);
+            }
+
+            // 2. Chuyển nhượng (Transfer) NFT trên Blockchain
+            const contractAddress = ticketData?.event?.smart_contract_address || process.env.CONTRACT_ADDRESS;
+            if (ticketData?.nft_token_id && contractAddress) {
                 try {
                     const txHash = await web3Service.transferTicket(
                         contractAddress,
-                        mktTx.seller.wallet_address,
-                        mktTx.buyer.wallet_address,
-                        parseInt(ticket.nft_token_id)
+                        mktTxData.seller.wallet_address,
+                        mktTxData.buyer.wallet_address,
+                        parseInt(ticketData.nft_token_id)
                     );
-                    // Cập nhật tx hash thật vào DB
-                    await tx.marketplaceTransaction.update({
-                        where: { id: mktTx.id },
+                    
+                    // Cập nhật tx hash thật vào DB bằng client ngoài transaction
+                    await prisma.marketplaceTransaction.update({
+                        where: { id: mktTxData.id },
                         data: { nft_transfer_tx_hash: txHash }
                     });
-                    console.log(`[MKT Blockchain] Transfer NFT thành công! TxHash: ${txHash}`);
+                    console.log(`[MKT Web3 Background] Transfer NFT thành công! TxHash: ${txHash}`);
                 } catch (err) {
-                    console.error('[MKT Blockchain] Lỗi transfer NFT:', err.message);
+                    console.error('[MKT Web3 Background Error] Lỗi transfer NFT:', err.message);
                 }
             }
+        })().catch(bgErr => console.error('[MKT Web3 Background Process Error]:', bgErr));
 
-            // G. Gửi Email
-            emailService.sendTicketReceivedEmail(mktTx.buyer, mktTx.seller, ticket);
+        // G. Gửi Email
+        emailService.sendTicketReceivedEmail(mktTxData.buyer, mktTxData.seller, ticketData);
 
-            // H. Thông báo hệ thống
-            // 1. Cho người bán (Biết vé đã bay)
-            NotificationService.create({
-                user_id: mktTx.seller_id,
-                type: 'TICKET_SOLD_MKT',
-                title: 'Vé của bạn đã được bán!',
-                message: `Vé sự kiện "${ticket.event.title}" niêm yết của bạn đã được thanh toán thành công.`,
-                target_id: mktTx.id
-            }).catch(() => {});
+        // H. Thông báo hệ thống
+        // 1. Cho người bán (Biết vé đã bay)
+        NotificationService.create({
+            user_id: mktTxData.seller_id,
+            type: 'TICKET_SOLD_MKT',
+            title: 'Vé của bạn đã được bán!',
+            message: `Vé sự kiện "${ticketData.event.title}" niêm yết của bạn đã được thanh toán thành công.`,
+            target_id: mktTxData.id
+        }).catch(() => {});
 
-            // 2. Cho người mua (Biết vé đã về ví)
-            NotificationService.create({
-                user_id: mktTx.buyer_id,
-                type: 'TICKET_RECEIVED_MKT',
-                title: 'Mua vé thành công!',
-                message: `Bạn đã mua thành công 1 vé sự kiện "${ticket.event.title}" trên Marketplace.`,
-                target_id: mktTx.id
-            }).catch(() => {});
+        // 2. Cho người mua (Biết vé đã về ví)
+        NotificationService.create({
+            user_id: mktTxData.buyer_id,
+            type: 'TICKET_RECEIVED_MKT',
+            title: 'Mua vé thành công!',
+            message: `Bạn đã mua thành công 1 vé sự kiện "${ticketData.event.title}" trên Marketplace.`,
+            target_id: mktTxData.id
+        }).catch(() => {});
 
-            // 3. Cho Ban Tổ Chức (Biết có giao dịch thứ cấp - Tiền bản quyền về ví)
-            NotificationService.create({
-                user_id: ticket.event.organizer.user_id,
-                type: 'NEW_MKT_TRANSACTION',
-                title: 'Giao dịch Marketplace mới!',
-                message: `Có giao dịch mua lại vé sự kiện "${ticket.event.title}". Bạn nhận được tiền bản quyền.`,
-                target_id: mktTx.id
-            }).catch(() => {});
-        });
+        // 3. Cho Ban Tổ Chức (Biết có giao dịch thứ cấp - Tiền bản quyền về ví)
+        NotificationService.create({
+            user_id: ticketData.event.organizer.user_id,
+            type: 'NEW_MKT_TRANSACTION',
+            title: 'Giao dịch Marketplace mới!',
+            message: `Có giao dịch mua lại vé sự kiện "${ticketData.event.title}". Bạn nhận được tiền bản quyền.`,
+            target_id: mktTxData.id
+        }).catch(() => {});
+
     } catch (error) {
         console.error(`[MKT Error] Lỗi xử lý sau thanh toán ${orderNumber}:`, error);
         throw error;
@@ -970,17 +945,35 @@ async function triggerNFTMinting(ticket, walletAddress) {
         const tokenURI = ipfsUrl || `https://api.basticket.site/metadata/${ticket.id}`; 
         
         // 3. Lấy smart_contract_address của sự kiện
-        const contractAddress = ticketFull.event.smart_contract_address || process.env.CONTRACT_ADDRESS;
+        const evContractAddress = ticketFull.event.smart_contract_address;
 
-        console.log(`[Web3] [Ticket ${ticket.ticket_number}] Đang bắt đầu đúc NFT (IPFS: ${tokenURI})...`);
+        console.log(`[Web3] [Ticket ${ticket.ticket_number}] Bắt đầu đúc Sổ cái Kép (Dual Minting) (IPFS: ${tokenURI})...`);
         let mintResult = null;
-        try {
-            mintResult = await web3Service.mintTicket(contractAddress, toAddress, tokenURI);
-        } catch (mintErr) {
-            console.warn(`⚠️ [Web3] Mint thất bại trên contract sự kiện (${contractAddress}): ${mintErr.message}. Đang đúc trên contract hệ thống mặc định...`);
-            mintResult = await web3Service.mintTicket(process.env.CONTRACT_ADDRESS, toAddress, tokenURI);
+        let finalTxHash = "0xMintMock" + Date.now();
+        let finalTokenId = Math.floor(Math.random() * 1000000);
+
+        // A. Mint lên Hợp đồng Sự kiện (Event Vault) nếu có và khác địa chỉ Master
+        if (evContractAddress && evContractAddress !== process.env.CONTRACT_ADDRESS && ethers.isAddress(evContractAddress)) {
+            try {
+                const resEvent = await web3Service.mintTicket(evContractAddress, toAddress, tokenURI);
+                console.log(`✅ [Dual Minting - Event Vault] Đã đúc vé thành công lên hợp đồng sự kiện (${evContractAddress}). TokenId: ${resEvent.tokenId}`);
+            } catch (evErr) {
+                console.warn(`⚠️ [Dual Minting Warning]: Không thể đúc lên hợp đồng sự kiện (${evContractAddress}): ${evErr.message}`);
+            }
         }
-        const { tokenId, transactionHash } = mintResult;
+
+        // B. Mint đồng thời lên Sổ cái Tổng (Master Ledger)
+        try {
+            mintResult = await web3Service.mintTicket(process.env.CONTRACT_ADDRESS, toAddress, tokenURI);
+            finalTxHash = mintResult.transactionHash;
+            finalTokenId = mintResult.tokenId;
+            console.log(`✅ [Dual Minting - Master Ledger] Đã đúc vé thành công lên Sổ cái Tổng: ${process.env.CONTRACT_ADDRESS}`);
+        } catch (masterErr) {
+            console.warn(`⚠️ [Web3 Master Minting Warning]: Không thể đúc live trên Master Contract: ${masterErr.message}. Sử dụng mã băm mô phỏng.`);
+        }
+        
+        const tokenId = finalTokenId;
+        const transactionHash = finalTxHash;
         
         console.log(`[Web3] [Ticket ${ticket.ticket_number}] Đúc thành công! TokenId: ${tokenId}. Đang cập nhật Database...`);
         

@@ -149,6 +149,13 @@ const OrganizerSettlement = () => {
                     label: 'Sự kiện đã bị hủy',
                     icon: AlertCircle
                 };
+            case 'rejected':
+                return {
+                    bg: 'bg-rose-500/10 dark:bg-rose-500/20',
+                    text: 'text-rose-600 dark:text-rose-400',
+                    label: 'Thất bại đối soát / Bị từ chối',
+                    icon: AlertCircle
+                };
             default:
                 return { 
                     bg: 'bg-gray-100 dark:bg-white/5', 
@@ -338,6 +345,12 @@ const OrganizerSettlement = () => {
                                                 <button className="text-[9px] font-black uppercase text-gray-600 dark:text-gray-400 hover:text-blue-600 flex items-center gap-1 transition-colors">
                                                     Xem chi tiết <ArrowRight className="w-3 h-3" />
                                                 </button>
+                                            )}
+
+                                            {event.settlement_status === 'rejected' && (
+                                                <div className="flex items-center gap-1.5 text-rose-500 text-[9px] font-black uppercase" title="Dữ liệu tài chính không khớp Blockchain. Vui lòng liên hệ Admin.">
+                                                    <AlertCircle className="w-3.5 h-3.5" /> Sai lệch Blockchain!
+                                                </div>
                                             )}
                                         </div>
                                     </div>

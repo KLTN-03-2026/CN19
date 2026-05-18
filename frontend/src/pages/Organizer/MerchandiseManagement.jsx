@@ -426,7 +426,7 @@ const MerchandiseManagement = () => {
           </div>
         ) : filtered.length > 0 ? (
           viewMode === 'grid' ? (
-            <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 min-[1920px]:grid-cols-6 gap-3 md:gap-6">
+            <div className="grid grid-cols-2 lg:grid-cols-4 3xl:grid-cols-5 4xl:grid-cols-6 gap-3 md:gap-6">
               {filtered.map(item => (
                 <div key={item.id} className="bg-white dark:bg-[#16161a] rounded-[2.5rem] border border-gray-200 dark:border-white/5 overflow-hidden group hover:shadow-2xl hover:shadow-blue-500/10 transition-all duration-500 hover:-translate-y-1">
                   {/* Image */}

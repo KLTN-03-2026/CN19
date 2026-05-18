@@ -461,7 +461,7 @@ const EventManagement = () => {
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3 md:gap-4 animate-in fade-in zoom-in-95 duration-300">
+        <div className="grid grid-cols-2 lg:grid-cols-4 3xl:grid-cols-5 4xl:grid-cols-6 gap-3 md:gap-4 animate-in fade-in zoom-in-95 duration-300">
            {events.map((event) => (
              <div key={event.id} className="bg-white dark:bg-[#111114] border border-gray-200 dark:border-white/5 rounded-2xl overflow-hidden shadow-sm hover:shadow-md hover:border-neon-green/20 transition-all group flex flex-col h-full">
                 <div className="aspect-[16/9] relative overflow-hidden flex-shrink-0">

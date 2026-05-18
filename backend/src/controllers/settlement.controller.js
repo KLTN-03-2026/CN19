@@ -295,7 +295,12 @@ const SettlementController = {
         include: {
           event: {
             include: {
-              organizer: { select: { organization_name: true } }
+              organizer: {
+                select: {
+                  organization_name: true,
+                  user: { select: { avatar_url: true } }
+                }
+              }
             }
           }
         },
@@ -304,8 +309,7 @@ const SettlementController = {
 
       // Bổ sung chi tiết doanh thu nếu chưa có (tính toán lại để hiển thị UI)
       const enhancedPayouts = await Promise.all(payouts.map(async (p) => {
-        // Nếu đã có trong DB thì dùng (giả định sau này sẽ lưu), 
-        // hiện tại tính toán lại để fix lỗi hiển thị 0đ cho yêu cầu cũ
+        const plainPayout = JSON.parse(JSON.stringify(p));
         const eventId = p.event_id;
         
         // Lấy orders thuộc payout này (hoặc thuộc event nếu là yêu cầu cũ)
@@ -336,7 +340,7 @@ const SettlementController = {
         const gasFee = Number(p.gas_fee || 0);
 
         return {
-          ...p,
+          ...plainPayout,
           ticket_revenue: ticketRevenue,
           merch_revenue: merchRevenue,
           marketplace_royalty: marketplaceRoyalty || Number(p.marketplace_royalty || 0),
@@ -482,6 +486,72 @@ const SettlementController = {
       }
 
       if (action === 'settle') {
+        // 1. Lấy các đơn hàng chưa quyết toán của sự kiện này để đối soát
+        const unsettledOrders = await prisma.order.findMany({
+          where: { 
+            event_id: payout.event_id, 
+            status: 'paid', 
+            is_settled: false, 
+            order_type: { in: ['TICKET_PURCHASE', 'MERCHANDISE_PURCHASE'] } 
+          }
+        });
+
+        const unsettledMarketplace = await prisma.marketplaceTransaction.findMany({
+          where: { 
+            ticket: { event_id: payout.event_id }, 
+            status: 'paid', 
+            is_settled: false 
+          }
+        });
+
+        // 2. Thực hiện đối soát Sổ cái Blockchain
+        let reconciliationFailed = false;
+        let failedItemDetails = '';
+
+        for (const order of unsettledOrders) {
+            const isOk = await blockchainService.verifyOrderReconciliation(order);
+            if (!isOk) {
+                reconciliationFailed = true;
+                failedItemDetails = `Đơn hàng ${order.order_number} có dữ liệu không đồng nhất với Sổ cái Blockchain.`;
+                break;
+            }
+        }
+
+        if (!reconciliationFailed) {
+            for (const tx of unsettledMarketplace) {
+                const isOk = await blockchainService.verifyMarketplaceReconciliation(tx);
+                if (!isOk) {
+                    reconciliationFailed = true;
+                    failedItemDetails = `Giao dịch Marketplace ${tx.transaction_number} có dữ liệu không đồng nhất với Sổ cái Blockchain.`;
+                    break;
+                }
+            }
+        }
+
+        if (reconciliationFailed) {
+            // Cập nhật trạng thái Payout thành bị từ chối/lỗi đối soát
+            await prisma.escrowPayout.update({
+                where: { id: payout.id },
+                data: {
+                    status: 'rejected',
+                    processed_at: new Date(),
+                    admin_notes: `[Duyệt thủ công] THẤT BẠI ĐỐI SOÁT BLOCKCHAIN: ${failedItemDetails}`
+                }
+            });
+
+            // Tạo thông báo cho BTC
+            await prisma.notification.create({
+                data: {
+                    user_id: payout.event.organizer.user_id,
+                    type: 'SETTLEMENT_FAILED_RECONCILIATION',
+                    title: 'Quyết toán bị từ chối: Phát hiện sai lệch Blockchain!',
+                    message: `Yêu cầu quyết toán của bạn bị từ chối do hệ thống phát hiện dữ liệu tài chính trong hệ thống không đồng nhất với Sổ cái Blockchain tại sự kiện "${payout.event.title}".`
+                }
+            });
+
+            return res.status(400).json({ error: `Phát hiện lỗi đối soát Blockchain: ${failedItemDetails}` });
+        }
+
         // GHI LOG LÊN BLOCKCHAIN (Minh bạch tài chính tuyệt đối)
         let bcTxHash = 'SETTLE-' + Date.now();
         try {

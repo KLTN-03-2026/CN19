@@ -120,8 +120,8 @@ const AdminSettlementManagement = () => {
 
     // Tính toán thống kê tự động từ toàn bộ dữ liệu
     const stats = {
-        pendingCount: requests.filter(r => r.status === 'pending').length,
-        pendingAmount: requests.filter(r => r.status === 'pending').reduce((sum, r) => sum + Number(r.net_payout), 0),
+        pendingCount: requests.filter(r => ['pending', 'processing'].includes(r.status)).length,
+        pendingAmount: requests.filter(r => ['pending', 'processing'].includes(r.status)).reduce((sum, r) => sum + Number(r.net_payout), 0),
         settledCount: requests.filter(r => r.status === 'settled').length,
         settledAmount: requests.filter(r => r.status === 'settled').reduce((sum, r) => sum + Number(r.net_payout), 0),
         forecastCount: eligibleEvents.filter(e => e.settlement_status === 'eligible').length,
@@ -243,12 +243,16 @@ const AdminSettlementManagement = () => {
                 ) : (
                     activeTab === 'overview' || activeTab === 'all_requests' 
                     ? (activeTab === 'all_requests' ? eligibleEvents.filter(e => e.settlement_status === 'eligible') : eligibleEvents)
+                    : activeTab === 'pending'
+                    ? requests.filter(r => ['pending', 'processing'].includes(r.status))
                     : requests.filter(r => r.status === activeTab)
                 ).length > 0 ? (
                     <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                         {(
                             activeTab === 'overview' || activeTab === 'all_requests' 
                             ? (activeTab === 'all_requests' ? eligibleEvents.filter(e => e.settlement_status === 'eligible') : eligibleEvents)
+                            : activeTab === 'pending'
+                            ? requests.filter(r => ['pending', 'processing'].includes(r.status))
                             : requests.filter(r => r.status === activeTab)
                         ).map((item) => {
                             const isOverview = activeTab === 'overview' || activeTab === 'all_requests';
@@ -316,12 +320,16 @@ const AdminSettlementManagement = () => {
 
                                         {/* Footer */}
                                         <div className="mt-auto flex items-center justify-between pt-1">
-                                            <div className="flex items-center gap-2">
-                                                <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-zinc-800 flex items-center justify-center">
+                                            <div className="flex items-center gap-2 max-w-[70%]">
+                                                <div className="w-8 h-8 rounded-full bg-slate-100 dark:bg-zinc-800 flex items-center justify-center shrink-0">
                                                     <Banknote className="w-4 h-4 text-slate-800 dark:text-gray-400" />
                                                 </div>
-                                                <div className="text-[10px] font-black text-slate-600 dark:text-gray-400 uppercase">
-                                                    {!isOverview ? `TK: *${item.bank_info?.account_number?.slice(-4) || '****'}` : (status === 'settled' ? 'Hoàn tất giải ngân' : 'Chờ BTC yêu cầu')}
+                                                <div className="text-[10px] font-black text-slate-600 dark:text-gray-400 uppercase truncate">
+                                                    {!isOverview 
+                                                      ? (status === 'settled' 
+                                                          ? `Smart Contract: ${item.event?.smart_contract_address || import.meta.env.VITE_CONTRACT_ADDRESS || '0x9711005b6...4ee'}` 
+                                                          : 'Ví hệ thống nội bộ') 
+                                                      : (status === 'settled' ? 'Hoàn tất giải ngân' : 'Chờ BTC yêu cầu')}
                                                 </div>
                                             </div>
 
@@ -330,7 +338,7 @@ const AdminSettlementManagement = () => {
                                                     onClick={() => setSelectedRequest(item)}
                                                     className="px-6 py-2.5 bg-zinc-900 dark:bg-white text-white dark:text-black text-[10px] font-black uppercase rounded-xl hover:bg-neon-green hover:text-black dark:hover:bg-neon-green transition-all active:scale-95 flex items-center gap-2 shadow-lg shadow-zinc-900/10 dark:shadow-white/5"
                                                 >
-                                                    XỬ LÝ NGAY
+                                                    {status === 'settled' ? 'XEM CHI TIẾT' : 'XỬ LÝ NGAY'}
                                                     <ChevronRight className="w-3 h-3" />
                                                 </button>
                                             ) : (
@@ -367,21 +375,21 @@ const AdminSettlementManagement = () => {
                         <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/5 rounded-full -ml-32 -mb-32 blur-3xl pointer-events-none"></div>
 
                         {/* Modal Header */}
-                        <div className="px-10 py-8 border-b border-gray-100 dark:border-zinc-800/50 bg-gray-50/50 dark:bg-zinc-900/30 relative z-10">
-                             <h2 className="text-2xl font-black text-gray-900 dark:text-white uppercase tracking-tight flex items-center gap-3">
+                        <div className="px-8 py-5 border-b border-gray-100 dark:border-zinc-800/50 bg-gray-50/50 dark:bg-zinc-900/30 relative z-10">
+                             <h2 className="text-xl font-black text-gray-900 dark:text-white tracking-tight flex items-center gap-3">
                                   <div className="p-2 bg-neon-green/10 rounded-xl">
-                                     <FileText className="w-6 h-6 text-neon-green" />
+                                     <FileText className="w-5 h-5 text-neon-green" />
                                   </div>
-                                  CHI TIẾT GIẢI NGÂN
+                                  Chi tiết giải ngân
                              </h2>
-                             <p className="text-[11px] text-slate-700 dark:text-zinc-400 font-black uppercase tracking-tight mt-2 ml-14">Mã yêu cầu: #{selectedRequest.id}</p>
+                             <p className="text-[11px] text-slate-700 dark:text-zinc-400 font-bold tracking-tight mt-1.5 ml-14">Mã yêu cầu: #{selectedRequest.id}</p>
                         </div>
 
                         {/* Modal Content */}
-                        <div className="p-10 space-y-8 max-h-[65vh] overflow-y-auto custom-scrollbar relative z-10">
+                        <div className="p-6 space-y-5 max-h-[65vh] overflow-y-auto custom-scrollbar relative z-10">
                             
                             {/* Event Image & Summary Header */}
-                            <div className="flex flex-col md:flex-row gap-8 items-start">
+                            <div className="flex flex-col md:flex-row gap-5 items-start">
                                 <div className="w-full md:w-48 h-32 rounded-[2rem] overflow-hidden shrink-0 border border-gray-200 dark:border-zinc-800 shadow-md">
                                     <img 
                                         src={selectedRequest.event?.image_url || 'https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=800&q=80'} 
@@ -389,152 +397,149 @@ const AdminSettlementManagement = () => {
                                         alt="event" 
                                     />
                                 </div>
-                                <div className="flex-1 space-y-5">
-                                    <div className="grid grid-cols-2 gap-6">
+                                <div className="flex-1 space-y-3">
+                                    <div className="grid grid-cols-2 gap-4">
                                         <div>
-                                            <label className="text-[10px] font-black text-slate-700 dark:text-zinc-500 uppercase tracking-tight block mb-2">Tên sự kiện</label>
-                                            <div className="font-black text-gray-900 dark:text-white uppercase tracking-tight leading-tight text-sm">{selectedRequest.event?.title}</div>
+                                            <label className="text-[10px] font-black text-slate-700 dark:text-zinc-500 uppercase tracking-tight block mb-1">Tên sự kiện</label>
+                                            <div className="font-black text-gray-900 dark:text-white tracking-tight leading-tight text-sm">{selectedRequest.event?.title}</div>
                                         </div>
                                         <div>
-                                            <label className="text-[10px] font-black text-neon-green uppercase tracking-tight block mb-2 opacity-80">Ban tổ chức</label>
-                                            <div className="font-black text-neon-green uppercase tracking-tight leading-tight text-sm">{selectedRequest.event?.organizer?.organization_name}</div>
+                                            <label className="text-[10px] font-black text-neon-green uppercase tracking-tight block mb-1 opacity-80">Ban tổ chức</label>
+                                            <div className="flex items-center gap-2">
+                                                <img 
+                                                    src={
+                                                        selectedRequest.event?.organizer?.user?.avatar_url
+                                                            ? (selectedRequest.event.organizer.user.avatar_url.startsWith('http')
+                                                                ? selectedRequest.event.organizer.user.avatar_url
+                                                                : `${import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000'}/${selectedRequest.event.organizer.user.avatar_url}`)
+                                                            : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&q=80'
+                                                    } 
+                                                    className="w-6 h-6 rounded-full object-cover border border-neon-green/20"
+                                                    alt="organizer avatar"
+                                                />
+                                                <div className="font-black text-neon-green tracking-tight leading-tight text-sm">{selectedRequest.event?.organizer?.organization_name}</div>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div className="pt-6 border-t border-gray-100 dark:border-zinc-800/50 flex items-end justify-between">
+                                    <div className="pt-4 border-t border-gray-100 dark:border-zinc-800/50 flex items-end justify-between">
                                         <div>
-                                            <label className="text-[10px] font-black text-slate-700 dark:text-zinc-500 uppercase tracking-widest block mb-2">Tổng doanh thu (GROSS)</label>
-                                            <div className="font-black text-gray-900 dark:text-white text-2xl tracking-tight">{formatCurrency(selectedRequest.total_revenue)}</div>
+                                            <label className="text-[10px] font-black text-slate-700 dark:text-zinc-500 uppercase tracking-tight block mb-1">Tổng doanh thu (Gross)</label>
+                                            <div className="font-black text-gray-900 dark:text-white text-xl tracking-tight">{formatCurrency(selectedRequest.total_revenue)}</div>
                                         </div>
                                         <div className="text-right">
-                                            <label className="text-[10px] font-black text-neon-green uppercase tracking-widest block mb-2 opacity-80">Thực nhận (NET)</label>
-                                            <div className="font-black text-neon-green text-3xl tracking-tight leading-none">{formatCurrency(selectedRequest.net_payout)}</div>
+                                            <label className="text-[10px] font-black text-neon-green uppercase tracking-tight block mb-1 opacity-80">Thực nhận (Net)</label>
+                                            <div className="font-black text-neon-green text-2xl tracking-tight leading-none">{formatCurrency(selectedRequest.net_payout)}</div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
                             {/* Detailed Breakdown */}
-                            <div className="p-6 bg-slate-50/50 dark:bg-zinc-900/50 rounded-[2rem] border border-gray-200 dark:border-zinc-800/50">
-                                <h3 className="text-[10px] font-black text-slate-600 dark:text-zinc-500 uppercase tracking-tight mb-5 flex items-center gap-2">
+                            <div className="p-4 bg-slate-50/50 dark:bg-zinc-900/50 rounded-[2rem] border border-gray-200 dark:border-zinc-800/50">
+                                <h3 className="text-[10px] font-black text-slate-600 dark:text-zinc-500 uppercase tracking-tight mb-3 flex items-center gap-2">
                                     <TrendingUp className="w-4 h-4 text-neon-green/70" />
-                                    BẢNG PHÂN BỔ TÀI CHÍNH
+                                    Bảng phân bổ tài chính
                                 </h3>
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                    <div className="p-4 bg-white dark:bg-zinc-950 rounded-2xl border border-gray-100 dark:border-zinc-800/50 shadow-sm">
-                                        <div className="text-[9px] font-black text-slate-700 dark:text-gray-500 uppercase mb-1.5 tracking-tight">Doanh thu vé</div>
-                                        <div className="font-black text-gray-900 dark:text-white text-sm tracking-tight">{formatCurrency(selectedRequest.ticket_revenue || 0)}</div>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                    <div className="p-3 bg-white dark:bg-zinc-950 rounded-2xl border border-gray-100 dark:border-zinc-800/50 shadow-sm">
+                                        <div className="text-[9px] font-black text-slate-700 dark:text-gray-500 uppercase mb-1 tracking-tight">Doanh thu vé</div>
+                                        <div className="font-black text-gray-900 dark:text-white text-xs tracking-tight">{formatCurrency(selectedRequest.ticket_revenue || 0)}</div>
                                     </div>
-                                    <div className="p-4 bg-white dark:bg-zinc-950 rounded-2xl border border-gray-100 dark:border-zinc-800/50 shadow-sm">
-                                        <div className="text-[9px] font-black text-slate-700 dark:text-gray-500 uppercase mb-1.5 tracking-tight">Vật phẩm</div>
-                                        <div className="font-black text-gray-900 dark:text-white text-sm tracking-tight">{formatCurrency(selectedRequest.merch_revenue || 0)}</div>
+                                    <div className="p-3 bg-white dark:bg-zinc-950 rounded-2xl border border-gray-100 dark:border-zinc-800/50 shadow-sm">
+                                        <div className="text-[9px] font-black text-slate-700 dark:text-gray-500 uppercase mb-1 tracking-tight">Vật phẩm</div>
+                                        <div className="font-black text-gray-900 dark:text-white text-xs tracking-tight">{formatCurrency(selectedRequest.merch_revenue || 0)}</div>
                                     </div>
-                                    <div className="p-4 bg-white dark:bg-zinc-950 rounded-2xl border border-gray-100 dark:border-zinc-800/50 shadow-sm">
-                                        <div className="text-[9px] font-black text-slate-700 dark:text-gray-500 uppercase mb-1.5 tracking-tight">Marketplace</div>
-                                        <div className="font-black text-gray-900 dark:text-white text-sm tracking-tight">{formatCurrency(selectedRequest.marketplace_royalty || 0)}</div>
+                                    <div className="p-3 bg-white dark:bg-zinc-950 rounded-2xl border border-gray-100 dark:border-zinc-800/50 shadow-sm">
+                                        <div className="text-[9px] font-black text-slate-700 dark:text-gray-500 uppercase mb-1 tracking-tight">Marketplace</div>
+                                        <div className="font-black text-gray-900 dark:text-white text-xs tracking-tight">{formatCurrency(selectedRequest.marketplace_royalty || 0)}</div>
                                     </div>
-                                    <div className="p-4 bg-white dark:bg-zinc-950 rounded-2xl border border-gray-100 dark:border-zinc-800/50 shadow-sm">
-                                        <div className="text-[9px] font-black text-red-400 uppercase mb-1.5 tracking-tight">Phí hệ thống</div>
-                                        <div className="font-black text-red-500 text-sm tracking-tight">-{formatCurrency(selectedRequest.total_fees || 0)}</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Bank Info Section */}
-                            <div className="p-6 bg-slate-50/80 dark:bg-zinc-900/80 rounded-[2rem] border border-gray-200 dark:border-zinc-800">
-                                <div className="text-[10px] font-black text-slate-800 dark:text-zinc-500 uppercase tracking-tight mb-5 flex items-center gap-2">
-                                    <Banknote className="w-4 h-4 text-neon-green/70" />
-                                    THÔNG TIN CHUYỂN KHOẢN
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white dark:bg-zinc-950 p-6 rounded-[1.5rem] border border-gray-100 dark:border-zinc-800/50 shadow-sm">
-                                    <div className="md:col-span-2">
-                                        <span className="text-[10px] text-slate-500 font-black uppercase tracking-tight block mb-2">Số tài khoản thụ hưởng</span>
-                                        <span className="font-black text-gray-900 dark:text-white text-3xl tracking-tight select-all">{selectedRequest.bank_info?.account_number || 'N/A'}</span>
-                                    </div>
-                                    <div>
-                                        <span className="text-[10px] text-slate-500 font-black uppercase tracking-tight block mb-2">Tên chủ tài khoản</span>
-                                        <span className="font-black text-gray-900 dark:text-white uppercase tracking-tight text-lg">{selectedRequest.bank_info?.account_holder || 'N/A'}</span>
-                                    </div>
-                                    <div>
-                                        <span className="text-[10px] text-slate-500 font-black uppercase tracking-tight block mb-2">Ngân hàng</span>
-                                        <span className="font-black text-gray-900 dark:text-zinc-300 tracking-tight uppercase text-sm">{selectedRequest.bank_info?.bank_name || 'N/A'}</span>
+                                    <div className="p-3 bg-white dark:bg-zinc-950 rounded-2xl border border-gray-100 dark:border-zinc-800/50 shadow-sm">
+                                        <div className="text-[9px] font-black text-red-400 uppercase mb-1 tracking-tight">Phí hệ thống</div>
+                                        <div className="font-black text-red-500 text-xs tracking-tight">-{formatCurrency(selectedRequest.total_fees || 0)}</div>
                                     </div>
                                 </div>
                             </div>
 
                             {/* Processing Section */}
                             {selectedRequest.status !== 'settled' && (
-                                <div className="space-y-6">
-                                    <div className="space-y-3">
+                                <div className="space-y-4">
+                                    <div className="space-y-2">
                                         <label className="text-[10px] font-black text-slate-800 dark:text-zinc-500 uppercase tracking-tight flex items-center gap-2 ml-1">
                                             <FileText className="w-4 h-4 text-neon-green/60" /> Ghi chú nội bộ
                                         </label>
                                         <textarea 
                                             value={adminNote}
                                             onChange={(e) => setAdminNote(e.target.value)}
-                                            className="w-full bg-white dark:bg-zinc-900/50 border border-gray-200 dark:border-zinc-800 rounded-[1.5rem] p-5 text-sm font-bold focus:outline-none focus:border-neon-green transition-all dark:text-white placeholder-slate-400 dark:placeholder-zinc-600 shadow-sm resize-none"
+                                            className="w-full bg-white dark:bg-zinc-900/50 border border-gray-200 dark:border-zinc-800 rounded-[1.5rem] p-4 text-sm font-bold focus:outline-none focus:border-neon-green transition-all dark:text-white placeholder-slate-400 dark:placeholder-zinc-600 shadow-sm resize-none"
                                             placeholder="Nhập hướng dẫn hoặc ghi chú đối soát..."
                                             rows="3"
-                                        />
-                                    </div>
-                                    <div className="space-y-3">
-                                        <label className="text-[10px] font-black text-slate-800 dark:text-zinc-500 uppercase tracking-tight flex items-center gap-2 ml-1">
-                                            <ExternalLink className="w-4 h-4 text-neon-green/60" /> Biên lai chuyển khoản (URL)
-                                        </label>
-                                        <input 
-                                            type="url"
-                                            value={evidenceUrl}
-                                            onChange={(e) => setEvidenceUrl(e.target.value)}
-                                            className="w-full bg-white dark:bg-zinc-900/50 border border-gray-200 dark:border-zinc-800 rounded-2xl px-5 py-4 text-sm font-bold focus:outline-none focus:border-neon-green transition-all dark:text-white placeholder-slate-400 dark:placeholder-zinc-600 shadow-sm"
-                                            placeholder="https://imgur.com/example.png"
                                         />
                                     </div>
                                 </div>
                             )}
 
                             {selectedRequest.status === 'settled' && (
-                                <div className="flex items-center gap-6 p-6 bg-neon-green/5 border border-neon-green/20 rounded-[2rem] animate-in slide-in-from-bottom-4 duration-500">
-                                    <div className="w-14 h-14 rounded-full bg-neon-green/20 flex items-center justify-center shrink-0 shadow-lg shadow-neon-green/5">
-                                        <CheckCircle2 className="w-7 h-7 text-neon-green" />
+                                <div className="p-5 bg-neon-green/5 border border-neon-green/20 rounded-[2rem] space-y-3 animate-in slide-in-from-bottom-4 duration-500">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-12 h-12 rounded-full bg-neon-green/20 flex items-center justify-center shrink-0 shadow-lg shadow-neon-green/5">
+                                            <CheckCircle2 className="w-6 h-6 text-neon-green" />
+                                        </div>
+                                        <div>
+                                            <span className="text-sm font-black text-neon-green uppercase tracking-tight">Giao dịch hoàn tất trên Blockchain</span>
+                                            <p className="text-[11px] text-slate-600 dark:text-zinc-400 font-bold mt-1 tracking-tight">
+                                                Mã tham chiếu: <span className="font-mono text-xs text-gray-900 dark:text-white">{selectedRequest.payout_trans_id}</span>
+                                            </p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <span className="text-sm font-black text-neon-green uppercase tracking-tight">GIAO DỊCH HOÀN TẤT</span>
-                                        <p className="text-[11px] text-slate-600 dark:text-zinc-400 font-bold mt-1 uppercase tracking-tight">Mã tham chiếu: {selectedRequest.payout_trans_id}</p>
+                                    <div className="pt-3 border-t border-neon-green/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                                        <div className="text-[10px] text-slate-600 dark:text-zinc-400">
+                                            <span className="font-black uppercase text-gray-900 dark:text-white">Smart Contract:</span>{' '}
+                                            <span className="font-mono">{selectedRequest.event?.smart_contract_address || import.meta.env.VITE_CONTRACT_ADDRESS || '0x9711005b6f9ac6953c41a5bb3d86a7549a9084ee'}</span>
+                                        </div>
+                                        <a 
+                                            href={`https://amoy.polygonscan.com/tx/${selectedRequest.payout_trans_id}`} 
+                                            target="_blank" 
+                                            rel="noreferrer" 
+                                            className="px-4 py-2 bg-neon-green/20 hover:bg-neon-green/30 text-neon-green text-[10px] font-black uppercase rounded-xl border border-neon-green/30 transition-all flex items-center gap-1.5 shrink-0"
+                                        >
+                                            <ExternalLink className="w-3.5 h-3.5" /> Kiểm tra Polygonscan
+                                        </a>
                                     </div>
                                 </div>
                             )}
                         </div>
 
                         {/* Modal Footer */}
-                        <div className="p-10 bg-slate-50/90 dark:bg-zinc-900/90 border-t border-gray-100 dark:border-zinc-800/80 flex items-center gap-4 relative z-10 backdrop-blur-xl">
+                        <div className="p-6 bg-slate-50/90 dark:bg-zinc-900/90 border-t border-gray-100 dark:border-zinc-800/80 flex items-center gap-4 relative z-10 backdrop-blur-xl">
                             <button 
                                 onClick={() => setSelectedRequest(null)}
-                                className="px-10 py-4 text-[11px] font-black uppercase tracking-tight text-slate-800 hover:text-gray-900 dark:hover:text-white bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-2xl transition-all shadow-sm active:scale-95"
+                                className="px-8 py-3.5 text-[11px] font-black tracking-tight text-slate-800 hover:text-gray-900 dark:hover:text-white bg-white dark:bg-zinc-800 border border-gray-200 dark:border-zinc-700 rounded-2xl transition-all shadow-sm active:scale-95"
                             >
-                                QUAY LẠI
+                                Quay lại
                             </button>
                             
                             {selectedRequest.status !== 'settled' && selectedRequest.status !== 'rejected' && (
-                                <div className="flex gap-4 ml-auto">
+                                <div className="flex gap-3 ml-auto">
                                     <button 
                                         onClick={() => handleProcess(selectedRequest.id, 'reject')}
-                                        className="px-8 py-4 bg-red-500/10 text-red-600 border border-red-500/20 text-[11px] font-black uppercase tracking-tight rounded-2xl hover:bg-red-600 hover:text-white transition-all active:scale-95"
+                                        className="px-6 py-3.5 bg-red-500/10 text-red-600 border border-red-500/20 text-[11px] font-black tracking-tight rounded-2xl hover:bg-red-600 hover:text-white transition-all active:scale-95"
                                     >
-                                        TỪ CHỐI
+                                        Từ chối
                                     </button>
                                     {selectedRequest.status === 'pending' && (
                                         <button 
                                             onClick={() => handleProcess(selectedRequest.id, 'approve')}
-                                            className="px-10 py-4 bg-zinc-900 dark:bg-blue-600 text-white text-[11px] font-black uppercase tracking-tight rounded-2xl hover:bg-blue-700 transition-all shadow-xl shadow-blue-600/20 active:scale-95"
+                                            className="px-8 py-3.5 bg-zinc-900 dark:bg-blue-600 text-white text-[11px] font-black tracking-tight rounded-2xl hover:bg-blue-700 transition-all shadow-xl shadow-blue-600/20 active:scale-95"
                                         >
-                                            DUYỆT YÊU CẦU
+                                            Duyệt yêu cầu
                                         </button>
                                     )}
                                     {selectedRequest.status === 'processing' && (
                                         <button 
                                             onClick={() => handleProcess(selectedRequest.id, 'settle')}
-                                            className="px-10 py-4 bg-neon-green text-black text-[11px] font-black uppercase tracking-tight rounded-2xl hover:bg-neon-green/90 transition-all shadow-xl shadow-neon-green/20 active:scale-95"
+                                            className="px-8 py-3.5 bg-neon-green text-black text-[11px] font-black tracking-tight rounded-2xl hover:bg-neon-green/90 transition-all shadow-xl shadow-neon-green/20 active:scale-95"
                                         >
-                                            XÁC NHẬN GIẢI NGÂN
+                                            Xác nhận giải ngân
                                         </button>
                                     )}
                                 </div>

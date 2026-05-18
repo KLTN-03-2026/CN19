@@ -281,18 +281,46 @@ const transferTicket = async (req, res) => {
       return res.status(404).json({ error: 'Tài khoản người nhận không tồn tại.' });
     }
 
-    // Thực thi gọi Blockchain
-    let txHash = '0xTxHashMock' + Date.now();
+    if (receiver.id === userId) {
+      return res.status(400).json({ error: 'Bạn không thể tự chuyển nhượng vé cho chính mình.' });
+    }
+
+    // Kiểm tra chính sách: Mỗi vé chỉ được phép chuyển nhượng/bán lại tối đa 1 lần
+    const existingTransfersCount = await prisma.ticketTransfer.count({
+      where: { ticket_id: id, status: 'completed' }
+    });
+
+    const existingMktCount = await prisma.marketplaceTransaction.count({
+      where: { ticket_id: id, status: 'paid' }
+    });
+
+    if ((existingTransfersCount + existingMktCount) >= 1) {
+      return res.status(400).json({ 
+        error: 'Vé này đã được sang tay (chuyển nhượng hoặc mua bán lại) 1 lần và không thể sang tay tiếp.' 
+      });
+    }
+
+    // Thực thi gọi Blockchain với ví thật của người dùng
+    let txHash = null;
     try {
-        if (ticket.nft_token_id) {
-            // Tạm mượn admin làm proxy transfer do user chưa có ví thật kết nối
-            const mockSenderWallet = '0x70997970C51812dc3A010C7d01b50e0d17dc79C8'; // Hardhat #1
-            const mockReceiverWallet = '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC'; // Hardhat #2
-            txHash = await web3Service.transferTicket(mockSenderWallet, mockReceiverWallet, parseInt(ticket.nft_token_id));
+        const senderUser = await prisma.user.findUnique({ where: { id: userId }, select: { wallet_address: true } });
+        const senderWallet = senderUser?.wallet_address;
+        const receiverWallet = receiver.wallet_address;
+        const contractAddress = ticket.event?.smart_contract_address || process.env.CONTRACT_ADDRESS;
+
+        if (ticket.nft_token_id && senderWallet && receiverWallet && contractAddress) {
+            txHash = await web3Service.transferTicket(
+                contractAddress,
+                senderWallet,
+                receiverWallet,
+                parseInt(ticket.nft_token_id)
+            );
+        } else {
+            console.warn(`[Transfer] Bỏ qua on-chain: token=${ticket.nft_token_id}, senderWallet=${senderWallet}, receiverWallet=${receiverWallet}`);
         }
     } catch (err) {
         console.error('Blockchain transfer error:', err);
-        return res.status(500).json({ error: 'Lỗi Smart Contract: Không thể chuyển nhượng.' });
+        // Không block DB, vẫn tiếp tục lưu DB và trả về thành công
     }
     
     await prisma.$transaction(async (tx) => {

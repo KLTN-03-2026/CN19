@@ -26,7 +26,9 @@ const getConfig = async (req, res) => {
       site_name: 'BASTICKET',
       support_email: 'support@basticket.com',
       maintenance_mode: 'false',
-      bot_risk_threshold: '0.7'
+      bot_risk_threshold: '0.7',
+      smart_contract_address: process.env.CONTRACT_ADDRESS || '0x9711005b6f9AC6953c41A5Bb3d86a7549a9084EE',
+      rpc_url: process.env.RPC_URL || 'https://rpc-amoy.polygon.technology/'
     };
     res.status(200).json({ data: { ...defaults, ...config } });
   } catch (error) {
@@ -449,7 +451,11 @@ const getSharedConfig = async (req, res) => {
             'system_gas_fee',
             'resale_price_cap_percent',
             'resale_transaction_fee_percent',
-            'default_royalty_percent'
+            'default_royalty_percent',
+            'smart_contract_address',
+            'rpc_url',
+            'withdrawal_fee_percent',
+            'min_withdrawal_amount'
           ]
         }
       }
@@ -468,7 +474,11 @@ const getSharedConfig = async (req, res) => {
       system_gas_fee: config.system_gas_fee || '10000',
       resale_price_cap_percent: config.resale_price_cap_percent || '8',
       resale_transaction_fee_percent: config.resale_transaction_fee_percent || '1',
-      default_royalty_percent: config.default_royalty_percent || '3'
+      default_royalty_percent: config.default_royalty_percent || '3',
+      withdrawal_fee_percent: config.withdrawal_fee_percent || '2',
+      min_withdrawal_amount: config.min_withdrawal_amount || '10000',
+      smart_contract_address: config.smart_contract_address || process.env.CONTRACT_ADDRESS || '0x9711005b6f9AC6953c41A5Bb3d86a7549a9084EE',
+      rpc_url: config.rpc_url || process.env.RPC_URL || 'https://rpc-amoy.polygon.technology/'
     };
 
     res.status(200).json({ data: finalConfig });

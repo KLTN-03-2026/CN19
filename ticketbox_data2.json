@@ -1,0 +1,20 @@
+{
+  "categories": {},
+  "banners": {},
+  "isLoadingCate": true,
+  "isLoadingBanner": true,
+  "openSearch": false,
+  "dataSearch": [],
+  "loadingSearch": false,
+  "error": {},
+  "categoriesBar": [],
+  "isLoadingCategoriesBar": true,
+  "openAuthenModal": false,
+  "isLoadingSectionByDate": false,
+  "sectionByDate": {
+    "thisWeekend": null,
+    "thisMonth": null
+  },
+  "isLoadingExcitingDestination": false,
+  "excitingDestination": []
+}

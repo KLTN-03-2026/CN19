@@ -311,7 +311,7 @@ const Checkout = () => {
                     {order.order_type === 'TICKET_TRANSFER' ? 'Thời gian chuyển nhượng' : t('checkout.holdTime')}
                  </p>
                  <p className="text-xs font-bold opacity-70">
-                    {order.order_type === 'TICKET_TRANSFER' ? 'Phí dịch vụ chuyển nhượng đang được giữ cho bạn' : t('checkout.holdTimeDesc')}
+                    {order.order_type === 'TICKET_TRANSFER' ? 'Yêu cầu chuyển nhượng đang được giữ cho bạn' : t('checkout.holdTimeDesc')}
                  </p>
               </div>
            </div>
@@ -440,6 +440,21 @@ const Checkout = () => {
                                </div>
                                <p className="font-black text-sm">+{formatPrice(order.gas_fee || 0, currentLocale)}</p>
                             </div>
+
+                            {/* [Single Transfer Warning in Checkout] */}
+                            <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl mt-4 flex items-start gap-3.5">
+                                <Info className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                                <div>
+                                    <h4 className="text-[11px] font-black text-amber-500 uppercase tracking-tight">
+                                        {i18n.language === 'vi' ? 'Lưu ý quan trọng trước khi thanh toán' : 'Important Notice Before Payment'}
+                                    </h4>
+                                    <p className="text-xs text-gray-600 dark:text-gray-300 font-medium leading-relaxed mt-1">
+                                        {i18n.language === 'vi' 
+                                          ? 'Theo quy định chống đầu cơ của BASTICKET, vé mua lại trên Marketplace chỉ được sang tay 1 lần. Sau khi giao dịch hoàn tất, vé sẽ thuộc sở hữu vĩnh viễn của bạn và không thể tiếp tục bán lại hay chuyển nhượng.'
+                                          : 'Per BASTICKET anti-scalping regulations, resale tickets can only be transferred once. Upon successful checkout, you will become the permanent owner with no further resale or transfer privileges.'}
+                                    </p>
+                                </div>
+                            </div>
                          </div>
                       )}
                       {order && order.order_type === 'TICKET_TRANSFER' && (
@@ -532,8 +547,8 @@ const Checkout = () => {
                       </div>
                    )}
 
-                   {/* Service Fee row - Only show for Transfer if needed, hide for Primary Purchase and Marketplace Purchase (since marketplace fees are shown on the left) */}
-                   {order.order_type !== 'TICKET_PURCHASE' && order.order_type !== 'MARKETPLACE_PURCHASE' && (
+                   {/* Service Fee row - Hide for Primary, Marketplace and Transfers */}
+                   {order.order_type !== 'TICKET_PURCHASE' && order.order_type !== 'MARKETPLACE_PURCHASE' && order.order_type !== 'TICKET_TRANSFER' && (
                     <div className="flex justify-between items-center text-xs font-bold animate-in fade-in duration-500">
                        <span className="text-gray-400 font-black uppercase">
                          {t('checkout.serviceFee')} {order.platform_fee_percent ? `${Number(order.platform_fee_percent).toFixed(1)}%` : '3.0%'}

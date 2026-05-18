@@ -17,7 +17,8 @@ const getEvents = async (req, res) => {
       minPrice, 
       maxPrice, 
       sort,
-      is_featured 
+      is_featured,
+      location
     } = req.query;
 
     const whereClause = {
@@ -29,6 +30,10 @@ const getEvents = async (req, res) => {
 
     if (keyword) {
       whereClause.title = { contains: keyword, mode: 'insensitive' };
+    }
+
+    if (location) {
+      whereClause.location_address = { contains: location, mode: 'insensitive' };
     }
 
     if (category_id) {

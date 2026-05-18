@@ -563,6 +563,7 @@ model WithdrawalRequest {
   processed_at        DateTime?
   created_at          DateTime  @default(now())
   user_id             String?
+  fee_percent         Decimal   @default(0)  // % phí tại thời điểm yêu cầu (snapshot)
   fee_amount          Decimal   @default(0)
   net_amount          Decimal   @default(0)
   payout_trans_id     String?

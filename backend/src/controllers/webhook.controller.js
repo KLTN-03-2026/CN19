@@ -11,9 +11,13 @@ const WebhookController = {
      */
     handleCasso: async (req, res) => {
         try {
-            // 1. Kiểm tra Secure Token (Casso gửi trong Header)
-            const webhookToken = req.headers['secure-token'];
-            if (webhookToken !== process.env.CASSO_WEBHOOK_TOKEN) {
+            // 1. Kiểm tra Secure Token (Casso / payOS gửi trong Header)
+            const webhookToken = req.headers['secure-token'] || req.headers['x-api-key'] || req.headers['payos-checksum'];
+            if (
+                webhookToken !== process.env.CASSO_WEBHOOK_TOKEN &&
+                webhookToken !== process.env.PAYOS_CHECKSUM_KEY &&
+                webhookToken !== process.env.PAYOS_API_KEY
+            ) {
                 return res.status(401).json({ error: 'Unauthorized webhook request' });
             }
 
@@ -39,40 +43,62 @@ const WebhookController = {
                     const withdrawalRequest = await prisma.withdrawalRequest.findFirst({
                         where: {
                             id: { startsWith: shortId },
-                            status: 'approved' // Chỉ xử lý những yêu cầu đã được Admin duyệt tạo mã QR
+                            status: { in: ['pending', 'approved'] } // Hỗ trợ cả khi Admin chưa bấm duyệt thủ công
                         },
                         include: { user: true }
                     });
 
                     if (withdrawalRequest) {
-                        // Kiểm tra số tiền (Cho phép sai lệch nhỏ nếu cần, hoặc khớp hoàn toàn)
-                        if (Math.abs(Number(withdrawalRequest.net_amount) - amount) < 100) {
+                        // Kiểm tra số tiền (Khớp tuyệt đối số tiền chuyển thực tế, dù âm hay dương)
+                        if (Math.abs(Number(withdrawalRequest.net_amount) - Math.abs(amount)) < 100) {
+                            let txHash = null;
                             await prisma.$transaction(async (tx) => {
                                 // 1. Cập nhật trạng thái yêu cầu rút tiền
                                 await tx.withdrawalRequest.update({
                                     where: { id: withdrawalRequest.id },
                                     data: {
-                                        status: 'success',
+                                        status: 'approved', // Chuyển thành approved / completed
                                         processed_at: new Date(),
                                         bank_transaction_id: String(tid),
                                         admin_notes: `Tự động xác nhận qua Casso (TID: ${tid})`
                                     }
                                 });
 
-                                // 2. Cập nhật trạng thái giao dịch ví (Nếu có)
-                                await tx.walletTransaction.updateMany({
-                                    where: {
-                                        user_id: withdrawalRequest.user_id,
-                                        type: 'WITHDRAWAL',
-                                        status: 'completed' // Đã được set ở bước approve, giờ chỉ cập nhật note
-                                    },
-                                    data: {
-                                        description: `Rút tiền thành công qua ngân hàng (TID: ${tid})`
-                                    }
+                                // 2. Cập nhật trạng thái giao dịch ví của User
+                                const lastTx = await tx.walletTransaction.findFirst({
+                                    where: { user_id: withdrawalRequest.user_id, type: 'WITHDRAWAL', status: 'pending' },
+                                    orderBy: { created_at: 'desc' }
                                 });
+                                if (lastTx) {
+                                    await tx.walletTransaction.update({
+                                        where: { id: lastTx.id },
+                                        data: { status: 'completed', description: `Rút tiền thành công qua ngân hàng (TID: ${tid})` }
+                                    });
+                                }
 
-                                // 3. GHI LOG LÊN BLOCKCHAIN (Minh bạch tài chính)
-                                let txHash = null;
+                                // 3. CHUYỂN PHÍ VỀ VÍ ADMIN (nếu đơn chuyển từ pending sang approved)
+                                if (withdrawalRequest.status === 'pending' && withdrawalRequest.fee_amount > 0) {
+                                    const adminUser = await tx.user.findFirst({
+                                        where: { role: { in: ['admin', 'super_admin', 'ADMIN', 'SUPER_ADMIN'] } }
+                                    });
+                                    if (adminUser) {
+                                        await tx.user.update({
+                                            where: { id: adminUser.id },
+                                            data: { balance: { increment: withdrawalRequest.fee_amount } }
+                                        });
+                                        await tx.walletTransaction.create({
+                                            data: {
+                                                user_id: adminUser.id,
+                                                amount: withdrawalRequest.fee_amount,
+                                                type: 'REVENUE',
+                                                description: `Thu phí rút tiền từ ${withdrawalRequest.user?.full_name || withdrawalRequest.user?.email || 'Người dùng'} (${withdrawalRequest.fee_percent ? Number(withdrawalRequest.fee_percent) : 2}%)`,
+                                                status: 'completed'
+                                            }
+                                        });
+                                    }
+                                }
+
+                                // 4. GHI LOG LÊN BLOCKCHAIN (Minh bạch tài chính)
                                 try {
                                     txHash = await blockchainService.logFinancialTransaction(
                                         withdrawalRequest.id,
@@ -84,7 +110,7 @@ const WebhookController = {
                                     console.error('[Web3 Error] Không thể ghi log rút tiền lên Blockchain (Casso):', bcError);
                                 }
 
-                                // 4. Cập nhật mã giao dịch vào DB
+                                // 5. Cập nhật mã giao dịch vào DB
                                 if (txHash) {
                                     await tx.withdrawalRequest.update({
                                         where: { id: withdrawalRequest.id },
@@ -93,10 +119,12 @@ const WebhookController = {
                                 }
                             });
 
-                            // 5. Gửi email thông báo cho người dùng
-                            EmailService.sendWithdrawalSuccessEmail(withdrawalRequest.user, withdrawalRequest, txHash);
+                            // 6. Gửi email thông báo cho người dùng
+                            if (withdrawalRequest.user) {
+                                EmailService.sendWithdrawalSuccessEmail(withdrawalRequest.user, withdrawalRequest, txHash);
+                            }
 
-                            console.log(`[CASSO SUCCESS] Processed withdrawal for ${withdrawalRequest.user.email}`);
+                            console.log(`[CASSO SUCCESS] Processed withdrawal for ${withdrawalRequest.user?.email}`);
                         } else {
                             console.warn(`[CASSO WARNING] Amount mismatch for request ${shortId}. Expected ${withdrawalRequest.net_amount}, got ${amount}`);
                         }

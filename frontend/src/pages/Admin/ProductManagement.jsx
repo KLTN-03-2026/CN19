@@ -462,7 +462,7 @@ const ProductManagement = () => {
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-4 3xl:grid-cols-5 4xl:grid-cols-6 gap-3">
            {products.map((p) => (
              <div key={p.id} className="bg-white dark:bg-[#111114] rounded-[2.5rem] border border-gray-200 dark:border-white/5 overflow-hidden group hover:shadow-xl hover:shadow-neon-green/10 hover:border-neon-green/40 transition-all duration-500 flex flex-col hover:-translate-y-1">
                 <div className="relative aspect-video overflow-hidden">

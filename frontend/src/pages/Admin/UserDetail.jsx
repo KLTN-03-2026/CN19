@@ -2084,9 +2084,10 @@ const UserDetail = () => {
 
               <div className="space-y-3">
                 <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Mô tả sự kiện</div>
-                <div className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed max-h-40 overflow-y-auto pr-4 scrollbar-thin scrollbar-thumb-white/10">
-                  {selectedEvent.description || 'Không có mô tả chi tiết cho sự kiện này.'}
-                </div>
+                <div
+                  className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed max-h-40 overflow-y-auto pr-4 scrollbar-thin scrollbar-thumb-white/10 prose prose-sm dark:prose-invert max-w-none"
+                  dangerouslySetInnerHTML={{ __html: selectedEvent.description || '<p>Không có mô tả chi tiết cho sự kiện này.</p>' }}
+                />
               </div>
 
               <div className="flex justify-end pt-4">

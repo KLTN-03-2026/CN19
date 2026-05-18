@@ -647,11 +647,44 @@ const getEventById = async (req, res) => {
       }
     });
 
-    const recentOrders = recentOrdersRaw.map(order => ({
-      ...order,
-      total_ticket_quantity: (order.items || []).reduce((sum, i) => sum + (i.quantity || 0), 0),
-      total_merch_quantity: (order.merchandise_items || []).reduce((sum, i) => sum + (i.quantity || 0), 0)
+    // Lấy thêm giao dịch Marketplace (Bán lại vé) cho sự kiện này
+    const mktTransactionsRaw = await prisma.marketplaceTransaction.findMany({
+      where: { ticket: { event_id: id } },
+      take: 500,
+      orderBy: { created_at: 'desc' },
+      include: {
+        buyer: { select: { full_name: true, email: true } },
+        seller: { select: { full_name: true, email: true } }
+      }
+    });
+
+    // Map MarketplaceTransaction sang cấu trúc giống Order để frontend dùng chung
+    const mktOrders = mktTransactionsRaw.map(tx => ({
+      id: tx.id,
+      order_number: tx.transaction_number,
+      order_type: 'MARKETPLACE_PURCHASE',
+      status: tx.status,
+      total_amount: tx.buyer_pay_amount,
+      subtotal: tx.buyer_pay_amount,
+      platform_fee: tx.platform_fee,
+      commission_fee: tx.commission_fee,
+      gas_fee: tx.gas_fee,
+      created_at: tx.created_at,
+      customer: tx.buyer,   // Người mua = khách hàng
+      seller: tx.seller,    // Người bán lại
+      total_ticket_quantity: 1,
+      total_merch_quantity: 0,
+      _isMkt: true
     }));
+
+    const recentOrders = [
+      ...recentOrdersRaw.map(order => ({
+        ...order,
+        total_ticket_quantity: (order.items || []).reduce((sum, i) => sum + (i.quantity || 0), 0),
+        total_merch_quantity: (order.merchandise_items || []).reduce((sum, i) => sum + (i.quantity || 0), 0)
+      })),
+      ...mktOrders
+    ].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
     // 0. Tính toán tổng số vé đã bán cho từng hạng vé bằng cách cộng dồn OrderItem.quantity
     const tierSoldAggregates = await prisma.orderItem.groupBy({

@@ -582,11 +582,12 @@ const EventDetail = () => {
                            <FileText className="w-4 h-4 text-neon-green" />
                            <span>Mô tả Sự kiện</span>
                          </h4>
-                         <div className="bg-gray-50/50 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 p-6 rounded-3xl text-sm leading-relaxed text-gray-600 dark:text-gray-400 max-h-[250px] overflow-y-auto custom-scrollbar font-medium">
-                            {event.description || 'Chưa cung cấp mô tả.'}
-                         </div>
-                      </div>
-                      <div className="space-y-4">
+                          <div
+                            className="bg-gray-50/50 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 p-6 rounded-3xl text-sm leading-relaxed text-gray-600 dark:text-gray-400 max-h-[250px] overflow-y-auto custom-scrollbar font-medium prose prose-sm dark:prose-invert max-w-none"
+                            dangerouslySetInnerHTML={{ __html: event.description || "<p>Chưa cung cấp mô tả.</p>" }}
+                           />
+                       </div>
+                       <div className="space-y-4">
                          <h4 className="text-[11px] font-black text-gray-400 uppercase tracking-widest flex items-center space-x-2">
                            <Building2 className="w-4 h-4 text-blue-500" />
                            <span>Hồ sơ Tài chính BTC</span>

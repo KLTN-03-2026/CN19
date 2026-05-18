@@ -258,9 +258,59 @@ const getTransactionDetail = async (req, res) => {
 
         if (!tx) return res.status(404).json({ error: 'Không tìm thấy giao dịch.' });
 
+        let financial_ledger_tx_hash = null;
+        try {
+            const blockchainService = require('../services/blockchain.service');
+            const currentBlock = await blockchainService.provider.getBlockNumber();
+            let fromBlock = currentBlock - 100;
+            let toBlock = currentBlock;
+
+            if (tx.nft_transfer_tx_hash) {
+                try {
+                    const chainTx = await blockchainService.provider.getTransaction(tx.nft_transfer_tx_hash);
+                    if (chainTx && chainTx.blockNumber) {
+                        fromBlock = chainTx.blockNumber - 50;
+                        toBlock = chainTx.blockNumber + 50;
+                    }
+                } catch (txErr) {
+                    console.warn(`[Admin TransactionDetail] Lỗi lấy block number của Marketplace Tx:`, txErr.message);
+                }
+            }
+
+            const filter = blockchainService.contract.filters.FinancialLog(tx.transaction_number);
+            
+            // Quét theo từng chunk tối đa 90 blocks để tránh giới hạn cực kỳ nghiêm ngặt của RPC Amoy
+            const chunkSize = 90;
+            let currentFrom = fromBlock;
+            let events = [];
+
+            while (currentFrom < toBlock) {
+                const currentTo = Math.min(currentFrom + chunkSize, toBlock);
+                try {
+                    const chunkEvents = await blockchainService.contract.queryFilter(filter, currentFrom, currentTo);
+                    if (chunkEvents && chunkEvents.length > 0) {
+                        events = chunkEvents;
+                        break;
+                    }
+                } catch (chunkErr) {
+                    console.warn(`[Admin TransactionDetail] Lỗi quét chunk [${currentFrom} - ${currentTo}]:`, chunkErr.message);
+                }
+                currentFrom = currentTo + 1;
+            }
+
+            if (events && events.length > 0) {
+                financial_ledger_tx_hash = events[events.length - 1].transactionHash;
+            }
+        } catch (bcErr) {
+            console.warn(`[Admin TransactionDetail] Không thể lấy financial ledger hash từ blockchain:`, bcErr.message);
+        }
+
         return res.status(200).json({
             type: 'MARKETPLACE',
-            data: tx
+            data: {
+                ...tx,
+                financial_ledger_tx_hash
+            }
         });
     } else {
         // Mặc định coi là ORDER (Primary / Transfer)
@@ -327,6 +377,54 @@ const getTransactionDetail = async (req, res) => {
         const firstTicket = order.tickets?.find(t => t.nft_token_id) || order.transfers?.[0]?.ticket;
         const metadata_url = firstTicket?.nft_token_id ? `${process.env.BACKEND_URL || 'http://localhost:5000'}/api/metadata/${firstTicket.nft_token_id}` : null;
 
+        let financial_ledger_tx_hash = null;
+        try {
+            const blockchainService = require('../services/blockchain.service');
+            const currentBlock = await blockchainService.provider.getBlockNumber();
+            let fromBlock = currentBlock - 100;
+            let toBlock = currentBlock;
+
+            let reference_tx_hash = nft_mint_tx_hash || nft_transfer_tx_hash;
+            if (reference_tx_hash) {
+                try {
+                    const chainTx = await blockchainService.provider.getTransaction(reference_tx_hash);
+                    if (chainTx && chainTx.blockNumber) {
+                        fromBlock = chainTx.blockNumber - 10;
+                        toBlock = Math.min(chainTx.blockNumber + 300, currentBlock);
+                    }
+                } catch (txErr) {
+                    console.warn(`[Admin TransactionDetail] Lỗi lấy block number của Order Tx:`, txErr.message);
+                }
+            }
+
+            const filter = blockchainService.contract.filters.FinancialLog(order.order_number);
+            
+            // Quét theo từng chunk tối đa 90 blocks để tránh giới hạn cực kỳ nghiêm ngặt của RPC Amoy
+            const chunkSize = 90;
+            let currentFrom = fromBlock;
+            let events = [];
+
+            while (currentFrom < toBlock) {
+                const currentTo = Math.min(currentFrom + chunkSize, toBlock);
+                try {
+                    const chunkEvents = await blockchainService.contract.queryFilter(filter, currentFrom, currentTo);
+                    if (chunkEvents && chunkEvents.length > 0) {
+                        events = chunkEvents;
+                        break;
+                    }
+                } catch (chunkErr) {
+                    console.warn(`[Admin TransactionDetail] Lỗi quét chunk [${currentFrom} - ${currentTo}]:`, chunkErr.message);
+                }
+                currentFrom = currentTo + 1;
+            }
+
+            if (events && events.length > 0) {
+                financial_ledger_tx_hash = events[events.length - 1].transactionHash;
+            }
+        } catch (bcErr) {
+            console.warn(`[Admin TransactionDetail] Không thể lấy financial ledger hash từ blockchain:`, bcErr.message);
+        }
+
         return res.status(200).json({
             type: 'ORDER',
             data: {
@@ -334,7 +432,8 @@ const getTransactionDetail = async (req, res) => {
               receiver,
               nft_mint_tx_hash,
               nft_transfer_tx_hash,
-              metadata_url
+              metadata_url,
+              financial_ledger_tx_hash
             }
         });
     }

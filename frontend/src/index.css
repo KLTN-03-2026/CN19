@@ -6,6 +6,8 @@
   --color-dark-bg: #0a0a0a;
   --color-dark-card: #121212;
   --color-dark-border: #222222;
+  --breakpoint-3xl: 100rem;
+  --breakpoint-4xl: 125rem;
 }
 
 /* Cấu hình cho class-based dark mode của Tailwind CSS v4 */

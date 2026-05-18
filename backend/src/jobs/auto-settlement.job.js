@@ -1,5 +1,6 @@
 const cron = require('node-cron');
 const prisma = require('../config/prisma');
+const blockchainService = require('../services/blockchain.service');
 
 /**
  * Hàm thực hiện quyết toán tự động cho một sự kiện
@@ -43,6 +44,87 @@ const autoSettleEvent = async (event) => {
         where: { id: event.id },
         include: { organizer: true }
     });
+
+    // 1. Thực hiện đối soát Sổ cái Blockchain
+    let reconciliationFailed = false;
+    let failedItemDetails = '';
+
+    for (const order of unsettledOrders) {
+        const isOk = await blockchainService.verifyOrderReconciliation(order);
+        if (!isOk) {
+            reconciliationFailed = true;
+            failedItemDetails = `Đơn hàng ${order.order_number} sai lệch dữ liệu Blockchain.`;
+            break;
+        }
+    }
+
+    if (!reconciliationFailed) {
+        for (const tx of unsettledMarketplace) {
+            const isOk = await blockchainService.verifyMarketplaceReconciliation(tx);
+            if (!isOk) {
+                reconciliationFailed = true;
+                failedItemDetails = `Giao dịch Marketplace ${tx.transaction_number} sai lệch dữ liệu Blockchain.`;
+                break;
+            }
+        }
+    }
+
+    if (reconciliationFailed) {
+        console.error(`[AutoSettle] ❌ Đối soát Blockchain thất bại cho sự kiện "${event.title}": ${failedItemDetails}`);
+        
+        // Cập nhật trạng thái Payout thành bị từ chối/lỗi đối soát
+        if (existingPayout) {
+            await prisma.escrowPayout.update({
+                where: { id: existingPayout.id },
+                data: {
+                    status: 'rejected',
+                    processed_at: new Date(),
+                    admin_notes: `[Auto-Settle] THẤT BẠI ĐỐI SOÁT BLOCKCHAIN: ${failedItemDetails}`
+                }
+            });
+        } else {
+            await prisma.escrowPayout.create({
+                data: {
+                    event_id: event.id,
+                    total_revenue: totalRevenue || 0,
+                    platform_fee: platformFee || 0,
+                    net_payout: netPayout || 0,
+                    status: 'rejected',
+                    requested_at: new Date(),
+                    processed_at: new Date(),
+                    admin_notes: `[Auto-Settle] THẤT BẠI ĐỐI SOÁT BLOCKCHAIN: ${failedItemDetails}`,
+                    bank_info: {}
+                }
+            });
+        }
+
+        // Tạo thông báo cho BTC
+        await prisma.notification.create({
+            data: {
+                user_id: fullEvent.organizer.user_id,
+                type: 'SETTLEMENT_FAILED_RECONCILIATION',
+                title: 'Đối soát Blockchain thất bại!',
+                message: `Hệ thống phát hiện sai lệch dữ liệu tài chính với Blockchain ở sự kiện "${event.title}". Vui lòng liên hệ Admin để kiểm tra.`
+            }
+        });
+
+        // Tạo thông báo cho Admin
+        const admins = await prisma.user.findMany({
+            where: { role: 'admin' }
+        });
+        for (const admin of admins) {
+            await prisma.notification.create({
+                data: {
+                    user_id: admin.id,
+                    type: 'SETTLEMENT_FAILED_RECONCILIATION',
+                    title: 'Cảnh báo đối soát thất bại!',
+                    message: `Sự kiện "${event.title}" của BTC "${fullEvent.organizer.organization_name}" thất bại đối soát Blockchain: ${failedItemDetails}`
+                }
+            });
+        }
+
+        return { settled: false, reason: 'Đối soát Blockchain thất bại', details: failedItemDetails };
+    }
 
     await prisma.$transaction(async (tx) => {
         if (existingPayout) {

@@ -91,12 +91,10 @@ class Web3Service {
             console.log('----------------------------------------------------');
             return address;
         } catch (error) {
-            console.error('❌ [Web3 Service Error]:', error);
-            // Ném lỗi chi tiết hơn để controller bắt được
-            if (error.code === 'INSUFFICIENT_FUNDS') {
-                throw new Error('Ví Admin không đủ số dư để trả phí Gas (Cần nạp thêm MATIC).');
-            }
-            throw error;
+            console.warn('⚠️ [Web3 Live Deployment Warning]: Không thể deploy lên mạng public (Lỗi mạng hoặc thiếu MATIC).');
+            console.warn(`Chi tiết lỗi: ${error.message}`);
+            console.log('🔄 Tự động kích hoạt cơ chế Fallback: Trả về null để hệ thống sử dụng chung Contract Hệ Thống (Platform Contract)...');
+            return null;
         }
     }
 
@@ -117,7 +115,7 @@ class Web3Service {
             let tokenId = null;
             for (const log of receipt.logs) {
                 try {
-                    const parsedLog = this.contract.interface.parseLog(log);
+                    const parsedLog = eventContract.interface.parseLog(log);
                     if (parsedLog && parsedLog.name === 'TicketMinted') {
                         tokenId = Number(parsedLog.args[1]); // args: [to, tokenId, uri]
                         break;

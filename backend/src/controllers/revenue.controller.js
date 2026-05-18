@@ -101,7 +101,7 @@ const RevenueController = {
             });
 
             const feePercent = Number(settings.find(s => s.key === 'withdrawal_fee_percent')?.value || 2);
-            const minWithdrawal = Number(settings.find(s => s.key === 'min_withdrawal_amount')?.value || 100000);
+            const minWithdrawal = Number(settings.find(s => s.key === 'min_withdrawal_amount')?.value || 10000);
 
             res.status(200).json({
                 balance: Number(user.balance),
@@ -161,7 +161,7 @@ const RevenueController = {
             });
 
             const feePercent = Number(settings.find(s => s.key === 'withdrawal_fee_percent')?.value || 2);
-            const minWithdrawal = Number(settings.find(s => s.key === 'min_withdrawal_amount')?.value || 100000);
+            const minWithdrawal = Number(settings.find(s => s.key === 'min_withdrawal_amount')?.value || 10000);
 
             // 2. Kiểm tra thông tin ngân hàng & số dư
             const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -197,6 +197,7 @@ const RevenueController = {
                     data: {
                         user_id: userId,
                         amount: withdrawAmount,
+                        fee_percent: feePercent,
                         fee_amount: feeAmount,
                         net_amount: netAmount,
                         bank_name: user.bank_name,

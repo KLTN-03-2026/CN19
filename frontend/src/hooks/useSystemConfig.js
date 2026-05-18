@@ -34,7 +34,7 @@ export const useSystemConfig = () => {
         resale_transaction_fee_percent: 1,
         default_royalty_percent: 3,
         withdrawal_fee_percent: 2,
-        min_withdrawal_amount: 100000
+        min_withdrawal_amount: 10000
       });
     } finally {
       setLoading(false);
@@ -68,6 +68,6 @@ export const useSystemConfig = () => {
     // Các phí khác
     gasFee: getFee('system_gas_fee', 10000),
     withdrawalFee: getFee('withdrawal_fee_percent', 2),
-    minWithdrawal: getFee('min_withdrawal_amount', 100000),
+    minWithdrawal: getFee('min_withdrawal_amount', 10000),
   };
 };

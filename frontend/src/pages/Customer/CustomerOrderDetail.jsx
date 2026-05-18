@@ -352,14 +352,37 @@ const CustomerOrderDetail = () => {
                                             {order.payment_method || t('transactions.detail.updating')}
                                         </span>
                                     </div>
-                                    <div className="p-4 bg-white/5 rounded-2xl border border-white/5">
-                                        <p className="text-[10px] font-bold text-gray-500 uppercase mb-2 flex items-center gap-2">
-                                            <ExternalLink className="w-3 h-3" /> Blockchain Proof
-                                        </p>
-                                        <p className="text-[11px] font-mono opacity-50 break-all leading-relaxed">
-                                            0x{order.id.substring(0, 16)}...{order.id.substring(order.id.length - 8)}
-                                        </p>
-                                    </div>
+                                    {(() => {
+                                        const rawTxHash = order.transaction_hash || order.metadata?.nft_transfer_tx_hash || order.tickets?.[0]?.nft_mint_tx_hash;
+                                        const txHash = (rawTxHash && !rawTxHash.includes('TxHashMock')) ? rawTxHash : null;
+                                        if (txHash) {
+                                            return (
+                                                <a 
+                                                    href={`https://amoy.polygonscan.com/tx/${txHash}`}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="block p-4 bg-neon-green/10 border border-neon-green/20 rounded-2xl group hover:shadow-lg hover:shadow-neon-green/5 transition-all text-left"
+                                                >
+                                                    <p className="text-[10px] font-bold text-neon-green uppercase mb-2 flex items-center gap-2">
+                                                        <ExternalLink className="w-3 h-3 text-neon-green" /> Blockchain Proof
+                                                    </p>
+                                                    <p className="text-[11px] font-mono text-neon-green truncate leading-relaxed">
+                                                        {txHash}
+                                                    </p>
+                                                </a>
+                                            );
+                                        }
+                                        return (
+                                            <div className="p-4 bg-white/5 rounded-2xl border border-white/5 opacity-50">
+                                                <p className="text-[10px] font-bold text-gray-500 uppercase mb-2 flex items-center gap-2">
+                                                    <Shield className="w-3 h-3" /> Blockchain Proof
+                                                </p>
+                                                <p className="text-[11px] font-mono opacity-50 break-all leading-relaxed">
+                                                    {order.status?.toLowerCase() === 'pending' ? 'Chờ thanh toán...' : 'Đang đồng bộ Blockchain...'}
+                                                </p>
+                                            </div>
+                                        );
+                                    })()}
                                 </div>
                             </div>
                         </div>

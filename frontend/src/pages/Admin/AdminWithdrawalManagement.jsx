@@ -174,7 +174,7 @@ const AdminWithdrawalManagement = () => {
                             <div className="relative">
                                 <div className="text-[10px] font-black text-slate-800 dark:text-gray-400 uppercase tracking-tight flex items-center gap-2 mb-4">
                                     <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-                                    Tổng phí thu sàn (2%)
+                                    Tổng phí thu sàn
                                 </div>
                                 <div className="text-2xl font-black text-blue-600 dark:text-blue-400 tracking-tight leading-none">
                                     {formatCurrency(stats.totalFees)}
@@ -250,7 +250,7 @@ const AdminWithdrawalManagement = () => {
                                             <p className="text-[12px] font-black text-gray-900 dark:text-white tracking-tight leading-none">{formatCurrency(item.net_amount)}</p>
                                         </div>
                                         <div className="space-y-1 text-right">
-                                            <div className="text-[9px] font-black text-red-500 dark:text-red-400 uppercase tracking-tight">Phí rút (2%)</div>
+                                            <div className="text-[9px] font-black text-red-500 dark:text-red-400 uppercase tracking-tight">Phí rút ({item.fee_percent ? `${Number(item.fee_percent)}%` : '2%'})</div>
                                             <p className="text-[12px] font-black text-red-600 dark:text-red-500 tracking-tight leading-none">-{formatCurrency(item.fee_amount)}</p>
                                         </div>
                                     </div>
@@ -352,7 +352,7 @@ const AdminWithdrawalManagement = () => {
                                     <span className="font-black text-neon-green text-3xl tracking-tight">{formatCurrency(selectedRequest.net_amount)}</span>
                                 </div>
                                 <div className="text-right">
-                                    <span className="text-[10px] text-slate-800 font-black uppercase tracking-tight block mb-1">Phí hệ thống (2%)</span>
+                                    <span className="text-[10px] text-slate-800 font-black uppercase tracking-tight block mb-1">Phí hệ thống ({selectedRequest.fee_percent ? `${Number(selectedRequest.fee_percent)}%` : '2%'})</span>
                                     <span className="font-black text-red-500 text-lg tracking-tight">-{formatCurrency(selectedRequest.fee_amount)}</span>
                                 </div>
                             </div>

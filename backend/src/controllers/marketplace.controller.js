@@ -30,6 +30,20 @@ const createListing = async (req, res) => {
       return res.status(400).json({ error: 'Vé này đã được đăng bán trên Chợ rồi.' });
     }
 
+    // Kiểm tra chính sách: Mỗi vé chỉ được sang tay 1 lần (nếu mua từ chợ hoặc đã chuyển nhượng thì không được bán lại)
+    const pastTransfersCount = await prisma.ticketTransfer.count({
+      where: { ticket_id: ticket_id, status: 'completed' }
+    });
+    const pastMktCount = await prisma.marketplaceTransaction.count({
+      where: { ticket_id: ticket_id, status: 'paid' }
+    });
+
+    if ((pastTransfersCount + pastMktCount) >= 1) {
+      return res.status(400).json({ 
+        error: 'Vé này có nguồn gốc sang tay (mua từ chợ hoặc được chuyển nhượng) nên không thể tiếp tục đăng bán lại.' 
+      });
+    }
+
     if (!ticket.event.allow_resale) {
       return res.status(400).json({ error: 'Sự kiện này không hỗ trợ đăng bán lại vé.' });
     }

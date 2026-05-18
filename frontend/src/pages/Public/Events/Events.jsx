@@ -18,6 +18,7 @@ const Events = () => {
     );
     const [priceRange, setPriceRange] = useState([0, 10000000]);
     const [selectedDate, setSelectedDate] = useState(null);
+    const [location, setLocation] = useState(searchParams.get('location') || '');
     const [sortBy, setSortBy] = useState('newest');
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [isSortOpen, setIsSortOpen] = useState(false);
@@ -32,6 +33,10 @@ const Events = () => {
         if (search) {
             setSearchTerm(search);
         }
+        const loc = searchParams.get('location');
+        if (loc) {
+            setLocation(loc);
+        }
     }, [searchParams]);
 
     // Fetch Categories for Sidebar
@@ -43,14 +48,15 @@ const Events = () => {
 
     // Fetch Events with Filters
     const { data: eventsResult, isLoading } = useQuery({
-        queryKey: ['events-explore', selectedCategories, priceRange, selectedDate, sortBy, searchTerm],
+        queryKey: ['events-explore', selectedCategories, priceRange, selectedDate, sortBy, searchTerm, location],
         queryFn: () => eventService.getEvents({
             category_id: selectedCategories.length > 0 ? selectedCategories.join(',') : undefined,
             minPrice: priceRange[0],
             maxPrice: priceRange[1],
             date: selectedDate,
             sort: sortBy,
-            keyword: searchTerm || undefined
+            keyword: searchTerm || undefined,
+            location: location || undefined
         }),
         keepPreviousData: true
     });
@@ -72,6 +78,7 @@ const Events = () => {
         setSelectedCategories([]);
         setPriceRange([0, 10000000]);
         setSelectedDate(null);
+        setLocation('');
         setSearchParams({});
     };
 
@@ -169,6 +176,8 @@ const Events = () => {
                         onPriceChange={setPriceRange}
                         selectedDate={selectedDate}
                         onDateChange={setSelectedDate}
+                        location={location}
+                        onLocationChange={setLocation}
                         onClearAll={handleClearAll}
                         isOpen={isSidebarOpen}
                         onClose={() => setIsSidebarOpen(false)}

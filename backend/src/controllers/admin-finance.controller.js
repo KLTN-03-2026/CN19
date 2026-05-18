@@ -183,6 +183,7 @@ const processWithdrawal = async (req, res) => {
     }
 
     if (action === 'approve') {
+      let txHash = null;
       await prisma.$transaction(async (tx) => {
         // 1. Cập nhật trạng thái yêu cầu
         await tx.withdrawalRequest.update({ 
@@ -203,9 +204,9 @@ const processWithdrawal = async (req, res) => {
         }
 
         // 3. CHUYỂN PHÍ 2% VỀ VÍ ADMIN
-        // Tìm tài khoản admin đầu tiên (hoặc admin đang xử lý)
+        // Tìm tài khoản admin
         const adminUser = await tx.user.findFirst({
-            where: { role: 'admin' }
+            where: { role: { in: ['admin', 'super_admin', 'ADMIN', 'SUPER_ADMIN'] } }
         });
 
         if (adminUser && request.fee_amount > 0) {
@@ -220,15 +221,14 @@ const processWithdrawal = async (req, res) => {
                 data: {
                     user_id: adminUser.id,
                     amount: request.fee_amount,
-                    type: 'REVENUE', // Hoặc tạo thêm type 'PLATFORM_FEE'
-                    description: `Thu phí rút tiền từ ${request.user.full_name || request.user.email} (2%)`,
+                    type: 'REVENUE',
+                    description: `Thu phí rút tiền từ ${request.user?.full_name || request.user?.email || 'Người dùng'} (${request.fee_percent ? Number(request.fee_percent) : 2}%)`,
                     status: 'completed'
                 }
             });
         }
 
         // 4. GHI LOG LÊN BLOCKCHAIN (Minh bạch tài chính)
-        let txHash = null;
         try {
             txHash = await blockchainService.logFinancialTransaction(
                 request.id,
@@ -250,15 +250,16 @@ const processWithdrawal = async (req, res) => {
       });
 
       // 6. Gửi email thông báo cho người dùng
-      // Chúng ta thực hiện ngoài transaction để tránh delay phản hồi API
-      EmailService.sendWithdrawalSuccessEmail(request.user, request, txHash);
+      if (request.user) {
+          EmailService.sendWithdrawalSuccessEmail(request.user, request, txHash);
+      }
 
       // 7. Thông báo hệ thống
       NotificationService.create({
         user_id: request.user_id,
         type: 'WITHDRAWAL_APPROVED',
         title: 'Yêu cầu rút tiền thành công',
-        message: `Yêu cầu rút ${request.amount.toLocaleString()}đ của bạn đã được duyệt và chuyển khoản thành công.`,
+        message: `Yêu cầu rút ${Number(request.amount).toLocaleString()}đ của bạn đã được duyệt và chuyển khoản thành công.`,
         target_id: id
       });
 

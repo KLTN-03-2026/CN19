@@ -261,7 +261,7 @@ const MyEvents = () => {
                 </div>
             ) : filteredEvents.length > 0 ? (
                 viewMode === 'grid' ? (
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 3xl:grid-cols-5 4xl:grid-cols-6 gap-3 sm:gap-4">
                         {filteredEvents.map((event) => {
                             const statusInfo = getStatusInfo(event.status, event);
                             const totalTickets = event.ticket_tiers?.reduce((sum, t) => sum + (t.quantity_total || 0), 0) || 0;
