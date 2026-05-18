@@ -76,8 +76,12 @@ const WebhookController = {
                     if (withdrawalRequest) {
                         console.log(`[MATCH FOUND] Request ID: ${withdrawalRequest.id}, Net Amount: ${withdrawalRequest.net_amount}, Actual Paid: ${amount}`);
                         
-                        // Khớp số tiền (cho phép sai số nhỏ hơn 100đ)
-                        if (Math.abs(Number(withdrawalRequest.net_amount) - Math.abs(amount)) < 100) {
+                        // Khớp số tiền (cho phép sai số nhỏ hơn 100đ, linh hoạt với cả Net Amount và Total Gross Amount)
+                        const netAmountNum = Number(withdrawalRequest.net_amount);
+                        const grossAmountNum = Number(withdrawalRequest.amount);
+                        const paidAmountNum = Math.abs(amount);
+
+                        if (Math.abs(netAmountNum - paidAmountNum) < 100 || Math.abs(grossAmountNum - paidAmountNum) < 100) {
                             // 1. Thực hiện Transaction cập nhật Database (Nhanh và không bị Web3 block/timeout)
                             await prisma.$transaction(async (tx) => {
                                 // a. Cập nhật đơn rút tiền sang 'approved'

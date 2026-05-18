@@ -28,3 +28,5 @@ backend/prisma/src/generated/
 
 # AI Service
 ai-service/=
+.vercel
+.env*.local
